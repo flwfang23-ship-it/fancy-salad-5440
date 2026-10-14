@@ -1,0 +1,1918 @@
+<script type="text/plain" data-ai-only>
+# H5 外部推广链接管理
+
+> 使用说明：本文档采用"人类阅读正文 + AI 维护说明"的双层结构。  
+> 第 1～7 章用于人类阅读，应优先保证业务主线连续、真实、简洁、好读。  
+> 第 8 章用于 AI 维护，集中记录写作约束、上下游检查、待确认逻辑和维护注意事项。
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+商户在日常运营中需要将 H5 活动页面通过外部渠道进行推广投放。当前商户每次推广都需要分别生成链接、配置口令、管理投放状态，且一次只能推广一个活动。当商户需要在同一投放场景中同时推广两个活动时，需要分别生成、投放和管理多条链接，用户也无法在同一页面中直接选择活动。
+
+需要一套统一的 H5 外部推广链接管理能力，支持单活动和多活动两种推广模式，让商户在后台一站式完成链接创建、配置、投放和状态管理。
+
+```text
+改造前
+
+活动 A → 链接 A ─┐
+                 ├→ 商户分别投放和管理
+活动 B → 链接 B ─┘
+
+
+改造后
+
+单活动模式：活动 + H5 模板 → 一条推广链接 → 对外投放
+
+多活动模式：活动 A × 推广位 A + 活动 B × 推广位 B + 多活动模板 → 一条推广链接
+                ↓
+        用户在同一页面选择活动
+```
+
+### 1.2 一句话业务模型
+
+```text
+已启用的 H5 模板（单活动 / 多活动）
+        +
+商户配置的推广内容（密令、直达链接）
+        +
+商户选择的投放版位（多活动场景）
+        ↓
+生成固定推广链接 → 对外投放 → 用户访问并参与活动
+```
+
+### 1.3 最终目标
+
+- **统一管理推广链接：** 商户在后台一站式管理单活动和多活动两种推广链接的创建、编辑、状态切换和删除。
+- **简化多活动配置：** 将多活动版位配置从"选平台 → 选活动 → 选推广位"简化为直接填写"密令简版 + 直达链接"，降低商户操作门槛。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌──────────────────────────────────┬────────────────────────────────────────┐
+│ SaaS 总后台                      │ 客户端后台（商户运营人员）              │
+├──────────────────────────────────┼────────────────────────────────────────┤
+│ ① 准备可推广活动                 │                                        │
+│          │                       │                                        │
+│ ② 创建并启用 H5 模板             │                                        │
+│    ├─ 单活动 H5 模板             │                                        │
+│    └─ 多活动 H5 模板             │                                        │
+│ 【模板状态：启用】                │                                        │
+│          │                       │                                        │
+│          └──────────────────────→│ ③ 进入推广链接列表                     │
+│                                  │          │                             │
+│                                  │ ④ 新建推广链接                         │
+│                                  │    ├─ 单活动：选模板 + 填推广内容      │
+│                                  │    └─ 多活动：选模板 + 填上下版位      │
+│                                  │ 【链接状态：推广中】                    │
+│                                  │          │                             │
+│                                  │ ⑤ 复制推广链接并对外投放               │
+│                                  │          │                             │
+│                                  │ ⑥ 管理推广链接                         │
+│                                  │    ├─ 编辑链接名称和推广内容           │
+│                                  │    ├─ 停推 / 重新推广                  │
+│                                  │    │  【链接状态：停推 / 推广中】      │
+│                                  │    └─ 删除（软删除）                   │
+│                                  │          │                             │
+│                                  │ ⑦ 查看链接详情（含直跳链接）           │
+└──────────────────────────────────┴────────────────────────────────────────┘
+```
+
+泳道图需要同时表达状态时，采用以下原则：
+
+- 编号节点只写参与方实际执行的业务动作。
+- 状态标注写在触发该状态的动作之后，不占用新的流程序号。
+- 本功能涉及两个核心业务对象：**H5 模板**（状态：启用 / 停用）和**推广链接**（状态：推广中 / 停推）。
+- 推广链接删除为软删除，数据库保留记录，已分发的链接仍可正常访问。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前业务闭环，可划分为：
+
+1. **第一阶段：模板与推广基础准备（主要参与方：SaaS 总后台）**：SaaS 总后台准备可推广活动和 H5 模板，模板启用后被客户端新建链接时选择。
+2. **第二阶段：单活动 H5 推广链接管理（主要参与方：客户端后台）**：商户在后台创建、编辑、停推和删除单活动推广链接，生成固定访问地址并对外投放。
+3. **第三阶段：多活动 H5 推广链接管理（主要参与方：客户端后台）**：商户在后台创建、编辑、停推和删除多活动推广链接，为上下两个版位分别配置密令和直达链接。
+
+```text
+第一阶段：模板与推广基础准备
+① 准备活动 → ② 创建并启用模板
+                    ↓
+第二阶段：单活动 H5 推广链接管理
+③ 进入列表 → ④ 新建链接 → ⑤ 投放 → ⑥ 管理 → ⑦ 查看详情
+                    ↓
+第三阶段：多活动 H5 推广链接管理
+③ 进入列表 → ④ 新建链接 → ⑤ 投放 → ⑥ 管理 → ⑦ 查看详情
+```
+
+### 2.3 页面类型说明
+
+后续各阶段的模块页面均为后台管理页面，使用"表格类型"字段标注。
+
+| 页面类型 | 面向对象 | 含义 | 正文字段表格列 |
+| --- | --- | --- | --- |
+| 列表页 | 后台操作人员 | 操作人员看到的页面是一张列表，字段在列表和详情中可能分别展示 | 字段名称、字段类型、列表、详情、新增、字段解释 |
+
+本功能所有页面均为列表页，使用 6 列字段表结构（字段名称 / 字段类型 / 列表 / 详情 / 新增 / 字段解释）。"列表、详情、新增"三列只使用 `是`、`否`、`是（可编辑）` 三种枚举。
+
+
+## 3. 第一阶段：模板与推广基础准备
+
+### 3.1 活动与模板准备
+
+#### 业务背景
+
+当前环节：① 准备可推广活动、② 创建并启用 H5 模板<br>
+页面路径：SaaS 总后台 > 页面管理 > H5 模板管理<br>
+对下游影响：确保后续创建推广链接时具备可选模板；模板启用后方可被客户端新建链接时选择。<br>
+表格类型：列表页<br>
+
+> 创建推广链接前，需要具备两个基础条件：已有可推广且具备所需推广内容的活动、已有状态为"启用"的 H5 模板。本节说明这些基础能力如何服务于推广链接管理。活动内容、模板本身的维护规则不在本文重复展开。
+
+#### 字段说明
+
+##### 单活动 H5 模板（引用已有模块）
+
+单活动 H5 模板定义 C 端页面的整体样式和用户点击后的去向。模板不绑定具体商户或活动，可以被不同商户重复使用。
+
+##### 多活动 H5 模板（新增页面）
+
+多活动 H5 模板定义 C 端页面的整体样式、上下两个活动版位，以及用户点击每个版位后的去向。每个模板固定包含上下两个活动版位，每个版位分别配置用户去向。
+
+新增与编辑共用同一表单；编辑时模板编号和 H5 类型不可修改。
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 模板名称 | string | 是 | 否 | 是（可编辑） | **数据来源：** SaaS 总后台运营填写。<br>**逻辑：** 作为多活动 H5 模板记录的名称。<br>**用途：** 用于总后台识别模板，并在客户端选择多活动 H5 模板时显示。 |
+| 模板编号 | string | 是 | 否 | 是（可编辑） | **数据来源：** 前端工程师填写。<br>**逻辑：** 每套前端模板对应唯一编号，创建后不可修改。<br>**用途：** 用户访问 H5 时，系统根据该编号加载对应模板。 |
+| H5 类型 | string | 是 | 否 | 是 | **数据来源：** 系统固定值。<br>**逻辑：** 写死为"多活动 H5"，新增时只读展示，不允许选择或修改。<br>**用途：** 用于区分当前模板类型。 |
+| 上方版位用户去向 | enum（饿了么 APP、淘宝 APP、美团小程序、饿了么小程序） | 是 | 否 | 是（可编辑） | **数据来源：** SaaS 总后台运营选择。<br>**逻辑：** 系统根据枚举值获取对应联盟推广数据。<br>**用途：** 决定上方版位可选活动平台、推广数据来源和用户参与方式。 |
+| 下方版位用户去向 | enum（饿了么 APP、淘宝 APP、美团小程序、饿了么小程序） | 是 | 否 | 是（可编辑） | **数据来源：** SaaS 总后台运营选择。<br>**逻辑：** 枚举值与上方版位相同；两个版位独立配置，允许选择相同去向。<br>**用途：** 决定下方版位可选活动平台、推广数据来源和用户参与方式。 |
+| 描述 | string | 否 | 否 | 是（可编辑） | **数据来源：** SaaS 总后台运营选填。<br>**逻辑：** 记录模板适用场景和使用说明。<br>**用途：** 仅用于总后台维护参考，不在 C 端页面展示。 |
+| 预览图 | image | 是 | 否 | 是（可编辑） | **数据来源：** SaaS 总后台运营上传。<br>**逻辑：** 作为模板静态效果图。<br>**用途：** 用于总后台列表和客户端选择模板时预览。 |
+| 状态 | enum（启用、停用） | 是 | 否 | 是（可编辑） | **数据来源：** SaaS 总后台运营设置。<br>**逻辑：** 只有启用模板可被客户端新建链接时选择，停用不删除模板。<br>**用途：** 控制模板是否进入客户端新建链接的可选范围。 |
+| 更新时间 | datetime | 是 | 否 | 否 | **数据来源：** 系统在模板保存或状态变更时自动记录。<br>**逻辑：** 展示模板最近一次更新的时间。<br>**用途：** 供运营判断模板维护时间和排序参考。 |
+
+#### 列表交互
+
+**交互：新增模板**  
+**业务用途**：创建一套可供客户端新建多活动 H5 链接时选择的页面模板。
+
+**交互：编辑模板**  
+**业务用途**：维护模板名称、上下版位用户去向、描述、预览图和状态；模板编号和 H5 类型创建后不可修改。
+
+**交互：预览**  
+**业务用途**：查看模板效果图或预览地址，帮助运营确认模板样式。
+
+**交互：启用或停用**  
+**业务用途**：控制模板是否进入客户端新建链接的可选范围；停用不删除模板。
+
+#### 业务逻辑
+
+**双版位固定结构：** 多活动模板固定包含上下两个版位，模板只定义页面结构和用户去向，不保存具体活动和推广位。
+
+**模板编号与类型保护：** 模板编号和 H5 类型创建后不可修改。
+
+**版位去向独立配置：** 上下版位各选择一个用户去向，可以相同，也可以不同。
+
+**启用控制：** 只有启用状态的多活动模板可用于新建链接。模板停用后，不再进入新建链接的可选范围。
+
+
+## 4. 第二阶段：单活动 H5 推广链接管理
+
+### 4.1 单活动 H5 推广链接 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：③ 进入推广链接列表、④ 新建推广链接、⑤ 复制并投放、⑥ 管理推广链接、⑦ 查看详情<br>
+页面路径：客户端后台 > 推广管理 > 单活动 H5<br>
+对下游影响：商户在此完成链接的新建、编辑、停推和删除；投放的固定链接供外部渠道传播和用户访问。<br>
+表格类型：列表页<br>
+
+> 商户通过一个统一管理页面承载单活动 H5 推广链接的查询、新增和管理，将一个 H5 模板和一个活动组合成一条可对外投放的固定链接。新建时，商户选择一个 H5 模板，填写链接名称、密令简版、备注和直跳链接，系统生成一条固定推广链接。
+
+#### 字段说明
+
+以下字段表统一说明一条单活动 H5 推广链接在列表、详情和新增场景中的字段。
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 链接名称 | string | 是 | 是 | 是（可编辑） | **数据来源：** 商户在新建或编辑时填写。<br>**逻辑：** 作为当前推广链接记录的名称。<br>**用途：** 用于识别投放渠道、批次或场景，并作为列表搜索条件。 |
+| H5 模板 | enum（通用推广模板、节日活动模板、游戏活动模板、电商促销模板、品牌宣传模板、注册拉新模板） | 是 | 是 | 是（可编辑） | **数据来源：** 商户从已启用的单活动 H5 模板中选择。<br>**逻辑：** 选项显示模板名称；选择后系统读取模板编号。<br>**用途：** 决定 C 端页面的展示样式和用户参与方式。 |
+| 缩略图 | image | 是 | 是 | 否 | **数据来源：** 系统根据所选模板自动带出模板预览图。<br>**逻辑：** 作为链接在列表中的缩略展示。<br>**用途：** 帮助商户快速识别链接对应的模板样式。 |
+| H5 链接 | string | 是 | 是 | 否 | **数据来源：** 系统在创建成功后自动生成。<br>**逻辑：** 格式为 `https://h5.example.com/p/{shortCode}` 的唯一访问地址。<br>**用途：** 供商户复制并对外投放。 |
+| 密令简版 | string | 是 | 是 | 是（可编辑） | **数据来源：** 商户选填。<br>**逻辑：** 简短口令，用于口头传播。<br>**用途：** 方便用户通过口令快速找到对应活动，如"618大促""新人专享"。 |
+| 直跳链接 | string | 否 | 是 | 是（可编辑） | **数据来源：** 商户选填。<br>**逻辑：** 用户点击推广链接后的直接跳转目标地址。仅在详情弹窗中展示，不在列表页展示。<br>**用途：** 作为推广链接的最终跳转目标。 |
+| 备注 | string | 是 | 是 | 是（可编辑） | **数据来源：** 商户选填。<br>**逻辑：** 记录投放渠道、负责人或内部说明。<br>**用途：** 仅用于商户内部管理。 |
+| 状态 | enum（推广中、停推） | 是 | 是 | 否 | **数据来源：** 创建时默认为"推广中"，商户在列表中切换。<br>**逻辑：** 仅改变后台管理状态，不影响推广链接访问。停推后链接仍可正常打开。<br>**用途：** 供商户按投放状态分类管理链接记录。 |
+| 更新时间 | datetime | 是 | 是 | 否 | **数据来源：** 系统在链接保存或状态变更时自动记录。<br>**逻辑：** 展示链接最近一次更新的时间。<br>**用途：** 供列表排序和记录追溯。 |
+
+操作类（编辑、停推、启用、删除）属于页面功能，不作为业务字段保存。
+
+#### 列表交互
+
+**交互：新增链接**  
+**业务用途**：创建新的单活动推广链接。商户填写链接名称、选择 H5 模板、填写密令简版、备注和直跳链接。创建成功后，系统形成一条新的推广链接记录，并生成格式为 `https://h5.example.com/p/{shortCode}` 的固定访问地址。
+
+**交互：查看详情**  
+**业务用途**：打开详情弹窗，展示当前链接的全部字段（含直跳链接），仅用于核对；不在详情中修改链接配置。
+
+**交互：编辑**  
+**业务用途**：打开编辑弹窗，修改链接名称、H5 模板、密令简版、备注和直跳链接。编辑不改变已生成的推广链接地址。
+
+**交互：停推**  
+**业务用途**：将状态为"推广中"的链接切换为"停推"，仅调整商户后台的链接管理状态，不影响推广链接访问和已投放渠道。
+
+**交互：启用**  
+**业务用途**：将状态为"停推"的链接恢复为"推广中"，链接恢复正常投放管理。
+
+**交互：删除**  
+**业务用途**：软删除当前推广链接记录。删除前弹出二次确认，告知商户"删除后不影响已经推出去的链接"。数据库保留记录，已分发的链接仍可正常访问。删除后列表不再展示该记录。
+
+#### 业务逻辑
+
+**模板选择范围：** 只显示已启用的单活动 H5 模板。选择模板后，系统自动带出模板缩略图。
+
+**直跳链接仅详情展示：** 直跳链接在新增和编辑弹窗中可填写，在详情弹窗中可查看，但不在列表表格列中展示，避免列表信息过载。
+
+**状态流转：** 新建链接默认为"推广中"。推广中 → 执行停推 → 停推。停推 → 执行启用 → 推广中。任意状态均可执行软删除。
+
+**删除不中断已投放链接：** 软删除仅从后台列表移除记录，已生成并投放的推广链接仍可正常访问，不影响终端用户体验。
+
+#### 详情字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 链接名称、状态、更新时间 |
+| 模板与展示 | H5 模板、缩略图 |
+| 推广内容 | H5 链接、密令简版、直跳链接、备注 |
+
+#### 新增字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 链接名称 |
+| 模板与展示 | H5 模板 |
+| 推广内容 | 密令简版、直跳链接、备注 |
+
+
+## 5. 第三阶段：多活动 H5 推广链接管理
+
+### 5.1 多活动 H5 推广链接 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：③ 进入推广链接列表、④ 新建推广链接、⑤ 复制并投放、⑥ 管理推广链接、⑦ 查看详情<br>
+页面路径：客户端后台 > 推广管理 > 多活动 H5<br>
+对下游影响：商户在此完成多活动链接的新建、编辑、停推和删除；投放的固定链接供外部渠道传播，用户打开后在同一页面选择上方或下方活动参与。<br>
+表格类型：列表页<br>
+
+> 商户通过一个统一管理页面承载多活动 H5 推广链接的查询、新增和管理。与单活动链接不同，多活动链接将一个多活动 H5 模板与上下两个版位的推广内容组合成一条可对外投放的固定链接。商户选择模板后，直接为上方版位和下方版位分别填写密令简版和直达链接，无需经过"选平台 → 选活动 → 选推广位"的复杂配置链路。
+
+#### 字段说明
+
+以下字段表统一说明一条多活动 H5 推广链接在列表、详情和新增场景中的字段。
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 链接名称 | string | 是 | 是 | 是（可编辑） | **数据来源：** 商户在新建或编辑时填写。<br>**逻辑：** 作为当前多活动 H5 链接记录的名称。<br>**用途：** 用于识别投放渠道、批次或场景，并作为列表搜索条件。 |
+| 多活动 H5 模板 | enum（已启用的多活动 H5 模板列表） | 是 | 是 | 是（可编辑） | **数据来源：** 商户从已启用的多活动 H5 模板中选择。<br>**逻辑：** 选项显示模板名称及上下版位用户去向；选择后系统读取模板编号和版位去向。<br>**用途：** 为 C 端页面渲染提供页面结构和用户去向。 |
+| 上方版位·密令简版 | string | 是 | 是 | 是（可编辑） | **数据来源：** 商户填写。<br>**逻辑：** 上方版位的简短口令，用于用户快速复制或识别。<br>**用途：** 决定上方版位在 C 端展示的口令文案。 |
+| 上方版位·直达链接 | string | 是 | 是 | 是（可编辑） | **数据来源：** 商户填写。<br>**逻辑：** 用户点击上方版位后的直接跳转目标地址。<br>**用途：** 决定上方版位用户点击后的去向。 |
+| 下方版位·密令简版 | string | 是 | 是 | 是（可编辑） | **数据来源：** 商户填写。<br>**逻辑：** 下方版位的简短口令，与上方版位独立配置。<br>**用途：** 决定下方版位在 C 端展示的口令文案。 |
+| 下方版位·直达链接 | string | 是 | 是 | 是（可编辑） | **数据来源：** 商户填写。<br>**逻辑：** 用户点击下方版位后的直接跳转目标地址，与上方版位独立配置。<br>**用途：** 决定下方版位用户点击后的去向。 |
+| 备注 | string | 否 | 是 | 是（可编辑） | **数据来源：** 商户选填。<br>**逻辑：** 记录投放渠道、负责人或内部说明。<br>**用途：** 仅用于商户内部管理，不在 C 端页面展示。 |
+| 状态 | enum（在推、停推） | 是 | 是 | 否 | **数据来源：** 创建时默认为"在推"，商户在列表中切换。<br>**逻辑：** 仅改变后台管理状态，不影响推广链接访问。停推后链接仍可正常打开。<br>**用途：** 供商户按投放状态分类管理链接记录。 |
+| 推广链接 | string | 是 | 是 | 否 | **数据来源：** 系统在创建成功后自动生成。<br>**逻辑：** 格式为 `https://h5.example.com/m/{shortCode}` 的唯一访问地址。<br>**用途：** 供商户复制并对外投放。 |
+| 创建时间 | datetime | 是 | 是 | 否 | **数据来源：** 系统在链接首次创建时自动记录。<br>**逻辑：** 表示当前链接记录生成时间。<br>**用途：** 供列表排序和记录追溯。 |
+
+操作类（编辑、停推、重新推广、复制链接、预览、删除）属于页面功能，不作为业务字段保存。
+
+#### 列表交互
+
+**交互：新建链接**  
+**业务用途**：创建新的多活动推广链接。商户填写链接名称、选择多活动 H5 模板、为上下两个版位分别填写密令简版和直达链接、填写备注。创建成功后，系统形成一条新的多活动链接记录，并生成格式为 `https://h5.example.com/m/{shortCode}` 的固定访问地址。
+
+**交互：查看详情**  
+**业务用途**：打开详情弹窗，展示当前链接的全部字段（含上下版位的密令和直达链接），仅用于核对和复制；不在详情中修改模板或版位配置。
+
+**交互：编辑**  
+**业务用途**：打开编辑弹窗，修改链接名称、多活动 H5 模板、上下版位的密令简版和直达链接、备注。编辑不改变已生成的推广链接地址。
+
+**交互：停推**  
+**业务用途**：将状态为"在推"的链接切换为"停推"，仅调整商户后台的链接管理状态，不影响推广链接访问。
+
+**交互：重新推广**  
+**业务用途**：将状态为"停推"的链接恢复为"在推"，链接恢复正常投放管理。
+
+**交互：复制链接**  
+**业务用途**：一键复制当前固定推广链接到剪贴板，供商户对外投放或继续传播。
+
+**交互：预览**  
+**业务用途**：弹窗展示当前所选模板的预览图和用户去向信息，帮助商户确认模板样式。预览展示模板静态效果，不读取当前链接的真实活动数据。
+
+**交互：删除**  
+**业务用途**：软删除当前推广链接记录。删除前弹出二次确认，告知商户"删除后不影响已经推出去的链接"。数据库保留记录，已分发的链接仍可正常访问。删除后列表不再展示该记录。
+
+#### 业务逻辑
+
+**简化版位配置：** 与 SaaS 总后台模板管理中复杂的"选平台 → 选活动 → 选推广位"不同，客户端创建多活动链接时，每个版位只需填写"密令简版 + 直达链接"两个字段。模板的用户去向已在 SaaS 总后台配置完成，客户端直接复用。
+
+**版位独立性：** 上下版位各自独立填写密令简版和直达链接，互不影响。两个版位可以使用相同或不同的密令和链接。
+
+**模板选择范围：** 只显示已启用的多活动 H5 模板。选项同时展示模板名称和上下版位的用户去向，帮助商户确认版位对应的平台。
+
+**状态流转：** 新建链接默认为"在推"。在推 → 执行停推 → 停推。停推 → 执行重新推广 → 在推。任意状态均可执行软删除。
+
+**删除不中断已投放链接：** 软删除仅从后台列表移除记录，已生成并投放的推广链接仍可正常访问。
+
+
+#### 详情字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 链接名称、状态、创建时间 |
+| 模板选择 | 多活动 H5 模板 |
+| 上方版位 | 上方版位·密令简版、上方版位·直达链接 |
+| 下方版位 | 下方版位·密令简版、下方版位·直达链接 |
+| 其他 | 备注、推广链接 |
+
+#### 新增字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 链接名称 |
+| 模板选择 | 多活动 H5 模板 |
+| 上方版位 | 上方版位·密令简版、上方版位·直达链接 |
+| 下方版位 | 下方版位·密令简版、下方版位·直达链接 |
+| 其他 | 备注 |
+
+
+## 6. 关键业务规则
+
+> 本章只汇总跨页面、跨阶段或特别容易误解的已确认规则。  
+> 已在单一业务小节中讲清且不会产生歧义的内容，不在此重复。
+
+### 6.1 单活动与多活动的差异
+
+| 维度 | 单活动 H5 | 多活动 H5 |
+| --- | --- | --- |
+| 模板 | 单活动 H5 模板 | 多活动 H5 模板（固定上下双版位） |
+| 版位数量 | 无版位概念，一个链接对应一个活动 | 固定上下两个版位，各自独立配置 |
+| 配置项 | 链接名称、模板、密令简版、备注、直跳链接 | 链接名称、模板、上方密令+链接、下方密令+链接、备注 |
+| 推广链接格式 | `https://h5.example.com/p/{shortCode}` | `https://h5.example.com/m/{shortCode}` |
+| 列表字段差异 | 含缩略图、H5 链接列；直跳链接仅详情展示 | 含上下版位密令和链接列；推广链接列；无缩略图 |
+
+### 6.2 状态流转
+
+#### H5 模板状态（SaaS 总后台）
+
+| 状态 | 业务含义 | 触发操作 | 可执行的后续操作 |
+| --- | --- | --- | --- |
+| 启用 | 模板当前可用于新建链接 | SaaS 总后台运营设置为启用 | 编辑、预览、停用 |
+| 停用 | 模板暂停用于新建，历史链接不受影响 | SaaS 总后台运营设置为停用 | 编辑、预览、启用 |
+
+#### 推广链接管理状态（客户端后台）
+
+| 状态 | 业务含义 | 触发操作 | 可执行的后续操作 | 链接访问 |
+| --- | --- | --- | --- | --- |
+| 推广中（在推） | 商户将该记录作为正在投放的链接管理 | 创建时默认，或从停推恢复 | 编辑、停推、复制链接、预览、删除 | 正常访问 |
+| 停推 | 商户标记为停止投放，仅改变后台管理状态 | 商户执行停推 | 编辑、启用（重新推广）、复制链接、预览、删除 | 正常访问 |
+
+### 6.3 软删除规则
+
+- 删除操作为软删除，数据库保留记录。
+- 已生成并投放的推广链接不受删除影响，仍可正常访问。
+- 删除前必须弹出二次确认，明确告知商户"删除后不影响已经推出去的链接"。
+- 删除后该记录从后台列表移除，不可恢复（前端层面）。
+
+
+## 7. 权限说明
+
+| 功能或操作 | SaaS 总后台运营 | 客户端客户 |
+| --- | :---: | :---: |
+| 查看 H5 模板列表 | 是 | 否 |
+| 新增、编辑、启用或停用模板 | 是 | 否 |
+| 查看单活动 H5 推广链接列表 | 否 | 是 |
+| 新建单活动 H5 推广链接 | 否 | 是 |
+| 编辑单活动 H5 推广链接 | 否 | 是 |
+| 停推或启用单活动链接 | 否 | 是 |
+| 删除单活动链接 | 否 | 是 |
+| 查看多活动 H5 推广链接列表 | 否 | 是 |
+| 新建多活动 H5 推广链接 | 否 | 是 |
+| 编辑多活动 H5 推广链接 | 否 | 是 |
+| 停推或重新推广多活动链接 | 否 | 是 |
+| 复制多活动推广链接 | 否 | 是 |
+| 预览多活动模板样式 | 否 | 是 |
+| 删除多活动链接 | 否 | 是 |
+
+客户只能查看和操作归属于当前客户的推广链接，不得查看其他客户的链接和推广数据。
+
+
+## 8. AI 维护说明
+
+> 本章属于 AI 阅读和维护模块，不承担向人类读者重复解释业务正文的职责。  
+> AI 修改本文档时，应先保护业务真实性和阅读连续性，再考虑结构完整性。
+
+### 8.1 文档设计理念
+
+本文档采用双层结构：
+
+1. **人类阅读模块**：第 1～7 章。通过泳道图建立全局认知，再按照真实业务发生顺序线性表达，使读者能够连续理解业务起点、分支、汇合、处理和结果。
+2. **AI 维护模块**：第 8 章。集中保存维护顺序、边界约束、术语同步要求、信息可信度判断、上下游检查和待确认逻辑。
+
+维护目标：
+
+```text
+人类正文：看清单活动和多活动两种推广链接如何创建、配置、投放和管理
+AI 说明：保护模板维护、客户端配置和上下游模块的边界
+```
+
+不得把 AI 维护所需的检查清单、推测和疑点大量前置到人类正文中，也不得让人类正文承担数据模型、系统架构或技术实现说明的职责。
+
+### 8.2 正文组织原则
+
+- 正文按业务实际发生顺序展开，不按总后台、客户端分别集中成章。
+- 2.1 泳道图是流程信息的唯一事实源；所有页面/功能小节通过 `#### 业务背景` 的"当前环节"引用泳道图节点编号和动作名称。
+- 不得在页面/功能小节中新增局部"流程位置"泳道图。
+- 每个页面/功能小节内部固定按"业务背景 → 字段说明 → 列表交互 → 业务逻辑"四段组织。
+- 业务背景使用四行短标签（当前环节 / 页面路径 / 对下游影响 / 表格类型）。
+- 每个页面小节末尾固定保留"列表交互"，无交互时写"无交互。"。列表交互使用轻量文本表达。
+- 业务逻辑只收纳前三节没有覆盖但读者仍需理解的增量规则，使用 `**规则标题：** 说明。` 格式。
+- 新增或改造页面在功能标题中直接标记"（新增页面）"或"（改造页面）"。
+- 同一业务对象只维护一张统一字段表，通过"列表、详情、新增"三列区分字段出现位置；三列只使用 `是`、`否`、`是（可编辑）` 三种枚举。
+- 直跳链接仅在详情中展示（列表列标记为"否"），体现"列表信息简洁、详情信息完整"的设计原则。
+
+### 8.3 泳道和参与方识别规则
+
+理论上的完整参与方框架为：
+
+```text
+[外部系统] → SaaS 总后台 → 客户端后台 → C 端用户
+```
+
+实际编写时本功能仅涉及 SaaS 总后台和客户端后台两个参与方。商户运营人员通过客户端后台执行操作，因此"客户端后台"和"商户运营人员"合并为一个泳道。
+
+### 8.4 上下游与模块边界检查
+
+| 修改内容 | 必须检查的影响 |
+| --- | --- |
+| 泳道图节点、编号或顺序 | 全部页面/功能小节的"当前环节" |
+| 多活动模板字段 | 客户端多活动链接创建流程 |
+| 单活动链接字段 | 列表展示、详情弹窗、新增/编辑弹窗 |
+| 删除逻辑 | 软删除提示文案、数据库保留策略 |
+
+### 8.5 单活动与多活动的简化关系
+
+本功能中，多活动 H5 推广链接管理是单活动 H5 的扩展变体。两者的核心差异：
+
+- **单活动**：通过 8 个字段描述一条链接，其中直跳链接仅在详情展示。
+- **多活动**：去掉 B11 原文中的 8 个复杂版位字段（上方版位组合、上方平台、上方活动、上方推广位、下方版位组合、下方平台、下方活动、下方推广位），替换为上方和下方各 2 个简化字段（密令简版 + 直达链接）。
+
+多活动模板的用户去向配置（饿了么 APP / 淘宝 APP / 美团小程序 / 饿了么小程序）保留在 SaaS 总后台模板管理中，客户端创建链接时不需要重复选择平台和活动。
+
+### 8.6 待确认逻辑
+
+1. 单活动 H5 模板的枚举值是否仅限于当前列出的 6 个（通用推广、节日活动、游戏活动、电商促销、品牌宣传、注册拉新），还是支持动态扩展？
+2. 多活动 H5 模板的枚举值（双11、年货节、618、日常等）是否为固定列表，是否随 SaaS 总后台模板的启用/停用动态变化？
+3. 缩略图是否支持商户自定义上传，还是固定使用模板预设图？
+4. 删除后的记录是否需要在某个"回收站"页面中查看和恢复？
+5. 推广链接的 shortCode 生成规则（长度、字符集、唯一性保证）是否需要与现有系统保持一致？
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>H5 外部推广链接管理</title>
+<style id="css-布局">
+*, *::before, *::after { box-sizing: border-box; }
+:root { --侧栏间距: 28px; --左栏宽: max(420px, 22vw); --右栏宽: 300px; --标签栏高: 52px; }
+body { margin: 0; padding: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用容器 { min-height: 100vh; }
+.阶段区域 { display: grid; grid-template-columns: var(--左栏宽) minmax(0, 1fr) var(--右栏宽); gap: var(--侧栏间距); width: min(calc(100vw - 28px), 2400px); margin: 0 auto; align-items: start; }
+.左侧栏 { grid-column: 1; position: sticky; top: calc(var(--标签栏高) + 16px); max-height: calc(100vh - var(--标签栏高) - 32px); overflow-y: auto; overflow-x: visible; background: #fff; border-right: 1px solid #e2e8f0; padding: 16px 0 0 0; }
+.内容摘要 { margin: 0 10px 16px 10px; }
+.内容摘要内 { min-width: 0; border: 1px solid #d9e2ec; border-left: 4px solid #0f6b8f; border-radius: 6px; background: #fff; padding: 7px 12px; box-shadow: 0 4px 14px rgba(15, 35, 52, 0.05); }
+.内容摘要内 h1 { font-size: 18px; line-height: 1.3; margin: 0 0 6px 0; color: #172033; }
+.业务简介 { min-width: 0; margin: 0; }
+.业务简介 blockquote { margin: 0; border: 0; border-radius: 0; background: transparent; padding: 0; color: #344054; font-size: 13px; line-height: 1.6; }
+.业务简介 blockquote p { margin: 4px 0; }
+.阶段导航区 { margin: 0 10px 16px 10px; }
+.全局泳道 { margin: 0 10px 16px 10px; background: #fff; border: 1px solid #d9e2ec; border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 35, 52, 0.08); padding: 10px; }
+.主舞台 { grid-column: 2; padding: 24px 32px 48px; min-width: 0; background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(15, 35, 52, 0.04); }
+.右侧栏 { grid-column: 3; position: sticky; top: calc(var(--标签栏高) + 30px); max-height: calc(100vh - var(--标签栏高) - 32px); overflow-y: auto; background: #fff; border-left: 1px solid #e2e8f0; padding: 24px 16px 16px 16px; min-width: 0; }
+.标签包裹 { position: sticky; top: 0; z-index: 100; background: rgba(246, 248, 251, 0.96); border-bottom: 1px solid #e2e8f0; backdrop-filter: blur(8px); }
+.标签包裹内 { display: flex; gap: 8px; overflow-x: auto; width: min(calc(100vw - 28px), 2400px); margin: 0 auto; padding: 12px 0; padding-left: calc(var(--左栏宽) + var(--侧栏间距)); }
+.标签面板 { display: none; } .标签面板.激活 { display: block; }
+.面板布局 { display: grid; grid-template-columns: 1fr 220px; gap: 32px; align-items: start; }
+.面板布局 .节目录 { position: sticky; top: calc(var(--标签栏高) + 72px); }
+@media (max-width: 1200px) { .阶段区域 { grid-template-columns: 1fr; } .左侧栏, .右侧栏 { display: none; } .标签包裹内 { padding-left: 0; } .面板布局 { grid-template-columns: 1fr; } .面板布局 .节目录 { display: none; } }
+</style>
+<style id="css-组件">
+/* ═══ 大 tab 标签按钮 ═══ */
+.标签按钮 { flex: 0 0 auto; display: flex; align-items: center; border: 1px solid #bcccdc; background: #fff; color: #344054; border-radius: 8px; padding: 9px 12px; font: inherit; font-size: 14px; line-height: 1.25; cursor: pointer; white-space: nowrap; }
+.标签按钮:hover { border-color: #0f6b8f; } .标签按钮.激活 { border-color: #0f6b8f; background: #0f6b8f; color: #fff; }
+.标签编号 { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; margin-right: 7px; border-radius: 999px; background: #edf2f7; color: #475467; font-size: 12px; font-weight: 700; }
+.标签按钮.激活 .标签编号 { background: rgba(255,255,255,0.18); color: #fff; }
+
+/* ═══ 小 tab 阶段导航 ═══ */
+.阶段页面导航 { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-top: 1px solid #e2e8f0; }
+.阶段链接 { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; text-decoration: none; color: #475569; font-size: 13px; transition: all 0.15s; }
+.阶段链接:hover { background: #f1f5f9; color: #1e293b; } .阶段链接.激活 { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.页面编号 { font-size: 11px; color: #94a3b8; font-family: monospace; min-width: 24px; } .页面类型图标 { font-size: 14px; } .阶段链接.激活 .页面编号 { color: #3b82f6; }
+
+/* ═══ 右侧栏注释卡片 ═══ */
+.注释卡片组 { display: flex; flex-direction: column; gap: 14px; }
+.注释卡片 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+.注释卡片头 { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.注释图标 { font-size: 16px; } .注释标题 { font-size: 14px; font-weight: 600; color: #334155; }
+.注释卡片正文 { padding: 12px 16px; font-size: 13px; line-height: 1.7; color: #475569; }
+.注释卡片正文 p { margin: 0 0 8px 0; } .注释卡片正文 p:last-child { margin-bottom: 0; }
+.注释卡片正文 ul { margin: 4px 0; padding-left: 20px; } .注释卡片正文 li { margin: 3px 0; } .注释卡片正文 strong { color: #1e293b; }
+
+/* ═══ 内容页面：阅读文档 ═══ */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 30px 0 12px; font-size: 21px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; scroll-margin-top: 68px; }
+.阅读标题 { scroll-margin-top: 68px; line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 21px; margin: 30px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 17px; margin: 24px 0 8px; } .文档正文 h5 { font-size: 15px; margin: 20px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.文档图片 { max-width: 100%; height: auto; border-radius: 8px; margin: 16px 0; display: block; }
+.行内代码 { font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 0.92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; font-weight: 500; }
+.代码块 pre { margin: 0; padding: 16px; background: #ffffff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; border: 0; }
+.代码块 code { display: block; padding: 0; border: 0; background: transparent; color: inherit; font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ═══ 节目录 ═══ */
+.节目录列表 { list-style: none; padding: 0; margin: 0; } .节目录列表 ul { list-style: none; padding-left: 16px; }
+.目录项 { margin: 2px 0; line-height: 1.6; }
+.目录项 a { display: block; padding: 4px 10px; border-radius: 4px; color: #475569; text-decoration: none; font-size: 13px; border-left: 2px solid transparent; transition: all 0.15s; }
+.目录项 a:hover { background: #f1f5f9; color: #1e293b; border-left-color: #3b82f6; } .目录层级3 a { font-weight: 600; font-size: 14px; } .目录层级4 a { padding-left: 20px; } .目录层级5 a { padding-left: 30px; font-size: 12px; color: #64748b; }
+
+/* ═══ 演示壳 ═══ */
+.演示壳 { display: grid; grid-template-columns: 180px 1fr; gap: 0; min-height: 480px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0; }
+.演示侧标 { background: linear-gradient(160deg, #1e293b 0%, #334155 100%); padding: 28px 20px; display: flex; flex-direction: column; gap: 10px; color: #e2e8f0; user-select: none; }
+.角色标签 { display: inline-block; padding: 4px 12px; background: rgba(59, 130, 246, 0.25); border: 1px solid rgba(96, 165, 250, 0.4); border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; align-self: flex-start; }
+.模块标签 { font-size: 18px; font-weight: 700; margin-top: 8px; line-height: 1.4; }
+.范围标签 { font-size: 11px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-top: auto; }
+.演示主体 { background: #f8fafc; display: flex; flex-direction: column; }
+.演示顶栏 { display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; }
+.浏览器按钮 { display: flex; gap: 6px; flex-shrink: 0; } .浏览器圆点 { width: 10px; height: 10px; border-radius: 50%; }
+.浏览器圆点.红 { background: #ef4444; } .浏览器圆点.黄 { background: #f59e0b; } .浏览器圆点.绿 { background: #10b981; }
+.地址栏 { flex: 1; padding: 5px 12px; background: #f1f5f9; border-radius: 6px; font-size: 12px; }
+.地址文本 { color: #64748b; font-family: "Sarasa Mono SC", "Cascadia Code", "Consolas", monospace; }
+.演示内容区 { flex: 1; padding: 24px; overflow-y: auto; }
+
+/* ═══ 流程信息卡（中间渲染区业务背景横幅） ═══ */
+.流程信息卡 {
+  margin-bottom: 24px;
+  background: #fafcff;
+  border: 1px solid #cbd5e1;
+  border-left: 5px solid #1d4ed8;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 35, 52, 0.06);
+}
+.流程信息卡-头部 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+.流程步骤号 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.流程信息卡-环节名 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #172033;
+  letter-spacing: 0.3px;
+}
+.流程信息卡-正文 {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.流程信息卡-行 {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.流程信息卡-标签 {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+.流程信息卡-值 .影响箭头 { color: #94a3b8; margin: 0 2px; }
+.流程信息卡-值 .影响结果 { color: #1e293b; font-weight: 500; }
+
+/* ═══ 移动端展示页：手机壳 ═══ */
+.移动端演示壳 { min-height: 620px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 18px; background: linear-gradient(#eef2f6 1px, transparent 1px), linear-gradient(90deg, #eef2f6 1px, transparent 1px); background-size: 24px 24px; border: 1px solid #e2e8f0; border-radius: 12px; }
+.手机外壳 { width: 376px; height: 744px; border: 10px solid #111827; border-radius: 34px; background: #f5f7fa; overflow: hidden; box-shadow: 0 18px 48px rgba(15, 23, 42, .22); display: flex; flex-direction: column; }
+.手机状态栏 { height: 28px; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font-size: 12px; color: #111827; background: #fff; flex: 0 0 auto; }
+.小程序导航栏 { height: 48px; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; background: #fff; border-bottom: 1px solid #e5e7eb; text-align: center; font-weight: 700; }
+.移动图标按钮 { border: 0; background: transparent; color: #111827; font-size: 20px; cursor: pointer; }
+.移动页面标题 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 8px; }
+.移动状态切换 { width: min(100%, 620px); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px; background: #fff; border: 1px solid #dbe5ef; border-radius: 8px; }
+.移动状态按钮 { border: 1px solid #d0d5dd; border-radius: 6px; background: #fff; color: #475467; padding: 7px 10px; font-size: 12px; cursor: pointer; }
+.移动状态按钮.active { border-color: #0f6b8f; background: #e8f4f8; color: #0f6b8f; font-weight: 700; }
+.移动页面内容 { flex: 1; overflow: auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.移动状态面板 { display: none; flex-direction: column; gap: 14px; }
+.移动状态面板.active { display: flex; }
+.移动底部区域 { flex: 0 0 auto; padding: 12px 18px 18px; background: #fff; border-top: 1px solid #e5e7eb; display: none; gap: 10px; position: relative; }
+.移动底部区域.active { display: grid; }
+.移动主视觉, .移动卡片 { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; position: relative; }
+.移动主视觉 { padding: 18px; }
+.移动主视觉 h3 { margin: 0 0 8px; font-size: 20px; line-height: 1.35; }
+.移动主视觉 p, .移动卡片 p { margin: 0; color: #667085; font-size: 13px; line-height: 1.7; }
+.移动卡片 h4 { margin: 0 0 10px; font-size: 15px; }
+.移动信息行 { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #eef2f6; font-size: 13px; }
+.移动信息行:last-child { border-bottom: 0; }
+.移动字段说明按钮 { width: 20px; height: 20px; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; line-height: 18px; cursor: pointer; text-align: center; flex: 0 0 auto; }
+.移动字段说明按钮:hover { background: #eff6ff; color: #0f6b8f; border-color: #93c5fd; }
+.移动标签 { display: inline-flex; border-radius: 999px; padding: 2px 8px; font-size: 12px; background: #ecfdf3; color: #027a48; }
+.移动提示 { font-size: 12px; line-height: 1.6; color: #667085; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; }
+.移动主按钮, .移动次按钮 { height: 44px; border-radius: 6px; cursor: pointer; font-weight: 700; }
+.移动主按钮 { border: 0; background: #0f6b8f; color: #fff; }
+.移动主按钮:disabled { background: #cbd5e1; cursor: not-allowed; }
+.移动次按钮 { border: 1px solid #d0d5dd; background: #fff; color: #475467; }
+.移动空状态 { text-align: center; padding: 42px 18px; color: #667085; font-size: 13px; }
+.移动缺省 { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 300px; color: #94a3b8; font-size: 14px; }
+
+/* ═══ 移动端标注布局 ═══ */
+.移动端标注布局 { display: grid; grid-template-columns: 376px 470px; gap: 14px; align-items: start; justify-content: center; }
+.字段标注栏 { display: flex; flex-direction: column; gap: 8px; padding-top: 0; }
+.标注栏标题 { font-size: 13px; font-weight: 700; color: #475569; padding: 4px 0 4px 2px; margin-bottom: 2px; border-bottom: 1px solid #e2e8f0; }
+.字段标注状态组 { display: none; grid-template-columns: 1fr; gap: 8px; }
+.字段标注状态组.active { display: grid; }
+.字段标注编号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #0f6b8f; color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.字段内编号 { position: absolute; top: -8px; right: -6px; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #0f6b8f; color: #fff; font-size: 10px; font-weight: 700; z-index: 2; box-shadow: 0 1px 4px rgba(15,35,52,0.18); }
+.移动主视觉[data-annot-mark], .移动卡片[data-annot-mark], [data-annot-card="true"], .小程序导航栏[data-annot-mark], .移动底部区域[data-annot-mark] { cursor: pointer; }
+.移动主视觉.标注选中, .移动卡片.标注选中, [data-annot-card="true"].标注选中, .小程序导航栏.标注选中, .移动底部区域.标注选中 { outline: 2px solid #0f6b8f; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(15,107,143,0.12); }
+.标注卡片 { background: #fff; border: 1px solid #d9e2ec; border-radius: 8px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(15,35,52,0.04); }
+.标注卡片头 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #eef2f6; font-size: 14px; font-weight: 600; color: #1e293b; }
+.标注卡片头 .字段标注编号 { width: 20px; height: 20px; font-size: 10px; }
+.标注卡片行 { display: flex; gap: 4px; margin: 3px 0; font-size: 12px; line-height: 1.55; }
+.标注卡片标签 { color: #94a3b8; flex-shrink: 0; min-width: 32px; }
+.标注卡片值 { color: #475569; }
+@media (max-width: 1500px) { .移动端标注布局 { grid-template-columns: 376px 360px; } }
+@media (max-width: 1200px) { .移动端标注布局 { grid-template-columns: 1fr; } .字段标注栏 { display: none; } }
+
+/* ═══ 列表页 ═══ */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 130px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 130px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ═══ 页面编辑：控制下拉区 ═══ */
+.控制下拉区 { display: flex; align-items: center; gap: 10px; padding: 0 0 16px 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 16px; }
+.控制下拉标签 { font-size: 13px; font-weight: 600; color: #475569; } .控制说明 { font-size: 12px; color: #94a3b8; }
+
+/* ═══ 页面编辑：字段卡片 ═══ */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 24px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-row.muted { opacity: 0.55; background: #f8fafc; border-radius: 4px; }
+.field-row.muted .field-display { color: #94a3b8; font-style: italic; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; } .field-card-path { font-size: 12px; color: #94a3b8; font-family: monospace; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 140px 1fr 32px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 120px; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+.field-info-btn:hover, .field-info-btn.is-open { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.field-detail-panel { display: none; margin: 4px 0 8px 140px; padding: 10px 14px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
+.field-detail-panel.show { display: block; } .field-detail-panel dl { display: grid; grid-template-columns: 80px 1fr; gap: 4px 10px; margin: 0; font-size: 12px; }
+.field-detail-panel dt { color: #94a3b8; } .field-detail-panel dd { color: #475569; margin: 0; }
+
+/* ═══ 详情抽屉 ═══ */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; height: 100vh; background: #fff; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 64px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; }
+.panel-title { font-size: 18px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.detail-item { min-height: 58px; padding: 10px 14px; border-bottom: 1px solid #d9e2ec; } .detail-item:nth-child(odd) { border-right: 1px solid #d9e2ec; }
+.detail-item:last-child { border-bottom: 0; } .detail-label { color: #8a93a3; font-size: 12px; margin-bottom: 4px; }
+.detail-value { color: #303744; font-size: 13px; font-weight: 550; word-break: break-word; }
+.type-tag { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; vertical-align: middle; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ═══ 字段弹窗 ═══ */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ═══ 泳道图组件 ═══ */
+.泳道图 { margin: 0; font-size: 14px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道图-头 { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.泳道图-头格 { padding: 11px 10px; text-align: center; font-weight: 700; font-size: 15px; letter-spacing: .5px; }
+.泳道图-头格.总后台 { background: linear-gradient(180deg,#eff6ff,#dbeafe); color: #1d4ed8; border-bottom: 2px solid #93c5fd; }
+.泳道图-头格.客户端 { background: linear-gradient(180deg,#ecfdf5,#d1fae5); color: #065f46; border-bottom: 2px solid #6ee7b7; }
+.泳道行 { display: grid; grid-template-columns: 1fr 1fr; }
+.泳道行 + .泳道行 { border-top: 1px solid #f1f5f9; }
+.泳道格 { padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; }
+.泳道格.左 { border-right: 1px solid #e8ecf1; background: #fcfdfe; }
+.泳道格.右 { background: #fff; }
+.泳道节点 { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-weight: 600; font-size: 14px; line-height: 1.4; align-self: flex-start; }
+.泳道节点.总后台节点 { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.泳道节点.客户端节点 { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.泳道步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.总后台节点 .泳道步骤号 { background: #3b82f6; color: #fff; }
+.客户端节点 .泳道步骤号 { background: #10b981; color: #fff; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支行 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 6px; padding: 3px 0; font-size: 13px; line-height: 1.6; }
+.泳道分支行 .分支标 { font-weight: 600; }
+.泳道分支行 .分支标.驳回 { color: #dc2626; }
+.泳道分支行 .分支标.通过 { color: #16a34a; }
+.泳道分支说明 { font-size: 12px; color: #94a3b8; padding: 0 0 2px 14px; line-height: 1.6; }
+
+/* ═══ 提示消息 ═══ */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+
+/* ═══ 类型标签全局 ═══ */
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+
+/* ═══ 页面流程图：迷你手机壳 ═══ */
+.页面流程图外壳 { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 16px 0 32px 0; overflow: hidden; }
+.迷你手机壳 { width: 180px; border: 5px solid #111827; border-radius: 16px; background: #f5f7fa; overflow: hidden; box-shadow: 0 6px 24px rgba(15,23,42,.16); display: flex; flex-direction: column; flex: 0 0 auto; transition: transform 0.2s, box-shadow 0.2s; }
+.迷你手机壳:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(15,23,42,.22); }
+.迷你手机壳.入口壳 { border-color: #0f6b8f; }
+.迷你手机壳.日历壳 { border-color: #3b82f6; }
+.迷你手机壳.工具壳 { border-color: #f59e0b; }
+.迷你手机壳.详情壳 { border-color: #10b981; }
+.迷你状态栏 { height: 16px; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; font-size: 7px; color: #111827; background: #fff; flex: 0 0 auto; }
+.迷你导航栏 { height: 24px; display: flex; align-items: center; justify-content: center; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 9px; font-weight: 700; color: #111827; flex: 0 0 auto; position: relative; }
+.迷你导航栏 .迷你返回 { position: absolute; left: 8px; font-size: 12px; color: #111827; }
+.迷你页面内容 { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 5px; overflow: hidden; min-height: 100px; }
+.迷你底部Tab { height: 24px; display: flex; align-items: center; justify-content: space-around; background: #fff; border-top: 1px solid #e5e7eb; font-size: 7px; color: #94a3b8; flex: 0 0 auto; padding: 0 3px; }
+.迷你底部Tab span { cursor: default; }
+.迷你底部Tab .活跃 { color: #0f6b8f; font-weight: 700; }
+.迷你页标题 { font-size: 9px; font-weight: 700; color: #1e293b; text-align: center; margin: 0 0 2px 0; }
+.迷你页副文 { font-size: 7px; color: #64748b; text-align: center; line-height: 1.4; margin: 0; }
+.迷你卡片 { background: #fff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 6px; font-size: 7px; color: #334155; display: flex; align-items: center; gap: 5px; }
+.迷你卡片.置灰 { opacity: 0.45; }
+.迷你缩略图 { width: 22px; height: 22px; background: #e2e8f0; border-radius: 3px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+.迷你卡片文 { flex: 1; min-width: 0; line-height: 1.3; }
+.迷你卡片文 .主文 { font-size: 7px; font-weight: 600; color: #1e293b; }
+.迷你卡片文 .副文 { font-size: 6px; color: #94a3b8; }
+.迷你按钮 { display: block; width: 100%; padding: 3px; border: 0; border-radius: 3px; background: #0f6b8f; color: #fff; font-size: 7px; font-weight: 700; text-align: center; }
+.迷你按钮.绿 { background: #16a34a; }
+.迷你标签 { display: inline-block; padding: 1px 4px; border-radius: 2px; font-size: 6px; font-weight: 600; }
+.迷你标签.进行中 { background: #0f6b8f; color: #fff; }
+.迷你标签.即将开始 { background: #dbeafe; color: #1d4ed8; }
+.迷你宫格 { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; }
+.迷你宫格项 { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 3px; padding: 4px 2px; text-align: center; font-size: 6px; color: #475569; }
+.迷你时间块 { font-size: 8px; font-weight: 700; color: #334155; padding: 0 2px; display: flex; align-items: center; gap: 4px; }
+.迷你时间块 .时间 { color: #0f6b8f; }
+
+/* ═══ 页面流程图：节点组与分支标注 ═══ */
+.手机节点组 { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.手机分支标注 { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; max-width: 190px; }
+.手机分支标签 { font-size: 10px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 7px; white-space: nowrap; line-height: 1.4; }
+.手机分支标签.强调 { border-color: #fcd34d; background: #fffbeb; color: #92400e; font-weight: 600; }
+
+/* ═══ 页面流程图：层级与连接器 ═══ */
+.流程层级 { display: flex; justify-content: center; align-items: flex-start; gap: 40px; flex-wrap: wrap; width: 100%; }
+.向下连接器 { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 0; }
+.连接竖线 { width: 2px; height: 28px; background: #cbd5e1; }
+.连接箭头 { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #cbd5e1; }
+.连接标签 { font-size: 12px; color: #64748b; background: #f8fafc; padding: 3px 12px; border-radius: 20px; border: 1px solid #e2e8f0; white-space: nowrap; margin: 4px 0; font-weight: 500; }
+.分支连接器 { display: flex; align-items: stretch; justify-content: center; width: 100%; min-height: 64px; }
+.分支连接列 { display: flex; flex-direction: column; align-items: center; flex: 1; max-width: 230px; }
+.分支连接竖线上 { width: 2px; height: 10px; background: #cbd5e1; }
+.分支连接标签 { font-size: 11px; color: #64748b; background: #f8fafc; padding: 2px 10px; border-radius: 20px; border: 1px solid #e2e8f0; white-space: nowrap; margin: 2px 0; font-weight: 500; }
+.分支连接竖线下 { width: 2px; background: #cbd5e1; flex: 1; min-height: 16px; }
+.分支连接横桥 { display: flex; align-items: center; width: 100%; min-width: 40px; }
+.分支横线 { height: 2px; background: #cbd5e1; flex: 1; }
+.分支箭头下 { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #cbd5e1; }
+.分支顶部竖线 { width: 2px; height: 10px; background: #cbd5e1; align-self: center; }
+.返回连接器 { display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; padding: 6px 0 0 0; }
+.返回虚线 { flex: 1; max-width: 160px; height: 0; border-top: 2px dashed #cbd5e1; }
+.返回标签 { font-size: 11px; color: #6366f1; background: #eef2ff; padding: 2px 10px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+
+/* ═══ 页面流程图：图例 ═══ */
+.图例行 { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; padding: 16px 0 0 0; border-top: 1px solid #e2e8f0; margin-top: 20px; }
+.图例项 { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; }
+.图例壳块 { width: 14px; height: 20px; border-radius: 3px; border: 2px solid; flex-shrink: 0; background: #fff; }
+.图例壳块.入口壳 { border-color: #0f6b8f; } .图例壳块.日历壳 { border-color: #3b82f6; }
+.图例壳块.工具壳 { border-color: #f59e0b; } .图例壳块.详情壳 { border-color: #10b981; }
+
+@media (max-width: 900px) {
+  .流程层级 { flex-direction: column; align-items: center; gap: 12px; }
+  .分支连接器 { flex-direction: column; align-items: center; }
+  .分支连接横桥 { display: none; }
+  .迷你手机壳 { width: 160px; }
+}
+</style>
+<style id="css-状态">
+.标签按钮.激活 { border-color: #0f6b8f; background: #0f6b8f; color: #fff; }
+.标签面板.激活 { display: block; }
+.阶段链接.激活 { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-row.muted { opacity: 0.55; background: #f8fafc; border-radius: 4px; }
+.field-row.muted .field-display { color: #94a3b8; font-style: italic; }
+.字段行.禁用 { opacity: 0.4; pointer-events: none; } .字段行.隐藏 { display: none; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+</style>
+</head>
+<body>
+<div class="应用容器">
+<div id="标签导航" class="标签包裹"><div class="标签包裹内">
+<button class="标签按钮 激活" data-stage="1" onclick="切换标签(1)"><span class="标签编号">1</span> 需求背景与目标</button>
+<button class="标签按钮" data-stage="2" onclick="切换标签(2)"><span class="标签编号">2</span> 业务流程</button>
+<button class="标签按钮" data-stage="3" onclick="切换标签(3)"><span class="标签编号">3</span> 第一阶段：模板与推广基础准备</button>
+<button class="标签按钮" data-stage="4" onclick="切换标签(4)"><span class="标签编号">4</span> 第二阶段：单活动 H5 推广链接管理</button>
+<button class="标签按钮" data-stage="5" onclick="切换标签(5)"><span class="标签编号">5</span> 第三阶段：多活动 H5 推广链接管理</button>
+<button class="标签按钮" data-stage="6" onclick="切换标签(6)"><span class="标签编号">6</span> 关键业务规则</button>
+<button class="标签按钮" data-stage="7" onclick="切换标签(7)"><span class="标签编号">7</span> 权限说明</button>
+<button class="标签按钮" data-stage="8" onclick="切换标签(8)"><span class="标签编号">8</span> AI 维护说明</button>
+</div></div>
+<div class="阶段区域">
+<aside class="左侧栏">
+<div class="内容摘要"><div class="内容摘要内">
+<h1>H5 外部推广链接管理</h1>
+<div class="业务简介"><blockquote><p>使用说明：本文档采用"人类阅读正文 + AI 维护说明"的双层结构。</p></blockquote></div>
+</div></div>
+<div class="阶段导航区" id="阶段导航区">
+<nav id="阶段04导航" class="阶段页面导航" style="display:none;">
+  <a class="阶段链接 激活" href="javascript:切换页面('4.1','列表页')" data-page="4.1" data-page-type="列表页"><span class="页面编号">4.1</span><span class="页面类型图标">📋</span><span class="页面标题">单活动 H5 推广链接</span></a>
+</nav>
+<nav id="阶段05导航" class="阶段页面导航" style="display:none;">
+  <a class="阶段链接 激活" href="javascript:切换页面('5.1','列表页')" data-page="5.1" data-page-type="列表页"><span class="页面编号">5.1</span><span class="页面类型图标">📋</span><span class="页面标题">多活动 H5 推广链接</span></a>
+</nav>
+
+</div>
+<div class="全局泳道"><h3>多方业务泳道图</h3><div id="全局泳道代码" class="泳道代码"><div class="泳道图">
+<div class="泳道图-头">
+  <div class="泳道图-头格 总后台">SaaS 总后台</div>
+  <div class="泳道图-头格 客户端">客户端后台</div>
+</div><div class="泳道行">
+  <div class="泳道格 左"><div class="泳道节点 总后台节点"><span class="泳道步骤号">①</span>准备可推广活动</div></div>
+  <div class="泳道格 右"></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"><div class="泳道节点 总后台节点"><span class="泳道步骤号">②</span>创建并启用 H5 模板</div><span class="泳道状态徽章 通过色">链接状态：模板状态：启用</span><div class="泳道分支行"><span class="分支标 通过">单活动 H5 模板</span> · <span class="分支标 通过">多活动 H5 模板</span></div></div>
+  <div class="泳道格 右"></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"></div>
+  <div class="泳道格 右"><div class="泳道节点 客户端节点"><span class="泳道步骤号">③</span>进入推广链接列表</div></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"></div>
+  <div class="泳道格 右"><div class="泳道节点 客户端节点"><span class="泳道步骤号">④</span>新建推广链接</div><span class="泳道状态徽章 通过色">链接状态：链接状态：推广中</span><div class="泳道分支行"><span class="分支标 通过">单活动：选模板 + 填推广内容</span> · <span class="分支标 通过">多活动：选模板 + 填上下版位</span></div></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"></div>
+  <div class="泳道格 右"><div class="泳道节点 客户端节点"><span class="泳道步骤号">⑤</span>复制推广链接并对外投放</div></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"></div>
+  <div class="泳道格 右"><div class="泳道节点 客户端节点"><span class="泳道步骤号">⑥</span>管理推广链接</div><div class="泳道分支行"><span class="分支标 通过">编辑链接名称和推广内容</span> · <span class="分支标 通过">停推 / 重新推广</span> · <span class="分支标 驳回">删除（软删除）</span></div></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"></div>
+  <div class="泳道格 右"><div class="泳道节点 客户端节点"><span class="泳道步骤号">⑦</span>查看链接详情（含直跳链接）</div></div>
+</div>
+</div></div></div>
+</aside>
+<main class="主舞台">
+<section class="标签面板 激活" data-stage="1">
+  <div class="面板布局">
+    <div id="节1正文" class="文档正文"><div id="s1_1_1">
+<h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>商户在日常运营中需要将 H5 活动页面通过外部渠道进行推广投放。当前商户每次推广都需要分别生成链接、配置口令、管理投放状态，且一次只能推广一个活动。当商户需要在同一投放场景中同时推广两个活动时，需要分别生成、投放和管理多条链接，用户也无法在同一页面中直接选择活动。</p>
+<p>需要一套统一的 H5 外部推广链接管理能力，支持单活动和多活动两种推广模式，让商户在后台一站式完成链接创建、配置、投放和状态管理。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>改造前
+
+活动 A → 链接 A ─┐
+                 ├→ 商户分别投放和管理
+活动 B → 链接 B ─┘
+
+
+改造后
+
+单活动模式：活动 + H5 模板 → 一条推广链接 → 对外投放
+
+多活动模式：活动 A × 推广位 A + 活动 B × 推广位 B + 多活动模板 → 一条推广链接
+                ↓
+        用户在同一页面选择活动</code></pre></div>
+</div>
+<div id="s1_1_2">
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>已启用的 H5 模板（单活动 / 多活动）
+        +
+商户配置的推广内容（密令、直达链接）
+        +
+商户选择的投放版位（多活动场景）
+        ↓
+生成固定推广链接 → 对外投放 → 用户访问并参与活动</code></pre></div>
+</div>
+<div id="s1_1_3">
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>统一管理推广链接：</strong> 商户在后台一站式管理单活动和多活动两种推广链接的创建、编辑、状态切换和删除。</li>
+<li><strong>简化多活动配置：</strong> 将多活动版位配置从"选平台 → 选活动 → 选推广位"简化为直接填写"密令简版 + 直达链接"，降低商户操作门槛。</li>
+</ul>
+
+</div></div>
+    <nav id="节1目录" class="节目录"><ul class="节目录列表">
+<li class="目录项 目录层级3"><a href="#s1_1_1">1.1 为什么要做</a></li>
+<li class="目录项 目录层级3"><a href="#s1_1_2">1.2 一句话业务模型</a></li>
+<li class="目录项 目录层级3"><a href="#s1_1_3">1.3 最终目标</a></li>
+</ul></nav>
+  </div>
+</section><section class="标签面板" data-stage="2">
+  <div class="面板布局">
+    <div id="节2正文" class="文档正文"><div id="s2_2_1">
+<h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<div class="泳道图"><div class="泳道图">
+<div class="泳道图-头">
+  <div class="泳道图-头格 总后台">SaaS 总后台</div>
+  <div class="泳道图-头格 客户端">客户端后台</div>
+</div><div class="泳道行">
+  <div class="泳道格 左"><div class="泳道节点 总后台节点"><span class="泳道步骤号">①</span>准备可推广活动</div></div>
+  <div class="泳道格 右"></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"><div class="泳道节点 总后台节点"><span class="泳道步骤号">②</span>创建并启用 H5 模板</div><span class="泳道状态徽章 通过色">链接状态：模板状态：启用</span><div class="泳道分支行"><span class="分支标 通过">单活动 H5 模板</span> · <span class="分支标 通过">多活动 H5 模板</span></div></div>
+  <div class="泳道格 右"></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"></div>
+  <div class="泳道格 右"><div class="泳道节点 客户端节点"><span class="泳道步骤号">③</span>进入推广链接列表</div></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"></div>
+  <div class="泳道格 右"><div class="泳道节点 客户端节点"><span class="泳道步骤号">④</span>新建推广链接</div><span class="泳道状态徽章 通过色">链接状态：链接状态：推广中</span><div class="泳道分支行"><span class="分支标 通过">单活动：选模板 + 填推广内容</span> · <span class="分支标 通过">多活动：选模板 + 填上下版位</span></div></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"></div>
+  <div class="泳道格 右"><div class="泳道节点 客户端节点"><span class="泳道步骤号">⑤</span>复制推广链接并对外投放</div></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"></div>
+  <div class="泳道格 右"><div class="泳道节点 客户端节点"><span class="泳道步骤号">⑥</span>管理推广链接</div><div class="泳道分支行"><span class="分支标 通过">编辑链接名称和推广内容</span> · <span class="分支标 通过">停推 / 重新推广</span> · <span class="分支标 驳回">删除（软删除）</span></div></div>
+</div>
+<div class="泳道行">
+  <div class="泳道格 左"></div>
+  <div class="泳道格 右"><div class="泳道节点 客户端节点"><span class="泳道步骤号">⑦</span>查看链接详情（含直跳链接）</div></div>
+</div>
+</div></div>
+<p>泳道图需要同时表达状态时，采用以下原则：</p>
+<ul>
+<li>编号节点只写参与方实际执行的业务动作。</li>
+<li>状态标注写在触发该状态的动作之后，不占用新的流程序号。</li>
+<li>本功能涉及两个核心业务对象：<strong>H5 模板</strong>（状态：启用 / 停用）和<strong>推广链接</strong>（状态：推广中 / 停推）。</li>
+<li>推广链接删除为软删除，数据库保留记录，已分发的链接仍可正常访问。</li>
+</ul>
+
+</div>
+<div id="s2_2_2">
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>后续正文按照业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前业务闭环，可划分为：</p>
+<p>1. <strong>第一阶段：模板与推广基础准备（主要参与方：SaaS 总后台）</strong>：SaaS 总后台准备可推广活动和 H5 模板，模板启用后被客户端新建链接时选择。</p>
+<p>2. <strong>第二阶段：单活动 H5 推广链接管理（主要参与方：客户端后台）</strong>：商户在后台创建、编辑、停推和删除单活动推广链接，生成固定访问地址并对外投放。</p>
+<p>3. <strong>第三阶段：多活动 H5 推广链接管理（主要参与方：客户端后台）</strong>：商户在后台创建、编辑、停推和删除多活动推广链接，为上下两个版位分别配置密令和直达链接。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：模板与推广基础准备
+① 准备活动 → ② 创建并启用模板
+                    ↓
+第二阶段：单活动 H5 推广链接管理
+③ 进入列表 → ④ 新建链接 → ⑤ 投放 → ⑥ 管理 → ⑦ 查看详情
+                    ↓
+第三阶段：多活动 H5 推广链接管理
+③ 进入列表 → ④ 新建链接 → ⑤ 投放 → ⑥ 管理 → ⑦ 查看详情</code></pre></div>
+</div>
+<div id="s2_2_3">
+<h3 class="阅读节标题">2.3 页面类型说明</h3>
+<p>后续各阶段的模块页面均为后台管理页面，使用"表格类型"字段标注。</p>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>页面类型</th>
+<th>面向对象</th>
+<th>含义</th>
+<th>正文字段表格列</th>
+</tr>
+<tr>
+<td>列表页</td>
+<td>后台操作人员</td>
+<td>操作人员看到的页面是一张列表，字段在列表和详情中可能分别展示</td>
+<td>字段名称、字段类型、列表、详情、新增、字段解释</td>
+</tr>
+</table></div>
+
+<p>本功能所有页面均为列表页，使用 6 列字段表结构（字段名称 / 字段类型 / 列表 / 详情 / 新增 / 字段解释）。"列表、详情、新增"三列只使用 <code class="行内代码">是</code>、<code class="行内代码">否</code>、<code class="行内代码">是（可编辑）</code> 三种枚举。</p>
+</div></div>
+    <nav id="节2目录" class="节目录"><ul class="节目录列表">
+<li class="目录项 目录层级3"><a href="#s2_2_1">2.1 多方业务泳道图</a></li>
+<li class="目录项 目录层级3"><a href="#s2_2_2">2.2 阶段划分与阅读说明</a></li>
+<li class="目录项 目录层级3"><a href="#s2_2_3">2.3 页面类型说明</a></li>
+</ul></nav>
+  </div>
+</section><section class="标签面板" data-stage="3">
+  <div class="面板布局">
+    <div id="节3正文" class="文档正文"><p>已开发完成所有的模板功能，不再进行赘述。</p></div>
+  </div>
+</section><section class="标签面板" data-stage="4">
+<div id="阶段04列表区" class="阶段列表区">
+<div class="演示壳" data-page="4.1">
+<div class="演示侧标"><span class="角色标签">商户运营人员</span><span class="模块标签">单活动 H5 推广链接</span><span class="范围标签">SAAS 管理后台</span></div>
+<div class="演示主体" style="min-width:0;"><div class="演示顶栏"><div class="浏览器按钮"><span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span></div><div class="地址栏"><span class="地址文本">客户端后台 > 推广管理 > 单活动 H5</span></div></div>
+<div class="演示内容区" style="overflow-x:auto;">
+<div class="流程信息卡">
+  <div class="流程信息卡-头部">
+    <span class="流程步骤号">③④⑤⑥⑦</span>
+    <span class="流程信息卡-环节名">当前环节：进入推广链接列表 → 新建推广链接 → 复制并投放 → 管理推广链接 → 查看详情</span>
+  </div>
+  <div class="流程信息卡-正文">
+    <div class="流程信息卡-行">
+      <span class="流程信息卡-标签 路径">页面路径</span>
+      <span class="流程信息卡-值"><span class="路径分段">客户端后台 > 推广管理 > &gt;</span> <span class="路径末段">单活动 H5</span></span>
+    </div>
+    <div class="流程信息卡-行">
+      <span class="流程信息卡-标签 影响">对下游影响</span>
+      <span class="流程信息卡-值"> <span class="影响结果">商户在此完成链接的新建、编辑、停推和删除</span> <span class="影响结果">投放的固定链接供外部渠道传播和用户访问。</span></span>
+    </div>
+  </div>
+</div><div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索链接名称或密令"></div><div class="筛选区"><span class="筛选标签">状态：</span><select class="筛选下拉"><option>全部</option><option>推广中</option><option>停推</option></select></div><button class="详情按钮" style="background:#0f6b8f;color:#fff;border-color:#0f6b8f;margin-left:auto;" onclick="打开新增抽屉('4.1')">＋ 新增</button></div>
+<div style="overflow-x:auto;">
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">链接名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('链接名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">H5 模板<span class="类型标签 enum">enum（A模板、B模板、C模板、D模板等）</span></span><button class="信息按钮" onclick="显示字段弹窗('H5 模板', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">缩略图<span class="类型标签 file">image</span></span><button class="信息按钮" onclick="显示字段弹窗('缩略图', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">H5 链接<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('H5 链接', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">密令简版<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('密令简版', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">备注<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('备注', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum（推广中、停推）</span></span><button class="信息按钮" onclick="显示字段弹窗('状态', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">更新时间<span class="类型标签 date">datetime</span></span><button class="信息按钮" onclick="显示字段弹窗('更新时间', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">618大促推广-微信渠道</td><td class="列表单元格">—</td><td class="列表单元格">预览</td><td class="列表单元格">—</td><td class="列表单元格">618大促</td><td class="列表单元格">微信朋友圈投放</td><td class="列表单元格">推广中</td><td class="列表单元格">2026-07-15 10:30</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({链接名称:'618大促推广-微信渠道',H5模板:'通用推广模板',缩略图:'预览',H5链接:'https://h5.example.com/p/aB3xK9',密令简版:'618大促',备注:'微信朋友圈投放',状态:'推广中',更新时间:'2026-07-15 10:30',_壳节编号:'4.1'},'单活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">新品上市-抖音渠道</td><td class="列表单元格">—</td><td class="列表单元格">预览</td><td class="列表单元格">—</td><td class="列表单元格">新品首发</td><td class="列表单元格">抖音信息流广告</td><td class="列表单元格">推广中</td><td class="列表单元格">2026-07-14 16:20</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({链接名称:'新品上市-抖音渠道',H5模板:'节日活动模板',缩略图:'预览',H5链接:'https://h5.example.com/p/cD7mL2',密令简版:'新品首发',备注:'抖音信息流广告',状态:'推广中',更新时间:'2026-07-14 16:20',_壳节编号:'4.1'},'单活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">会员拉新-地推</td><td class="列表单元格">—</td><td class="列表单元格">预览</td><td class="列表单元格">—</td><td class="列表单元格">新人专享</td><td class="列表单元格">线下地推活动</td><td class="列表单元格">停推</td><td class="列表单元格">2026-07-13 09:15</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({链接名称:'会员拉新-地推',H5模板:'通用推广模板',缩略图:'预览',H5链接:'https://h5.example.com/p/eF4pN8',密令简版:'新人专享',备注:'线下地推活动',状态:'停推',更新时间:'2026-07-13 09:15',_壳节编号:'4.1'},'单活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">品牌日-全渠道</td><td class="列表单元格">—</td><td class="列表单元格">预览</td><td class="列表单元格">—</td><td class="列表单元格">品牌狂欢</td><td class="列表单元格">全渠道统一投放</td><td class="列表单元格">推广中</td><td class="列表单元格">2026-07-12 14:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({链接名称:'品牌日-全渠道',H5模板:'节日活动模板',缩略图:'预览',H5链接:'https://h5.example.com/p/gH9qR5',密令简版:'品牌狂欢',备注:'全渠道统一投放',状态:'推广中',更新时间:'2026-07-12 14:00',_壳节编号:'4.1'},'单活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">暑期促销-小红书</td><td class="列表单元格">—</td><td class="列表单元格">预览</td><td class="列表单元格">—</td><td class="列表单元格">暑促特惠</td><td class="列表单元格">小红书种草推广</td><td class="列表单元格">推广中</td><td class="列表单元格">2026-07-11 11:45</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({链接名称:'暑期促销-小红书',H5模板:'通用推广模板',缩略图:'预览',H5链接:'https://h5.example.com/p/jK2sT7',密令简版:'暑促特惠',备注:'小红书种草推广',状态:'推广中',更新时间:'2026-07-11 11:45',_壳节编号:'4.1'},'单活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">游戏联动-社群</td><td class="列表单元格">—</td><td class="列表单元格">预览</td><td class="列表单元格">—</td><td class="列表单元格">游戏福利</td><td class="列表单元格">社群推广</td><td class="列表单元格">停推</td><td class="列表单元格">2026-07-10 08:30</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({链接名称:'游戏联动-社群',H5模板:'节日活动模板',缩略图:'预览',H5链接:'https://h5.example.com/p/lM5uW3',密令简版:'游戏福利',备注:'社群推广',状态:'停推',更新时间:'2026-07-10 08:30',_壳节编号:'4.1'},'单活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">年终回馈-短信</td><td class="列表单元格">—</td><td class="列表单元格">预览</td><td class="列表单元格">—</td><td class="列表单元格">年终回馈</td><td class="列表单元格">短信营销</td><td class="列表单元格">推广中</td><td class="列表单元格">2026-07-09 13:20</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({链接名称:'年终回馈-短信',H5模板:'通用推广模板',缩略图:'预览',H5链接:'https://h5.example.com/p/nP8vY6',密令简版:'年终回馈',备注:'短信营销',状态:'推广中',更新时间:'2026-07-09 13:20',_壳节编号:'4.1'},'单活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">异业合作-联合推广</td><td class="列表单元格">—</td><td class="列表单元格">预览</td><td class="列表单元格">—</td><td class="列表单元格">联合福利</td><td class="列表单元格">异业合作联合推广</td><td class="列表单元格">推广中</td><td class="列表单元格">2026-07-08 15:50</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({链接名称:'异业合作-联合推广',H5模板:'节日活动模板',缩略图:'预览',H5链接:'https://h5.example.com/p/qR1xZ4',密令简版:'联合福利',备注:'异业合作联合推广',状态:'推广中',更新时间:'2026-07-08 15:50',_壳节编号:'4.1'},'单活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+</tbody></table>
+</div>
+<div class="列表脚注">共 8 条记录</div>
+</div></div></div>
+</div>
+</section><section class="标签面板" data-stage="5">
+<div id="阶段05列表区" class="阶段列表区">
+<div class="演示壳" data-page="5.1">
+<div class="演示侧标"><span class="角色标签">商户运营人员</span><span class="模块标签">多活动 H5 推广链接</span><span class="范围标签">SAAS 管理后台</span></div>
+<div class="演示主体" style="min-width:0;"><div class="演示顶栏"><div class="浏览器按钮"><span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span></div><div class="地址栏"><span class="地址文本">客户端后台 > 推广管理 > 多活动 H5</span></div></div>
+<div class="演示内容区" style="overflow-x:auto;">
+<div class="流程信息卡">
+  <div class="流程信息卡-头部">
+    <span class="流程步骤号">③④⑤⑥⑦</span>
+    <span class="流程信息卡-环节名">当前环节：进入推广链接列表 → 新建推广链接 → 复制并投放 → 管理推广链接 → 查看详情</span>
+  </div>
+  <div class="流程信息卡-正文">
+    <div class="流程信息卡-行">
+      <span class="流程信息卡-标签 路径">页面路径</span>
+      <span class="流程信息卡-值"><span class="路径分段">客户端后台 > 推广管理 > &gt;</span> <span class="路径末段">多活动 H5</span></span>
+    </div>
+    <div class="流程信息卡-行">
+      <span class="流程信息卡-标签 影响">对下游影响</span>
+      <span class="流程信息卡-值"> <span class="影响结果">商户在此完成多活动链接的新建、编辑、停推和删除</span> <span class="影响结果">投放的固定链接供外部渠道传播，用户打开后在同一页面选择上方或下方活动参与。</span></span>
+    </div>
+  </div>
+</div><div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索链接名称或密令"></div><div class="筛选区"><span class="筛选标签">状态：</span><select class="筛选下拉"><option>全部</option><option>在推</option><option>停推</option></select></div><button class="详情按钮" style="background:#0f6b8f;color:#fff;border-color:#0f6b8f;margin-left:auto;" onclick="打开新增抽屉('5.1')">＋ 新增</button></div>
+<div style="overflow-x:auto;">
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">链接名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('链接名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">多活动 H5 模板<span class="类型标签 enum">enum（已启用的多活动 H5 模板列表）</span></span><button class="信息按钮" onclick="显示字段弹窗('多活动 H5 模板', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">上方版位·密令简版<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('上方版位·密令简版', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">上方版位·直达链接<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('上方版位·直达链接', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">下方版位·密令简版<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('下方版位·密令简版', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">下方版位·直达链接<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('下方版位·直达链接', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum（在推、停推）</span></span><button class="信息按钮" onclick="显示字段弹窗('状态', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">推广链接<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('推广链接', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">创建时间<span class="类型标签 date">datetime</span></span><button class="信息按钮" onclick="显示字段弹窗('创建时间', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">双11大促-双版位</td><td class="列表单元格">—</td><td class="列表单元格">双11主会场</td><td class="列表单元格">https://act.example.com/11</td><td class="列表单元格">双11分会场</td><td class="列表单元格">https://act.example.com/11b</td><td class="列表单元格">在推</td><td class="列表单元格">https://h5.example.com/m/sD2fA1</td><td class="列表单元格">2026-07-15 09:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({'链接名称':'双11大促-双版位','多活动H5模板':'双11活动模板（上:美团小程序 / 下:饿了么APP）','上方版位·密令简版':'双11主会场','上方版位·直达链接':'https://act.example.com/11','下方版位·密令简版':'双11分会场','下方版位·直达链接':'https://act.example.com/11b','状态':'在推','推广链接':'https://h5.example.com/m/sD2fA1','创建时间':'2026-07-15 09:00',_壳节编号:'5.1'},'多活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">年货节-双版位</td><td class="列表单元格">—</td><td class="列表单元格">年货主推</td><td class="列表单元格">https://act.example.com/nh1</td><td class="列表单元格">年货秒杀</td><td class="列表单元格">https://act.example.com/nh2</td><td class="列表单元格">在推</td><td class="列表单元格">https://h5.example.com/m/fG5hB3</td><td class="列表单元格">2026-07-14 11:30</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({'链接名称':'年货节-双版位','多活动H5模板':'年货节模板（上:淘宝APP / 下:饿了么小程序）','上方版位·密令简版':'年货主推','上方版位·直达链接':'https://act.example.com/nh1','下方版位·密令简版':'年货秒杀','下方版位·直达链接':'https://act.example.com/nh2','状态':'在推','推广链接':'https://h5.example.com/m/fG5hB3','创建时间':'2026-07-14 11:30',_壳节编号:'5.1'},'多活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">618-双版位联动</td><td class="列表单元格">—</td><td class="列表单元格">618狂欢</td><td class="列表单元格">https://act.example.com/618a</td><td class="列表单元格">618秒杀</td><td class="列表单元格">https://act.example.com/618b</td><td class="列表单元格">在推</td><td class="列表单元格">https://h5.example.com/m/hJ8kC5</td><td class="列表单元格">2026-07-13 14:45</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({'链接名称':'618-双版位联动','多活动H5模板':'双11活动模板（上:美团小程序 / 下:饿了么APP）','上方版位·密令简版':'618狂欢','上方版位·直达链接':'https://act.example.com/618a','下方版位·密令简版':'618秒杀','下方版位·直达链接':'https://act.example.com/618b','状态':'在推','推广链接':'https://h5.example.com/m/hJ8kC5','创建时间':'2026-07-13 14:45',_壳节编号:'5.1'},'多活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">品牌日-上下联动</td><td class="列表单元格">—</td><td class="列表单元格">品牌闪购</td><td class="列表单元格">https://act.example.com/bd1</td><td class="列表单元格">品牌特卖</td><td class="列表单元格">https://act.example.com/bd2</td><td class="列表单元格">停推</td><td class="列表单元格">https://h5.example.com/m/kL2nD7</td><td class="列表单元格">2026-07-12 10:20</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({'链接名称':'品牌日-上下联动','多活动H5模板':'年货节模板（上:淘宝APP / 下:饿了么小程序）','上方版位·密令简版':'品牌闪购','上方版位·直达链接':'https://act.example.com/bd1','下方版位·密令简版':'品牌特卖','下方版位·直达链接':'https://act.example.com/bd2','状态':'停推','推广链接':'https://h5.example.com/m/kL2nD7','创建时间':'2026-07-12 10:20',_壳节编号:'5.1'},'多活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">会员日-双版位</td><td class="列表单元格">—</td><td class="列表单元格">会员专属</td><td class="列表单元格">https://act.example.com/v1</td><td class="列表单元格">积分兑换</td><td class="列表单元格">https://act.example.com/v2</td><td class="列表单元格">在推</td><td class="列表单元格">https://h5.example.com/m/mP4qE9</td><td class="列表单元格">2026-07-11 16:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({'链接名称':'会员日-双版位','多活动H5模板':'双11活动模板（上:美团小程序 / 下:饿了么APP）','上方版位·密令简版':'会员专属','上方版位·直达链接':'https://act.example.com/v1','下方版位·密令简版':'积分兑换','下方版位·直达链接':'https://act.example.com/v2','状态':'在推','推广链接':'https://h5.example.com/m/mP4qE9','创建时间':'2026-07-11 16:00',_壳节编号:'5.1'},'多活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">拉新活动-上下版位</td><td class="列表单元格">—</td><td class="列表单元格">邀请有礼</td><td class="列表单元格">https://act.example.com/inv1</td><td class="列表单元格">新客专享</td><td class="列表单元格">https://act.example.com/inv2</td><td class="列表单元格">在推</td><td class="列表单元格">https://h5.example.com/m/rS6tF1</td><td class="列表单元格">2026-07-10 08:15</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({'链接名称':'拉新活动-上下版位','多活动H5模板':'年货节模板（上:淘宝APP / 下:饿了么小程序）','上方版位·密令简版':'邀请有礼','上方版位·直达链接':'https://act.example.com/inv1','下方版位·密令简版':'新客专享','下方版位·直达链接':'https://act.example.com/inv2','状态':'在推','推广链接':'https://h5.example.com/m/rS6tF1','创建时间':'2026-07-10 08:15',_壳节编号:'5.1'},'多活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">周年庆-双版位</td><td class="列表单元格">—</td><td class="列表单元格">周年主会场</td><td class="列表单元格">https://act.example.com/an1</td><td class="列表单元格">周年秒杀</td><td class="列表单元格">https://act.example.com/an2</td><td class="列表单元格">停推</td><td class="列表单元格">https://h5.example.com/m/tU8vG3</td><td class="列表单元格">2026-07-09 13:40</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({'链接名称':'周年庆-双版位','多活动H5模板':'双11活动模板（上:美团小程序 / 下:饿了么APP）','上方版位·密令简版':'周年主会场','上方版位·直达链接':'https://act.example.com/an1','下方版位·密令简版':'周年秒杀','下方版位·直达链接':'https://act.example.com/an2','状态':'停推','推广链接':'https://h5.example.com/m/tU8vG3','创建时间':'2026-07-09 13:40',_壳节编号:'5.1'},'多活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">日常推广-双版位</td><td class="列表单元格">—</td><td class="列表单元格">每日特惠</td><td class="列表单元格">https://act.example.com/d1</td><td class="列表单元格">限时抢购</td><td class="列表单元格">https://act.example.com/d2</td><td class="列表单元格">在推</td><td class="列表单元格">https://h5.example.com/m/vW0xH5</td><td class="列表单元格">2026-07-08 17:25</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({'链接名称':'日常推广-双版位','多活动H5模板':'年货节模板（上:淘宝APP / 下:饿了么小程序）','上方版位·密令简版':'每日特惠','上方版位·直达链接':'https://act.example.com/d1','下方版位·密令简版':'限时抢购','下方版位·直达链接':'https://act.example.com/d2','状态':'在推','推广链接':'https://h5.example.com/m/vW0xH5','创建时间':'2026-07-08 17:25',_壳节编号:'5.1'},'多活动 H5 推广链接详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td></tr>
+</tbody></table>
+</div>
+<div class="列表脚注">共 8 条记录</div>
+</div></div></div>
+</div>
+</section><section class="标签面板" data-stage="6">
+  <div class="面板布局">
+    <div id="节6正文" class="文档正文"><blockquote><p>本章只汇总跨页面、跨阶段或特别容易误解的已确认规则。  
+已在单一业务小节中讲清且不会产生歧义的内容，不在此重复。</p></blockquote>
+<div id="s6_6_1">
+<h3 class="阅读节标题">6.1 单活动与多活动的差异</h3>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>维度</th>
+<th>单活动 H5</th>
+<th>多活动 H5</th>
+</tr>
+<tr>
+<td>模板</td>
+<td>单活动 H5 模板</td>
+<td>多活动 H5 模板（固定上下双版位）</td>
+</tr>
+<tr>
+<td>版位数量</td>
+<td>无版位概念，一个链接对应一个活动</td>
+<td>固定上下两个版位，各自独立配置</td>
+</tr>
+<tr>
+<td>配置项</td>
+<td>链接名称、模板、密令简版、备注、直跳链接</td>
+<td>链接名称、模板、上方密令+链接、下方密令+链接、备注</td>
+</tr>
+<tr>
+<td>推广链接格式</td>
+<td><code class="行内代码">https://h5.example.com/p/{shortCode}</code></td>
+<td><code class="行内代码">https://h5.example.com/m/{shortCode}</code></td>
+</tr>
+<tr>
+<td>列表字段差异</td>
+<td>含缩略图、H5 链接列；直跳链接仅详情展示</td>
+<td>含上下版位密令和链接列；推广链接列；无缩略图</td>
+</tr>
+</table></div>
+
+</div>
+<div id="s6_6_2">
+<h3 class="阅读节标题">6.2 状态流转</h3>
+<h4 class="阅读标题">H5 模板状态（SaaS 总后台）</h4>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>状态</th>
+<th>业务含义</th>
+<th>触发操作</th>
+<th>可执行的后续操作</th>
+</tr>
+<tr>
+<td>启用</td>
+<td>模板当前可用于新建链接</td>
+<td>SaaS 总后台运营设置为启用</td>
+<td>编辑、预览、停用</td>
+</tr>
+<tr>
+<td>停用</td>
+<td>模板暂停用于新建，历史链接不受影响</td>
+<td>SaaS 总后台运营设置为停用</td>
+<td>编辑、预览、启用</td>
+</tr>
+</table></div>
+
+<h4 class="阅读标题">推广链接管理状态（客户端后台）</h4>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>状态</th>
+<th>业务含义</th>
+<th>触发操作</th>
+<th>可执行的后续操作</th>
+<th>链接访问</th>
+</tr>
+<tr>
+<td>推广中（在推）</td>
+<td>商户将该记录作为正在投放的链接管理</td>
+<td>创建时默认，或从停推恢复</td>
+<td>编辑、停推、复制链接、预览、删除</td>
+<td>正常访问</td>
+</tr>
+<tr>
+<td>停推</td>
+<td>商户标记为停止投放，仅改变后台管理状态</td>
+<td>商户执行停推</td>
+<td>编辑、启用（重新推广）、复制链接、预览、删除</td>
+<td>正常访问</td>
+</tr>
+</table></div>
+
+</div>
+<div id="s6_6_3">
+<h3 class="阅读节标题">6.3 软删除规则</h3>
+<ul>
+<li>删除操作为软删除，数据库保留记录。</li>
+<li>已生成并投放的推广链接不受删除影响，仍可正常访问。</li>
+<li>删除前必须弹出二次确认，明确告知商户"删除后不影响已经推出去的链接"。</li>
+<li>删除后该记录从后台列表移除，不可恢复（前端层面）。</li>
+</ul>
+
+</div></div>
+    <nav id="节6目录" class="节目录"><ul class="节目录列表">
+<li class="目录项 目录层级3"><a href="#s6_6_1">6.1 单活动与多活动的差异</a></li>
+<li class="目录项 目录层级3"><a href="#s6_6_2">6.2 状态流转</a></li>
+<li class="目录项 目录层级4"><a href="#H5模板状态SaaS总后台">H5 模板状态（SaaS 总后台）</a></li>
+<li class="目录项 目录层级4"><a href="#推广链接管理状态客户端后台">推广链接管理状态（客户端后台）</a></li>
+<li class="目录项 目录层级3"><a href="#s6_6_3">6.3 软删除规则</a></li>
+</ul></nav>
+  </div>
+</section><section class="标签面板" data-stage="7">
+  <div class="面板布局">
+    <div id="节7正文" class="文档正文"><div class="表格容器"><table class="阅读表格">
+<tr>
+<th>功能或操作</th>
+<th>SaaS 总后台运营</th>
+<th>客户端客户</th>
+</tr>
+<tr>
+<td>查看 H5 模板列表</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>新增、编辑、启用或停用模板</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>查看单活动 H5 推广链接列表</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>新建单活动 H5 推广链接</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>编辑单活动 H5 推广链接</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>停推或启用单活动链接</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>删除单活动链接</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>查看多活动 H5 推广链接列表</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>新建多活动 H5 推广链接</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>编辑多活动 H5 推广链接</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>停推或重新推广多活动链接</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>复制多活动推广链接</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>预览多活动模板样式</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>删除多活动链接</td>
+<td>否</td>
+<td>是</td>
+</tr>
+</table></div>
+
+<p>客户只能查看和操作归属于当前客户的推广链接，不得查看其他客户的链接和推广数据。</p></div>
+    <nav id="节7目录" class="节目录"><ul class="节目录列表">
+</ul></nav>
+  </div>
+</section><section class="标签面板" data-stage="8">
+  <div class="面板布局">
+    <div id="节8正文" class="文档正文"><blockquote><p>本章属于 AI 阅读和维护模块，不承担向人类读者重复解释业务正文的职责。  
+AI 修改本文档时，应先保护业务真实性和阅读连续性，再考虑结构完整性。</p></blockquote>
+<div id="s8_8_1">
+<h3 class="阅读节标题">8.1 文档设计理念</h3>
+<p>本文档采用双层结构：</p>
+<p>1. <strong>人类阅读模块</strong>：第 1～7 章。通过泳道图建立全局认知，再按照真实业务发生顺序线性表达，使读者能够连续理解业务起点、分支、汇合、处理和结果。</p>
+<p>2. <strong>AI 维护模块</strong>：第 8 章。集中保存维护顺序、边界约束、术语同步要求、信息可信度判断、上下游检查和待确认逻辑。</p>
+<p>维护目标：</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>人类正文：看清单活动和多活动两种推广链接如何创建、配置、投放和管理
+AI 说明：保护模板维护、客户端配置和上下游模块的边界</code></pre></div>
+<p>不得把 AI 维护所需的检查清单、推测和疑点大量前置到人类正文中，也不得让人类正文承担数据模型、系统架构或技术实现说明的职责。</p>
+</div>
+<div id="s8_8_2">
+<h3 class="阅读节标题">8.2 正文组织原则</h3>
+<ul>
+<li>正文按业务实际发生顺序展开，不按总后台、客户端分别集中成章。</li>
+<li>2.1 泳道图是流程信息的唯一事实源；所有页面/功能小节通过 <code class="行内代码">#### 业务背景</code> 的"当前环节"引用泳道图节点编号和动作名称。</li>
+<li>不得在页面/功能小节中新增局部"流程位置"泳道图。</li>
+<li>每个页面/功能小节内部固定按"业务背景 → 字段说明 → 列表交互 → 业务逻辑"四段组织。</li>
+<li>业务背景使用四行短标签（当前环节 / 页面路径 / 对下游影响 / 表格类型）。</li>
+<li>每个页面小节末尾固定保留"列表交互"，无交互时写"无交互。"。列表交互使用轻量文本表达。</li>
+<li>业务逻辑只收纳前三节没有覆盖但读者仍需理解的增量规则，使用 <code class="行内代码"><strong>规则标题：</strong> 说明。</code> 格式。</li>
+<li>新增或改造页面在功能标题中直接标记"（新增页面）"或"（改造页面）"。</li>
+<li>同一业务对象只维护一张统一字段表，通过"列表、详情、新增"三列区分字段出现位置；三列只使用 <code class="行内代码">是</code>、<code class="行内代码">否</code>、<code class="行内代码">是（可编辑）</code> 三种枚举。</li>
+<li>直跳链接仅在详情中展示（列表列标记为"否"），体现"列表信息简洁、详情信息完整"的设计原则。</li>
+</ul>
+
+</div>
+<div id="s8_8_3">
+<h3 class="阅读节标题">8.3 泳道和参与方识别规则</h3>
+<p>理论上的完整参与方框架为：</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>[外部系统] → SaaS 总后台 → 客户端后台 → C 端用户</code></pre></div>
+<p>实际编写时本功能仅涉及 SaaS 总后台和客户端后台两个参与方。商户运营人员通过客户端后台执行操作，因此"客户端后台"和"商户运营人员"合并为一个泳道。</p>
+</div>
+<div id="s8_8_4">
+<h3 class="阅读节标题">8.4 上下游与模块边界检查</h3>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>修改内容</th>
+<th>必须检查的影响</th>
+</tr>
+<tr>
+<td>泳道图节点、编号或顺序</td>
+<td>全部页面/功能小节的"当前环节"</td>
+</tr>
+<tr>
+<td>多活动模板字段</td>
+<td>客户端多活动链接创建流程</td>
+</tr>
+<tr>
+<td>单活动链接字段</td>
+<td>列表展示、详情弹窗、新增/编辑弹窗</td>
+</tr>
+<tr>
+<td>删除逻辑</td>
+<td>软删除提示文案、数据库保留策略</td>
+</tr>
+</table></div>
+
+</div>
+<div id="s8_8_5">
+<h3 class="阅读节标题">8.5 单活动与多活动的简化关系</h3>
+<p>本功能中，多活动 H5 推广链接管理是单活动 H5 的扩展变体。两者的核心差异：</p>
+<ul>
+<li><strong>单活动</strong>：通过 8 个字段描述一条链接，其中直跳链接仅在详情展示。</li>
+<li><strong>多活动</strong>：去掉 B11 原文中的 8 个复杂版位字段（上方版位组合、上方平台、上方活动、上方推广位、下方版位组合、下方平台、下方活动、下方推广位），替换为上方和下方各 2 个简化字段（密令简版 + 直达链接）。</li>
+</ul>
+
+<p>多活动模板的用户去向配置（饿了么 APP / 淘宝 APP / 美团小程序 / 饿了么小程序）保留在 SaaS 总后台模板管理中，客户端创建链接时不需要重复选择平台和活动。</p>
+</div>
+<div id="s8_8_6">
+<h3 class="阅读节标题">8.6 待确认逻辑</h3>
+<p>1. 单活动 H5 模板的枚举值是否仅限于当前列出的 6 个（通用推广、节日活动、游戏活动、电商促销、品牌宣传、注册拉新），还是支持动态扩展？</p>
+<p>2. 多活动 H5 模板的枚举值（双11、年货节、618、日常等）是否为固定列表，是否随 SaaS 总后台模板的启用/停用动态变化？</p>
+<p>3. 缩略图是否支持商户自定义上传，还是固定使用模板预设图？</p>
+<p>4. 删除后的记录是否需要在某个"回收站"页面中查看和恢复？</p>
+<p>5. 推广链接的 shortCode 生成规则（长度、字符集、唯一性保证）是否需要与现有系统保持一致？</p>
+</div></div>
+    <nav id="节8目录" class="节目录"><ul class="节目录列表">
+<li class="目录项 目录层级3"><a href="#s8_8_1">8.1 文档设计理念</a></li>
+<li class="目录项 目录层级3"><a href="#s8_8_2">8.2 正文组织原则</a></li>
+<li class="目录项 目录层级3"><a href="#s8_8_3">8.3 泳道和参与方识别规则</a></li>
+<li class="目录项 目录层级3"><a href="#s8_8_4">8.4 上下游与模块边界检查</a></li>
+<li class="目录项 目录层级3"><a href="#s8_8_5">8.5 单活动与多活动的简化关系</a></li>
+<li class="目录项 目录层级3"><a href="#s8_8_6">8.6 待确认逻辑</a></li>
+</ul></nav>
+  </div>
+</section>
+</main>
+<aside class="右侧栏" id="右侧栏" style="display:none;">
+<div id="阶段04右侧栏" class="阶段右侧栏组" style="display:none;">
+<div class="注释卡片组" data-page="4.1">
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">&#128269;</span><span class="注释标题">业务背景</span></div><div class="注释卡片正文">当前环节：③ 进入推广链接列表、④ 新建推广链接、⑤ 复制并投放、⑥ 管理推广链接、⑦ 查看详情<br><br>页面路径：客户端后台 > 推广管理 > 单活动 H5<br><br>对下游影响：商户在此完成链接的新建、编辑、停推和删除；投放的固定链接供外部渠道传播和用户访问。<br><br>表格类型：列表页<br><br><br>> 商户通过一个统一管理页面承载单活动 H5 推广链接的查询、新增和管理，将一个 H5 模板和一个活动组合成一条可对外投放的固定链接。新建时，商户选择一个 H5 模板，填写链接名称、密令简版、备注和直跳链接，系统生成一条固定推广链接。</div></div>
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">⚙</span><span class="注释标题">列表交互</span></div><div class="注释卡片正文"><strong>交互：新增链接</strong>  <br><strong>业务用途</strong>：创建新的单活动推广链接。商户填写链接名称、选择 H5 模板、填写密令简版、备注和直跳链接。创建成功后，系统形成一条新的推广链接记录，并生成格式为 <code class="行内代码">https://h5.example.com/p/{shortCode}</code> 的固定访问地址。<br><br><strong>交互：查看详情</strong>  <br><strong>业务用途</strong>：打开详情弹窗，展示当前链接的全部字段（含直跳链接），仅用于核对；不在详情中修改链接配置。<br><br><strong>交互：编辑</strong>  <br><strong>业务用途</strong>：打开编辑弹窗，修改链接名称、H5 模板、密令简版、备注和直跳链接。编辑不改变已生成的推广链接地址。<br><br><strong>交互：停推</strong>  <br><strong>业务用途</strong>：将状态为"推广中"的链接切换为"停推"，仅调整商户后台的链接管理状态，不影响推广链接访问和已投放渠道。<br><br><strong>交互：启用</strong>  <br><strong>业务用途</strong>：将状态为"停推"的链接恢复为"推广中"，链接恢复正常投放管理。<br><br><strong>交互：删除</strong>  <br><strong>业务用途</strong>：软删除当前推广链接记录。删除前弹出二次确认，告知商户"删除后不影响已经推出去的链接"。数据库保留记录，已分发的链接仍可正常访问。删除后列表不再展示该记录。</div></div>
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">💡</span><span class="注释标题">业务逻辑</span></div><div class="注释卡片正文"><strong>模板选择范围：</strong> 只显示已启用的单活动 H5 模板。选择模板后，系统自动带出模板缩略图。<br><br><strong>直跳链接仅详情展示：</strong> 直跳链接在新增和编辑弹窗中可填写，在详情弹窗中可查看，但不在列表表格列中展示，避免列表信息过载。<br><br><strong>状态流转：</strong> 新建链接默认为"推广中"。推广中 → 执行停推 → 停推。停推 → 执行启用 → 推广中。任意状态均可执行软删除。<br><br><strong>删除不中断已投放链接：</strong> 软删除仅从后台列表移除记录，已生成并投放的推广链接仍可正常访问，不影响终端用户体验。</div></div>
+</div></div>
+<div id="阶段05右侧栏" class="阶段右侧栏组" style="display:none;">
+<div class="注释卡片组" data-page="5.1">
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">&#128269;</span><span class="注释标题">业务背景</span></div><div class="注释卡片正文">当前环节：③ 进入推广链接列表、④ 新建推广链接、⑤ 复制并投放、⑥ 管理推广链接、⑦ 查看详情<br><br>页面路径：客户端后台 > 推广管理 > 多活动 H5<br><br>对下游影响：商户在此完成多活动链接的新建、编辑、停推和删除；投放的固定链接供外部渠道传播，用户打开后在同一页面选择上方或下方活动参与。<br><br>表格类型：列表页<br><br><br>> 商户通过一个统一管理页面承载多活动 H5 推广链接的查询、新增和管理。与单活动链接不同，多活动链接将一个多活动 H5 模板与上下两个版位的推广内容组合成一条可对外投放的固定链接。商户选择模板后，直接为上方版位和下方版位分别填写密令简版和直达链接，无需经过"选平台 → 选活动 → 选推广位"的复杂配置链路。</div></div>
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">⚙</span><span class="注释标题">列表交互</span></div><div class="注释卡片正文"><strong>交互：新建链接</strong>  <br><strong>业务用途</strong>：创建新的多活动推广链接。商户填写链接名称、选择多活动 H5 模板、为上下两个版位分别填写密令简版和直达链接、填写备注。创建成功后，系统形成一条新的多活动链接记录，并生成格式为 <code class="行内代码">https://h5.example.com/m/{shortCode}</code> 的固定访问地址。<br><br><strong>交互：查看详情</strong>  <br><strong>业务用途</strong>：打开详情弹窗，展示当前链接的全部字段（含上下版位的密令和直达链接），仅用于核对和复制；不在详情中修改模板或版位配置。<br><br><strong>交互：编辑</strong>  <br><strong>业务用途</strong>：打开编辑弹窗，修改链接名称、多活动 H5 模板、上下版位的密令简版和直达链接、备注。编辑不改变已生成的推广链接地址。<br><br><strong>交互：停推</strong>  <br><strong>业务用途</strong>：将状态为"在推"的链接切换为"停推"，仅调整商户后台的链接管理状态，不影响推广链接访问。<br><br><strong>交互：重新推广</strong>  <br><strong>业务用途</strong>：将状态为"停推"的链接恢复为"在推"，链接恢复正常投放管理。<br><br><strong>交互：复制链接</strong>  <br><strong>业务用途</strong>：一键复制当前固定推广链接到剪贴板，供商户对外投放或继续传播。<br><br><strong>交互：预览</strong>  <br><strong>业务用途</strong>：弹窗展示当前所选模板的预览图和用户去向信息，帮助商户确认模板样式。预览展示模板静态效果，不读取当前链接的真实活动数据。<br><br><strong>交互：删除</strong>  <br><strong>业务用途</strong>：软删除当前推广链接记录。删除前弹出二次确认，告知商户"删除后不影响已经推出去的链接"。数据库保留记录，已分发的链接仍可正常访问。删除后列表不再展示该记录。</div></div>
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">💡</span><span class="注释标题">业务逻辑</span></div><div class="注释卡片正文"><strong>简化版位配置：</strong> 与 SaaS 总后台模板管理中复杂的"选平台 → 选活动 → 选推广位"不同，客户端创建多活动链接时，每个版位只需填写"密令简版 + 直达链接"两个字段。模板的用户去向已在 SaaS 总后台配置完成，客户端直接复用。<br><br><strong>版位独立性：</strong> 上下版位各自独立填写密令简版和直达链接，互不影响。两个版位可以使用相同或不同的密令和链接。<br><br><strong>模板选择范围：</strong> 只显示已启用的多活动 H5 模板。选项同时展示模板名称和上下版位的用户去向，帮助商户确认版位对应的平台。<br><br><strong>状态流转：</strong> 新建链接默认为"在推"。在推 → 执行停推 → 停推。停推 → 执行重新推广 → 在推。任意状态均可执行软删除。<br><br><strong>删除不中断已投放链接：</strong> 软删除仅从后台列表移除记录，已生成并投放的推广链接仍可正常访问。</div></div>
+</div></div>
+
+</aside>
+</div>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭抽屉();关闭新增抽屉()"></div>
+<aside id="detailDrawer" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="detailDrawerTitle">详情</div>
+    <button class="btn-close" onclick="关闭抽屉()">×</button>
+  </div>
+  <div id="detailBody" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭抽屉()">关闭</button>
+  </div>
+</aside>
+<aside id="新增抽屉面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="新增抽屉标题">新增</div>
+    <button class="btn-close" onclick="关闭新增抽屉()">×</button>
+  </div>
+  <div id="新增抽屉正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭新增抽屉()">关闭</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-标签切换">
+function 切换标签(n) {
+  document.querySelectorAll('.标签按钮').forEach(function(b) { b.classList.remove('激活'); });
+  var btn = document.querySelector('.标签按钮[data-stage="' + n + '"]'); if (btn) btn.classList.add('激活');
+  document.querySelectorAll('.标签面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.querySelector('.标签面板[data-stage="' + n + '"]'); if (panel) panel.classList.add('激活');
+  var 所有导航 = document.querySelectorAll('.阶段页面导航');
+  for (var i = 0; i < 所有导航.length; i++) { 所有导航[i].style.display = 'none'; }
+  // 非数字型 data-stage（如 'pageflow'）不触发阶段导航和右侧栏
+  var 数字阶段 = (typeof n === 'number' || /^\d+$/.test(String(n))) ? parseInt(n, 10) : null;
+  if (数字阶段 !== null && 数字阶段 >= 3) {
+    var N = String(数字阶段).padStart(2, '0');
+    var 当前导航 = document.getElementById('阶段' + N + '导航');
+    if (当前导航) { 当前导航.style.display = ''; var 首个 = 当前导航.querySelector('.阶段链接'); if (首个) { var 页码 = 首个.getAttribute('data-page'); var 类型 = 首个.getAttribute('data-page-type'); if (页码) 切换页面(页码, 类型); } }
+  }
+  var 右侧栏 = document.getElementById('右侧栏');
+  var 所有右侧栏组 = document.querySelectorAll('.阶段右侧栏组');
+  for (var i = 0; i < 所有右侧栏组.length; i++) { 所有右侧栏组[i].style.display = 'none'; }
+  if (数字阶段 !== null && 数字阶段 >= 3) {
+    if (右侧栏) 右侧栏.style.display = '';
+    var N = String(数字阶段).padStart(2, '0');
+    var 当前右侧栏 = document.getElementById('阶段' + N + '右侧栏');
+    if (当前右侧栏) { 当前右侧栏.style.display = ''; var 首个卡片 = 当前右侧栏.querySelector('.注释卡片组'); if (首个卡片) 首个卡片.style.display = ''; }
+  } else { if (右侧栏) 右侧栏.style.display = 'none'; }
+  // C端模式切换：页面流程图和第三阶段使用全宽布局
+  var body = document.body;
+  body.classList.remove('页面流程图模式', '第三阶段模式');
+  if (n === 'pageflow' || String(n) === 'pageflow') {
+    body.classList.add('页面流程图模式');
+  } else if (数字阶段 === 8) {
+    body.classList.add('第三阶段模式');
+  }
+}
+(function() { var 右侧栏 = document.getElementById('右侧栏'); if (右侧栏) 右侧栏.style.display = 'none'; })();
+</script>
+<script id="js-阶段切换">
+function 切换页面(页码, 页面类型) {
+  var N = 页码.toString().split('.')[0]; var N填充 = N.padStart(2, '0');
+  document.querySelectorAll('.阶段链接').forEach(function(l) { l.classList.remove('激活'); });
+  var link = document.querySelector('.阶段链接[data-page="' + 页码 + '"]'); if (link) link.classList.add('激活');
+  var 编辑区 = document.getElementById('阶段' + N填充 + '编辑区');
+  var 列表区 = document.getElementById('阶段' + N填充 + '列表区');
+  var 移动区 = document.getElementById('阶段' + N填充 + '移动区');
+  if (页面类型 === '移动端展示页') {
+    if (移动区) 移动区.style.display = '';
+    if (列表区) 列表区.style.display = 'none';
+    if (编辑区) 编辑区.style.display = 'none';
+    if (移动区) { var ms = 移动区.querySelectorAll('.移动端演示壳'); for (var i = 0; i < ms.length; i++) { ms[i].style.display = (ms[i].getAttribute('data-page') === 页码) ? '' : 'none'; } }
+    var 当前壳 = 移动区 ? 移动区.querySelector('.移动端演示壳[data-page="' + 页码 + '"]') : null;
+    var 当前状态按钮 = 当前壳 ? 当前壳.querySelector('.移动状态按钮.active') || 当前壳.querySelector('.移动状态按钮') : null;
+    if (当前状态按钮) 切换移动状态(页码, 当前状态按钮.getAttribute('data-state'));
+  } else if (页面类型 === '列表页') {
+    if (列表区) 列表区.style.display = '';
+    if (编辑区) 编辑区.style.display = 'none';
+    if (移动区) 移动区.style.display = 'none';
+    [列表区].forEach(function(c) { if (!c) return; var ss = c.querySelectorAll('.演示壳'); for (var i = 0; i < ss.length; i++) { ss[i].style.display = (ss[i].getAttribute('data-page') === 页码) ? '' : 'none'; } });
+  }
+  else {
+    if (编辑区) 编辑区.style.display = '';
+    if (列表区) 列表区.style.display = 'none';
+    if (移动区) 移动区.style.display = 'none';
+    if (编辑区) { var ss = 编辑区.querySelectorAll('.演示壳'); for (var i = 0; i < ss.length; i++) { ss[i].style.display = (ss[i].getAttribute('data-page') === 页码) ? '' : 'none'; } }
+  }
+  var 右侧栏容器 = document.getElementById('阶段' + N填充 + '右侧栏');
+  if (右侧栏容器) { var 所有卡片组 = 右侧栏容器.querySelectorAll('.注释卡片组'); for (var i = 0; i < 所有卡片组.length; i++) { 所有卡片组[i].style.display = 'none'; } var 目标 = 右侧栏容器.querySelector('.注释卡片组[data-page="' + 页码 + '"]'); if (目标) 目标.style.display = ''; }
+}
+function 切换移动状态(页码, 状态) {
+  var 壳 = document.querySelector('.移动端演示壳[data-page="' + 页码 + '"]');
+  if (壳) {
+    var 按钮 = 壳.querySelectorAll('.移动状态按钮');
+    for (var i = 0; i < 按钮.length; i++) { 按钮[i].classList.toggle('active', 按钮[i].getAttribute('data-state') === 状态); }
+    var 面板 = 壳.querySelectorAll('.移动状态面板');
+    for (var j = 0; j < 面板.length; j++) { 面板[j].classList.toggle('active', 面板[j].getAttribute('data-state') === 状态); }
+    var 底部 = 壳.querySelectorAll('.移动底部区域');
+    for (var b = 0; b < 底部.length; b++) { 底部[b].classList.toggle('active', 底部[b].getAttribute('data-state') === 状态); }
+    var 标注组 = 壳.querySelectorAll('.字段标注状态组');
+    for (var g = 0; g < 标注组.length; g++) { var ds = 标注组[g].getAttribute('data-state'); if (ds) { 标注组[g].classList.toggle('active', ds === 状态); } }
+    同步移动端编号与标注(页码, 状态, 壳);
+  }
+  var N = 页码.toString().split('.')[0]; var N填充 = N.padStart(2, '0');
+  var 右侧栏容器 = document.getElementById('阶段' + N填充 + '右侧栏');
+  if (右侧栏容器) {
+    var 所有卡片组 = 右侧栏容器.querySelectorAll('.注释卡片组');
+    for (var k = 0; k < 所有卡片组.length; k++) { 所有卡片组[k].style.display = 'none'; }
+    var 目标 = 右侧栏容器.querySelector('.注释卡片组[data-page="' + 页码 + '"][data-mobile-state="' + 状态 + '"]') || 右侧栏容器.querySelector('.注释卡片组[data-page="' + 页码 + '"]');
+    if (目标) 目标.style.display = '';
+  }
+}
+function 同步移动端编号与标注(页码, 状态, 壳) {
+  if (!壳) return;
+  function 标题文本(el) {
+    if (el.getAttribute('data-annot-title')) return el.getAttribute('data-annot-title');
+    if (el.classList.contains('小程序导航栏')) return '顶部导航';
+    if (el.classList.contains('移动主视觉')) return '状态图标区';
+    if (el.classList.contains('移动底部区域')) return '底部操作区';
+    var h = el.querySelector('h4,h3');
+    if (!h) return '展示卡片';
+    var clone = h.cloneNode(true);
+    var btns = clone.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].remove();
+    return clone.textContent.replace(/\s+/g, ' ').trim();
+  }
+  function 安全文本(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+  function 取值(el, key, fallback) {
+    return 安全文本(el.getAttribute('data-annot-' + key) || fallback);
+  }
+  var 条目 = [];
+  var 导航 = 壳.querySelector('.小程序导航栏');
+  if (导航) 条目.push({ el: 导航, 标题: 标题文本(导航), 标注: 导航.getAttribute('data-annot-mark') || '' });
+  var 当前面板 = 壳.querySelector('.移动状态面板.active');
+  if (当前面板) {
+    var 卡片 = 当前面板.querySelectorAll('.移动主视觉, .移动卡片, [data-annot-card="true"]');
+    for (var c = 0; c < 卡片.length; c++) 条目.push({ el: 卡片[c], 标题: 标题文本(卡片[c]), 标注: 卡片[c].getAttribute('data-annot-mark') || '' });
+  }
+  var 当前底部 = 壳.querySelector('.移动底部区域.active');
+  if (当前底部) 条目.push({ el: 当前底部, 标题: 标题文本(当前底部), 标注: 当前底部.getAttribute('data-annot-mark') || '' });
+  for (var n = 0; n < 条目.length; n++) {
+    条目[n].标注 = 条目[n].标注 || String(n + 1);
+    var 编号 = 条目[n].el.querySelector('.字段内编号');
+    if (!编号) {
+      编号 = document.createElement('span');
+      编号.className = '字段内编号';
+      条目[n].el.insertBefore(编号, 条目[n].el.firstChild);
+    }
+    编号.textContent = 条目[n].标注;
+  }
+  function 右侧模块说明(item) {
+    var el = item.el;
+    return '<div class="标注卡片"><div class="标注卡片头"><span class="字段标注编号">' + 安全文本(item.标注) + '</span> ' + 安全文本(item.标题) + '</div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">模块名称</span><span class="标注卡片值">' + 安全文本(item.标题) + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">标注编号</span><span class="标注卡片值">' + 安全文本(item.标注) + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">数据来源</span><span class="标注卡片值">' + 取值(el, 'source', '当前页面数据') + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">展示逻辑</span><span class="标注卡片值">' + 取值(el, 'rule', el.getAttribute('data-annot-display') || '随当前状态展示') + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">交互逻辑</span><span class="标注卡片值">' + 取值(el, 'action', '无') + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">显示状态</span><span class="标注卡片值">' + 取值(el, 'state', 状态) + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">异常/空状态</span><span class="标注卡片值">' + 取值(el, 'empty', '无') + '</span></div></div>';
+  }
+  function 写入标注(栏, 渲染函数, 只渲染选中) {
+    if (!栏) return;
+    var 所有组 = 栏.querySelectorAll('.字段标注状态组');
+    for (var i = 0; i < 所有组.length; i++) 所有组[i].classList.remove('active');
+    var 自动组 = 栏.querySelector('.字段标注状态组[data-auto-sync="' + 页码 + '"]') || 栏.querySelector('.字段标注状态组[data-auto-sync]');
+    if (!自动组) {
+      自动组 = document.createElement('div');
+      自动组.className = '字段标注状态组';
+      自动组.setAttribute('data-auto-sync', 页码);
+      栏.appendChild(自动组);
+    }
+    自动组.setAttribute('data-state', 状态);
+    自动组.classList.add('active');
+    var html = '';
+    if (只渲染选中) {
+      var 选中 = null;
+      for (var s = 0; s < 条目.length; s++) {
+        if (条目[s].el.classList.contains('标注选中')) { 选中 = 条目[s]; break; }
+      }
+      if (!选中 && 条目.length) {
+        选中 = 条目[0];
+        选中.el.classList.add('标注选中');
+      }
+      html = 选中 ? 渲染函数(选中, 0) : '<div class="标注卡片">点击手机渲染区中的模块或编号，查看对应模块说明。</div>';
+    } else {
+      for (var j = 0; j < 条目.length; j++) html += 渲染函数(条目[j], j);
+    }
+    自动组.innerHTML = html;
+    return 自动组;
+  }
+  var 右栏组 = 写入标注(壳.querySelector('.字段标注右栏'), 右侧模块说明, true);
+  for (var e = 0; e < 条目.length; e++) {
+    条目[e].el.onclick = function(ev) {
+      for (var x = 0; x < 条目.length; x++) 条目[x].el.classList.remove('标注选中');
+      this.classList.add('标注选中');
+      if (右栏组) {
+        for (var y = 0; y < 条目.length; y++) {
+          if (条目[y].el === this) { 右栏组.innerHTML = 右侧模块说明(条目[y]); break; }
+        }
+      }
+      ev.stopPropagation();
+    };
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var 壳列表 = document.querySelectorAll('.移动端演示壳[data-page]');
+  for (var i = 0; i < 壳列表.length; i++) {
+    var 页码 = 壳列表[i].getAttribute('data-page');
+    var 当前状态按钮 = 壳列表[i].querySelector('.移动状态按钮.active') || 壳列表[i].querySelector('.移动状态按钮');
+    if (页码 && 当前状态按钮) 切换移动状态(页码, 当前状态按钮.getAttribute('data-state'));
+  }
+});
+</script>
+<script id="js-字段联动">
+function 应用字段状态() {}
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); if (按钮) 按钮.classList.toggle('is-open'); }
+}
+// ── 通用：枚举控制字段的置灰切换（页面编辑类）──
+// 用法：控制字段 <select> 写 onchange="置灰切换_{页码}(this.value)"
+//       受控区 div 写 id="grp_{页码}_{匹配值}"，默认不匹配的区初始 style="opacity:0.35;pointer-events:none;transition:opacity 0.25s"
+//       每个存在枚举控制关系的页面编辑类小节生成一个对应的 置灰切换_{页码}() 函数
+function 置灰切换_模板(页码, val, 映射表) {
+  // 映射表 格式：{ '枚举值A': ['idA1','idA2'], '枚举值B': ['idB1'] }
+  Object.keys(映射表).forEach(function(k) {
+    var 匹配 = (k === val);
+    (映射表[k] || []).forEach(function(gid) {
+      var el = document.getElementById(gid);
+      if (el) { el.style.opacity = 匹配 ? '1' : '0.35'; el.style.pointerEvents = 匹配 ? 'auto' : 'none'; }
+    });
+  });
+}
+</script>
+<script id="js-抽屉">
+window._详情字段按节 = window._详情字段按节 || {};
+function 打开抽屉(行数据, 标题) {
+  var drawer = document.getElementById('detailDrawer'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('detailBody'); var titleEl = document.getElementById('detailDrawerTitle');
+  if (!drawer || !body) return; titleEl.textContent = 标题 || '详情';
+  var 当前节 = (行数据 && 行数据._壳节编号) || '';
+  var 详情字段 = (当前节 && window._详情字段按节[当前节]) ? window._详情字段按节[当前节] : [];
+  if (详情字段.length === 0) { var 已见 = {}; var keys = Object.keys(window._详情字段按节); for (var k = 0; k < keys.length; k++) { var fl = window._详情字段按节[keys[k]]; for (var i = 0; i < fl.length; i++) { if (!已见[fl[i].名称]) { 已见[fl[i].名称] = true; 详情字段.push(fl[i]); } } } }
+  var html = '<div class="编辑卡片区">';
+  // 辅助：渲染详情字段行（显示实际值）
+  function 渲染详情字段行(f, 值) {
+    var 编辑性 = (f.详情编辑性 !== undefined) ? f.详情编辑性 : (f.编辑性 || '可编辑');
+    var 编辑性标签 = '<span class="编辑性标签 ' + 编辑性 + '">' + 编辑性 + '</span>';
+    var row = '';
+    row += '<div class="field-row">';
+    row += '<span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">';
+    row += '<span class="field-display">' + 值 + '</span>';
+    row += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += 编辑性标签;
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button>';
+    row += '</span></div>';
+    return row;
+  }
+  // 优先用详情专属分组，其次复用新增分组
+  var 分组配置 = (当前节 && window._详情字段分组 && window._详情字段分组[当前节]) ? window._详情字段分组[当前节]
+              : (当前节 && window._新增字段分组 && window._新增字段分组[当前节]) ? window._新增字段分组[当前节]
+              : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 详情字段.length; k++) {
+          if (详情字段[k].名称 === 组.字段[j]) {
+            var val = (行数据 && 行数据[组.字段[j]] !== undefined) ? String(行数据[组.字段[j]]) : '—';
+            html += 渲染详情字段行(详情字段[k], val);
+            break;
+          }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    // 兼容旧文件的 detail-grid 兜底；新生成的列表页必须注册 _详情字段分组，正常不应走到这里。
+    html += '<div class="detail-grid">';
+    if (详情字段.length > 0) { for (var i = 0; i < 详情字段.length; i++) { var f = 详情字段[i]; var val = (行数据 && 行数据[f.名称] !== undefined) ? String(行数据[f.名称]) : '—'; html += '<div class="detail-item"><div class="detail-label">' + f.名称 + '<span class="type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span><button class="信息按钮" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)" style="margin-left:4px;">ⓘ</button></div><div class="detail-value">' + val + '</div></div>'; } }
+    else if (行数据) { var ks = Object.keys(行数据).filter(function(k) { return k.indexOf('_') !== 0; }); for (var i = 0; i < ks.length; i++) { html += '<div class="detail-item"><div class="detail-label">' + ks[i] + '</div><div class="detail-value">' + String(行数据[ks[i]] || '—') + '</div></div>'; } }
+    else { html += '<div class="detail-item"><div class="detail-value">暂无数据</div></div>'; }
+    html += '</div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭抽屉() { var d = document.getElementById('detailDrawer'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-新增抽屉">
+function 打开新增抽屉(节编号) {
+  var drawer = document.getElementById('新增抽屉面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('新增抽屉正文'); var titleEl = document.getElementById('新增抽屉标题');
+  if (!drawer || !body) return;
+  var 字段列表 = (节编号 && window._详情字段按节[节编号]) ? window._详情字段按节[节编号] : [];
+  // 过滤出 在新增=true 的字段
+  var 新增字段 = []; for (var i = 0; i < 字段列表.length; i++) { if (字段列表[i].在新增) 新增字段.push(字段列表[i]); }
+  titleEl.textContent = (节编号 || '') + ' — 新增';
+  var html = '<div class="编辑卡片区">';
+  // 规则摘要框（如有控制逻辑）
+  var 控制逻辑块 = (节编号 && window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  // 辅助：渲染单个字段行
+  function 渲染字段行(f) {
+    var 编辑性 = (f.新增编辑性 !== undefined) ? f.新增编辑性 : (f.编辑性 || '可编辑');
+    var 编辑性标签 = '<span class="编辑性标签 ' + 编辑性 + '">' + 编辑性 + '</span>';
+    var row = '';
+    row += '<div class="field-row">';
+    row += '<span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">';
+    row += '<span class="field-display">' + (f.示例值 || (f.基础类型 === 'enum' ? '（下拉选择）' : '（填写）')) + '</span>';
+    row += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += 编辑性标签;
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button>';
+    row += '</span></div>';
+    return row;
+  }
+  // 检查是否有字段分组配置
+  var 分组配置 = (节编号 && window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 新增字段.length; k++) {
+          if (新增字段[k].名称 === 组.字段[j]) { html += 渲染字段行(新增字段[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>新增配置</h4></div><div class="field-card-body">';
+    if (新增字段.length === 0) { html += '<div class="空状态">该页面无可新增字段</div>'; }
+    else {
+      for (var i = 0; i < 新增字段.length; i++) { html += 渲染字段行(新增字段[i]); }
+    }
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭新增抽屉() { var d = document.getElementById('新增抽屉面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script id="js-单元格截断">
+/* ── 列表单元格 2 行截断 ── */
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script>
+window._详情字段按节=window._详情字段按节||{};
+window._详情字段按节["4.1"]=[
+  {名称:"链接名称",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户在新建或编辑时填写。",逻辑:"作为当前推广链接记录的名称。",用途:"用于识别投放渠道、批次或场景，并作为列表搜索条件。",节编号:"4.1"},
+  {名称:"H5 模板",类型原文:"enum（A模板、B模板、C模板、D模板等）",基础类型:"enum",枚举值:"A模板、B模板、C模板、D模板等",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户从已启用的单活动 H5 模板中选择。",逻辑:"选项显示模板名称；选择后系统读取模板编号。",用途:"决定 C 端页面的展示样式和用户参与方式。",节编号:"4.1"},
+  {名称:"缩略图",类型原文:"image",基础类型:"file",在详情:true,详情可编辑:false,在新增:false,编辑性:"只读",数据来源:"系统根据所选模板自动带出模板预览图。",逻辑:"作为链接在列表中的缩略展示。",用途:"帮助商户快速识别链接对应的模板样式。",节编号:"4.1"},
+  {名称:"H5 链接",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:false,编辑性:"只读",数据来源:"系统在创建成功后自动生成。",逻辑:"格式为 `https://h5.example.com/p/{shortCode}` 的唯一访问地址。",用途:"供商户复制并对外投放。",节编号:"4.1"},
+  {名称:"密令简版",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户选填。",逻辑:"简短口令，用于口头传播。",用途:"方便用户通过口令快速找到对应活动，如\"618大促\"\"新人专享\"。",节编号:"4.1"},
+  {名称:"直跳链接",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户选填。",逻辑:"用户点击推广链接后的直接跳转目标地址。仅在详情弹窗中展示，不在列表页展示。",用途:"作为推广链接的最终跳转目标。",节编号:"4.1"},
+  {名称:"备注",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户选填。",逻辑:"记录投放渠道、负责人或内部说明。",用途:"仅用于商户内部管理。",节编号:"4.1"},
+  {名称:"状态",类型原文:"enum（推广中、停推）",基础类型:"enum",枚举值:"推广中、停推",在详情:true,详情可编辑:false,在新增:false,编辑性:"只读",数据来源:"创建时默认为\"推广中\"，商户在列表中切换。",逻辑:"仅改变后台管理状态，不影响推广链接访问。停推后链接仍可正常打开。",用途:"供商户按投放状态分类管理链接记录。",节编号:"4.1"},
+  {名称:"更新时间",类型原文:"datetime",基础类型:"date",在详情:true,详情可编辑:false,在新增:false,编辑性:"只读",数据来源:"系统在链接保存或状态变更时自动记录。",逻辑:"展示链接最近一次更新的时间。",用途:"供列表排序和记录追溯。",节编号:"4.1"}
+];
+window._详情字段按节["5.1"]=[
+  {名称:"链接名称",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户在新建或编辑时填写。",逻辑:"作为当前多活动 H5 链接记录的名称。",用途:"用于识别投放渠道、批次或场景，并作为列表搜索条件。",节编号:"5.1"},
+  {名称:"多活动 H5 模板",类型原文:"enum（已启用的多活动 H5 模板列表）",基础类型:"enum",枚举值:"已启用的多活动 H5 模板列表",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户从已启用的多活动 H5 模板中选择。",逻辑:"选项显示模板名称及上下版位用户去向；选择后系统读取模板编号和版位去向。",用途:"为 C 端页面渲染提供页面结构和用户去向。",节编号:"5.1"},
+  {名称:"上方版位·密令简版",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户填写。",逻辑:"上方版位的简短口令，用于用户快速复制或识别。",用途:"决定上方版位在 C 端展示的口令文案。",节编号:"5.1"},
+  {名称:"上方版位·直达链接",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户填写。",逻辑:"用户点击上方版位后的直接跳转目标地址。",用途:"决定上方版位用户点击后的去向。",节编号:"5.1"},
+  {名称:"下方版位·密令简版",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户填写。",逻辑:"下方版位的简短口令，与上方版位独立配置。",用途:"决定下方版位在 C 端展示的口令文案。",节编号:"5.1"},
+  {名称:"下方版位·直达链接",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户填写。",逻辑:"用户点击下方版位后的直接跳转目标地址，与上方版位独立配置。",用途:"决定下方版位用户点击后的去向。",节编号:"5.1"},
+  {名称:"备注",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增编辑性:"可编辑",编辑性:"可编辑",数据来源:"商户选填。",逻辑:"记录投放渠道、负责人或内部说明。",用途:"仅用于商户内部管理，不在 C 端页面展示。",节编号:"5.1"},
+  {名称:"状态",类型原文:"enum（在推、停推）",基础类型:"enum",枚举值:"在推、停推",在详情:true,详情可编辑:false,在新增:false,编辑性:"只读",数据来源:"创建时默认为\"在推\"，商户在列表中切换。",逻辑:"仅改变后台管理状态，不影响推广链接访问。停推后链接仍可正常打开。",用途:"供商户按投放状态分类管理链接记录。",节编号:"5.1"},
+  {名称:"推广链接",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:false,编辑性:"只读",数据来源:"系统在创建成功后自动生成。",逻辑:"格式为 `https://h5.example.com/m/{shortCode}` 的唯一访问地址。",用途:"供商户复制并对外投放。",节编号:"5.1"},
+  {名称:"创建时间",类型原文:"datetime",基础类型:"date",在详情:true,详情可编辑:false,在新增:false,编辑性:"只读",数据来源:"系统在链接首次创建时自动记录。",逻辑:"表示当前链接记录生成时间。",用途:"供列表排序和记录追溯。",节编号:"5.1"}
+];
+window._详情字段分组=window._详情字段分组||{};
+window._详情字段分组["4.1"]=[{组名:"基本信息",字段:["链接名称","状态","更新时间"]},{组名:"模板与展示",字段:["H5 模板","缩略图"]},{组名:"推广内容",字段:["H5 链接","密令简版","直跳链接","备注"]}];
+window._详情字段分组["5.1"]=[{组名:"基本信息",字段:["链接名称","状态","创建时间"]},{组名:"模板选择",字段:["多活动 H5 模板"]},{组名:"上方版位",字段:["上方版位·密令简版","上方版位·直达链接"]},{组名:"下方版位",字段:["下方版位·密令简版","下方版位·直达链接"]},{组名:"其他",字段:["备注","推广链接"]}];
+window._新增字段分组=window._新增字段分组||{};
+window._新增字段分组["4.1"]=[{组名:"基本信息",字段:["链接名称"]},{组名:"模板与展示",字段:["H5 模板"]},{组名:"推广内容",字段:["密令简版","直跳链接","备注"]}];
+window._新增字段分组["5.1"]=[{组名:"基本信息",字段:["链接名称"]},{组名:"模板选择",字段:["多活动 H5 模板"]},{组名:"上方版位",字段:["上方版位·密令简版","上方版位·直达链接"]},{组名:"下方版位",字段:["下方版位·密令简版","下方版位·直达链接"]},{组名:"其他",字段:["备注"]}];
+(window._字段总库||[]).push(
+  {名称:"链接名称",类型原文:"string",基础类型:"string",数据来源:"商户在新建或编辑时填写。",逻辑:"作为当前推广链接记录的名称。",用途:"用于识别投放渠道、批次或场景，并作为列表搜索条件。",节编号:"4.1"},
+  {名称:"H5 模板",类型原文:"enum（A模板、B模板、C模板、D模板等）",基础类型:"enum",枚举值:"A模板、B模板、C模板、D模板等",数据来源:"商户从已启用的单活动 H5 模板中选择。",逻辑:"选项显示模板名称；选择后系统读取模板编号。",用途:"决定 C 端页面的展示样式和用户参与方式。",节编号:"4.1"},
+  {名称:"缩略图",类型原文:"image",基础类型:"file",数据来源:"系统根据所选模板自动带出模板预览图。",逻辑:"作为链接在列表中的缩略展示。",用途:"帮助商户快速识别链接对应的模板样式。",节编号:"4.1"},
+  {名称:"H5 链接",类型原文:"string",基础类型:"string",数据来源:"系统在创建成功后自动生成。",逻辑:"格式为 `https://h5.example.com/p/{shortCode}` 的唯一访问地址。",用途:"供商户复制并对外投放。",节编号:"4.1"},
+  {名称:"密令简版",类型原文:"string",基础类型:"string",数据来源:"商户选填。",逻辑:"简短口令，用于口头传播。",用途:"方便用户通过口令快速找到对应活动，如\"618大促\"\"新人专享\"。",节编号:"4.1"},
+  {名称:"直跳链接",类型原文:"string",基础类型:"string",数据来源:"商户选填。",逻辑:"用户点击推广链接后的直接跳转目标地址。仅在详情弹窗中展示，不在列表页展示。",用途:"作为推广链接的最终跳转目标。",节编号:"4.1"},
+  {名称:"备注",类型原文:"string",基础类型:"string",数据来源:"商户选填。",逻辑:"记录投放渠道、负责人或内部说明。",用途:"仅用于商户内部管理。",节编号:"4.1"},
+  {名称:"状态",类型原文:"enum（推广中、停推）",基础类型:"enum",枚举值:"推广中、停推",数据来源:"创建时默认为\"推广中\"，商户在列表中切换。",逻辑:"仅改变后台管理状态，不影响推广链接访问。停推后链接仍可正常打开。",用途:"供商户按投放状态分类管理链接记录。",节编号:"4.1"},
+  {名称:"更新时间",类型原文:"datetime",基础类型:"date",数据来源:"系统在链接保存或状态变更时自动记录。",逻辑:"展示链接最近一次更新的时间。",用途:"供列表排序和记录追溯。",节编号:"4.1"},
+  {名称:"链接名称",类型原文:"string",基础类型:"string",数据来源:"商户在新建或编辑时填写。",逻辑:"作为当前多活动 H5 链接记录的名称。",用途:"用于识别投放渠道、批次或场景，并作为列表搜索条件。",节编号:"5.1"},
+  {名称:"多活动 H5 模板",类型原文:"enum（已启用的多活动 H5 模板列表）",基础类型:"enum",枚举值:"已启用的多活动 H5 模板列表",数据来源:"商户从已启用的多活动 H5 模板中选择。",逻辑:"选项显示模板名称及上下版位用户去向；选择后系统读取模板编号和版位去向。",用途:"为 C 端页面渲染提供页面结构和用户去向。",节编号:"5.1"},
+  {名称:"上方版位·密令简版",类型原文:"string",基础类型:"string",数据来源:"商户填写。",逻辑:"上方版位的简短口令，用于用户快速复制或识别。",用途:"决定上方版位在 C 端展示的口令文案。",节编号:"5.1"},
+  {名称:"上方版位·直达链接",类型原文:"string",基础类型:"string",数据来源:"商户填写。",逻辑:"用户点击上方版位后的直接跳转目标地址。",用途:"决定上方版位用户点击后的去向。",节编号:"5.1"},
+  {名称:"下方版位·密令简版",类型原文:"string",基础类型:"string",数据来源:"商户填写。",逻辑:"下方版位的简短口令，与上方版位独立配置。",用途:"决定下方版位在 C 端展示的口令文案。",节编号:"5.1"},
+  {名称:"下方版位·直达链接",类型原文:"string",基础类型:"string",数据来源:"商户填写。",逻辑:"用户点击下方版位后的直接跳转目标地址，与上方版位独立配置。",用途:"决定下方版位用户点击后的去向。",节编号:"5.1"},
+  {名称:"备注",类型原文:"string",基础类型:"string",数据来源:"商户选填。",逻辑:"记录投放渠道、负责人或内部说明。",用途:"仅用于商户内部管理，不在 C 端页面展示。",节编号:"5.1"},
+  {名称:"状态",类型原文:"enum（在推、停推）",基础类型:"enum",枚举值:"在推、停推",数据来源:"创建时默认为\"在推\"，商户在列表中切换。",逻辑:"仅改变后台管理状态，不影响推广链接访问。停推后链接仍可正常打开。",用途:"供商户按投放状态分类管理链接记录。",节编号:"5.1"},
+  {名称:"推广链接",类型原文:"string",基础类型:"string",数据来源:"系统在创建成功后自动生成。",逻辑:"格式为 `https://h5.example.com/m/{shortCode}` 的唯一访问地址。",用途:"供商户复制并对外投放。",节编号:"5.1"},
+  {名称:"创建时间",类型原文:"datetime",基础类型:"date",数据来源:"系统在链接首次创建时自动记录。",逻辑:"表示当前链接记录生成时间。",用途:"供列表排序和记录追溯。",节编号:"5.1"}
+);
+</script>
+</body>
+</html>

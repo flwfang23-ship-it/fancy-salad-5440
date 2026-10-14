@@ -1,0 +1,1334 @@
+<script type="text/plain" data-ai-only>
+# 素材库双端复用
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+平台已有一套素材库管理能力，结构为"文件夹 → 分类 → 素材图"两层关系。当前素材库只在内部使用，客户端后台无法复用素材库的图片，每次客户端业务（如商品主图上传）都需要单独上传一次，重复存储、重复维护，图片资源浪费严重；同时总后台与客户端在图片上传上的规则也不一致，需要统一收口。
+
+```text
+改造前
+
+素材库只在内部分组使用；
+客户端后台上传商品主图时，每次都重新上传一次，图片资源不互通、不复用；
+没有"文件夹是否对客户端开放"的管理能力。
+
+
+改造后
+
+总后台维护素材库文件夹开放开关
+        ↓
+总后台选分类上传图片入库 → 双端均按规则复用素材库图片
+        ↓
+总后台 Banner 配置主图（从素材库选择）→ 入库即可用
+客户端后台商品主图（从素材库选择已开放文件夹的图，或直接上传直接使用，不入库）
+```
+
+### 1.2 一句话业务模型
+
+```text
+素材库（文件夹→分类→素材图，文件夹带"是否开放给客户端"开关）
+        +
+总后台维护文件夹开关、按分类上传入库
+        +
+客户端从已开放文件夹复用图 / 直接上传直接使用（不入库）
+        ↓
+总后台配置 Banner 主图 → 客户端配置商品主图 → 双端业务页面图片可复用
+```
+
+### 1.3 最终目标
+
+- **素材库双端复用：** 总后台和客户端后台均能从素材库选择图片复用，客户端只可见已开放文件夹下的图片。
+- **双端上传规则收口：** 总后台上传必须先选分类、入库后才可用；客户端上传后直接使用、不入库不留存。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ SaaS 总后台                           │ 客户端后台                             │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ ① 维护素材库文件夹开放开关           │                                      │
+│ 【文件夹状态：开放 / 不开放】          │                                      │
+│          │                           │                                      │
+│ ② 选分类上传图片入库                 │                                      │
+│ 【素材图状态：已入库，可复用】         │                                      │
+│          │                           │                                      │
+│ ③ 配置 Banner 主图                   │                                      │
+│ 【Banner 状态：在推 / 停推】          │                                      │
+│          │                           │                                      │
+│          └──────────────────────────→│ ④ 从已开放文件夹选择图片复用         │
+│                                      │ 【素材图状态：已复用至业务】          │
+│                                      │          │                           │
+│                                      │ ⑤ 上传商品主图（不入库直接使用）    │
+│                                      │ 【商品主图状态：直接可用】            │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+```
+
+泳道图说明：
+
+- 编号节点只写参与方实际执行的业务动作。
+- 状态标注写在触发该状态的动作之后，不占用新的流程序号。
+- 一张泳道图只展示核心状态主线，本功能涉及三个核心业务对象：**文件夹**（状态：开放 / 不开放）、**素材图**（状态：已入库 / 已复用至业务）、**Banner**（状态：在推 / 停推）、**商品主图**（状态：直接可用）。
+- 客户端上传的商品主图不进入素材库，状态独立，与素材图无关联。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前业务闭环，可划分为：
+
+1. **第一阶段：素材库管理（主要参与方：SaaS 总后台）**：总后台维护素材库文件夹开放开关，按分类上传图片入库，素材图成为可被双端复用的资源。
+2. **第二阶段：双端调用素材库（主要参与方：SaaS 总后台 + 客户端后台）**：总后台在 Banner 配置中从素材库选择主图；客户端从已开放文件夹复用图片，或直接上传直接使用（不入库）。
+
+```text
+第一阶段：素材库管理
+① 维护素材库文件夹开放开关 → ② 选分类上传图片入库
+                    ↓
+第二阶段：双端调用素材库
+③ 配置 Banner 主图 → ④ 从已开放文件夹选择图片复用 → ⑤ 上传商品主图（不入库直接使用）
+```
+
+每个页面/功能小节的 `#### 业务背景` 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。
+
+### 2.3 页面类型说明
+
+| 页面类型 | 面向对象 | 含义 | 正文字段表格列 |
+| --- | --- | --- | --- |
+| 列表页 | 后台操作人员 | 操作人员看到的当前页面是一张列表，字段在列表和详情中可能分别展示 | 字段名称、字段类型、列表、详情、新增、字段解释 |
+
+本功能全部为 B 端后台页面（无 C 端用户页面），统一使用列表页形态：新增/编辑走弹窗，详情走抽屉。
+
+**字段类型**列的值域：
+
+| 字段类型 | 说明 | 示例 |
+| --- | --- | --- |
+| string | 字符串 | `string` |
+| date | 日期 | `date` |
+| enum | 枚举，必须用括号罗列全部枚举值 | `enum（开放、不开放）` |
+| file | 文件 | `file` |
+| 组合字段 | 复合字段 | `组合字段` |
+
+---
+
+## 3. 第一阶段：素材库管理
+
+### 3.2 素材管理 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：② 选分类上传图片入库
+页面路径：SaaS 总后台 > 素材库 > 素材管理
+对下游影响：素材管理页是素材库的主操作台：左侧维护文件夹、顶部分类 Tab 管理二级分类、右上"上传文件"将图片入库；本页内部结构同时被双端业务页的"选图弹窗"复用，素材图入库后即成为可被双端复用的资源
+表格类型：列表页
+
+#### 字段说明
+
+页面整体布局：左侧为文件夹树（顶部"+ 新增文件夹"，每行展示文件夹名称与"展示到客户端"开关（开放/不开放，可点击切换），底部"回收站"）；右侧顶部为素材名称搜索框、分类 Tab（全部/按钮/外卖/其他…）与"新增分类"入口；主区域为图片卡片网格（文件名、分类·大小、编辑/下载/删除）；右上为"上传文件"按钮；底部分页（24 条/页）。
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 所属文件夹 | string | 是 | 是 | 否 | **数据来源：** 系统取上传时左侧当前选中的文件夹。<br>**逻辑：** 上传入口位于具体文件夹上下文内，文件夹自动带入，无需在上传弹窗中重复选择。<br>**用途：** 标识素材图一级归属。 |
+| 目标分类 | enum（按钮、外卖、其他） | 是 | 是 | 是（可编辑） | **数据来源：** 总后台运营人员在"上传到分类"弹窗中选择。<br>**逻辑：** 必填项，未选择目标分类时"选择文件并上传"置灰不可点；同时作为页面顶部的分类 Tab 维度。<br>**用途：** 标识素材图二级归属，是总后台上传入库的前置条件。 |
+| 图片文件 | file | 是 | 是 | 是（可编辑） | **数据来源：** 总后台运营人员上传。<br>**逻辑：** 必须先选目标分类才能选择文件上传；上传成功后图片立即入库，卡片网格中以缩略图展示。<br>**用途：** 直观查看素材内容。 |
+| 上传时间 | date | 否 | 是 | 否 | **数据来源：** 系统记录上传时间。<br>**逻辑：** 格式 YYYY-MM-DD HH:mm。<br>**用途：** 用于排序和追溯。 |
+| 入库状态 | enum（已入库） | 是 | 是 | 否 | **数据来源：** 系统根据上传结果自动标记。<br>**逻辑：** 上传成功即入库，可被双端复用。<br>**用途：** 标识素材图当前可被复用。 |
+
+"操作"属于页面功能，不作为业务字段保存。
+
+#### 详情字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 归属信息 | 所属文件夹、目标分类 |
+| 图片信息 | 图片文件、上传时间、入库状态 |
+
+#### 列表交互
+
+**交互：上传文件（总后台）**
+**业务用途**：点击右上"上传文件"弹出"上传到分类"弹窗：先选必填的「目标分类」，未选时"选择文件并上传"整段置灰不可点；选分类后选择文件上传，成功即入库，可被双端复用。
+
+**交互：新增文件夹 / 新增分类**
+**业务用途**：左侧"+ 新增文件夹"创建一级文件夹；选中文件夹后顶部"新增分类"为其增加二级分类，分类同步出现在 Tab 中。
+
+**交互：分类 Tab 与搜索**
+**业务用途**：点击分类 Tab 按二级分类筛选当前文件夹下的素材；搜索框按素材名称模糊搜索，二者可叠加。
+
+**交互：卡片编辑 / 下载 / 删除**
+**业务用途**：每张素材卡片提供编辑（修改归属分类）、下载（下载原图）、删除（移入回收站，不移除 OSS 原始文件）；点击图片本身打开详情抽屉。
+
+**交互：全选与分页**
+**业务用途**："全选本页"批量选择当前页素材，配合批量下载/删除；底部固定 24 条/页分页。
+
+#### 业务逻辑
+
+**上传必须选分类：** "上传到分类"弹窗中目标分类为必填，未选择时"选择文件并上传"置灰不可点击，确保每张入库素材都有明确的二级归属。
+
+**入库即可用：** 素材上传成功即入库，无需审核或发布。入库后即可被总后台（如 Banner 主图）和客户端（仅限所属文件夹已开放时）通过选图弹窗复用。
+
+**客户端可见性跟随文件夹：** 素材图在客户端是否可见取决于其所属文件夹的开放状态，素材图本身不单独设置开放开关。
+
+**页面结构被双端选图弹窗复用：** 双端业务页（4.1 Banner、4.2 商品主图）选择主图时弹出的选图弹窗复用本页"文件夹树 + 分类 Tab + 图片网格"的内部结构，差异仅在数据范围与管理权限（见 4.1、4.2）。
+
+---
+
+## 4. 第二阶段：双端调用素材库
+
+### 4.1 Banner 配置 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：③ 配置 Banner 主图
+页面路径：SaaS 总后台 > 内容运营 > Banner 配置
+对下游影响：Banner 主图从素材库选择已入库的图，形成 Banner 业务记录；选择主图时不影响素材库原图片
+表格类型：列表页
+
+#### 字段说明
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| Banner 名称 | string | 是 | 是 | 是（可编辑） | **数据来源：** 总后台运营人员填写。<br>**逻辑：** Banner 名称用于后台识别，建议简洁明确。<br>**用途：** 帮助运营人员区分不同 Banner。 |
+| 主图 | file | 是 | 是 | 是（可编辑） | **数据来源：** 总后台运营人员在新增/编辑弹窗点击主图字段，打开双端共用的"素材选择"弹窗，从素材库选择已入库的素材图。<br>**逻辑：** 主图必须来源于素材库，不支持直接上传本地图片；弹窗以总后台模式打开，全部文件夹可见，管理入口完整（可新增文件夹/分类、可在弹窗内直接"上传文件"入库）。<br>**用途：** Banner 在前端展示的主视觉。 |
+| 跳转链接 | string | 否 | 是 | 是（可编辑） | **数据来源：** 总后台运营人员填写。<br>**逻辑：** 选填，支持 H5/小程序路径。<br>**用途：** 用户点击 Banner 后跳转目标。 |
+| 状态 | enum（在推、停推） | 是 | 是 | 是（可编辑） | **数据来源：** 总后台运营人员切换。<br>**逻辑：** 在推→前端可见；停推→前端不可见。<br>**用途：** 控制 Banner 是否对前端展示。 |
+| 创建时间 | date | 否 | 是 | 否 | **数据来源：** 系统记录创建时间。<br>**逻辑：** 格式 YYYY-MM-DD HH:mm。<br>**用途：** 用于排序和查询。 |
+
+"操作"属于页面功能，不作为业务字段保存。
+
+#### 详情字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | Banner 名称、状态、创建时间 |
+| 主图与跳转 | 主图、跳转链接 |
+
+#### 列表交互
+
+**交互：新增 Banner**
+**业务用途**：新建一条 Banner 配置。主图字段点击后打开共用"素材选择"弹窗（总后台模式：全部文件夹、管理入口完整、可在弹窗内"上传文件"入库）；新建后默认状态=停推，需手动切换为在推才对前端可见。
+
+**交互：编辑 Banner**
+**业务用途**：修改 Banner 名称、主图、跳转链接、状态。主图同样通过共用"素材选择"弹窗更换；状态切换立即对前端生效，无需二次发布。
+
+**交互：查看详情**
+**业务用途**：打开详情抽屉，展示 Banner 基本信息、主图预览和跳转链接。
+
+#### 业务逻辑
+
+**主图通过共用选图弹窗选择：** Banner 主图必须从素材库选择已入库的素材图，不支持直接上传本地图片。弹窗复用 3.2 素材管理页"文件夹树 + 分类 Tab + 图片网格"的内部结构，总后台模式下全部文件夹可见、全部管理入口可用。
+
+**状态即时生效：** Banner 状态切换立即对前端生效，无需发布或审核。从在推切换为停推后，前端立即不再展示该 Banner。
+
+**素材图变更不影响已用引用：** Banner 选择素材图后保留对原图的引用快照，素材图在素材库被编辑或删除时，已配置的 Banner 主图不受影响。
+
+---
+
+### 4.2 商品主图配置 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：④ 从已开放文件夹选择图片复用 / ⑤ 上传商品主图（不入库直接使用）
+页面路径：客户端后台 > 商品管理 > 商品主图
+对下游影响：客户端在配置商品主图时，可从素材库已开放文件夹复用图片，或直接上传直接使用（不入库不留存）；两条路径都形成商品业务记录
+表格类型：列表页
+
+#### 字段说明
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 商品名称 | string | 是 | 是 | 是（可编辑） | **数据来源：** 客户端后台运营人员填写。<br>**逻辑：** 商品名称用于客户端识别，建议简洁明确。<br>**用途：** 帮助客户端区分不同商品。 |
+| 商品主图 | file | 是 | 是 | 是（可编辑） | **数据来源：** 客户端后台运营人员在新增/编辑弹窗点击商品主图字段，打开双端共用的"素材选择"弹窗（客户端模式）。<br>**逻辑：** 弹窗内部结构与 3.2 一致但管理受限：① 文件夹树只列出已开放文件夹；② 新增文件夹、新增分类、回收站、卡片上的编辑/下载/删除全部隐藏；③ 弹窗右上保留"上传图片"按钮，点击后直接选择文件上传、不入库、不分类，仅当前业务使用。<br>**用途：** 商品在前端展示的主视觉。 |
+| 图片来源 | enum（素材库复用、直接上传） | 是 | 是 | 否 | **数据来源：** 系统根据用户操作路径自动标记。<br>**逻辑：** 从素材库选择→素材库复用；直接上传→直接上传。<br>**用途：** 标识商品主图的来源路径，便于追溯。 |
+| 创建时间 | date | 否 | 是 | 否 | **数据来源：** 系统记录创建时间。<br>**逻辑：** 格式 YYYY-MM-DD HH:mm。<br>**用途：** 用于排序和查询。 |
+
+"操作"属于页面功能，不作为业务字段保存。
+
+#### 详情字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 商品名称、图片来源、创建时间 |
+| 商品主图 | 商品主图 |
+
+#### 列表交互
+
+**交互：新增商品主图**
+**业务用途**：新建一条商品主图记录。商品主图字段点击后打开共用"素材选择"弹窗（客户端模式：仅已开放文件夹、管理入口全部隐藏）；弹窗内支持两条路径——从已开放文件夹选图复用，或点击"上传图片"直接上传（不入库不留存）。新增后即可在前端使用。
+
+**交互：编辑商品主图**
+**业务用途**：修改商品名称、商品主图。商品主图同样通过共用"素材选择"弹窗更换；编辑后立即生效，无需发布或审核。
+
+**交互：查看详情**
+**业务用途**：打开详情抽屉，展示商品基本信息和商品主图预览。
+
+#### 业务逻辑
+
+**客户端模式选图弹窗：** 商品主图弹窗复用 3.2 的内部结构，但仅列出已开放文件夹，新增文件夹、新增分类、回收站、卡片编辑/下载/删除全部隐藏；客户端无法绕过开放开关访问未开放素材。
+
+**双路径上传：** 客户端弹窗支持两条路径：① 从已开放文件夹选图复用；② 点击"上传图片"直接选择文件上传。系统根据用户操作路径自动标记图片来源。
+
+**直接上传不入库：** 客户端直接上传的图片不进入素材库，不归属任何文件夹和分类，仅作为当前商品主图使用，无法被其他业务复用。
+
+**素材库复用受开放约束：** 客户端只能从已开放文件夹中选择图片复用，不开放文件夹及其下属分类、素材图对客户端不可见。客户端无法绕过开放开关访问未开放素材。
+
+**上传无分类约束：** 客户端直接上传路径不需要选分类，与总后台上传必须选分类的规则不同；这是双端上传规则的核心差异，反映了两端对素材管理的不同诉求。
+
+---
+
+## 5. 第三阶段：系统传图位置清单
+
+### 5.1 传图位置清单 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：素材库选图能力落地
+页面路径：开发交付清单（无实际后台路径，本页为开发交付参考）
+对下游影响：告诉开发哪些传图位置要接入素材库选图能力。4.1/4.2 为交互演示样例，本页为真实落地清单。
+表格类型：列表页（只读清单）
+
+#### 字段说明
+
+本页为文本式清单，无字段表。按"端 > 模块 > 页面 > 传图位置"层级展示，共 9 个传图位置。
+
+#### 传图位置清单
+
+**总后台**（6 个传图位置）
+
+- **04-活动管理及公告**
+  - 联盟活动 — 编辑活动图片
+  - 第三方活动 — 编辑活动图片
+  - 公告及二维码 — 上传二维码
+- **05-小程序配置**
+  - 组件管理 — 缩略图 + 按钮图标（一个组件两个图位）
+  - 发布人设置 — 头像编辑
+- **06-页面管理**
+  - H5 模板管理 — 缩略图
+
+**客户端**（3 个传图位置）
+
+- **外部口令单页**
+  - 模板管理 — 所有的传图组件（一个模板多个图位都走选图）
+- **小程序（内部功能）**
+  - 专题页配置 — 配置图片（仅页面类型=B版权益页）
+  - 活动配置 — 配置图片
+
+#### 列表交互
+
+**交互：查看清单**
+**业务用途**：本页为只读文本清单，无新增/编辑操作。每个传图位置可点击"详情"查看字段说明。开发按本清单把素材库选图能力铺到每个传图位置。
+
+#### 业务逻辑
+
+**落地范围：** 总后台 6 个传图位置（04-活动管理及公告 3 个、05-小程序配置 2 个、06-页面管理 1 个）；客户端 3 个传图位置（外部口令单页 1 个、小程序内部功能 2 个）。
+
+**4.1/4.2 为演示样例：** 4.1 Banner 配置、4.2 商品主图配置为交互演示样例，已跑通双端选图弹窗的交互；本清单为真实落地范围，开发按本清单接入。
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>09-15素材库双端复用_v2</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用壳 { display: grid; grid-template-columns: var(--泳道宽) var(--菜单宽) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+
+/* ── 中：后台菜单（白底黑字，全铺开，父节点不可点） ── */
+.菜单区 { background: #fff; color: #334155; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+.菜单品牌 { padding: 18px 18px 14px; border-bottom: 1px solid #eef2f7; }
+.菜单品牌名 { font-size: 16px; font-weight: 700; color: #172033; line-height: 1.4; }
+.菜单品牌小 { font-size: 11px; color: #94a3b8; margin-top: 3px; letter-spacing: .5px; }
+.菜单父 { padding: 16px 18px 4px; font-size: 12px; color: #0f6b8f; font-weight: 700; letter-spacing: .5px; }
+.菜单文档, .菜单叶子 { display: flex; align-items: center; gap: 8px; color: #334155; font-size: 13.5px; cursor: pointer; user-select: none; border-left: 3px solid transparent; }
+.菜单文档 { padding: 9px 18px; }
+.菜单叶子 { padding: 8px 18px 8px 30px; font-size: 13px; }
+.菜单文档.子级 { padding: 9px 18px 9px 30px; font-size: 13px; }
+.菜单文档:hover, .菜单叶子:hover { background: #f1f5f9; color: #0f172a; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.菜单号 { font-family: Consolas, monospace; font-size: 11px; color: #94a3b8; min-width: 26px; }
+.菜单文档.激活 .菜单号, .菜单叶子.激活 .菜单号 { color: #0f6b8f; }
+.菜单图标 { font-size: 13px; }
+
+/* ── 中：内容工作区 ── */
+.内容区 { overflow-y: auto; background: #f1f5f9; }
+.页面面板 { display: none; padding: 22px 26px 48px; }
+.页面面板.激活 { display: block; }
+.页面卡 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(15,35,52,.04); margin-bottom: 18px; }
+.页面头 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.页面头 h2 { margin: 0; font-size: 19px; color: #172033; }
+.主按钮 { padding: 7px 16px; border: 1px solid #0f6b8f; border-radius: 6px; background: #0f6b8f; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.主按钮:hover { background: #0c5673; }
+
+/* ── 左：常驻泳道栏 ── */
+.泳道区 { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 14px 12px 28px; }
+.泳道区 > h3 { margin: 2px 4px 10px; font-size: 14px; color: #334155; }
+.泳道简介 { margin: 0 4px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.75; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道区 .泳道图 { font-size: 13px; }
+</style>
+<style id="css-组件">
+/* ── 文档页排版 ── */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 26px 0 12px; font-size: 20px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.阅读标题 { line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 20px; margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 16px; margin: 22px 0 8px; } .文档正文 h5 { font-size: 14px; margin: 18px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.行内代码 { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; }
+.代码块 pre { margin: 0; padding: 16px; background: #fff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; }
+.代码块 code { display: block; font-family: Consolas, Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ── 流程信息卡 ── */
+.流程信息卡 { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; background: linear-gradient(180deg,#f8fbff,#f1f7ff); margin-bottom: 16px; overflow: hidden; }
+.流程信息卡-头部 { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #dbeafe; }
+.流程步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.流程信息卡-环节名 { font-size: 13.5px; font-weight: 600; color: #1e3a8a; }
+.流程信息卡-正文 { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+.流程信息卡-行 { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.流程信息卡-标签 { flex-shrink: 0; display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+
+/* ── 列表页 ── */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 150px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 150px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; white-space: nowrap; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; margin-right: 6px; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.删除按钮 { padding: 4px 12px; border: 1px solid #ef4444; border-radius: 4px; background: #fff; color: #ef4444; font-size: 12px; cursor: pointer; } .删除按钮:hover { background: #ef4444; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+
+/* ── 字段卡（弹窗表单与详情抽屉共用） ── */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 20px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius:  10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 120px 1fr 28px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 140px; }
+.field-input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; width: 100%; max-width: 360px; font-family: inherit; }
+textarea.field-input { max-width: 100%; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+.field-info-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ── 详情抽屉 / 表单弹窗（右侧滑出） ── */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; max-width: 94vw; height: 100vh; background: #f8fafc; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 60px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: #fff; }
+.panel-title { font-size: 17px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ── 字段弹窗 ── */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ── 泳道图组件（2026 蓝圈号标准版） ── */
+.泳道图 { margin: 0; font-size: 13px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道圆圈 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支说明 { font-size: 12px; color: #b45309; padding: 2px 0 0 26px; line-height: 1.6; }
+.泳道行 { transition: opacity .25s ease; }
+.泳道图[class*="高亮阶段"] .泳道行[data-node-phase] { opacity: .35; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"], .泳道图.高亮阶段2 .泳道行[data-node-phase="2"],
+.泳道图.高亮阶段3 .泳道行[data-node-phase="3"], .泳道图.高亮阶段4 .泳道行[data-node-phase="4"],
+.泳道图.高亮阶段5 .泳道行[data-node-phase="5"], .泳道图.高亮阶段6 .泳道行[data-node-phase="6"],
+.泳道图.高亮阶段7 .泳道行[data-node-phase="7"], .泳道图.高亮阶段8 .泳道行[data-node-phase="8"],
+.泳道图.高亮阶段9 .泳道行[data-node-phase="9"], .泳道图.高亮阶段10 .泳道行[data-node-phase="10"] { opacity: 1; }
+.泳道行.置灰 { opacity: .25 !important; pointer-events: none; }
+.泳道行.当前 { opacity: 1 !important; }
+
+/* ── 提示消息 / 灯箱 / 杂项 ── */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+</style>
+<style id="css-状态">
+.页面面板.激活 { display: block; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.图片灯箱.可见 { display: flex; }
+</style>
+</head>
+<body>
+<div class="应用壳">
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<p class="泳道简介">平台已有一套素材库管理能力，结构为"文件夹 → 分类 → 素材图"两层关系。当前素材库只在内部使用，客户端后台无法复用素材库的图片，每次客户端业务（如商品主图上传）都需要单独上传一次，重复存储、重复维护，图片资源浪费严重；同时总后台与客户端在图片上传上的规则也不一致，需要统一收口。</p>
+<div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;">
+<div class="泳道图-头" style="display:grid;grid-template-columns:repeat(2,1fr);border-bottom:2px solid #e2e8f0;">
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">SaaS 总后台</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">客户端后台</div>
+</div><div class="泳道图-体">
+<div class="泳道行" data-swimlane-node="1" data-node-phase="1" style="display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">①</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">维护素材库文件夹开放开关</span></div><span class="泳道状态徽章 信息色">文件夹状态：开放 / 不开放</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="2" data-node-phase="1" style="display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">②</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">选分类上传图片入库</span></div><span class="泳道状态徽章 信息色">素材图状态：已入库，可复用</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="3" data-node-phase="2" style="display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">③</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">配置 Banner 主图</span></div><span class="泳道状态徽章 信息色">Banner 状态：在推 / 停推</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="4" data-node-phase="2" style="display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">④</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">从已开放文件夹选择图片复用</span></div><span class="泳道状态徽章 信息色">素材图状态：已复用至业务</span></div>
+</div>
+<div class="泳道行" data-swimlane-node="5" data-node-phase="2" style="display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑤</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">上传商品主图（不入库直接使用）</span></div><span class="泳道状态徽章 信息色">商品主图状态：直接可用</span></div>
+</div>
+</div></div>
+</aside>
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">09-15素材库双端复用_v2</div><div class="菜单品牌小">B 端业务原型 · v2 母版</div></div>
+<div class="菜单父"><span>需求与流程</span></div>
+<div class="菜单文档 子级 激活" data-menu-page="1" onclick="切换页面('1')"><span class="菜单号">001</span><span>需求背景与目标</span></div>
+<div class="菜单文档 子级" data-menu-page="2" onclick="切换页面('2')"><span class="菜单号">002</span><span>业务流程</span></div>
+<div class="菜单父"><span>第一阶段：素材库管理</span></div>
+<div class="菜单叶子" data-menu-page="3.2" onclick="切换页面('3.2')"><span class="菜单号">3.2</span><span class="菜单图标">🖼️</span><span>素材管理</span></div>
+<div class="菜单父"><span>第二阶段：双端调用素材库</span></div>
+<div class="菜单叶子" data-menu-page="4.1" onclick="切换页面('4.1')"><span class="菜单号">4.1</span><span class="菜单图标">🖼️</span><span>Banner 配置</span></div>
+<div class="菜单叶子" data-menu-page="4.2" onclick="切换页面('4.2')"><span class="菜单号">4.2</span><span class="菜单图标">📦</span><span>商品主图配置</span></div>
+<div class="菜单父"><span>第三阶段：系统传图位置清单</span></div>
+<div class="菜单叶子" data-menu-page="5.1" onclick="切换页面('5.1')"><span class="菜单号">5.1</span><span class="菜单图标">📍</span><span>传图位置清单</span></div>
+</nav>
+<main class="内容区" id="内容区">
+<section class="页面面板 激活" id="面_1" data-page="1"><div class="页面卡"><div class="页面头"><h2>需求背景与目标</h2></div><div class="文档正文"><h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>平台已有一套素材库管理能力，结构为"文件夹 → 分类 → 素材图"两层关系。当前素材库只在内部使用，客户端后台无法复用素材库的图片，每次客户端业务（如商品主图上传）都需要单独上传一次，重复存储、重复维护，图片资源浪费严重；同时总后台与客户端在图片上传上的规则也不一致，需要统一收口。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>改造前
+
+素材库只在内部分组使用；
+客户端后台上传商品主图时，每次都重新上传一次，图片资源不互通、不复用；
+没有"文件夹是否对客户端开放"的管理能力。
+
+
+改造后
+
+总后台维护素材库文件夹开放开关
+        ↓
+总后台选分类上传图片入库 → 双端均按规则复用素材库图片
+        ↓
+总后台 Banner 配置主图（从素材库选择）→ 入库即可用
+客户端后台商品主图（从素材库选择已开放文件夹的图，或直接上传直接使用，不入库）</code></pre></div>
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>素材库（文件夹→分类→素材图，文件夹带"是否开放给客户端"开关）
+        +
+总后台维护文件夹开关、按分类上传入库
+        +
+客户端从已开放文件夹复用图 / 直接上传直接使用（不入库）
+        ↓
+总后台配置 Banner 主图 → 客户端配置商品主图 → 双端业务页面图片可复用</code></pre></div>
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>素材库双端复用：</strong> 总后台和客户端后台均能从素材库选择图片复用，客户端只可见已开放文件夹下的图片。</li>
+<li><strong>双端上传规则收口：</strong> 总后台上传必须先选分类、入库后才可用；客户端上传后直接使用、不入库不留存。</li>
+</ul>
+</div></div></section>
+<section class="页面面板" id="面_2" data-page="2"><div class="页面卡"><div class="页面头"><h2>业务流程</h2></div><div class="文档正文"><h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<p>泳道图说明：</p>
+<ul>
+<li>编号节点只写参与方实际执行的业务动作。</li>
+<li>状态标注写在触发该状态的动作之后，不占用新的流程序号。</li>
+<li>一张泳道图只展示核心状态主线，本功能涉及三个核心业务对象：<strong>文件夹</strong>（状态：开放 / 不开放）、<strong>素材图</strong>（状态：已入库 / 已复用至业务）、<strong>Banner</strong>（状态：在推 / 停推）、<strong>商品主图</strong>（状态：直接可用）。</li>
+<li>客户端上传的商品主图不进入素材库，状态独立，与素材图无关联。</li>
+</ul>
+
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>后续正文按照业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前业务闭环，可划分为：</p>
+<p>1. <strong>第一阶段：素材库管理（主要参与方：SaaS 总后台）</strong>：总后台维护素材库文件夹开放开关，按分类上传图片入库，素材图成为可被双端复用的资源。</p>
+<p>2. <strong>第二阶段：双端调用素材库（主要参与方：SaaS 总后台 + 客户端后台）</strong>：总后台在 Banner 配置中从素材库选择主图；客户端从已开放文件夹复用图片，或直接上传直接使用（不入库）。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：素材库管理
+① 维护素材库文件夹开放开关 → ② 选分类上传图片入库
+                    ↓
+第二阶段：双端调用素材库
+③ 配置 Banner 主图 → ④ 从已开放文件夹选择图片复用 → ⑤ 上传商品主图（不入库直接使用）</code></pre></div>
+<p>每个页面/功能小节的 <code class="行内代码">#### 业务背景</code> 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。</p>
+<h3 class="阅读节标题">2.3 页面类型说明</h3>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>页面类型</th>
+<th>面向对象</th>
+<th>含义</th>
+<th>正文字段表格列</th>
+</tr>
+<tr>
+<td>列表页</td>
+<td>后台操作人员</td>
+<td>操作人员看到的当前页面是一张列表，字段在列表和详情中可能分别展示</td>
+<td>字段名称、字段类型、列表、详情、新增、字段解释</td>
+</tr>
+</table></div>
+
+<p>本功能全部为 B 端后台页面（无 C 端用户页面），统一使用列表页形态：新增/编辑走弹窗，详情走抽屉。</p>
+<p><strong>字段类型</strong>列的值域：</p>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>字段类型</th>
+<th>说明</th>
+<th>示例</th>
+</tr>
+<tr>
+<td>string</td>
+<td>字符串</td>
+<td><code class="行内代码">string</code></td>
+</tr>
+<tr>
+<td>date</td>
+<td>日期</td>
+<td><code class="行内代码">date</code></td>
+</tr>
+<tr>
+<td>enum</td>
+<td>枚举，必须用括号罗列全部枚举值</td>
+<td><code class="行内代码">enum（开放、不开放）</code></td>
+</tr>
+<tr>
+<td>file</td>
+<td>文件</td>
+<td><code class="行内代码">file</code></td>
+</tr>
+<tr>
+<td>组合字段</td>
+<td>复合字段</td>
+<td><code class="行内代码">组合字段</code></td>
+</tr>
+</table></div>
+
+<hr></div></div></section>
+<section class="页面面板" id="面_3_2" data-page="3.2"><div class="页面卡"><div class="页面头"><h2>素材管理</h2><button class="主按钮" onclick="打开表单弹窗('3.2','新增')">上传文件</button></div>
+<style id="css-素材库业务">
+.素材管理卡{border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#fff;}
+.素材主体{display:flex;flex:1;min-height:0;overflow:hidden;}
+.素材侧栏{width:216px;flex:none;border-right:1px solid #e2e8f0;background:#fafbfc;display:flex;flex-direction:column;overflow:auto;}
+.侧栏新增{margin:12px 12px 4px;padding:8px 10px;border:1px dashed #c7d2fe;border-radius:8px;background:#fff;color:#4338ca;font-size:13px;cursor:pointer;text-align:center;}
+.侧栏新增:hover{background:#eef2ff;}
+.文件夹树{flex:1;overflow:auto;padding:4px 8px;}
+.文件夹行{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#334155;}
+.文件夹行:hover{background:#f1f5f9;}
+.文件夹行.激活{background:#eef2ff;color:#4338ca;font-weight:600;}
+.文件夹行 .文件夹图标{font-size:14px;}
+.文件夹行 .数量{margin-left:auto;font-size:12px;color:#94a3b8;font-weight:400;}
+.文件夹行 .更多{color:#cbd5e1;padding:0 2px;}
+.文件夹开关{margin-left:auto;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;line-height:1.6;border:1px solid #e5e7eb;background:#f3f4f6;color:#6b7280;user-select:none;}
+.文件夹开关.开放{background:#ecfdf3;color:#027a48;border-color:#a7f3d0;}
+.文件夹开关.开放:hover{background:#d1fae5;}
+.文件夹开关.不开放{background:#f3f4f6;color:#6b7280;border-color:#e5e7eb;}
+.文件夹开关.不开放:hover{background:#e5e7eb;}
+.回收站{margin:4px 12px 12px;border-top:1px solid #eef2f7;padding-top:10px;background:none;border-left:none;border-right:none;border-bottom:none;color:#64748b;font-size:13px;cursor:pointer;text-align:left;}
+.回收站:hover{color:#4338ca;}
+.素材内容{flex:1;display:flex;flex-direction:column;min-width:0;}
+.素材工具栏{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #f1f5f9;}
+.文字按钮{background:none;border:none;color:#6366f1;font-size:13px;cursor:pointer;padding:4px 8px;white-space:nowrap;}
+.文字按钮:hover{color:#4338ca;}
+.分类Tabs{display:flex;gap:8px;padding:12px 18px 0;flex-wrap:wrap;}
+.分类Tab{padding:4px 16px;border:1px solid #e2e8f0;border-radius:16px;font-size:13px;cursor:pointer;background:#fff;color:#475569;}
+.分类Tab.激活{border-color:#6366f1;color:#4338ca;background:#eef2ff;font-weight:600;}
+.选择行{display:flex;align-items:center;gap:8px;padding:10px 18px 0;font-size:13px;color:#64748b;}
+.图片网格{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:14px;padding:14px 18px;flex:1;align-content:start;}
+.素材卡{border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;}
+.素材卡.选中{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.25);}
+.素材图框{position:relative;height:108px;background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:zoom-in;}
+.素材图框 img{max-width:100%;max-height:100%;}
+.素材文件名{font-size:12px;color:#1e293b;padding:6px 8px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.素材元{font-size:11px;color:#94a3b8;padding:2px 8px 0;}
+.素材操作{display:flex;gap:12px;padding:6px 8px 8px;font-size:12px;}
+.素材操作 a{color:#6366f1;cursor:pointer;}
+.素材操作 a.危险{color:#ef4444;}
+.分页栏{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid #f1f5f9;font-size:12px;color:#64748b;}
+.分页控件{display:flex;gap:8px;align-items:center;}
+.上传长条{width:100%;padding:14px;border:1px dashed #c7d2fe;border-radius:10px;background:#f5f3ff;color:#4338ca;font-size:14px;cursor:pointer;}
+.选图触发按钮{width:100%;padding:18px;border:1px dashed #c7d2fe;border-radius:10px;background:#fafaff;color:#4338ca;font-size:14px;cursor:pointer;}
+.选图触发按钮:hover{background:#f5f3ff;}
+.选图预览{margin-top:8px;}
+.选图预览 img{width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;}
+.选图预览 .选图名{font-size:12px;color:#64748b;margin-top:4px;}
+.素材遮罩{position:fixed;inset:0;background:rgba(15,23,42,.42);display:none;z-index:100;align-items:center;justify-content:center;}
+.素材遮罩.show{display:flex;}
+.素材选择面板{width:940px;max-width:94vw;height:660px;max-height:94vh;background:#fff;border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(15,23,42,.28);}
+.选择器头{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #f1f5f9;}
+.选择器头 h3{margin:0;font-size:16px;color:#1e293b;}
+#选择器模式标{font-size:12px;padding:2px 10px;border-radius:12px;background:#eef2ff;color:#4338ca;}
+#选择器模式标.客户端{background:#ecfdf5;color:#047857;}
+.选择器关闭{margin-left:auto;background:none;border:none;font-size:22px;color:#94a3b8;cursor:pointer;line-height:1;}
+.选择器脚{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid #f1f5f9;}
+#选择器已选{font-size:13px;color:#4338ca;}
+.勾选角{display:none;position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:#6366f1;color:#fff;font-size:12px;align-items:center;justify-content:center;}
+.素材卡.选中 .勾选角{display:flex;}
+/* === 独立弹窗（z-index:95，盖在选图弹窗之上） === */
+.临时遮罩{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;z-index:110;align-items:center;justify-content:center;}
+.临时遮罩.show{display:flex;}
+.临时面板{width:560px;max-width:94vw;max-height:86vh;background:#fff;border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(15,23,42,.3);}
+.临时头{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #f1f5f9;}
+.临时头 h3{margin:0;font-size:16px;color:#1e293b;}
+.临时关闭{margin-left:auto;background:none;border:none;font-size:22px;color:#94a3b8;cursor:pointer;line-height:1;}
+.临时关闭:hover{color:#475569;}
+.临时正文{padding:20px;overflow:auto;flex:1;}
+.临时脚{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid #f1f5f9;}
+.临时网格{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:14px;}
+.临时卡{border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;cursor:pointer;background:#fff;}
+.临时卡.选中{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.25);}
+.临时卡 .素材图框{height:90px;}
+.临时卡 .素材文件名{font-size:11px;padding:4px 6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.临时空{grid-column:1/-1;padding:30px;text-align:center;color:#94a3b8;font-size:13px;}
+</style>
+<div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">②</span><span class="流程信息卡-环节名">当前环节：② 选分类上传图片入库</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 素材库 &gt;</span> <span class="路径末段">素材管理</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">素材管理页是素材库的主操作台：左侧维护文件夹、顶部分类 Tab 管理二级分类、右上"上传文件"将图片入库；本页内部结构同时被双端业务页的"选图弹窗"复用，素材图入库后即成为可被双端复用的资源</span></div></div></div>
+<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#92400e;">&#9888; 总后台点击右上「上传文件」：弹出「上传到分类」，必须先选目标分类，未选时「选择文件并上传」置灰不可点。</div>
+<div class="素材管理卡"><div class="素材主体"><aside class="素材侧栏"><button class="侧栏新增" type="button" onclick="显示提示('演示环境：新增文件夹', '信息', 1600)">＋ 新增文件夹</button><div class="文件夹树"><div class="文件夹行 激活"><span class="文件夹图标">📁</span><span>营销活动素材</span><span class="文件夹开关 开放" onclick="切换文件夹开放('营销活动素材')">开放</span><span class="更多">⋯</span></div>
+<div class="文件夹行"><span class="文件夹图标">📁</span><span>商品主图素材</span><span class="文件夹开关 开放" onclick="切换文件夹开放('商品主图素材')">开放</span><span class="更多">⋯</span></div>
+<div class="文件夹行"><span class="文件夹图标">📁</span><span>Banner 素材</span><span class="文件夹开关 不开放" onclick="切换文件夹开放('Banner 素材')">不开放</span><span class="更多">⋯</span></div>
+<div class="文件夹行"><span class="文件夹图标">📁</span><span>节日主题素材</span><span class="文件夹开关 开放" onclick="切换文件夹开放('节日主题素材')">开放</span><span class="更多">⋯</span></div>
+<div class="文件夹行"><span class="文件夹图标">📁</span><span>内部审核素材</span><span class="文件夹开关 不开放" onclick="切换文件夹开放('内部审核素材')">不开放</span><span class="更多">⋯</span></div></div><button class="回收站" type="button" onclick="显示提示('演示环境：回收站（删除不移除 OSS 原始文件）', '信息', 2000)">🗑 回收站</button></aside><div class="素材内容"><div class="素材工具栏"><div class="搜索框" style="flex:1;max-width:280px;"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索素材名称"></div><button class="文字按钮" type="button" onclick="显示提示('演示环境：为当前文件夹新增分类', '信息', 1800)">＋ 新增分类</button></div><div class="分类Tabs"><span class="分类Tab 激活">全部</span>
+<span class="分类Tab">按钮</span>
+<span class="分类Tab">外卖</span>
+<span class="分类Tab">其他</span></div><div class="选择行"><label><input type="checkbox"> 全选本页</label><span>27 个素材</span></div><div class="图片网格"><div class="素材卡"><div class="素材图框"><span class="勾选角">✓</span><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=coupon%20marketing%20button&image_size=square_hd" alt="Group 123.png" onclick="打开抽屉({所属文件夹:'营销活动素材',目标分类:'按钮',图片文件:'Group 123.png',上传时间:'2026-08-02 09:30',入库状态:'已入库',_壳节编号:'3.2'}, '素材详情')"></div><div class="素材文件名">Group 123.png</div><div class="素材元">按钮 · 8.7 KB</div><div class="素材操作"><a onclick="打开表单弹窗('3.2','编辑')">编辑</a><a onclick="显示提示('演示环境：开始下载原图', '信息', 1600)">下载</a><a class="危险" onclick="显示提示('演示环境：移入回收站（不移除 OSS 原始文件）', '信息', 2000)">删除</a></div></div>
+<div class="素材卡"><div class="素材图框"><span class="勾选角">✓</span><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=coupon%20marketing%20button&image_size=square_hd" alt="Group 121.png" onclick="打开抽屉({所属文件夹:'营销活动素材',目标分类:'按钮',图片文件:'Group 121.png',上传时间:'2026-08-02 09:35',入库状态:'已入库',_壳节编号:'3.2'}, '素材详情')"></div><div class="素材文件名">Group 121.png</div><div class="素材元">按钮 · 6.4 KB</div><div class="素材操作"><a onclick="打开表单弹窗('3.2','编辑')">编辑</a><a onclick="显示提示('演示环境：开始下载原图', '信息', 1600)">下载</a><a class="危险" onclick="显示提示('演示环境：移入回收站（不移除 OSS 原始文件）', '信息', 2000)">删除</a></div></div>
+<div class="素材卡"><div class="素材图框"><span class="勾选角">✓</span><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=coupon%20marketing%20button&image_size=square_hd" alt="Group 122.png" onclick="打开抽屉({所属文件夹:'营销活动素材',目标分类:'按钮',图片文件:'Group 122.png',上传时间:'2026-08-02 09:40',入库状态:'已入库',_壳节编号:'3.2'}, '素材详情')"></div><div class="素材文件名">Group 122.png</div><div class="素材元">按钮 · 8.9 KB</div><div class="素材操作"><a onclick="打开表单弹窗('3.2','编辑')">编辑</a><a onclick="显示提示('演示环境：开始下载原图', '信息', 1600)">下载</a><a class="危险" onclick="显示提示('演示环境：移入回收站（不移除 OSS 原始文件）', '信息', 2000)">删除</a></div></div>
+<div class="素材卡"><div class="素材图框"><span class="勾选角">✓</span><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=coupon%20marketing%20button&image_size=square_hd" alt="elem2.png" onclick="打开抽屉({所属文件夹:'营销活动素材',目标分类:'按钮',图片文件:'elem2.png',上传时间:'2026-08-02 10:02',入库状态:'已入库',_壳节编号:'3.2'}, '素材详情')"></div><div class="素材文件名">elem2.png</div><div class="素材元">按钮 · 6.3 KB</div><div class="素材操作"><a onclick="打开表单弹窗('3.2','编辑')">编辑</a><a onclick="显示提示('演示环境：开始下载原图', '信息', 1600)">下载</a><a class="危险" onclick="显示提示('演示环境：移入回收站（不移除 OSS 原始文件）', '信息', 2000)">删除</a></div></div>
+<div class="素材卡"><div class="素材图框"><span class="勾选角">✓</span><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=coupon%20marketing%20button&image_size=square_hd" alt="顺风车@3x.png" onclick="打开抽屉({所属文件夹:'营销活动素材',目标分类:'其他',图片文件:'顺风车@3x.png',上传时间:'2026-08-03 11:20',入库状态:'已入库',_壳节编号:'3.2'}, '素材详情')"></div><div class="素材文件名">顺风车@3x.png</div><div class="素材元">其他 · 46.7 KB</div><div class="素材操作"><a onclick="打开表单弹窗('3.2','编辑')">编辑</a><a onclick="显示提示('演示环境：开始下载原图', '信息', 1600)">下载</a><a class="危险" onclick="显示提示('演示环境：移入回收站（不移除 OSS 原始文件）', '信息', 2000)">删除</a></div></div>
+<div class="素材卡"><div class="素材图框"><span class="勾选角">✓</span><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=coupon%20marketing%20button&image_size=square_hd" alt="美团下午茶@3x.png" onclick="打开抽屉({所属文件夹:'营销活动素材',目标分类:'外卖',图片文件:'美团下午茶@3x.png',上传时间:'2026-08-04 15:10',入库状态:'已入库',_壳节编号:'3.2'}, '素材详情')"></div><div class="素材文件名">美团下午茶@3x.png</div><div class="素材元">外卖 · 44.2 KB</div><div class="素材操作"><a onclick="打开表单弹窗('3.2','编辑')">编辑</a><a onclick="显示提示('演示环境：开始下载原图', '信息', 1600)">下载</a><a class="危险" onclick="显示提示('演示环境：移入回收站（不移除 OSS 原始文件）', '信息', 2000)">删除</a></div></div>
+<div class="素材卡"><div class="素材图框"><span class="勾选角">✓</span><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=coupon%20marketing%20button&image_size=square_hd" alt="买菜@3x 1.png" onclick="打开抽屉({所属文件夹:'营销活动素材',目标分类:'外卖',图片文件:'买菜@3x 1.png',上传时间:'2026-08-05 09:00',入库状态:'已入库',_壳节编号:'3.2'}, '素材详情')"></div><div class="素材文件名">买菜@3x 1.png</div><div class="素材元">外卖 · 66.1 KB</div><div class="素材操作"><a onclick="打开表单弹窗('3.2','编辑')">编辑</a><a onclick="显示提示('演示环境：开始下载原图', '信息', 1600)">下载</a><a class="危险" onclick="显示提示('演示环境：移入回收站（不移除 OSS 原始文件）', '信息', 2000)">删除</a></div></div>
+<div class="素材卡"><div class="素材图框"><span class="勾选角">✓</span><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=coupon%20marketing%20button&image_size=square_hd" alt="快递1@3x 1.png" onclick="打开抽屉({所属文件夹:'营销活动素材',目标分类:'其他',图片文件:'快递1@3x 1.png',上传时间:'2026-08-05 14:30',入库状态:'已入库',_壳节编号:'3.2'}, '素材详情')"></div><div class="素材文件名">快递1@3x 1.png</div><div class="素材元">其他 · 71.1 KB</div><div class="素材操作"><a onclick="打开表单弹窗('3.2','编辑')">编辑</a><a onclick="显示提示('演示环境：开始下载原图', '信息', 1600)">下载</a><a class="危险" onclick="显示提示('演示环境：移入回收站（不移除 OSS 原始文件）', '信息', 2000)">删除</a></div></div></div><div class="分页栏"><span>共 27 个素材</span><span class="分页控件">‹ <strong style="color:#4338ca;">1</strong> ›　24 条/页</span></div></div></div></div>
+</div></section>
+<section class="页面面板" id="面_4_1" data-page="4.1"><div class="页面卡"><div class="页面头"><h2>Banner 配置</h2><button class="主按钮" onclick="打开表单弹窗('4.1','新增')">+ 新增 Banner</button></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">③</span><span class="流程信息卡-环节名">当前环节：③ 配置 Banner 主图</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 内容运营 &gt;</span> <span class="路径末段">Banner 配置</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">Banner 主图从素材库选择已入库的图，形成 Banner 业务记录；选择主图时不影响素材库原图片</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索 Banner 名称"></div><div class="筛选区"><span class="筛选标签">状态：</span><select class="筛选下拉"><option>全部</option><option>在推</option><option>停推</option></select></div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;">在推 Banner <strong>3</strong> 个 &mdash; 主图必须从素材库选择已入库的图。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">Banner 名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('Banner 名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">主图<span class="类型标签 file">file</span></span><button class="信息按钮" onclick="显示字段弹窗('主图', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">跳转链接<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('跳转链接', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('状态', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">双十一预热</td><td class="列表单元格"><div style="position:relative;display:inline-block;line-height:0;vertical-align:middle;"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=banner%20image&image_size=landscape_16_9" alt="banner-01.jpg" style="width:80px;height:45px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"><span style="position:absolute;top:-3px;left:-3px;background:#10b981;color:#fff;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600;line-height:1.4;letter-spacing:.5px;box-shadow:0 1px 3px rgba(16,185,129,.4);">新上传</span></div></td><td class="列表单元格">/pages/banner/d11</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">在推</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({Banner名称:'双十一预热',主图:'banner-01.jpg',跳转链接:'/pages/banner/d11',状态:'在推',创建时间:'2026-09-10 10:00',主图来源:'全新上传',_壳节编号:'4.1'}, 'Banner 详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.1','编辑')">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格">新品首发</td><td class="列表单元格"><div style="position:relative;display:inline-block;line-height:0;vertical-align:middle;"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=banner%20image&image_size=landscape_16_9" alt="banner-02.jpg" style="width:80px;height:45px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"><span style="position:absolute;top:-3px;left:-3px;background:#10b981;color:#fff;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600;line-height:1.4;letter-spacing:.5px;box-shadow:0 1px 3px rgba(16,185,129,.4);">新上传</span></div></td><td class="列表单元格">/pages/banner/new</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">在推</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({Banner名称:'新品首发',主图:'banner-02.jpg',跳转链接:'/pages/banner/new',状态:'在推',创建时间:'2026-09-12 14:30',主图来源:'全新上传',_壳节编号:'4.1'}, 'Banner 详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.1','编辑')">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格">中秋大促</td><td class="列表单元格"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=banner%20image&image_size=landscape_16_9" alt="banner-03.jpg" style="width:80px;height:45px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"></td><td class="列表单元格">/pages/banner/mid</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#f3f4f6;color:#6b7280">停推</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({Banner名称:'中秋大促',主图:'banner-03.jpg',跳转链接:'/pages/banner/mid',状态:'停推',创建时间:'2026-09-01 09:00',主图来源:'素材库复用',_壳节编号:'4.1'}, 'Banner 详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.1','编辑')">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格">会员日专享</td><td class="列表单元格"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=banner%20image&image_size=landscape_16_9" alt="banner-04.jpg" style="width:80px;height:45px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"></td><td class="列表单元格">/pages/banner/vip</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#f3f4f6;color:#6b7280">停推</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({Banner名称:'会员日专享',主图:'banner-04.jpg',跳转链接:'/pages/banner/vip',状态:'停推',创建时间:'2026-08-20 11:00',主图来源:'素材库复用',_壳节编号:'4.1'}, 'Banner 详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.1','编辑')">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格">周年庆活动</td><td class="列表单元格"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=banner%20image&image_size=landscape_16_9" alt="banner-05.jpg" style="width:80px;height:45px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"></td><td class="列表单元格">/pages/banner/ann</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">在推</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({Banner名称:'周年庆活动',主图:'banner-05.jpg',跳转链接:'/pages/banner/ann',状态:'在推',创建时间:'2026-09-14 16:00',主图来源:'素材库复用',_壳节编号:'4.1'}, 'Banner 详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.1','编辑')">编辑</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 5 条记录</div>
+</div></section>
+<section class="页面面板" id="面_4_2" data-page="4.2"><div class="页面卡"><div class="页面头"><h2>商品主图配置</h2><button class="主按钮" onclick="打开表单弹窗('4.2','新增')">+ 新增商品主图</button></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">④</span><span class="流程信息卡-环节名">当前环节：④ 从已开放文件夹选择图片复用 / ⑤ 上传商品主图（不入库直接使用）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">客户端后台 &gt; 商品管理 &gt;</span> <span class="路径末段">商品主图</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">客户端在配置商品主图时，可从素材库已开放文件夹复用图片，或直接上传直接使用（不入库不留存）；两条路径都形成商品业务记录</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索商品名称"></div><div class="筛选区"><span class="筛选标签">图片来源：</span><select class="筛选下拉"><option>全部</option><option>素材库复用</option><option>直接上传</option></select></div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;">素材库复用 <strong>3</strong> 个 &middot; 直接上传 <strong>3</strong> 个 &mdash; 客户端直接上传不入素材库。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">商品名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('商品名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">商品主图<span class="类型标签 file">file</span></span><button class="信息按钮" onclick="显示字段弹窗('商品主图', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">图片来源<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('图片来源', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">创建时间<span class="类型标签 date">date</span></span><button class="信息按钮" onclick="显示字段弹窗('创建时间', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">春季新品连衣裙</td><td class="列表单元格"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=product%20image&image_size=square_hd" alt="prod-01.jpg" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#eff6ff;color:#1d4ed8">素材库复用</span></td><td class="列表单元格">2026-09-10 10:30</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({商品名称:'春季新品连衣裙',商品主图:'prod-01.jpg',图片来源:'素材库复用',创建时间:'2026-09-10 10:30',_壳节编号:'4.2'}, '商品主图详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.2','编辑')">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格">夏季短袖T恤</td><td class="列表单元格"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=product%20image&image_size=square_hd" alt="prod-02.jpg" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#fff7ed;color:#c2410c">直接上传</span></td><td class="列表单元格">2026-09-11 11:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({商品名称:'夏季短袖T恤',商品主图:'prod-02.jpg',图片来源:'直接上传',创建时间:'2026-09-11 11:00',_壳节编号:'4.2'}, '商品主图详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.2','编辑')">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格">秋季风衣外套</td><td class="列表单元格"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=product%20image&image_size=square_hd" alt="prod-03.jpg" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#eff6ff;color:#1d4ed8">素材库复用</span></td><td class="列表单元格">2026-09-12 14:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({商品名称:'秋季风衣外套',商品主图:'prod-03.jpg',图片来源:'素材库复用',创建时间:'2026-09-12 14:00',_壳节编号:'4.2'}, '商品主图详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.2','编辑')">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格">冬季羽绒服</td><td class="列表单元格"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=product%20image&image_size=square_hd" alt="prod-04.jpg" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#fff7ed;color:#c2410c">直接上传</span></td><td class="列表单元格">2026-09-13 15:30</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({商品名称:'冬季羽绒服',商品主图:'prod-04.jpg',图片来源:'直接上传',创建时间:'2026-09-13 15:30',_壳节编号:'4.2'}, '商品主图详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.2','编辑')">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格">亲子装套装</td><td class="列表单元格"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=product%20image&image_size=square_hd" alt="prod-05.jpg" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#eff6ff;color:#1d4ed8">素材库复用</span></td><td class="列表单元格">2026-09-14 16:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({商品名称:'亲子装套装',商品主图:'prod-05.jpg',图片来源:'素材库复用',创建时间:'2026-09-14 16:00',_壳节编号:'4.2'}, '商品主图详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.2','编辑')">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格">配饰围巾</td><td class="列表单元格"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=product%20image&image_size=square_hd" alt="prod-06.jpg" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;" onclick="放大图片(this)"></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#fff7ed;color:#c2410c">直接上传</span></td><td class="列表单元格">2026-09-15 09:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({商品名称:'配饰围巾',商品主图:'prod-06.jpg',图片来源:'直接上传',创建时间:'2026-09-15 09:00',_壳节编号:'4.2'}, '商品主图详情')">详情</button> <button class="详情按钮" onclick="打开表单弹窗('4.2','编辑')">编辑</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 6 条记录</div>
+<div id="素材选择器遮罩" class="素材遮罩" onclick="if(event.target===this)关闭素材选择器()"><div class="素材选择面板"><div class="选择器头"><h3>选择素材</h3><span id="选择器模式标"></span><button class="选择器关闭" type="button" onclick="关闭素材选择器()">×</button></div><div class="素材主体"><aside class="素材侧栏"><button class="侧栏新增 仅管理端" type="button" onclick="显示提示('演示环境：新增文件夹（总后台）','信息',1600)">＋ 新增文件夹</button><div class="文件夹树" id="选择器文件夹树"></div><button class="回收站 仅管理端" type="button" onclick="显示提示('演示环境：回收站','信息',1400)">🗑 回收站</button></aside><div class="素材内容"><div class="素材工具栏"><div class="搜索框" style="flex:1;max-width:260px;"><span class="搜索图标">&#128269;</span><input class="搜索输入" id="选择器搜索" type="text" placeholder="搜索素材名称"></div><button class="文字按钮 仅管理端" type="button" onclick="显示提示('演示环境：为当前文件夹新增分类','信息',1600)">＋ 新增分类</button><button class="主按钮" id="选择器上传按钮" type="button">上传文件</button></div><div class="分类Tabs" id="选择器分类Tabs"></div><div class="选择行"><label><input type="checkbox"> 全选本页</label><span id="选择器计数"></span></div><div class="图片网格" id="选择器网格"></div><div class="分页栏"><span id="选择器页信息"></span><span class="分页控件">‹ <strong style="color:#4338ca;">1</strong> ›　24 条/页</span></div></div></div><div class="选择器脚"><span id="选择器已选">未选择图片</span><span><button class="btn-secondary" type="button" onclick="关闭素材选择器()">取消</button> <button class="主按钮" type="button" onclick="确认选择素材()">确认选择</button></span></div></div></div><div id="上传分类遮罩" class="临时遮罩" onclick="if(event.target===this)关闭上传分类弹窗()"><div class="临时面板"><div class="临时头"><h3>上传到分类</h3><button class="临时关闭" type="button" onclick="关闭上传分类弹窗()">×</button></div><div class="临时正文"><div style="margin-bottom:14px;padding:10px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px;line-height:1.8;color:#92400e;"><strong>ⓘ 上传规则</strong><br>• 必须先选择目标分类，未选时「选择文件并上传」置灰不可点<br>• 上传成功立即入库，可被双端复用<br>• 上传后自动跳转到该分类</div><div class="field-row"><span class="field-label">目标分类</span><span class="field-control"><select class="field-select" id="上传分类选择" onchange="上传分类切换(this.value)"><option>请选择目标分类</option><option>按钮</option><option>外卖</option><option>其他</option></select><span class="field-type-tag">enum</span></span></div><div id="上传文件区" style="margin-top:16px;opacity:.5;pointer-events:none;"><button type="button" class="上传长条" onclick="执行上传入库()">⟰ 选择文件并上传</button></div></div><div class="临时脚"><span style="font-size:12px;color:#94a3b8;">所属文件夹：当前选图弹窗所在文件夹</span><button class="btn-secondary" type="button" onclick="关闭上传分类弹窗()">取消</button></div></div></div><div id="临时存放遮罩" class="临时遮罩" onclick="if(event.target===this)关闭临时存放区()"><div class="临时面板"><div class="临时头"><h3>临时存放区</h3><span style="font-size:12px;padding:2px 10px;border-radius:12px;background:#ecfdf5;color:#047857;">不入素材库</span><button class="临时关闭" type="button" onclick="关闭临时存放区()">×</button></div><div class="临时正文"><div style="margin-bottom:14px;padding:10px 14px;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;font-size:12px;line-height:1.8;color:#065f46;">图片仅用于当前业务，不会存入素材库。</div><button type="button" class="上传长条" onclick="document.getElementById('临时存放输入').click()">⟰ 选择文件并上传</button><input type="file" id="临时存放输入" accept="image/*" style="display:none"><div class="临时网格" id="临时存放网格"></div></div><div class="临时脚"><span id="临时存放已选">未选择图片</span><span><button class="btn-secondary" type="button" onclick="关闭临时存放区()">取消</button> <button class="主按钮" type="button" onclick="确认临时存放()">确认选择</button></span></div></div></div></div></section>
+<section class="页面面板" id="面_5_1" data-page="5.1"><div class="页面卡"><div class="页面头"><h2>传图位置清单</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号"></span><span class="流程信息卡-环节名">当前环节：素材库选图能力落地</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">开发交付清单（无实际后台路径，本页为开发交付参考）</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">告诉开发哪些传图位置要接入素材库选图能力。4.1/4.2 为交互演示样例，本页为真实落地清单。</span></div></div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;">&#128161; 本清单告诉开发：素材库选图能力要落地到下列传图位置。4.1/4.2 为交互演示样例，本页为真实落地清单。</div>
+<div style="margin:18px 0 8px;padding:6px 12px;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-weight:600;font-size:14px;">总后台</div>
+<div style="margin:0 0 14px 14px;padding-left:10px;border-left:3px solid #eff6ff;">
+<div style="font-weight:600;color:#334155;font-size:13.5px;margin:10px 0 4px;">04-活动管理及公告</div>
+<ul style="margin:0 0 6px;padding-left:22px;color:#475569;font-size:13px;line-height:1.9;">
+<li><strong>联盟活动</strong> — 编辑活动图片 <a class="详情按钮" style="font-size:12px;color:#6366f1;cursor:pointer;text-decoration:underline;border:none;background:none;padding:0;" onclick="打开抽屉({序号:'1',端:'总后台',模块:'04-活动管理及公告',页面:'联盟活动',传图位置:'编辑活动图片',备注:'',_壳节编号:'5.1'}, '传图位置详情')">详情</a></li>
+<li><strong>第三方活动</strong> — 编辑活动图片 <a class="详情按钮" style="font-size:12px;color:#6366f1;cursor:pointer;text-decoration:underline;border:none;background:none;padding:0;" onclick="打开抽屉({序号:'2',端:'总后台',模块:'04-活动管理及公告',页面:'第三方活动',传图位置:'编辑活动图片',备注:'',_壳节编号:'5.1'}, '传图位置详情')">详情</a></li>
+<li><strong>公告及二维码</strong> — 上传二维码 <a class="详情按钮" style="font-size:12px;color:#6366f1;cursor:pointer;text-decoration:underline;border:none;background:none;padding:0;" onclick="打开抽屉({序号:'3',端:'总后台',模块:'04-活动管理及公告',页面:'公告及二维码',传图位置:'上传二维码',备注:'',_壳节编号:'5.1'}, '传图位置详情')">详情</a></li>
+</ul>
+</div>
+<div style="margin:18px 0 8px;padding:6px 12px;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-weight:600;font-size:14px;">总后台</div>
+<div style="margin:0 0 14px 14px;padding-left:10px;border-left:3px solid #eff6ff;">
+<div style="font-weight:600;color:#334155;font-size:13.5px;margin:10px 0 4px;">05-小程序配置</div>
+<ul style="margin:0 0 6px;padding-left:22px;color:#475569;font-size:13px;line-height:1.9;">
+<li><strong>组件管理</strong> — 缩略图 + 按钮图标<span style="color:#94a3b8;font-size:12px;">（一个组件两个图位）</span> <a class="详情按钮" style="font-size:12px;color:#6366f1;cursor:pointer;text-decoration:underline;border:none;background:none;padding:0;" onclick="打开抽屉({序号:'4',端:'总后台',模块:'05-小程序配置',页面:'组件管理',传图位置:'缩略图 + 按钮图标',备注:'一个组件两个图位',_壳节编号:'5.1'}, '传图位置详情')">详情</a></li>
+<li><strong>发布人设置</strong> — 头像编辑 <a class="详情按钮" style="font-size:12px;color:#6366f1;cursor:pointer;text-decoration:underline;border:none;background:none;padding:0;" onclick="打开抽屉({序号:'5',端:'总后台',模块:'05-小程序配置',页面:'发布人设置',传图位置:'头像编辑',备注:'',_壳节编号:'5.1'}, '传图位置详情')">详情</a></li>
+</ul>
+</div>
+<div style="margin:18px 0 8px;padding:6px 12px;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-weight:600;font-size:14px;">总后台</div>
+<div style="margin:0 0 14px 14px;padding-left:10px;border-left:3px solid #eff6ff;">
+<div style="font-weight:600;color:#334155;font-size:13.5px;margin:10px 0 4px;">06-页面管理</div>
+<ul style="margin:0 0 6px;padding-left:22px;color:#475569;font-size:13px;line-height:1.9;">
+<li><strong>H5 模板管理</strong> — 缩略图 <a class="详情按钮" style="font-size:12px;color:#6366f1;cursor:pointer;text-decoration:underline;border:none;background:none;padding:0;" onclick="打开抽屉({序号:'6',端:'总后台',模块:'06-页面管理',页面:'H5 模板管理',传图位置:'缩略图',备注:'',_壳节编号:'5.1'}, '传图位置详情')">详情</a></li>
+</ul>
+</div>
+<div style="margin:18px 0 8px;padding:6px 12px;border-radius:6px;background:#fff7ed;color:#c2410c;font-weight:600;font-size:14px;">客户端</div>
+<div style="margin:0 0 14px 14px;padding-left:10px;border-left:3px solid #fff7ed;">
+<div style="font-weight:600;color:#334155;font-size:13.5px;margin:10px 0 4px;">外部口令单页</div>
+<ul style="margin:0 0 6px;padding-left:22px;color:#475569;font-size:13px;line-height:1.9;">
+<li><strong>模板管理</strong> — 所有的传图组件<span style="color:#94a3b8;font-size:12px;">（一个模板多个图位都走选图）</span> <a class="详情按钮" style="font-size:12px;color:#6366f1;cursor:pointer;text-decoration:underline;border:none;background:none;padding:0;" onclick="打开抽屉({序号:'7',端:'客户端',模块:'外部口令单页',页面:'模板管理',传图位置:'所有的传图组件',备注:'一个模板多个图位都走选图',_壳节编号:'5.1'}, '传图位置详情')">详情</a></li>
+</ul>
+</div>
+<div style="margin:18px 0 8px;padding:6px 12px;border-radius:6px;background:#fff7ed;color:#c2410c;font-weight:600;font-size:14px;">客户端</div>
+<div style="margin:0 0 14px 14px;padding-left:10px;border-left:3px solid #fff7ed;">
+<div style="font-weight:600;color:#334155;font-size:13.5px;margin:10px 0 4px;">小程序（内部功能）</div>
+<ul style="margin:0 0 6px;padding-left:22px;color:#475569;font-size:13px;line-height:1.9;">
+<li><strong>专题页配置</strong> — 配置图片<span style="color:#94a3b8;font-size:12px;">（仅页面类型=B版权益页）</span> <a class="详情按钮" style="font-size:12px;color:#6366f1;cursor:pointer;text-decoration:underline;border:none;background:none;padding:0;" onclick="打开抽屉({序号:'8',端:'客户端',模块:'小程序（内部功能）',页面:'专题页配置',传图位置:'配置图片',备注:'仅页面类型=B版权益页',_壳节编号:'5.1'}, '传图位置详情')">详情</a></li>
+<li><strong>活动配置</strong> — 配置图片 <a class="详情按钮" style="font-size:12px;color:#6366f1;cursor:pointer;text-decoration:underline;border:none;background:none;padding:0;" onclick="打开抽屉({序号:'9',端:'客户端',模块:'小程序（内部功能）',页面:'活动配置',传图位置:'配置图片',备注:'',_壳节编号:'5.1'}, '传图位置详情')">详情</a></li>
+</ul>
+</div><div class="列表脚注">共 9 个传图位置（总后台 6 + 客户端 3）</div>
+</div></section>
+</main>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭表单弹窗()"></div>
+<aside id="表单弹窗面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="表单弹窗标题">新增</div>
+    <button class="btn-close" onclick="关闭表单弹窗()">×</button>
+  </div>
+  <div id="表单弹窗正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭表单弹窗()">取消</button>
+    <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-泳道映射">
+window._泳道节点映射 = {"3.2": [2], "4.1": [3], "4.2": [4, 5]};
+window._阶段泳道映射 = {"3": 1, "4": 2, "5": 3};
+</script>
+<script id="js-页面切换">
+// 唯一导航函数：叶子菜单 onclick="切换页面('4.1')"。父节点不可点，无展开收起逻辑。
+function 切换页面(页码) {
+  document.querySelectorAll('.页面面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(页码).replace('.', '_'));
+  if (panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单文档,.菜单叶子').forEach(function(a) { a.classList.remove('激活'); });
+  var link = document.querySelector('[data-menu-page="' + 页码 + '"]');
+  if (link) link.classList.add('激活');
+  var c = document.getElementById('内容区'); if (c) c.scrollTop = 0;
+  更新泳道高亮(页码);
+}
+// 泳道两级高亮合并：阶段减弱（第一级）+ 本页节点置灰（第二级）；文档页(1/2)自动清空
+function 更新泳道高亮(页码) {
+  var 图 = document.getElementById('全局泳道图'); if (!图) return;
+  图.className = 图.className.replace(/ ?高亮阶段\d+/g, '');
+  var 阶段号 = String(页码).split('.')[0];
+  var k = (window._阶段泳道映射 || {})[阶段号];
+  if (k) 图.classList.add('高亮阶段' + k);
+  var nums = (window._泳道节点映射 || {})[页码];
+  图.querySelectorAll('.泳道行').forEach(function(r) {
+    if (!nums) { r.classList.remove('置灰'); r.classList.remove('当前'); return; }
+    var on = nums.indexOf(parseInt(r.getAttribute('data-swimlane-node'), 10)) >= 0;
+    r.classList.toggle('当前', on);
+    r.classList.toggle('置灰', !on);
+  });
+}
+</script>
+<script id="js-字段联动">
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); }
+}
+// 枚举置灰通用函数：受控分组在「启用值」命中时正常，否则整组变淡且不可点。
+// 用法：置灰切换_模板('grp_退货设置', this.value, ['是'])；多组受控就在适配函数里多调几次。
+function 置灰切换_模板(组id, val, 启用值列表) {
+  var on = 启用值列表.indexOf(val) >= 0;
+  var el = document.getElementById(组id);
+  if (el) { el.style.opacity = on ? '1' : '0.35'; el.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+</script>
+<script id="js-抽屉">
+window._详情字段按节 = window._详情字段按节 || {};
+function 打开抽屉(行数据, 标题) {
+  var drawer = document.getElementById('detailDrawer'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('detailBody'); var titleEl = document.getElementById('detailDrawerTitle');
+  if (!drawer || !body) return; titleEl.textContent = 标题 || '详情';
+  var 当前节 = (行数据 && 行数据._壳节编号) || '';
+  var 详情字段 = (当前节 && window._详情字段按节[当前节]) ? window._详情字段按节[当前节] : [];
+  var html = '<div class="编辑卡片区">';
+  function 渲染详情字段行(f, 值) {
+    var row = '';
+    row += '<div class="field-row" style="grid-template-columns:120px 1fr 28px;">';
+    row += '<span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control"><span class="field-display">' + 值 + '</span>';
+    row += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (当前节 && window._详情字段分组 && window._详情字段分组[当前节]) ? window._详情字段分组[当前节] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 详情字段.length; k++) {
+          if (详情字段[k].名称 === 组.字段[j]) {
+            var val = (行数据 && 行数据[组.字段[j]] !== undefined) ? String(行数据[组.字段[j]]) : '—';
+            html += 渲染详情字段行(详情字段[k], val);
+            break;
+          }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="空状态">该列表未注册详情字段分组（_详情字段分组）</div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭抽屉() { var d = document.getElementById('detailDrawer'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o && !document.getElementById('表单弹窗面板').classList.contains('show')) o.classList.remove('show'); }
+</script>
+<script id="js-表单弹窗">
+// 数据驱动的新增/编辑弹窗：window._表单字段按节['4.1'] + window._新增字段分组['4.1']
+// 三个可选扩展（枚举置灰场景三件套）：
+//   window._新增控制逻辑['4.1'] = 规则摘要框 HTML（弹窗顶部说明）
+//   字段对象加 联动:'置灰切换_xx(this.value)'（enum 下拉 onchange，串内只用单引号）
+//   分组对象加 id:'grp_xx'；window._弹窗初始化['4.1'] = function(){...}（弹窗打开后执行一次初始置灰）
+function 打开表单弹窗(节编号, 模式, 行数据) {
+  var drawer = document.getElementById('表单弹窗面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('表单弹窗正文'); var titleEl = document.getElementById('表单弹窗标题');
+  if (!drawer || !body) return;
+  模式 = 模式 || '新增';
+  行数据 = 行数据 || null;
+  var 字段列表 = (window._表单字段按节 && window._表单字段按节[节编号]) ? window._表单字段按节[节编号] : [];
+  titleEl.textContent = 模式 + ' · ' + 节编号;
+  var html = '<div class="编辑卡片区">';
+  var 控制逻辑块 = (window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  function 取值(f) { return (行数据 && 行数据[f.名称] !== undefined && 行数据[f.名称] !== '') ? 行数据[f.名称] : (f.示例值 || ''); }
+  function 控件(f) {
+    if (f.编辑性 === '只读') return '<span class="field-readonly">' + (取值(f) || '系统自动生成') + '</span>';
+    if (f.基础类型 === 'enum') {
+      var opts = (f.枚举值 || '').split(/[、,，]/).filter(Boolean);
+      var ev = f.联动 ? ' onchange="' + f.联动 + '"' : '';
+      var cur = String(取值(f));
+      var o = '<select class="field-select"' + ev + '>';
+      for (var i = 0; i < opts.length; i++) o += '<option' + (opts[i] === cur ? ' selected' : '') + '>' + opts[i] + '</option>';
+      return o + '</select>';
+    }
+    if (f.基础类型 === '富文本') return '<textarea class="field-input" rows="3" placeholder="请输入">' + 取值(f) + '</textarea>';
+    return '<input class="field-input" value="' + 取值(f) + '" placeholder="请输入">';
+  }
+  function 渲染字段行(f) {
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">' + 控件(f) + '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      if (模式 === '新增' && 组.组名 === '系统生成信息') continue;
+      html += '<div class="field-card"' + (组.id ? ' id="' + 组.id + '"' : '') + '><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 字段列表.length; k++) {
+          if (字段列表[k].名称 === 组.字段[j]) { html += 渲染字段行(字段列表[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>' + 模式 + '</h4></div><div class="field-card-body">';
+    if (字段列表.length === 0) html += '<div class="空状态">未注册弹窗字段（_表单字段按节 / _新增字段分组）</div>';
+    else for (var i = 0; i < 字段列表.length; i++) html += 渲染字段行(字段列表[i]);
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+  if (window._弹窗初始化 && window._弹窗初始化[节编号]) { try { window._弹窗初始化[节编号](); } catch (e) {} }
+}
+function 关闭表单弹窗() { var d = document.getElementById('表单弹窗面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+// 行内「删除」按钮入口：二次确认后提示（演示环境不落库）。
+function 确认删除(节编号, 行数据) {
+  if (!confirm('确定删除该记录？删除后不可恢复。')) return;
+  显示提示('已删除（演示环境，不落库）', '成功', 2200);
+}
+</script>
+<script id="js-单元格截断">
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script>
+window._详情字段按节=window._详情字段按节||{};
+window._详情字段分组=window._详情字段分组||{};
+window._详情字段按节["3.2"]=[
+  {名称:"所属文件夹",类型原文:"string",基础类型:"string",数据来源:"系统取上传时当前所在文件夹",用途:"标识素材图一级归属",节编号:"3.2"},
+  {名称:"目标分类",类型原文:"enum",基础类型:"enum",枚举值:"按钮、外卖、其他",数据来源:"总后台运营人员在上传到分类弹窗选择",逻辑:"必填，未选时选择文件并上传置灰不可点",用途:"标识素材图二级归属",节编号:"3.2"},
+  {名称:"图片文件",类型原文:"file",基础类型:"file",数据来源:"总后台运营人员上传",逻辑:"选目标分类后才能上传；成功立即入库",用途:"直观查看素材内容",节编号:"3.2"},
+  {名称:"上传时间",类型原文:"date",基础类型:"date",数据来源:"系统记录",用途:"排序和追溯",节编号:"3.2"},
+  {名称:"入库状态",类型原文:"enum",基础类型:"enum",枚举值:"已入库",数据来源:"系统根据上传结果自动标记",用途:"标识素材图当前可被复用",节编号:"3.2"}
+];
+window._详情字段分组["3.2"]=[{组名:"归属信息",字段:["所属文件夹","目标分类"]},{组名:"图片信息",字段:["图片文件","上传时间","入库状态"]}];
+window._详情字段按节["4.1"]=[
+  {名称:"Banner名称",类型原文:"string",基础类型:"string",数据来源:"总后台运营人员填写",用途:"区分不同Banner",节编号:"4.1"},
+  {名称:"主图",类型原文:"file",基础类型:"file",数据来源:"总后台运营人员通过共用素材选择弹窗（总后台模式）选择",逻辑:"主图必须来自素材库，不支持直接上传本地图片",用途:"Banner在前端展示的主视觉",节编号:"4.1"},
+  {名称:"跳转链接",类型原文:"string",基础类型:"string",数据来源:"总后台运营人员填写",逻辑:"选填，支持H5/小程序路径",用途:"用户点击Banner后跳转目标",节编号:"4.1"},
+  {名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"在推、停推",数据来源:"总后台运营人员切换",用途:"控制Banner是否对前端展示",节编号:"4.1"},
+  {名称:"创建时间",类型原文:"date",基础类型:"date",数据来源:"系统记录",用途:"排序和查询",节编号:"4.1"}
+];
+window._详情字段分组["4.1"]=[{组名:"基本信息",字段:["Banner名称","状态","创建时间"]},{组名:"主图与跳转",字段:["主图","跳转链接"]}];
+window._详情字段按节["4.2"]=[
+  {名称:"商品名称",类型原文:"string",基础类型:"string",数据来源:"客户端后台运营人员填写",用途:"区分不同商品",节编号:"4.2"},
+  {名称:"商品主图",类型原文:"file",基础类型:"file",数据来源:"客户端后台运营人员通过共用素材选择弹窗（客户端模式）选择或直接上传",用途:"商品在前端展示的主视觉",节编号:"4.2"},
+  {名称:"图片来源",类型原文:"enum",基础类型:"enum",枚举值:"素材库复用、直接上传",数据来源:"系统根据用户操作路径自动标记",用途:"标识商品主图来源路径，便于追溯",节编号:"4.2"},
+  {名称:"创建时间",类型原文:"date",基础类型:"date",数据来源:"系统记录",用途:"排序和查询",节编号:"4.2"}
+];
+window._详情字段分组["4.2"]=[{组名:"基本信息",字段:["商品名称","图片来源","创建时间"]},{组名:"商品主图",字段:["商品主图"]}];
+window._详情字段按节["5.1"]=[
+  {名称:"序号",类型原文:"number",基础类型:"number",数据来源:"系统按行编号",用途:"行定位",节编号:"5.1"},
+  {名称:"端",类型原文:"enum",基础类型:"enum",枚举值:"总后台、客户端",数据来源:"系统标记",用途:"区分传图位置所属端",节编号:"5.1"},
+  {名称:"模块",类型原文:"string",基础类型:"string",数据来源:"系统后台菜单结构",用途:"定位传图位置所在模块",节编号:"5.1"},
+  {名称:"页面",类型原文:"string",基础类型:"string",数据来源:"系统后台菜单结构",用途:"定位传图位置所在页面",节编号:"5.1"},
+  {名称:"传图位置",类型原文:"string",基础类型:"string",数据来源:"页面内的传图字段",用途:"告诉开发该字段要接素材库选图能力",节编号:"5.1"},
+  {名称:"备注",类型原文:"string",基础类型:"string",数据来源:"产品补充说明",用途:"补充约束条件",节编号:"5.1"}
+];
+window._详情字段分组["5.1"]=[{组名:"传图位置信息",字段:["序号","端","模块","页面","传图位置","备注"]}];
+
+window._表单字段按节=window._表单字段按节||{};
+window._新增字段分组=window._新增字段分组||{};
+
+window._表单字段按节["3.2"]=[
+  {名称:"目标分类",类型原文:"enum",基础类型:"enum",枚举值:"请选择目标分类、按钮、外卖、其他",示例值:"请选择目标分类",联动:"置灰切换_目标分类(this.value)",数据来源:"总后台运营人员选择",逻辑:"必填，未选择目标分类时文件区置灰",用途:"素材图二级归属，上传入库前置条件",节编号:"3.2"},
+  {名称:"图片文件",类型原文:"file",基础类型:"file",示例值:"",数据来源:"总后台运营人员上传",逻辑:"未选目标分类时置灰不可点；上传成功立即入库",用途:"待入库的素材文件",节编号:"3.2"}
+];
+window._新增字段分组["3.2"]=[{组名:"上传到分类",字段:["目标分类"]},{组名:"选择文件",id:"grp_文件",字段:["图片文件"]}];
+window._新增控制逻辑=window._新增控制逻辑||{};
+window._新增控制逻辑["3.2"]='<div style="margin-bottom:14px;padding:10px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px;line-height:1.8;color:#92400e;"><strong>ⓘ 上传规则（总后台）</strong><br>&bull; 必须先选择「目标分类」，未选时「选择文件并上传」整段置灰不可点<br>&bull; 所属文件夹取上传入口当前所在文件夹，无需重复选择<br>&bull; 上传成功立即入库，可被双端复用</div>';
+function 置灰切换_目标分类(val){ 置灰切换_模板('grp_文件', val, ['按钮','外卖','其他']); }
+
+window._表单字段按节["4.1"]=[
+  {名称:"Banner名称",类型原文:"string",基础类型:"string",示例值:"双十一预热",数据来源:"总后台运营人员填写",用途:"区分不同Banner",节编号:"4.1"},
+  {名称:"主图",类型原文:"file",基础类型:"file",示例值:"",数据来源:"总后台运营人员通过共用素材选择弹窗选择已入库素材图",逻辑:"主图必须来自素材库，不支持直接上传本地图片",用途:"Banner在前端展示的主视觉",节编号:"4.1"},
+  {名称:"跳转链接",类型原文:"string",基础类型:"string",示例值:"/pages/banner/d11",数据来源:"总后台运营人员填写",用途:"用户点击Banner后跳转目标",节编号:"4.1"},
+  {名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"在推、停推",示例值:"停推",数据来源:"总后台运营人员切换",逻辑:"新建默认停推，需手动切换为在推才对前端可见",用途:"控制Banner是否对前端展示",节编号:"4.1"}
+];
+window._新增字段分组["4.1"]=[{组名:"基本信息",字段:["Banner名称","状态"]},{组名:"主图与跳转",字段:["主图","跳转链接"]}];
+
+window._表单字段按节["4.2"]=[
+  {名称:"商品名称",类型原文:"string",基础类型:"string",示例值:"春季新品连衣裙",数据来源:"客户端后台运营人员填写",用途:"区分不同商品",节编号:"4.2"},
+  {名称:"商品主图",类型原文:"file",基础类型:"file",示例值:"",数据来源:"客户端模式选图弹窗：已开放文件夹复用 或 直接上传（不入库）",逻辑:"弹窗管理入口全部隐藏；直接上传仅当前业务使用",用途:"商品在前端展示的主视觉",节编号:"4.2"}
+];
+window._新增字段分组["4.2"]=[{组名:"基本信息",字段:["商品名称"]},{组名:"商品主图",字段:["商品主图"]}];
+
+window._弹窗初始化=window._弹窗初始化||{};
+// 3.2 图2弹窗：初始置灰 + 把图片文件控件替换为「选择文件并上传」长条
+window._弹窗初始化["3.2"]=function(){
+  置灰切换_目标分类('请选择目标分类');
+  var rows=document.querySelectorAll('#表单弹窗正文 .field-row');
+  Array.prototype.forEach.call(rows,function(r){
+    var lab=r.querySelector('.field-label');
+    if(!lab||lab.textContent.trim()!=='图片文件')return;
+    var ctrl=r.querySelector('.field-control');
+    ctrl.innerHTML='<button type="button" class="上传长条" onclick="模拟上传入库_页面()">⟰ 选择文件并上传</button><span class="field-type-tag">file</span><button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'图片文件\',event)">ⓘ</button>';
+  });
+};
+// 4.1 主图字段 → 共用素材选择器（总后台模式）
+window._弹窗初始化["4.1"]=function(){ 挂接素材选择字段('4.1','主图','admin'); };
+// 4.2 商品主图字段 → 共用素材选择器（客户端模式）
+window._弹窗初始化["4.2"]=function(){ 挂接素材选择字段('4.2','商品主图','client'); };
+
+/* ============ 双端共用「素材选择」弹窗（复用 3.2 内部结构：文件夹树+分类Tab+图片网格） ============ */
+window._素材库数据={
+  folders:[
+    {n:'营销活动素材',c:27,open:true},
+    {n:'商品主图素材',c:24,open:true},
+    {n:'Banner素材',c:12,open:false},
+    {n:'节日主题素材',c:18,open:true},
+    {n:'内部审核素材',c:6,open:false}
+  ],
+  cats:['全部','按钮','外卖','其他'],
+  imgs:[
+    {id:'m1',n:'Group 123.png',cat:'按钮',size:'8.7 KB',f:'营销活动素材'},
+    {id:'m2',n:'Group 121.png',cat:'按钮',size:'6.4 KB',f:'营销活动素材'},
+    {id:'m3',n:'Group 122.png',cat:'按钮',size:'8.9 KB',f:'营销活动素材'},
+    {id:'m4',n:'elem2.png',cat:'按钮',size:'6.3 KB',f:'营销活动素材'},
+    {id:'m5',n:'顺风车@3x.png',cat:'其他',size:'46.7 KB',f:'营销活动素材'},
+    {id:'m6',n:'美团下午茶@3x.png',cat:'外卖',size:'44.2 KB',f:'营销活动素材'},
+    {id:'m7',n:'买菜@3x 1.png',cat:'外卖',size:'66.1 KB',f:'营销活动素材'},
+    {id:'m8',n:'快递1@3x 1.png',cat:'其他',size:'71.1 KB',f:'营销活动素材'}
+  ],
+  imgUrl:'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=coupon%20marketing%20button&image_size=square_hd'
+};
+window._选择器状态={mode:'admin',folder:'营销活动素材',cat:'全部',sel:null,target:null};
+
+function 打开素材选择器(mode,节编号,字段名){
+  var s=window._选择器状态;
+  s.mode=mode;s.folder='营销活动素材';s.cat='全部';s.sel=null;s.target={节编号:节编号,字段名:字段名};
+  var 遮=document.getElementById('素材选择器遮罩');
+  var 标=document.getElementById('选择器模式标');
+  if(mode==='client'){标.textContent='客户端模式';标.className='客户端';}
+  else{标.textContent='总后台模式';标.className='';}
+  var 管理项=遮.querySelectorAll('.仅管理端');
+  for(var i=0;i<管理项.length;i++){管理项[i].style.display=(mode==='client')?'none':'';}
+  var 上传=document.getElementById('选择器上传按钮');
+  if(mode==='client'){上传.textContent='上传图片';上传.onclick=function(){打开临时存放区();};}
+  else{上传.textContent='上传文件';上传.onclick=function(){打开上传分类弹窗();};}
+  document.getElementById('选择器搜索').value='';
+  渲染选择器();
+  遮.classList.add('show');
+}
+function 关闭素材选择器(){ document.getElementById('素材选择器遮罩').classList.remove('show'); }
+
+function 渲染选择器(){
+  var s=window._选择器状态,d=window._素材库数据,h='',i,j,c,f,im,n=0;
+  for(i=0;i<d.folders.length;i++){
+    f=d.folders[i];
+    if(s.mode==='client'&&!f.open)continue;
+    h+='<div class="文件夹行'+(f.n===s.folder?' 激活':'')+'" onclick="选择器选文件夹(\''+f.n+'\')"><span class="文件夹图标">📁</span><span>'+f.n+'</span></div>';
+  }
+  document.getElementById('选择器文件夹树').innerHTML=h;
+  h='';
+  for(j=0;j<d.cats.length;j++){
+    c=d.cats[j];
+    h+='<span class="分类Tab'+(c===s.cat?' 激活':'')+'" onclick="选择器选分类(\''+c+'\')">'+c+'</span>';
+  }
+  document.getElementById('选择器分类Tabs').innerHTML=h;
+  h='';
+  for(i=0;i<d.imgs.length;i++){
+    im=d.imgs[i];
+    if(im.id.indexOf('tmp_')===0&&s.mode==='admin')continue;
+    if(im.f!==s.folder)continue;
+    if(s.cat!=='全部'&&im.cat!==s.cat)continue;
+    n++;
+    h+='<div class="素材卡'+(s.sel&&s.sel.id===im.id?' 选中':'')+'" onclick="选择器选图(\''+im.id+'\')">'
+      +'<div class="素材图框"><span class="勾选角">✓</span><img src="'+(im.url||d.imgUrl)+'" alt="'+im.n+'"></div>'
+      +'<div class="素材文件名">'+im.n+'</div><div class="素材元">'+im.cat+' · '+im.size+'</div>';
+    if(s.mode==='admin'){
+      h+='<div class="素材操作"><a onclick="event.stopPropagation();打开表单弹窗(\'3.2\',\'编辑\')">编辑</a><a onclick="event.stopPropagation();显示提示(\'演示环境：下载原图\',\'信息\',1400)">下载</a><a class="危险" onclick="event.stopPropagation();显示提示(\'演示环境：移入回收站\',\'信息\',1600)">删除</a></div>';
+    }
+    h+='</div>';
+  }
+  document.getElementById('选择器网格').innerHTML=h||'<div class="空状态" style="grid-column:1/-1;padding:40px;text-align:center;color:#94a3b8;">该分类下暂无素材</div>';
+  document.getElementById('选择器计数').textContent=n+' 个素材';
+  document.getElementById('选择器页信息').textContent='共 '+n+' 个素材';
+  document.getElementById('选择器已选').textContent=s.sel?('已选择：'+s.sel.n):'未选择图片';
+}
+function 选择器选文件夹(n){ window._选择器状态.folder=n;window._选择器状态.sel=null;渲染选择器(); }
+function 切换文件夹开放(name){
+  var d=window._素材库数据;
+  for(var i=0;i<d.folders.length;i++){
+    if(d.folders[i].n===name){
+      d.folders[i].open=!d.folders[i].open;
+      var st=d.folders[i].open?'开放':'不开放';
+      显示提示('已切换为'+st,'信息',1600);
+      var 遮=document.getElementById('素材选择器遮罩');
+      if(遮&&遮.classList.contains('show')){渲染选择器();}
+      return;
+    }
+  }
+}
+function 选择器选分类(c){ window._选择器状态.cat=c;window._选择器状态.sel=null;渲染选择器(); }
+function 选择器选图(id){
+  var d=window._素材库数据,s=window._选择器状态;
+  for(var i=0;i<d.imgs.length;i++){if(d.imgs[i].id===id){s.sel=d.imgs[i];break;}}
+  渲染选择器();
+}
+function 确认选择素材(){
+  var s=window._选择器状态;
+  if(!s.sel){显示提示('请先选择一张图片','信息',1600);return;}
+  var sid='选图预览_'+String(s.target.节编号).replace('.','_')+'_'+s.target.字段名;
+  var box=document.getElementById(sid);
+  if(box)box.innerHTML='<img src="'+(s.sel.url||window._素材库数据.imgUrl)+'" alt="'+s.sel.n+'"><div class="选图名">'+s.sel.n+'</div>';
+  显示提示('已选择：'+s.sel.n,'成功',1600);
+  关闭素材选择器();
+}
+/* ============ 总后台「上传到分类」弹窗（独立，z-index:95，盖在选图弹窗之上） ============ */
+function 打开上传分类弹窗(){
+  document.getElementById('上传分类选择').value='请选择目标分类';
+  上传分类切换('请选择目标分类');
+  document.getElementById('上传分类遮罩').classList.add('show');
+}
+function 关闭上传分类弹窗(){ document.getElementById('上传分类遮罩').classList.remove('show'); }
+function 上传分类切换(val){
+  var 区=document.getElementById('上传文件区');
+  if(!val||val.indexOf('请选择')===0){区.style.opacity='0.5';区.style.pointerEvents='none';}
+  else{区.style.opacity='1';区.style.pointerEvents='';}
+}
+function 执行上传入库(){
+  var cat=document.getElementById('上传分类选择').value;
+  if(!cat||cat.indexOf('请选择')===0){显示提示('请先选择目标分类','信息',1600);return;}
+  var d=window._素材库数据,s=window._选择器状态;
+  var newIm={id:'up_'+Date.now(),n:'新上传_'+(Date.now()%1000)+'.png',cat:cat,size:'12.3 KB',f:s.folder,url:d.imgUrl};
+  d.imgs.push(newIm);
+  显示提示('上传成功，已入库并自动跳转到该分类','成功',2200);
+  关闭上传分类弹窗();
+  s.cat=cat;s.sel=newIm;
+  渲染选择器();
+}
+/* ============ 客户端「临时存放区」弹窗（不入素材库） ============ */
+window._临时存放={imgs:[],sel:null};
+function 打开临时存放区(){
+  window._临时存放.imgs=[];window._临时存放.sel=null;
+  渲染临时存放();
+  document.getElementById('临时存放遮罩').classList.add('show');
+}
+function 关闭临时存放区(){ document.getElementById('临时存放遮罩').classList.remove('show'); }
+function 渲染临时存放(){
+  var t=window._临时存放,h='';
+  for(var i=0;i<t.imgs.length;i++){
+    var im=t.imgs[i];
+    h+='<div class="临时卡'+(t.sel&&t.sel.id===im.id?' 选中':'')+'" onclick="临时存放选图(\''+im.id+'\')">'
+      +'<div class="素材图框"><span class="勾选角">✓</span><img src="'+im.url+'" alt="'+im.n+'"></div>'
+      +'<div class="素材文件名">'+im.n+'</div></div>';
+  }
+  document.getElementById('临时存放网格').innerHTML=h||'<div class="临时空">尚未上传图片，点击上方按钮选择文件</div>';
+  document.getElementById('临时存放已选').textContent=t.sel?('已选择：'+t.sel.n):'未选择图片';
+}
+function 临时存放选图(id){
+  var t=window._临时存放;
+  for(var i=0;i<t.imgs.length;i++){if(t.imgs[i].id===id){t.sel=t.imgs[i];break;}}
+  渲染临时存放();
+}
+function 确认临时存放(){
+  var t=window._临时存放;
+  if(!t.sel){显示提示('请先选择一张图片','信息',1600);return;}
+  var s=window._选择器状态;
+  var sid='选图预览_'+String(s.target.节编号).replace('.','_')+'_'+s.target.字段名;
+  var box=document.getElementById(sid);
+  if(box)box.innerHTML='<img src="'+t.sel.url+'" alt="'+t.sel.n+'"><div class="选图名">'+t.sel.n+'</div>';
+  显示提示('已选择：'+t.sel.n+'（不入素材库）','成功',2200);
+  关闭临时存放区();
+  关闭素材选择器();
+}
+document.getElementById('临时存放输入').addEventListener('change',function(){
+  var f=this.files&&this.files[0];if(!f)return;
+  var im={id:'tmp_'+Date.now(),n:f.name,size:(f.size/1024).toFixed(1)+' KB',url:URL.createObjectURL(f)};
+  window._临时存放.imgs.push(im);
+  window._临时存放.sel=im;
+  渲染临时存放();this.value='';
+});
+/* ============ 3.2 表单（从 P32 页面直接打开）：模拟上传入库 ============ */
+function 模拟上传入库_页面(){
+  var sel=document.querySelector('#表单弹窗正文 select');
+  var cat=sel?sel.value:'';
+  if(!cat||cat.indexOf('请选择')===0){显示提示('请先选择目标分类','信息',1600);return;}
+  显示提示('上传成功，已入库（演示环境）','成功',2000);
+  关闭表单弹窗();
+}
+// 把新增/编辑弹窗中的主图字段替换为「从素材库选择图片」触发器
+function 挂接素材选择字段(节编号,字段名,模式){
+  var rows=document.querySelectorAll('#表单弹窗正文 .field-row');
+  Array.prototype.forEach.call(rows,function(r){
+    var lab=r.querySelector('.field-label');
+    if(!lab||lab.textContent.trim()!==字段名)return;
+    var ctrl=r.querySelector('.field-control');
+    var sid='选图预览_'+String(节编号).replace('.','_')+'_'+字段名;
+    ctrl.innerHTML='<button type="button" class="选图触发按钮" onclick="打开素材选择器(\''+模式+'\',\''+节编号+'\',\''+字段名+'\')">🖼 从素材库选择图片</button><div class="选图预览" id="'+sid+'"></div><span class="field-type-tag">file</span><button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\''+字段名+'\',event)">ⓘ</button>';
+  });
+}
+
+(window._字段总库||[]).push(
+{名称:"所属文件夹",类型原文:"string",基础类型:"string",数据来源:"系统取上传时当前所在文件夹",用途:"标识素材图一级归属",节编号:"3.2"},
+{名称:"目标分类",类型原文:"enum",基础类型:"enum",枚举值:"按钮、外卖、其他",数据来源:"总后台运营人员选择",逻辑:"必填，未选不能上传",用途:"标识素材图二级归属",节编号:"3.2"},
+{名称:"图片文件",类型原文:"file",基础类型:"file",数据来源:"总后台运营人员上传",逻辑:"选目标分类后才能上传，成功立即入库",用途:"待入库素材文件",节编号:"3.2"},
+{名称:"上传时间",类型原文:"date",基础类型:"date",数据来源:"系统记录",用途:"排序和追溯",节编号:"3.2"},
+{名称:"入库状态",类型原文:"enum",基础类型:"enum",枚举值:"已入库",数据来源:"系统自动标记",用途:"标识素材图可被复用",节编号:"3.2"},
+{名称:"Banner名称",类型原文:"string",基础类型:"string",数据来源:"总后台运营人员填写",用途:"区分不同Banner",节编号:"4.1"},
+{名称:"主图",类型原文:"file",基础类型:"file",数据来源:"总后台运营人员通过共用素材选择弹窗选择",逻辑:"必须来自素材库",用途:"Banner主视觉",节编号:"4.1"},
+{名称:"跳转链接",类型原文:"string",基础类型:"string",数据来源:"总后台运营人员填写",用途:"点击跳转目标",节编号:"4.1"},
+{名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"在推、停推",数据来源:"总后台运营人员切换",用途:"控制Banner是否对前端展示",节编号:"4.1"},
+{名称:"商品名称",类型原文:"string",基础类型:"string",数据来源:"客户端后台运营人员填写",用途:"区分不同商品",节编号:"4.2"},
+{名称:"商品主图",类型原文:"file",基础类型:"file",数据来源:"客户端通过共用素材选择弹窗选择或直接上传",用途:"商品主视觉",节编号:"4.2"},
+{名称:"图片来源",类型原文:"enum",基础类型:"enum",枚举值:"素材库复用、直接上传",数据来源:"系统根据用户操作路径自动标记",用途:"标识来源路径",节编号:"4.2"}
+);
+/* === 把弹窗 DOM 移到 body 下，脱离页面面板（避免 面_4_2 display:none 导致弹窗不显示） === */
+(function(){
+  function move(){
+    ['素材选择器遮罩','上传分类遮罩','临时存放遮罩'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el&&el.parentNode!==document.body) document.body.appendChild(el);
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',move);
+  else move();
+})();
+</script>
+</body>
+</html>

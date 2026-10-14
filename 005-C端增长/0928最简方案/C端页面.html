@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--
+================================================================================
+ C端原型 · 脚手架母版 v4.0（单文件 / 零依赖 / 双击即开）
+ 配套规范：A-工作流C端/000-MD模板/C端HTML形态规范.md
+
+ 【新功能适配只改 7 处，框架代码（导航/树/bf引擎/抽屉/渲染器/TPL 区）一个字不要动】
+  ① <title> 与各页功能名
+  ② APP / SHARE / WXMSG 三个业务常量（小程序名、头像、分享文案、订阅模板）
+  ③ :root 主题色（如不换色可跳过）
+  ④ 侧边树叶子节点（四分组一个都不能删；空组挂灰色「无」节点；多角色功能按
+     功能目标文件夹 → 角色文件夹 → 全局连续编号流程叶子组织，见示例三条流程）
+  ⑤ 手机壳各 .page 内业务 DOM（非本次功能区用 .ph 占位方块，不臆造）
+  ⑥ 注册表数据：titles / PAGE_META / DOCS / GOALS(功能总览) / BF_FLOWS(+BF_R) / DRAWERS / tabPages
+     多角色功能必须配功能总览页（GOALS：1-N 全局主线步骤，g 与 bf 环节双向对齐）；
+     bf 多角色铁律：一个流程只允许一个操作主体，主体切换即截断（✅节点 +
+     支线「➡见流程X」互指，B10）；fork 分歧节点不占编号；外部触达做真实快照、
+     系统动作用过渡态卡（B11）；单角色功能可省文件夹层直接挂 bf 叶子
+  ⑦ 交付前：控制台执行 SELF_CHECK()（或 URL 加 ?selfcheck=1），全绿才可交付
+     抽屉与流程快照优先调 TPL 区模板函数填配置；产物由 build.py 装配，禁止直接编辑产物 HTML
+
+ 【四条铁律】
+  · 真实页面只放手机壳；判断/分歧只放控制器红卡；弹窗唯一形态=半屏抽屉
+  · 手机壳可见文本零元语言（占位/支线/截断/视角/流程指引等），假数据必须像真数据；
+    豁免仅 .ph 占位方块与 .bf-sys 系统过渡态卡——SELF_CHECK 7.5 三层机器扫描，违禁报红
+  · 右侧文档一律走渲染器：docCard(小程序6节)/overviewDoc(总说明7块)/
+    subscribeDoc(订阅O模板)/shareDoc(分享F模板)/bfDoc(环节清单3列)——禁止手写结构
+  · 新增页面必须三处同时登记：侧边树 data-nav + #p-xxx + PAGE_META/titles/DOCS
+  · 新增抽屉必须登记进 DRAWERS 注册表，自检会扫描所有引用并核对
+================================================================================
+-->
+<title>积分周期兑换方案 · C端后台</title>
+<style>
+:root{--brand:#FF6B35;--brand2:#FF9F1C;--brand-soft:#FFF3E0;--wx:#576B95;--danger:#C62828;--ok:#2E7D32}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#e8e8ee;display:flex;justify-content:center;align-items:flex-start;gap:30px;min-height:100vh;padding:20px;flex-wrap:wrap}
+/* ===== 侧边树 ===== */
+.sidebar{width:236px;background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.08);padding:18px 14px;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;flex-shrink:0;transition:width .2s,padding .2s}
+.sidebar::-webkit-scrollbar{width:0}
+.sb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f0f0}
+.sb-head h3{font-size:14px;color:#888}
+.sb-fold{cursor:pointer;color:#999;font-size:14px;padding:2px 7px;border-radius:6px;user-select:none}
+.sb-fold:hover{background:#f2f2f4;color:var(--brand)}
+.sidebar.min{width:44px;padding:14px 6px}
+.sidebar.min .sb-head h3,.sidebar.min .sb-body{display:none}
+.sidebar.min .sb-head{border-bottom:none;margin-bottom:0;justify-content:center}
+.sidebar.min .sb-fold{font-size:16px}
+.tree-item{padding:9px 10px;font-size:13px;cursor:pointer;border-radius:8px;color:#333;transition:background .15s;margin-bottom:2px}
+.tree-item:hover{background:var(--brand-soft);color:var(--brand)}
+.tree-item.active{background:var(--brand);color:#fff;font-weight:600}
+.tree-item.grp{font-weight:600;color:#1a1a1c}
+.tree-item.grp .tg{float:right;color:#999;font-size:11px}
+.tree-children{margin-left:19px;border-left:2px solid #e8e8e8}
+.tree-children.collapsed{display:none}
+.tree-item.t2,.tree-item.t3{padding-left:14px;position:relative;font-size:12px;color:#555}
+.tree-item.t2::before,.tree-item.t3::before{content:'';position:absolute;left:-2px;top:50%;width:12px;height:2px;background:#e8e8e8}
+.tree-item.t2.last::after,.tree-item.t3.last::after{content:'';position:absolute;left:-2px;top:calc(50% + 2px);bottom:0;width:2px;background:#fff}
+.bf-subset{padding:10px 14px 2px;font-size:11px;color:#999;font-weight:700;letter-spacing:1px}
+.bf-subset-body{margin-left:10px}
+.tree-item.none{color:#bbb;cursor:default;background:none}
+.tree-item.none:hover{color:#bbb;background:none}
+.tree-note{font-size:11px;color:#bbb;padding:8px 10px;line-height:1.6}
+/* ===== 右侧文档面板 ===== */
+.doc-panel{flex:1;width:auto;min-width:470px;max-width:900px;background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.08);padding:22px;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto}
+.doc-panel::-webkit-scrollbar{width:0}
+.doc-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.doc-badge{background:var(--brand);color:#fff;font-weight:700;font-size:12px;border-radius:8px;padding:4px 10px;flex-shrink:0}
+.doc-name{font-size:17px;font-weight:700}
+.doc-desc{font-size:13px;color:#666;line-height:1.7;background:#FFF7F2;border-radius:10px;padding:10px 12px}
+.doc-panel h4{font-size:13px;color:var(--brand);margin:16px 0 8px;border-left:3px solid var(--brand);padding-left:8px}
+.doc-list{padding-left:18px;font-size:12.5px;color:#444;line-height:1.9}
+ol.doc-list>li{margin-bottom:13px}
+ol.doc-list>li b{color:#111}
+.doc-pts{list-style:none;padding:0;margin:6px 0 2px;font-size:12.5px;color:#444;line-height:1.85}
+.doc-pts>li{position:relative;padding-left:14px;margin-bottom:8px}
+.doc-pts>li::before{content:'·';position:absolute;left:2px;top:-1px;color:var(--brand);font-weight:700;font-size:15px}
+.doc-pts b{color:#111}
+.doc-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:2px}
+.doc-table th{background:#f7f7f9;color:#666;text-align:left;padding:7px 8px;border:1px solid #eee;font-weight:600}
+.doc-table td{padding:7px 8px;border:1px solid #eee;color:#444;line-height:1.6;vertical-align:top}
+.doc-table td:first-child{font-weight:600;color:#333;white-space:nowrap}
+.doc-sec{margin:10px 0 4px;padding:4px 10px;background:#eef2ff;border-radius:6px;font-size:13px;font-weight:600;color:#4338ca;display:inline-block}
+.ascii{font-family:Consolas,Menlo,"Courier New",monospace;font-size:15px;line-height:1.85;background:#fafafa;border:1px solid #eee;border-radius:10px;padding:14px 16px;overflow-x:auto;color:#333;white-space:pre;margin:8px 0 2px}
+.asc-cap{font-size:12px;font-weight:600;margin:10px 0 0;color:#333}
+.row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #f6f6f6;font-size:13px}
+.row span:first-child{color:#888;flex-shrink:0}
+.guide-btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.guide-btns .gb{flex:1;background:var(--brand-soft);color:#E65100;font-size:12px;font-weight:600;text-align:center;padding:10px 6px;border-radius:10px;cursor:pointer;min-width:90px}
+.guide-btns .gb:active{opacity:.8}
+/* ===== 手机壳五层：状态栏 / 导航栏 / 内容 / tabBar / 抽屉 ===== */
+body.no-phone .phone{display:none}
+.phone{width:390px;height:844px;background:#f5f5f7;border-radius:44px;box-shadow:0 0 0 11px #1a1a1c,0 0 0 13px #2a2a2e,0 30px 80px rgba(0,0,0,.35);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:28px;background:#1a1a1c;border-radius:0 0 18px 18px;z-index:100}
+.statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-size:14px;font-weight:600;color:#1a1a1c;flex-shrink:0}
+.statusbar .right{display:flex;gap:5px;align-items:center}
+.navbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#fff;border-bottom:1px solid #f0f0f0;flex-shrink:0;position:relative}
+.navbar .back{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#1a1a1c;cursor:pointer}
+.navbar .title{font-size:17px;font-weight:600;color:#1a1a1c;position:absolute;left:50%;transform:translateX(-50%)}
+.navbar .right-action{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--brand);cursor:pointer}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;background:#f5f5f7}
+.content::-webkit-scrollbar{width:0}
+.page{display:none;position:absolute;inset:0;overflow-y:auto;padding-bottom:80px}
+.page.active{display:block}
+.page::-webkit-scrollbar{width:0}
+.tabbar{height:64px;background:#fff;border-top:1px solid #ececec;display:flex;flex-shrink:0;padding-bottom:6px}
+.tabbar.hide{display:none}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#999;font-size:10px;cursor:pointer}
+.tab .ico{font-size:22px}
+.tab.active{color:var(--brand)}
+/* ===== 手机壳通用业务件（业务专属样式请按 .p-xxx 前缀自行追加） ===== */
+.card{background:#fff;border-radius:14px;margin:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.btn{display:block;width:100%;padding:13px;border:none;border-radius:24px;font-size:15px;font-weight:600;cursor:pointer;text-align:center}
+.btn-primary{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff}
+.btn-line{background:#fff;color:var(--brand);border:1.5px solid var(--brand)}
+.btn[disabled]{background:#f0f0f0;color:#bbb}
+.hero{background:linear-gradient(135deg,var(--brand),var(--brand2));padding:20px 16px 24px;color:#fff;border-radius:0 0 24px 24px}
+.hero .t{font-size:19px;font-weight:700}
+.hero .s{font-size:12px;opacity:.88;margin-top:6px;line-height:1.7}
+.menu{margin:12px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.menu .mi{display:flex;align-items:center;padding:15px 16px;border-bottom:1px solid #f6f6f6;cursor:pointer}
+.menu .mi:last-child{border-bottom:none}
+.menu .mi .ico{width:28px;text-align:center;font-size:18px}
+.menu .mi .t{flex:1;font-size:14px;margin-left:10px}
+.menu .mi .arr{color:#ccc;font-size:14px}
+/* 占位方块：非本次功能区一律用它标注，不展开不臆造 */
+.ph{margin:12px;border:1.5px dashed #cfcfd6;border-radius:12px;background:#fafafb;color:#a5a5ad;font-size:12px;line-height:1.7;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px 14px}
+.empty{text-align:center;padding:40px;color:#bbb;font-size:13px}
+.notice{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;z-index:300;opacity:0;transition:opacity .3s;white-space:nowrap}
+.notice.show{opacity:1}
+/* ===== 每日签到功能样式（签到示例会话5 回归 · 纯增量；.menu/.mi 基础类见上方，不改既有规则） ===== */
+.hero .bal{font-size:13px;opacity:.9}
+.hero .bal-num{font-size:34px;font-weight:700;margin-top:4px;cursor:pointer}
+.hero .bal-tip{font-size:12px;opacity:.85;margin-top:6px}
+.sign-reminder{margin:12px;background:linear-gradient(90deg,#FFF3E0,#FFE0B2);border-radius:12px;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#E65100;cursor:pointer}
+.mine-top{background:linear-gradient(135deg,#FF6B35,#FF9F1C);padding:24px 16px 30px;color:#fff;display:flex;align-items:center;gap:14px;border-radius:0 0 24px 24px}
+.mine-top .avatar{width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:28px}
+.mine-top .nick{font-size:17px;font-weight:600}
+.mine-top .sub{font-size:12px;opacity:.85;margin-top:4px;cursor:pointer}
+.menu .mi .badge{background:#FF3B30;color:#fff;font-size:10px;border-radius:9px;padding:1px 6px;margin-right:6px}
+.menu .mi .badge.ok{background:#E8F5E9;color:#2E7D32}
+.sign-top{background:linear-gradient(135deg,#FF6B35,#FF9F1C);padding:18px 16px;color:#fff;text-align:center;border-radius:0 0 20px 20px}
+.sign-top .d{font-size:13px;opacity:.9}
+.sign-top .n{font-size:30px;font-weight:700;margin:4px 0}
+.sign-top .p{font-size:12px;opacity:.85}
+.mcal-card{background:#fff;border-radius:14px;margin:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.mcal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.mcal-hd .mm{font-size:15px;font-weight:700;color:#1a1a1c}
+.mcal-nav{width:28px;height:28px;border-radius:8px;background:#f5f5f7;color:#666;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;user-select:none}
+.mcal-nav.off{opacity:.3;pointer-events:none}
+.mcal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.mcal .wd{font-size:10px;color:#bbb;padding:4px 0}
+.mcal .cd{position:relative;font-size:12px;color:#333;background:#f6f6f8;border-radius:8px;padding:8px 0 12px;min-height:36px}
+.mcal .cd.blank{background:none}
+.mcal .cd.dim{background:#fafafa;color:#ccc}
+.mcal .cd.future{background:#fafafa;color:#ccc}
+.mcal .cd.signed{background:#E8F5E9;color:#2E7D32;font-weight:600}
+.mcal .cd.missed{background:#FFEBEE;color:#C62828}
+.mcal .cd.today{outline:2px solid #FF6B35;font-weight:700}
+.mcal .cd .mk{position:absolute;bottom:2px;left:0;right:0;font-size:9px;font-weight:700}
+.mcal-legend{display:flex;gap:14px;justify-content:center;font-size:11px;color:#999;margin-top:10px}
+.demo-row{margin:12px;background:#F3E8FF;color:#6A1B9A;border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.8}
+.demo-row .db{display:flex;gap:8px;margin-top:8px}
+.demo-row .db div{flex:1;background:#fff;border:1px solid #E1BEE7;color:#7B1FA2;font-weight:700;text-align:center;padding:9px 4px;border-radius:10px;cursor:pointer;font-size:12px}
+.demo-row .db div:active{opacity:.8}
+.seg-tabs{display:flex;background:#fff;padding:10px 12px;gap:8px;position:sticky;top:0;z-index:5}
+.seg-tabs .st{flex:1;text-align:center;padding:8px;font-size:12px;border-radius:8px;background:#f5f5f7;color:#666;cursor:pointer}
+.seg-tabs .st.active{background:#FF6B35;color:#fff;font-weight:600}
+.bf-endpage{padding:60px 24px;text-align:center}
+.wx-more{margin-left:auto;color:#c2c2c2;font-size:14px;letter-spacing:2px}
+/* ===== 半屏抽屉（唯一弹窗形态） ===== */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none}
+.overlay.show{display:block}
+.drawer{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;z-index:201;transform:translateY(100%);transition:transform .3s ease;max-height:80%;overflow-y:auto;padding:20px 18px 30px}
+.drawer.show{transform:translateY(0)}
+.drawer .grab{width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 16px}
+.drawer h3{text-align:center;font-size:17px;margin-bottom:14px}
+.drawer .row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #f6f6f6;font-size:14px}
+.drawer .row span:first-child{color:#888}
+.drawer .btns{display:flex;gap:10px;margin-top:18px}
+.drawer .btns .btn{flex:1}
+/* ===== 业务流程：流程控制器 + 环节节点 + 分歧红卡 ===== */
+.bf-ctrl{display:none;width:266px;background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.08);padding:16px 14px;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;flex-shrink:0}
+.bf-ctrl::-webkit-scrollbar{width:0}
+body.bf-mode .bf-ctrl{display:block}
+.bf-ctrl-head{font-size:14px;font-weight:700;color:#1a1a1c;padding-bottom:10px;border-bottom:1px solid #f0f0f0}
+.bf-axis{margin-top:12px}
+.bf-node{display:flex;gap:9px;padding:8px 9px;border-radius:10px;cursor:pointer;align-items:flex-start;margin-bottom:3px}
+.bf-node:hover{background:var(--brand-soft)}
+.bf-dot{width:24px;height:24px;border-radius:50%;background:#f0f0f2;color:#999;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bf-node.done .bf-dot{background:#E8F5E9;color:#388E3C}
+.bf-node.cur .bf-dot{background:var(--brand);color:#fff}
+.bf-text{flex:1;min-width:0}
+.bf-nm{font-size:13px;color:#555;line-height:1.4}
+.bf-sub{font-size:11px;color:#9b9ba3;line-height:1.5}
+.bf-sub.bf-page{margin-top:3px}
+.bf-node.cur .bf-nm{color:#1a1a1c;font-weight:700}
+.bf-node.cur .bf-sub{color:#6b6b73}
+.bf-node.fork .bf-nm{color:var(--danger);font-weight:700}
+.bf-node.fork .bf-sub{color:#B57B8A}
+.bf-node.fork.cur .bf-sub{color:#8A4B5C}
+.bf-q{color:var(--danger);cursor:pointer;margin-left:4px;font-size:12px;vertical-align:middle}
+.bf-brs-t{font-size:11px;font-weight:700;color:#888;margin:12px 0 6px}
+.bf-brs{display:flex;flex-wrap:wrap;gap:6px}
+.bf-br-b{font-size:11px;color:var(--wx);background:#F0F4FA;border:1px solid #D8E2F0;border-radius:8px;padding:5px 9px;cursor:pointer}
+.bf-br-b:hover{background:#E3EBF7}
+.bf-nav-btns{display:flex;gap:8px;margin-top:14px}
+.bf-nav-btns .btn{padding:10px 0;font-size:13px;border-radius:12px}
+.bf-reset{text-align:center;font-size:12px;color:var(--wx);padding:12px 0 2px;cursor:pointer}
+.bf-body{padding-bottom:80px}
+.bf-sys{padding:48px 24px 0;text-align:center}
+.bf-sys .ico{font-size:50px}
+.bf-sys .tag{display:inline-block;font-size:11px;color:#8a8a93;background:#f0f0f3;border-radius:6px;padding:3px 8px;margin:14px 0 10px}
+.bf-sys .t{font-size:16px;font-weight:700}
+.bf-sys .s{font-size:12px;color:#999;line-height:1.9;margin-top:8px}
+/* ===== 微信生态部件：订阅通知卡 / 分享卡 / 会话快照 / 分享面板 ===== */
+#p-wxmsg,#p-share{background:#EDEDED}
+.wx-bar{background:#EDEDED;padding:14px 16px;font-size:14px;font-weight:600;color:#1a1a1c}
+.wx-date{text-align:center;font-size:11px;color:#b2b2b2;margin:14px 0 6px}
+.wx-card{margin:0 12px 12px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer}
+.wx-brand{display:flex;align-items:center;gap:9px;padding:12px 14px 0}
+.wx-ava{width:32px;height:32px;border-radius:8px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.wx-name{font-size:14px;font-weight:600}
+.wx-tt{padding:14px 16px 4px;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+.wx-bell{color:#c9c9c9;font-size:14px;font-weight:400}
+.wx-f{display:flex;padding:7px 16px;font-size:13px}
+.wx-f span{color:#9a9a9a;width:88px;flex-shrink:0}
+.wx-f b{font-weight:500;color:#1a1a1c}
+.wx-sep{height:1px;background:#f2f2f2;margin:10px 14px 0}
+.wx-foot{display:flex;align-items:center;gap:6px;padding:10px 14px 12px}
+.wx-ava-s{width:16px;height:16px;border-radius:4px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+.wx-kw{font-size:12px;font-weight:600;color:#1a1a1c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wx-go{margin-left:auto;font-size:12px;color:var(--wx);flex-shrink:0}
+.share-card{margin:0 12px 12px 64px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer}
+.share-tt{padding:10px 12px 8px;font-size:15px;font-weight:600;color:#1a1a1c}
+.share-cover{margin:0 12px;height:170px;border-radius:8px;background:linear-gradient(135deg,#FFE0B2,#FFCC80);display:flex;align-items:center;justify-content:center;font-size:40px;opacity:.7}
+.share-foot{display:flex;align-items:center;gap:6px;padding:8px 12px 10px;font-size:11px;color:#9a9a9a}
+.share-card.invalid{opacity:.55;filter:grayscale(.5)}
+.wx-chat{background:#EDEDED;border-radius:12px;overflow:hidden;padding-bottom:16px}
+.sh-app{display:flex;align-items:center;gap:10px;padding:2px 4px 12px;border-bottom:1px solid #f2f2f2}
+.sh-app .wx-ava{width:36px;height:36px;font-size:18px}
+.sh-app-nm{font-size:15px;font-weight:600}
+.sh-app-sub{font-size:11px;color:#9a9a9a;margin-top:2px}
+.sh-sec{font-size:12px;color:#9a9a9a;padding:12px 4px 8px}
+.sh-row{display:flex;gap:14px;overflow-x:auto;padding:2px 4px 4px;scrollbar-width:none}
+.sh-row::-webkit-scrollbar{display:none}
+.sh-c{width:56px;flex-shrink:0;text-align:center;cursor:pointer}
+.sh-c .ava{width:44px;height:44px;border-radius:8px;background:#f0f0f2;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto}
+.sh-c .nm{font-size:10px;color:#666;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px 6px;padding:8px 4px 4px}
+.sh-g{text-align:center;cursor:pointer}
+.sh-g .ava{width:44px;height:44px;border-radius:12px;background:#f5f5f7;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto}
+.sh-g .nm{font-size:10px;color:#666;margin-top:5px}
+.sh-cancel{margin-top:12px;border-top:1px solid #f2f2f2;text-align:center;padding:14px 0 4px;font-size:15px;color:#1a1a1c;cursor:pointer}
+/* ===== 功能总览：角色标签 / 步骤跳转 ===== */
+.role{display:inline-block;font-size:11px;border-radius:6px;padding:2px 8px;font-weight:700;white-space:nowrap}
+.role.old{background:#FFF3E0;color:#E65100}
+.role.new{background:#E3F2FD;color:#1565C0}
+.role.sys{background:#ECEFF1;color:#546E7A}
+.gjump{color:var(--brand);font-weight:700;cursor:pointer;white-space:nowrap}
+.gjump:active{opacity:.7}
+.tree-item.grp.goal{cursor:pointer}
+/* ===== 自检结果条 ===== */
+#checkBar{position:fixed;top:0;left:0;right:0;z-index:999;font-size:13px;padding:10px 18px;line-height:1.8;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+#checkBar.ok{background:#E8F5E9;color:#1b5e20}
+#checkBar.err{background:#FFEBEE;color:#b71c1c}
+#checkBar b{cursor:pointer;float:right}
+</style>
+</head>
+<body>
+<!-- ================= 侧边树（四分组缺一不可；空组保留并挂灰色「无」节点） ================= -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-head"><h3>📑 页面树状图</h3><span class="sb-fold" id="sbFold" onclick="toggleSidebar()">«</span></div>
+  <div class="sb-body">
+
+    <div class="tree-item grp" onclick="toggleGroup(this)">📑 总说明 <span class="tg">▾</span></div>
+    <div class="tree-children grp-body">
+      <div class="tree-item t2 last" data-nav="overview" onclick="nav('overview')">📑 总览</div>
+    </div>
+    <div class="tree-item grp" onclick="toggleGroup(this)">🗂 业务流程 <span class="tg">▾</span></div>
+    <div class="tree-children grp-body">
+      <!-- 业务流程拆 3 个子集：主流程 / 订阅 / 其他（纯分组标签，不是功能目标文件夹） -->
+      <div class="bf-subset">主流程</div>
+      <div class="tree-children bf-subset-body">
+        <div class="tree-item t3" data-nav="bf-new" onclick="nav('bf-new')">🆕 新用户-首单流程</div>
+        <div class="tree-item t3 last" data-nav="bf-old" onclick="nav('bf-old')">🔁 老用户-下单流程</div>
+      </div>
+      <div class="bf-subset">其他</div>
+      <div class="tree-children bf-subset-body">
+        <div class="tree-item t3" data-nav="bf-sign" onclick="nav('bf-sign')">📅 签到 · 每天召回</div>
+        <div class="tree-item t3 last" data-nav="bf-recall" onclick="nav('bf-recall')">📢 每天召回策略</div>
+      </div>
+    </div>
+    <div class="tree-item grp" onclick="toggleGroup(this)">📱 小程序页面 <span class="tg">▾</span></div>
+    <div class="tree-children grp-body">
+      <div class="tree-item t2" data-nav="mall" onclick="goTab('mall')">🏪 积分商城（tab）</div>
+      <div class="tree-children">
+        <div class="tree-item t3 last" data-nav="exchange" onclick="goPage('exchange')">🧾 兑换记录</div>
+      </div>
+      <div class="tree-item t2" data-nav="home" onclick="goTab('home')">🏠 首页（tab）</div>
+      <div class="tree-children">
+        <div class="tree-item t3 last" data-nav="sign" onclick="goPage('sign')">📅 签到</div>
+      </div>
+      <div class="tree-item t2" data-nav="mine" onclick="goTab('mine')">👤 我的（tab）</div>
+      <div class="tree-children">
+        <div class="tree-item t3" data-nav="orders" onclick="goPage('orders')">📦 订单列表</div>
+        <div class="tree-item t3" data-nav="points" onclick="goPage('points')">📊 积分明细</div>
+        <div class="tree-item t3 last" data-nav="cash" onclick="goPage('cash')">💸 提现记录</div>
+      </div>
+    </div>
+    <div class="tree-item grp" onclick="toggleGroup(this)">🔧 其他页面 <span class="tg">▾</span></div>
+    <div class="tree-children grp-body">
+      <div class="tree-item t2" data-nav="share" onclick="nav('share')">🔗 分享卡片页</div>
+      <div style="padding:10px 14px 2px;font-size:11px;color:#999;font-weight:700;letter-spacing:1px">🔔 订阅通知</div>
+      <div class="tree-children" style="margin-left:14px">
+        <div class="tree-item t3 last" data-nav="wxmsgD" onclick="nav('wxmsgD')">每天召回</div>
+      </div>
+    </div>
+    <div class="tree-note">💡 点击节点跳转对应页面<br>▾/▸ 收起或展开分组<br>« 收起整个树状图<br>URL 加 ?selfcheck=1 跑交付自检</div>
+  </div>
+</div>
+
+<!-- ================= 手机壳 ================= -->
+<div class="phone">
+<div class="notch"></div>
+<div class="statusbar"><span>9:41</span><span class="right">📶 🔋</span></div>
+<div class="navbar" id="navbar">
+  <div class="back" id="navBack" onclick="goBack()" style="visibility:hidden">‹</div>
+  <div class="title" id="navTitle">首页</div>
+  <div class="right-action" id="navRight"></div>
+</div>
+<div class="content">
+
+
+<!-- 总说明（no-phone：只有右侧文档，手机壳不出现） -->
+<div class="page" id="p-overview">
+  <div class="hero"><div class="t" id="ovTitle">外卖积分 · 总说明</div><div class="s">领券下单攒积分，积分换现金到微信零钱</div></div>
+  <div class="card">完整目标 / 用户定义 / 规则 / 业务分支 / 流程图 / 导览见右侧文档面板（结构由 overviewDoc 锁定 7 块）。</div>
+  <div class="guide-btns" style="padding:0 12px">
+    <div class="gb" onclick="nav('home')">🏠 首页</div>
+    <div class="gb" style="background:#E8F5E9;color:#2E7D32" onclick="nav('mall')">🏪 积分商城</div>
+    <div class="gb" style="background:#E3F2FD;color:#1565C0" onclick="nav('bf-new')">🆕 首单流程</div>
+  </div>
+</div>
+
+<!-- 小程序页面 · tab：首页（领券中心） -->
+<div class="page" id="p-home">
+  <div class="hero">
+    <div class="d" style="font-size:12px;opacity:.85">我的积分</div>
+    <div class="t" style="margin-top:4px;font-size:26px" id="hPts">12,000</div>
+    <div class="s" id="hMoney">约合 ¥6.00（1 元 = 2000 积分）</div>
+  </div>
+  <div class="card" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:13px 16px" onclick="nav('sign')">
+    <div style="font-size:22px">📅</div>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:700">连续签到 5 天 · 今日 +35</div>
+      <div style="font-size:11px;color:#999;margin-top:2px">签到得积分，连续越久档位越高</div>
+    </div>
+    <div style="background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:16px">去签到</div>
+  </div>
+  <div class="card">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">🧧 领外卖红包</div>
+    <div style="font-size:11px;color:#999;margin-bottom:12px">每张 +5 积分 · 每日 6 张 · 下单积分 = 平台佣金 × 50% × 2000</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:linear-gradient(135deg,#2F7CF6,#57A0FF);border-radius:12px;padding:12px 10px;color:#fff">
+        <div style="font-size:11px;opacity:.9">饿了么红包</div>
+        <div style="font-size:17px;font-weight:800;margin:4px 0 6px">满 20 减 5</div>
+        <div style="font-size:10px;opacity:.85;margin-bottom:8px">领券+<span class="hb-gain">5</span>，下单得积分</div>
+        <button style="width:100%;border:none;border-radius:14px;background:#fff;color:#2F7CF6;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="getHb(this)">领取 +5</button>
+      </div>
+      <div style="background:linear-gradient(135deg,#F6A300,#FFC53D);border-radius:12px;padding:12px 10px;color:#fff">
+        <div style="font-size:11px;opacity:.9">美团红包</div>
+        <div style="font-size:17px;font-weight:800;margin:4px 0 6px">满 25 减 6</div>
+        <div style="font-size:10px;opacity:.85;margin-bottom:8px">领券+<span class="hb-gain">5</span>，下单得积分</div>
+        <button style="width:100%;border:none;border-radius:14px;background:#fff;color:#B57500;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="getHb(this)">领取 +5</button>
+      </div>
+      <div style="background:linear-gradient(135deg,#2F7CF6,#57A0FF);border-radius:12px;padding:12px 10px;color:#fff">
+        <div style="font-size:11px;opacity:.9">饿了么红包</div>
+        <div style="font-size:17px;font-weight:800;margin:4px 0 6px">满 35 减 9</div>
+        <div style="font-size:10px;opacity:.85;margin-bottom:8px">领券+<span class="hb-gain">5</span>，下单得积分</div>
+        <button style="width:100%;border:none;border-radius:14px;background:#fff;color:#2F7CF6;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="getHb(this)">领取 +5</button>
+      </div>
+      <div style="background:linear-gradient(135deg,#F6A300,#FFC53D);border-radius:12px;padding:12px 10px;color:#fff">
+        <div style="font-size:11px;opacity:.9">美团红包</div>
+        <div style="font-size:17px;font-weight:800;margin:4px 0 6px">满 30 减 8</div>
+        <div style="font-size:10px;opacity:.85;margin-bottom:8px">领券+<span class="hb-gain">5</span>，下单得积分</div>
+        <button style="width:100%;border:none;border-radius:14px;background:#fff;color:#B57500;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="getHb(this)">领取 +5</button>
+      </div>
+      <div style="background:linear-gradient(135deg,#2F7CF6,#57A0FF);border-radius:12px;padding:12px 10px;color:#fff">
+        <div style="font-size:11px;opacity:.9">饿了么红包</div>
+        <div style="font-size:17px;font-weight:800;margin:4px 0 6px">满 45 减 12</div>
+        <div style="font-size:10px;opacity:.85;margin-bottom:8px">领券+<span class="hb-gain">5</span>，下单得积分</div>
+        <button style="width:100%;border:none;border-radius:14px;background:#fff;color:#2F7CF6;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="getHb(this)">领取 +5</button>
+      </div>
+      <div style="background:linear-gradient(135deg,#F6A300,#FFC53D);border-radius:12px;padding:12px 10px;color:#fff">
+        <div style="font-size:11px;opacity:.9">美团红包</div>
+        <div style="font-size:17px;font-weight:800;margin:4px 0 6px">满 50 减 15</div>
+        <div style="font-size:10px;opacity:.85;margin-bottom:8px">领券+<span class="hb-gain">5</span>，下单得积分</div>
+        <button style="width:100%;border:none;border-radius:14px;background:#fff;color:#B57500;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="getHb(this)">领取 +5</button>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:14px 16px" onclick="nav('mall')">
+    <div style="font-size:24px">🏪</div>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:700">积分商城</div>
+      <div style="font-size:11px;color:#999;margin-top:2px">积分换现金 · 直接打到微信零钱</div>
+    </div>
+    <div style="color:#ccc;font-size:14px">›</div>
+  </div>
+</div>
+
+<!-- 小程序页面 · tab：积分商城（核心消耗页） -->
+<div class="page" id="p-mall">
+  <div class="hero">
+    <div class="d" style="font-size:12px;opacity:.85">我的积分</div>
+    <div class="t" style="margin-top:4px;font-size:26px" id="mPts">12,000</div>
+    <div class="s">1 元 = 2000 积分</div>
+  </div>
+  <div class="card">
+    <div style="display:flex;background:#f5f5f7;border-radius:10px;padding:3px;margin-bottom:12px">
+      <div id="tabCash" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:8px 0;border-radius:8px;background:#fff;color:var(--brand);cursor:pointer" onclick="mallTab('cash')">现金任务</div>
+      <div id="tabHw" style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:8px 0;border-radius:8px;color:#888;cursor:pointer" onclick="mallTab('hw')">实物任务</div>
+    </div>
+    <div id="mallCash"><div id="cashGridHook"></div></div>
+    <div id="mallHw" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="border:1px solid #f0f0f0;border-radius:12px;padding:12px 10px">
+          <div style="font-size:13px;font-weight:700;color:#bbb">定制保温杯</div>
+          <div style="font-size:11px;color:#999;margin:3px 0 10px">8,000 积分</div>
+          <button style="width:100%;border:none;border-radius:14px;background:#f0f0f0;color:#bbb;font-size:12px;font-weight:700;padding:7px 0" disabled>已售罄</button>
+        </div>
+        <div style="border:1px solid #f0f0f0;border-radius:12px;padding:12px 10px">
+          <div style="font-size:13px;font-weight:700">品牌周边雨伞</div>
+          <div style="font-size:11px;color:#999;margin:3px 0 10px">3,000 积分</div>
+          <button style="width:100%;border:none;border-radius:14px;background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="showDrawer('d-addr')">兑换</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:13px 16px" onclick="nav('exchange')">
+    <div style="font-size:20px">🧾</div>
+    <div style="flex:1;font-size:14px;font-weight:700">兑换记录</div>
+    <div style="color:#ccc;font-size:14px">›</div>
+  </div>
+</div>
+
+<!-- 小程序页面 · tab：我的 -->
+<div class="page" id="p-mine">
+  <div class="hero" style="display:flex;align-items:center;gap:12px">
+    <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:26px">🧑</div>
+    <div style="flex:1">
+      <div class="t">外卖小达人</div>
+      <div class="s" style="margin-top:4px">积分 <b id="minePts">12,000</b></div>
+      <div class="s" style="margin-top:6px;font-size:11px;opacity:.85">累计获取 <b id="mineGain">19,200</b> · 已消耗 <b id="mineUsed">7,200</b> · 累计兑换 <b id="mineCash">¥3.60</b></div>
+    </div>
+  </div>
+  <div class="menu" id="mineMenuHook"></div>
+</div>
+
+<!-- 小程序页面 · 二级页：签到（首页下） -->
+<div class="page" id="p-sign">
+  <div class="hero">
+    <div class="d" style="font-size:12px;opacity:.85">已连续签到</div>
+    <div class="t" style="margin-top:4px" id="signDays">5 天</div>
+    <div class="s" id="signTip">今日签到 +35 积分 · 明日 +35</div>
+  </div>
+  <div class="card">
+    <div style="font-size:14px;font-weight:700;margin-bottom:12px">7 日签到档位</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px" id="signRow">
+      <div style="text-align:center;border-radius:10px;padding:8px 0;background:var(--brand-soft);color:var(--brand)"><div style="font-size:11px">D1</div><div style="font-size:13px;font-weight:800;margin-top:2px">+5</div><div style="font-size:10px;margin-top:2px">已签</div></div>
+      <div style="text-align:center;border-radius:10px;padding:8px 0;background:var(--brand-soft);color:var(--brand)"><div style="font-size:11px">D2</div><div style="font-size:13px;font-weight:800;margin-top:2px">+10</div><div style="font-size:10px;margin-top:2px">已签</div></div>
+      <div style="text-align:center;border-radius:10px;padding:8px 0;background:var(--brand-soft);color:var(--brand)"><div style="font-size:11px">D3</div><div style="font-size:13px;font-weight:800;margin-top:2px">+15</div><div style="font-size:10px;margin-top:2px">已签</div></div>
+      <div style="text-align:center;border-radius:10px;padding:8px 0;background:var(--brand-soft);color:var(--brand)"><div style="font-size:11px">D4</div><div style="font-size:13px;font-weight:800;margin-top:2px">+20</div><div style="font-size:10px;margin-top:2px">已签</div></div>
+      <div style="text-align:center;border-radius:10px;padding:8px 0;background:var(--brand-soft);color:var(--brand)"><div style="font-size:11px">D5</div><div style="font-size:13px;font-weight:800;margin-top:2px">+25</div><div style="font-size:10px;margin-top:2px">已签</div></div>
+      <div style="text-align:center;border-radius:10px;padding:8px 0;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff" id="signD6"><div style="font-size:11px">D6</div><div style="font-size:13px;font-weight:800;margin-top:2px">+35</div><div style="font-size:10px;margin-top:2px">今日</div></div>
+      <div style="text-align:center;border-radius:10px;padding:8px 0;background:#f5f5f7;color:#999"><div style="font-size:11px">D7</div><div style="font-size:13px;font-weight:800;margin-top:2px">+35</div><div style="font-size:10px;margin-top:2px">明日</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <button class="btn btn-primary" id="signBtn" onclick="doSign()">立即签到 +35</button>
+    <div style="margin-top:10px;padding:10px 12px;background:#E8F5E9;border-radius:10px;display:flex;align-items:center;gap:8px">
+      <div style="font-size:18px">🔔</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:#2E7D32">已订阅 · 每天召回</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">系统每天推送一次召回通知，引导回首页领红包下单</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 小程序页面 · 二级页：订单列表（我的下） -->
+<div class="page" id="p-orders">
+  <div class="card" style="padding:10px 12px">
+    <div id="ordPlatBarHook"></div>
+    <div id="ordStateBarHook"></div>
+  </div>
+  <div id="ordList"></div>
+</div>
+
+<!-- 小程序页面 · 二级页：积分明细 -->
+<div class="page" id="p-points">
+  <div class="card" style="padding:10px 12px">
+    <div id="ptsTabBarHook"></div>
+  </div>
+  <div class="card" id="ptsList"></div>
+</div>
+
+<!-- 小程序页面 · 二级页：提现记录（我的下） -->
+<div class="page" id="p-cash">
+  <div class="hero">
+    <div class="d" style="font-size:12px;opacity:.85">累计提现（微信零钱）</div>
+    <div class="t" style="margin-top:4px">¥8.60</div>
+    <div class="s">主动兑换，实时入微信零钱</div>
+  </div>
+  <div class="card" id="cashList"></div>
+</div>
+
+<!-- 小程序页面 · 二级页：兑换记录（积分商城下） -->
+<div class="page" id="p-exchange">
+  <div class="card" style="padding:10px 12px">
+    <div id="exTabBarHook"></div>
+  </div>
+  <div class="card" id="exList"></div>
+</div>
+
+<!-- 其他页面 · 分享（微信会话中看到的分享卡片；封面为纯视觉占位块） -->
+<div class="page" id="p-share">
+  <div class="wx-chat" style="margin:0">
+    <div class="wx-bar">💬 微信 · 文件传输助手</div>
+    <div class="wx-date">9月27日 10:00</div>
+    <div class="share-card" onclick="goTab('home');notice('来自分享：分享者 u10086')">
+      <div class="wx-brand"><span class="wx-ava">🥡</span><span class="wx-name">外卖积分</span></div>
+      <div class="share-tt">领外卖红包，下单攒积分换现金</div>
+      <div class="share-cover">🧧</div>
+      <div class="share-foot"><span class="wx-ava-s">🥡</span><span>小程序 · 外卖积分</span></div>
+    </div>
+    <div class="share-card invalid" onclick="notice('红包活动已结束：停留在微信会话')">
+      <div class="wx-brand"><span class="wx-ava">🥡</span><span class="wx-name">外卖积分</span></div>
+      <div class="share-tt">红包活动已结束</div>
+      <div class="share-cover">🌫</div>
+      <div class="share-foot"><span class="wx-ava-s">🥡</span><span>小程序 · 外卖积分</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 其他页面 · 订阅通知D：每天召回（签到时订阅；每天推送一次，引导回首页） -->
+<div class="page" id="p-wxmsgD">
+  <div class="wx-bar">🔔 服务通知</div>
+  <div class="wx-date">9月27日 09:00</div>
+  <div class="wx-card" onclick="landFromSubscribe('home')">
+    <div class="wx-brand"><span class="wx-ava">🥡</span><span class="wx-name">外卖积分</span></div>
+    <div class="wx-tt">每天召回 <span class="wx-bell">🔔</span></div>
+    <div class="wx-f"><span>召回提示</span><b>今天还没领红包哦</b></div>
+    <div class="wx-f"><span>可用红包</span><b>饿了么/美团 多张可领</b></div>
+    <div class="wx-f"><span>积分进度</span><b>已攒 12,000 积分</b></div>
+    <div class="wx-f"><span>行动建议</span><b>点卡片进首页领红包下单</b></div>
+    <div class="wx-sep"></div>
+    <div class="wx-foot"><span class="wx-ava-s">🥡</span><span class="wx-kw">每天召回 · 通知</span><span class="wx-go">小程序 ›</span></div>
+  </div>
+</div>
+
+<!-- 业务流程页（手机壳内容全部由 BF_R 渲染器注入；一个流程 = 一个操作主体 = 一个容器） -->
+<div class="page" id="p-bf-new"><div id="bfBody-bf-new" class="bf-body"></div></div>
+<div class="page" id="p-bf-old"><div id="bfBody-bf-old" class="bf-body"></div></div>
+<div class="page" id="p-bf-sign"><div id="bfBody-bf-sign" class="bf-body"></div></div>
+<div class="page" id="p-bf-recall"><div id="bfBody-bf-recall" class="bf-body"></div></div>
+
+</div><!-- /content -->
+<div class="tabbar" id="tabbar">
+  <div class="tab" data-tab="mall" onclick="goTab('mall')"><div class="ico">🏪</div>积分商城</div>
+  <div class="tab active" data-tab="home" onclick="goTab('home')"><div class="ico">🏠</div>首页</div>
+  <div class="tab" data-tab="mine" onclick="goTab('mine')"><div class="ico">👤</div>我的</div>
+</div>
+<div class="overlay" id="overlay" onclick="hideDrawer()"></div>
+<div id="drawerSlot"></div>
+<div class="notice" id="notice"></div>
+</div><!-- /phone -->
+
+<!-- 业务流程控制器（bf-mode 时才显示） -->
+<div class="bf-ctrl" id="bfCtrl"></div>
+
+<!-- 右侧文档面板（内容全部由渲染器注入，禁止手写结构） -->
+<div class="doc-panel" id="docPanel"></div>
+
+<script>
+'use strict';
+/* ================================================================
+   ① 业务常量：新功能改这里
+================================================================ */
+const APP={ava:'🥡',name:'外卖积分'};
+const SHARE={title:'领外卖红包，下单攒积分换现金',land:'home'};   // 分享卡片配置（封面用纯视觉占位块，无文字）
+const WXMSG={title:'每天召回通知',kw:'订阅模板 TM1004（每天召回）'};
+
+const D = {
+  "rate": 2000,
+  "rateText": "1 元 = 2000 积分",
+  "wxWay": "微信零钱",
+  "heroLabel": "我的积分",
+
+  "userPts": 12000,
+  "userPtsText": "12,000",
+  "userMoney": "约合 ¥6.00（1 元 = 2000 积分）",
+
+  "hb": {
+    "gain": 5,
+    "daily": 6,
+    "elm": 3,
+    "mt": 3,
+    "tip": "每张 +5 积分 · 每日 6 张 · 下单积分 = 平台佣金 × 50% × 2000"
+  },
+
+  "sign": {
+    "days": 5,
+    "today": 35,
+    "tomorrow": 35,
+    "t1": 5,
+    "t2": 10,
+    "t3": 15,
+    "t4": 20,
+    "t5": 25,
+    "t6": 35,
+    "t7": 35,
+    "tiersText": "5/10/15/20/25/35/35",
+    "remind": "连续签到 5 天 · 今日 +35",
+    "tip": "今日签到 +35 积分 · 明日 +35",
+    "tip2": "签到得积分，连续越久档位越高",
+    "subText": "已订阅 · 每天召回"
+  },
+
+  "mallEntrySub": "积分换现金 · 直接打到微信零钱",
+
+  "tasks": [
+    {"name": "¥0.3", "pts": 600, "ptsText": "600 积分"},
+    {"name": "¥0.5", "pts": 1000, "ptsText": "1,000 积分"},
+    {"name": "¥1", "pts": 2000, "ptsText": "2,000 积分"},
+    {"name": "¥2", "pts": 4000, "ptsText": "4,000 积分"},
+    {"name": "¥5", "pts": 10000, "ptsText": "10,000 积分"},
+    {"name": "¥10", "pts": 20000, "ptsText": "20,000 积分"},
+    {"name": "¥15", "pts": 30000, "ptsText": "30,000 积分"},
+    {"name": "¥20", "pts": 40000, "ptsText": "40,000 积分"}
+  ],
+
+  "goods": [
+    {"name": "定制保温杯", "pts": 8000, "ptsText": "8,000 积分"},
+    {"name": "品牌周边雨伞", "pts": 3000, "ptsText": "3,000 积分"}
+  ],
+
+  "cashTotal": "¥8.60",
+
+  "redPackets": [
+    {"pf": "饿了么", "amt": "满 20 减 5", "c1": "#2F7CF6", "c2": "#57A0FF", "tc": "#2F7CF6"},
+    {"pf": "美团", "amt": "满 25 减 6", "c1": "#F6A300", "c2": "#FFC53D", "tc": "#B57500"},
+    {"pf": "饿了么", "amt": "满 35 减 9", "c1": "#2F7CF6", "c2": "#57A0FF", "tc": "#2F7CF6"},
+    {"pf": "美团", "amt": "满 30 减 8", "c1": "#F6A300", "c2": "#FFC53D", "tc": "#B57500"},
+    {"pf": "饿了么", "amt": "满 45 减 12", "c1": "#2F7CF6", "c2": "#57A0FF", "tc": "#2F7CF6"},
+    {"pf": "美团", "amt": "满 50 减 15", "c1": "#F6A300", "c2": "#FFC53D", "tc": "#B57500"}
+  ],
+
+  "new": {
+    "platform": "饿了么",
+    "shop": "肯德基（世纪大道店）",
+    "payWay": "微信支付",
+    "pay": "16.00",
+    "payYuan": "¥16.00",
+    "commission": "4.00",
+    "pts": 4000,
+    "ptsText": "+4,000",
+    "bal": "4,005",
+    "datePaid": "9月26日 12:30",
+    "dateArrive": "9月26日 12:30"
+  },
+  "old": {
+    "platform": "美团",
+    "shop": "麦当劳（张江店）",
+    "payWay": "微信支付",
+    "pay": "38.50",
+    "payYuan": "¥38.50",
+    "commission": "7.70",
+    "pts": 7700,
+    "ptsText": "+7,700",
+    "bal": "19,705",
+    "datePaid": "9月26日 13:30",
+    "dateArrive": "9月26日 13:30"
+  },
+
+  "wxmsg": {
+    "dDate": "9月27日 12:30",
+    "dTitle": "每天召回",
+    "dTip": "今日还没签到 · 领红包攒积分",
+    "dBtn": "立即回来看"
+  },
+
+  "share": {
+    "title": "领外卖红包，下单攒积分换现金",
+    "entry": "分享给好友，一起领外卖红包",
+    "sub": "好友通过卡片进入小程序，即可领取新人红包",
+    "param": "u=u10086 & a=hb0927",
+    "chat": "微信 · 文件传输助手",
+    "date": "9月27日 10:00",
+    "invalid": "红包活动已结束"
+  },
+
+  "msgs": {
+    "d": "每天召回",
+    "kwD": "每天召回 · 服务通知"
+  },
+  "tm": {"d": "TM1004"},
+
+  "jumpText": "美团丨外卖团购特价<br>美食酒店电影",
+
+  "snap": {
+    "newPts": {"fresh": "0", "got": "5", "paid": "4,005", "arrived": "4,005"},
+    "oldPts": {"fresh": "12,000", "got": "12,005", "paid": "19,705", "arrived": "19,705"},
+    "newSub": {
+      "fresh": "新用户专享 · 首单立减 10 元",
+      "got": "刚刚 +5 · 领取红包",
+      "paid": "订单已付款 · +4,000 已到账",
+      "arrived": "刚刚 +4,000 · 已付款到账"
+    },
+    "oldSub": {
+      "fresh": "老客账户 · 本周红包已刷新",
+      "got": "刚刚 +5 · 领取红包",
+      "paid": "订单已付款 · +7,700 已到账",
+      "arrived": "刚刚 +7,700 · 已付款到账"
+    }
+  },
+  "bfPtsInit": 4005
+};
+
+/* ================================================================
+   ② 导航骨架（固定模式，不要改）
+   注：titles / tabPages / bfPages / noPhonePages / PAGE_META 是业务注册表，
+       位于本文件末尾「业务配置区」（demo 示例；build 装配时被 30_biz.js 整段替换）
+================================================================ */
+let curPage='home';
+function nav(p){if(tabPages.includes(p))goTab(p);else{goTab(PAGE_META[p].tab);goPage(p)}}
+function highlightTree(p){
+  document.querySelectorAll('.tree-item').forEach(el=>el.classList.toggle('active',el.dataset.nav===p));
+  document.body.classList.toggle('no-phone',noPhonePages.includes(p));
+  document.body.classList.toggle('bf-mode',bfPages.includes(p));
+  const act=document.querySelector('.tree-item.active');
+  if(act){let par=act.parentElement;while(par&&par.classList){if(par.classList.contains('tree-children'))par.classList.remove('collapsed');par=par.parentElement}}
+}
+function toggleGroup(el){const b=el.nextElementSibling;b.classList.toggle('collapsed');el.querySelector('.tg').textContent=b.classList.contains('collapsed')?'▸':'▾'}
+function toggleSidebar(){const s=document.getElementById('sidebar');s.classList.toggle('min');document.getElementById('sbFold').textContent=s.classList.contains('min')?'»':'«'}
+function goTab(p){showPage(p);document.getElementById('tabbar').classList.remove('hide');document.getElementById('navBack').style.visibility='hidden';setTitle(titles[p]);setTab(p)}
+function goPage(p){showPage(p);document.getElementById('tabbar').classList.add('hide');document.getElementById('navBack').style.visibility='visible';setTitle(titles[p])}
+function goBack(){goTab(PAGE_META[curPage].tab)}
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('p-'+p).classList.add('active');
+  document.querySelector('.content').scrollTop=0;curPage=p;
+  if(bfPages.includes(p)){if(bfCur!==p){bfCur=p;bfStep=0;bfStateReset()}bfRender()}
+  else if(PAGE_META[p]&&PAGE_META[p].onShow)PAGE_META[p].onShow();
+  highlightTree(p);renderDoc(p);
+}
+function setTitle(t){document.getElementById('navTitle').textContent=t}
+function setTab(p){document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===p))}
+let noticeTimer=null;
+function notice(msg){const n=document.getElementById('notice');n.textContent=msg;n.classList.add('show');clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>n.classList.remove('show'),1500)}
+
+/* ================================================================
+   ③ 半屏抽屉（唯一弹窗形态）
+   注：业务抽屉函数与 DRAWERS 注册表位于末尾「业务配置区」；本区只留固定机制与微信系统组件
+================================================================ */
+let drawerTimer=null;
+function showDrawer(id){
+  clearTimeout(drawerTimer);
+  document.getElementById('drawerSlot').innerHTML=getDrawer(id);
+  document.getElementById('overlay').classList.add('show');
+  setTimeout(()=>{const d=document.getElementById('theDrawer');if(d)d.classList.add('show')},10);
+}
+function swapDrawer(id){   // 链式调起：不收起遮罩，直接换内容（无闪烁）
+  clearTimeout(drawerTimer);
+  document.getElementById('drawerSlot').innerHTML=getDrawer(id);
+  const d=document.getElementById('theDrawer');if(d)d.classList.add('show');
+}
+function hideDrawer(){
+  if(window.drawerMaskHook&&drawerMaskHook()===true)return;   // v4.0 钩子：业务可在 30_biz.js 定义 drawerMaskHook 接管关闭（返回 true=已处理，如计数态遮罩拦截）
+  const d=document.getElementById('theDrawer');
+  if(d){d.classList.remove('show');clearTimeout(drawerTimer);drawerTimer=setTimeout(()=>{document.getElementById('overlay').classList.remove('show');document.getElementById('drawerSlot').innerHTML=''},300)}
+  else{document.getElementById('overlay').classList.remove('show')}
+}
+/* —— 图片点击放大：全屏 overlay，点击/ESC 关闭 —— */
+function showImg(img){
+  let m=document.getElementById('imgZoomMask');
+  if(!m){
+    m=document.createElement('div');
+    m.id='imgZoomMask';
+    m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)';
+    m.onclick=()=>{m.classList.remove('show');setTimeout(()=>{m.style.display='none';m.innerHTML=''},200)};
+    document.body.appendChild(m);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&m.style.display==='flex'){m.onclick()}});
+  }
+  m.innerHTML='<img src="'+img.src+'" alt="'+(img.alt||'')+'" style="max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.4)">';
+  m.style.display='flex';
+  setTimeout(()=>m.classList.add('show'),10);
+}
+/* —— 组件：分享落地参数约定（不造页面）——
+   卡片落地路径统一携带 u=分享者标识 & a=活动id；打开时统一走本函数：
+   无参数/活动失效 → toast + 缺省承接；有效 → 进入登记的落地业务页 */
+function landFromShare(page,p){
+  if(!p||!p.a){notice('链接参数异常：进入缺省页');return}
+  if(p.a==='expired'){notice('活动已结束：进入缺省页');return}
+  goPage(page);notice('来自分享：分享者 '+p.u);
+}
+/* —— 抽屉注册表查找：DRAWERS 在末尾「业务配置区」登记，新抽屉必须登记，自检会扫描所有引用并核对 —— */
+function getDrawer(id){return (DRAWERS[id]?DRAWERS[id](): '')||('<div class="drawer" id="theDrawer"><h3>⚠️ 抽屉未注册：'+id+'</h3><div class="btns"><button class="btn btn-primary" onclick="hideDrawer()">关闭</button></div></div>')}
+
+/* ================================================================
+   组件模板库 v4.0 —— 业务配置禁止改动本区
+   用法：业务抽屉函数 / 流程快照 / 页面块以「填配置对象」方式调用 TPL.xxx({...})；
+   入参 = 1 个配置对象（键 ≤8），返回 HTML 字符串；CSS 类名沿用现有体系，不新增样式。
+   rows 行格式：[左, 右] 或 [左, 右, 右值style]；btns=[{t,fn,s}]，s∈'primary'|'line'（省=primary）。
+   TPL 表达不了的变体：配置内手写 HTML 片段（逃生门）；同一变体出现第二次才晋升新参数/新模板。
+   设计依据（真实片段归档）：000-MD模板/组件片段库.md
+================================================================ */
+const TPL={
+  /* —— 内部工具：键值行（右值可带 style）与按钮组 —— */
+  _rows(rs){return (rs||[]).map(r=>'<div class="row"><span>'+r[0]+'</span><span'+(r[2]?' style="'+r[2]+'"':'')+'>'+r[1]+'</span></div>').join('')},
+  _btns(arr){return arr.map(b=>'<button class="btn '+(b.s==='line'?'btn-line':'btn-primary')+'" onclick="'+b.fn+'">'+b.t+'</button>').join('')},
+  /* —— 抽屉 4 类 —— */
+  /* 成功反馈型 TPL.okDrawer({title,icon,main,sub,note,rows,btns})：大emoji+主结果+副文案+可选警示条/键值行+1~2按钮（领取/兑换/签到/到账）；note=可选警示条 HTML */
+  okDrawer(c){
+    let h='<div class="drawer" id="theDrawer"><div class="grab"></div><h3>'+c.title+'</h3>'
+    +'<div style="text-align:center;font-size:46px;margin:10px 0">'+c.icon+'</div>'
+    +'<div style="text-align:center;font-size:22px;color:var(--brand);font-weight:800">'+c.main+'</div>';
+    if(c.sub)h+='<div style="text-align:center;font-size:12px;color:#999;margin-top:6px">'+c.sub+'</div>';
+    if(c.note)h+=c.note;
+    return h+TPL._rows(c.rows)+'<div class="btns">'+TPL._btns(c.btns)+'</div></div>';
+  },
+  /* 确认型 TPL.confirmDrawer({title,icon,lead,rows,cancel,ok})：可选emoji/导语+键值明细行+左取消右确认（兑换/开通/补签二次确认）；cancel/ok={t,fn} */
+  confirmDrawer(c){
+    let h='<div class="drawer" id="theDrawer"><div class="grab"></div><h3>'+c.title+'</h3>';
+    if(c.icon)h+='<div style="text-align:center;font-size:46px;margin:10px 0">'+c.icon+'</div>';
+    if(c.lead)h+='<div style="font-size:13px;color:#666;line-height:1.9;margin-bottom:10px">'+c.lead+'</div>';
+    return h+TPL._rows(c.rows)+'<div class="btns"><button class="btn btn-line" onclick="'+c.cancel.fn+'">'+c.cancel.t+'</button>'
+    +'<button class="btn btn-primary" onclick="'+c.ok.fn+'">'+c.ok.t+'</button></div></div>';
+  },
+  /* 营销转化型 TPL.convertDrawer({title,icon,desc,rows,reject,accept,foot})：emoji+损失/利益说明段+对比行+左拒绝右转化（断签/拦截/开启引导）；foot=可选底部小字 */
+  convertDrawer(c){
+    let h='<div class="drawer" id="theDrawer"><div class="grab"></div><h3>'+c.title+'</h3>'
+    +'<div style="text-align:center;font-size:46px;margin:10px 0">'+c.icon+'</div>'
+    +'<div style="text-align:center;font-size:14px;color:#666;line-height:1.8">'+c.desc+'</div>'
+    +TPL._rows(c.rows)
+    +'<div class="btns"><button class="btn btn-line" onclick="'+c.reject.fn+'">'+c.reject.t+'</button>'
+    +'<button class="btn btn-primary" onclick="'+c.accept.fn+'">'+c.accept.t+'</button></div>';
+    if(c.foot)h+='<div style="text-align:center;font-size:11px;color:#bbb;margin-top:10px">'+c.foot+'</div>';
+    return h+'</div>';
+  },
+  /* 信息展示型 TPL.infoDrawer({title,rows,btn})：纯键值行详情+单关闭按钮；btn={t,fn} 省={关闭,hideDrawer()} */
+  infoDrawer(c){
+    const b=c.btn||{t:'关闭',fn:'hideDrawer()'};
+    return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3>'+c.title+'</h3>'
+    +TPL._rows(c.rows)+'<div class="btns"><button class="btn btn-primary" onclick="'+b.fn+'">'+b.t+'</button></div></div>';
+  },
+  /* —— 页面块 6 类（手机壳 DOM / BF_R 快照共用） —— */
+  /* hero 积分卡 TPL.heroCard({label,value,sub,valueId,subId,fs})：valueId/subId=回写 id（可省）；fs=主数值字号 px（省=19） */
+  heroCard(c){
+    return '<div class="hero"><div class="d" style="font-size:12px;opacity:.85">'+c.label+'</div>'
+    +'<div class="t" style="margin-top:4px'+(c.fs?';font-size:'+c.fs+'px':'')+'"'+(c.valueId?' id="'+c.valueId+'"':'')+'>'+c.value+'</div>'
+    +'<div class="s"'+(c.subId?' id="'+c.subId+'"':'')+'>'+c.sub+'</div></div>';
+  },
+  /* 筛选 Tab 条 TPL.filterTabs({id,attr,cur,tabs,onpick,mb})：tabs=[[值,文案],…]；onpick=onclick 模板串，{v} 替换为值（如 "ordFilter('p','{v}')"）；mb=1 时底部留 8px 间距（双条联动用） */
+  filterTabs(c){
+    return '<div style="display:flex;gap:8px'+(c.mb?';margin-bottom:8px':'')+'" id="'+c.id+'">'
+    +c.tabs.map(t=>'<div style="flex:1;text-align:center;font-size:12px;font-weight:600;padding:7px 0;border-radius:8px;'
+      +(t[0]===c.cur?'background:#fff;color:var(--brand);':'color:#888;')+'cursor:pointer" '+c.attr+'="'+t[0]+'" onclick="'+c.onpick.replace('{v}',t[0])+'">'+t[1]+'</div>').join('')
+    +'</div>';
+  },
+  /* 筛选条运行时高亮 TPL.tabPick(barId,attr,v)：业务的筛选函数里调本行，替代手写 querySelectorAll 循环 */
+  tabPick(barId,attr,v){document.querySelectorAll('#'+barId+' > div').forEach(el=>{const on=el.getAttribute(attr)===v;el.style.cssText='flex:1;text-align:center;font-size:12px;font-weight:600;padding:7px 0;border-radius:8px;'+(on?'background:#fff;color:var(--brand)':'color:#888')+';cursor:pointer'})},
+  /* 仿真列表项 TPL.listRow({main,sub,right,rightColor,onclick})：主标题+副行（时间·备注）+右侧着色数值；onclick 可省 */
+  listRow(c){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid #f5f5f7'+(c.onclick?';cursor:pointer':'')+'"'+(c.onclick?' onclick="'+c.onclick+'"':'')+'>'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+c.main+'</div><div style="font-size:11px;color:#999;margin-top:2px">'+c.sub+'</div></div>'
+    +'<div style="font-size:15px;font-weight:800;color:'+c.rightColor+'">'+c.right+'</div></div>';
+  },
+  /* 网格卡 TPL.gridCards({cols,cards})：cards=[{badge,badgeOn,main,mainColor,sub,btn:{t,fn,st}}]；st∈'go'(渐变主按钮)|'warn'(浅底警示)|'off'(灰置灰 disabled)；mainColor=主值颜色（省=品牌色，off 卡常配 '#bbb'）；badge/badgeOn 可省 */
+  gridCards(c){
+    const BG={go:'background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff',warn:'background:#FFF1EB;color:var(--brand)',off:'background:#f0f0f0;color:#bbb'};
+    return '<div style="display:grid;grid-template-columns:'+Array(c.cols).fill('1fr').join(' ')+';gap:10px">'
+    +c.cards.map(k=>{
+      const st=k.btn.st||'go',off=st==='off';
+      return '<div style="border:1px solid #f0f0f0;border-radius:12px;padding:12px 10px;position:relative">'
+      +(k.badge?'<div style="position:absolute;top:8px;right:8px;font-size:10px;padding:2px 7px;border-radius:8px;background:'+(k.badgeOn?'#E8F5E9;color:#388E3C':'#F0F0F2;color:#999')+'">'+k.badge+'</div>':'')
+      +'<div style="font-size:18px;font-weight:800;color:'+(k.mainColor||'var(--brand)')+'">'+k.main+'</div>'
+      +'<div style="font-size:11px;color:#999;margin:3px 0 10px">'+k.sub+'</div>'
+      +'<button style="width:100%;border:none;border-radius:14px;'+BG[st]+';font-size:12px;font-weight:700;padding:7px 0'+(off?'':';cursor:pointer')+'"'+(off?' disabled':'')+(off?'':' onclick="'+k.btn.fn+'"')+'>'+k.btn.t+'</button></div>';
+    }).join('')+'</div>';
+  },
+  /* 功能菜单列表 TPL.menuList(items)：items=[{ico,t,fn,badge,hot}]；fn 省=纯展示项无 onclick；badge=右侧角标文案（配 .badge/.badge.ok 样式）；hot=主色描边高亮当前入口 */
+  menuList(items){
+    return '<div class="menu">'+items.map(m=>'<div class="mi"'+(m.fn?' onclick="'+m.fn+'"':'')+(m.hot?' style="outline:2px solid var(--brand);border-radius:12px"':'')+'><div class="ico">'+m.ico+'</div><div class="t">'+m.t+'</div>'+(m.badge?'<span class="badge">'+m.badge+'</span>':'')+'<div class="arr">›</div></div>').join('')+'</div>';
+  },
+  /* 提示条 TPL.tipBar({text,btnText,onBtn})：浅橙底说明条+右侧胶囊按钮（自带阻止冒泡，可嵌在可点卡片内） */
+  tipBar(c){
+    return '<div style="margin-top:10px;background:#FFF7F2;border-radius:8px;padding:8px 10px;font-size:11px;color:#E65100;display:flex;justify-content:space-between;align-items:center" onclick="event.stopPropagation()">'
+    +'<span>'+c.text+'</span>'
+    +'<span style="background:var(--brand);color:#fff;padding:3px 10px;border-radius:10px;font-weight:600;cursor:pointer" onclick="'+c.onBtn+'">'+c.btnText+'</span></div>';
+  }
+};
+
+/* ================================================================
+   ④ 右侧文档渲染器（规范即代码：结构缺项即渲染失败，禁止手写）
+================================================================ */
+function boldLead(x){const m=(''+x).match(/^([^：:]{2,26}[：:])/);return m?('<b>'+m[1]+'</b>'+(''+x).slice(m[1].length)):x}
+function asc(s,cap){return (cap?'<div class="asc-cap">'+cap+'</div>':'')+'<pre class="ascii">'+s+'</pre>'}
+/* 小程序页面：①页面简介 ②字段说明 ③交互主链路 ④弹窗及触发条件 ⑤缺省逻辑 ⑥返回操作（空节自动省略，编号顺延）
+   fields=[[块名,[[字段,演示数据,数据信息,交互],...]],...] 或单层 [...] */
+function docCard(no,name,intro,chains,fields,drawers,back,extra,empty){
+  const cir='①②③④⑤⑥';let n=0;const secs=[];
+  const pts=arr=>'<ul class="doc-pts">'+arr.map(x=>'<li>'+boldLead(x)+'</li>').join('')+'</ul>';
+  const head=t=>'<h4>'+cir[n++]+' '+t+'</h4>';
+  const table=rows=>'<table class="doc-table"><tr><th>字段</th><th>演示数据</th><th>数据信息</th><th>交互</th></tr>'
+    +rows.map(f=>'<tr><td>'+f[0]+'</td><td>'+f[1]+'</td><td>'+f[2]+'</td><td>'+(f[3]||'无')+'</td></tr>').join('')+'</table>';
+  if(typeof intro==='string')intro=['页面说明：'+intro];
+  if(intro&&intro.length)secs.push(head('页面简介')+pts(intro));
+  secs.push(head('字段说明')+(Array.isArray(fields[0])&&Array.isArray(fields[0][1])
+    ?fields.map(sec=>'<h5 class="doc-sec">'+sec[0]+'</h5>'+table(sec[1])).join(''):table(fields)));
+  if(chains&&chains.length)secs.push(head('交互主链路')+pts(chains));
+  if(drawers&&drawers.length)secs.push(head('弹窗及触发条件')+pts(drawers));
+  if(extra)secs.push(extra);
+  if(empty&&empty.length)secs.push(head('缺省逻辑')+pts(empty));
+  if(back&&back.length)secs.push(head('返回操作')+pts(back));
+  return '<div class="doc-head"><span class="doc-badge">'+no+'</span><span class="doc-name">'+name+'</span></div>'+secs.join('');
+}
+/* 总说明：固定块 🎯目标 → 👤用户定义 → 🚫用户限制 → 📋核心规则 → 🔄状态机（可选，c.sm）→ 🌿业务分支 → 🗺ASCII → 🧭导览
+   可选块 c.logic（产品功能逻辑）：位于 🎯目标 与 👤用户定义 之间，
+   logic=[{t:'分组标题',items:['小点（冒号前导词自动加粗）',...]},...]，向后兼容（缺省即省略） */
+function overviewDoc(c){
+  const sms=c.sm?(Array.isArray(c.sm)?c.sm:[c.sm]):[];
+  const smBlock=sms.length?'<h4>🔄 状态机</h4>'+sms.map(s=>asc(s.txt,'🗺 '+(s.cap||'状态流转'))).join(''):'';
+  const logicBlock=(c.logic&&c.logic.length)?'<h4>🧩 产品功能逻辑</h4><ul class="doc-pts">'
+    +c.logic.map(g=>'<li><b>'+g.t+'：</b><ul class="doc-pts" style="padding-left:6px;margin:3px 0 0">'
+    +g.items.map(x=>'<li>'+boldLead(x)+'</li>').join('')+'</ul></li>').join('')+'</ul>':'';
+  return '<div class="doc-head"><span class="doc-badge">'+c.badge+'</span><span class="doc-name">'+c.name+'</span></div>'
+  +'<div class="doc-desc"><b>🎯 目标：</b>'+c.goal+'</div>'
+  +(c.image?'<h4>🖼️ 业务闭环图</h4><div style="margin:8px 0"><img src="'+c.image.src+'" alt="'+(c.image.cap||'业务闭环图')+'" title="点击放大" onclick="showImg(this)" style="width:100%;border:1px solid #e3e8ef;border-radius:8px;cursor:zoom-in;display:block"><div style="font-size:11px;color:#999;margin-top:4px;text-align:center">'+(c.image.cap||'点击图片可放大查看')+'</div></div>':'')
+  +logicBlock
+  +'<h4>👤 用户定义</h4><div class="doc-desc">'+c.users+'</div>'
+  +'<h4>🚫 用户限制</h4><div class="doc-desc">'+c.limits+'</div>'
+  +'<h4>📋 核心规则</h4><table class="doc-table"><tr><th>规则</th><th>口径</th></tr>'
+  +c.rules.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('')+'</table>'
+  +smBlock
+  +'<h4>🌿 业务分支</h4><table class="doc-table"><tr><th>分支</th><th>触发条件</th><th>结果</th></tr>'
+  +c.branches.map(b=>'<tr><td onclick="nav(\''+b.nav+'\')" style="cursor:pointer;color:var(--brand);font-weight:700">'+b.name+'</td><td>'+b.cond+'</td><td>'+b.result+'</td></tr>').join('')+'</table>'
+  +asc(c.ascii.txt,'🗺 '+c.ascii.cap)
+  +'<h4>🧭 页面 / 流程导览</h4><div class="bf-brs">'
+  +c.guides.map(g=>'<div class="bf-br-b" onclick="nav(\''+g.nav+'\')">'+g.t+'</div>').join('')+'</div>';
+}
+/* 订阅通知（O 模板）：①场景说明固定5分点 ②模板字段（模板属性表 + 字段属性表，仅动态字段） */
+function subscribeDoc(c){
+  return '<div class="doc-head"><span class="doc-badge">'+c.badge+'</span><span class="doc-name">'+c.name+'</span></div>'
+  +'<h4>① 场景说明</h4><ul class="doc-pts">'
+  +c.scenes.map(x=>'<li><b>'+x[0]+'：</b>'+x[1]+'</li>').join('')+'</ul>'
+  +'<h4>② 模板字段</h4><h5 class="doc-sec">模板属性</h5>'
+  +'<table class="doc-table"><tr><th>属性</th><th>值</th></tr>'
+  +'<tr><td>模板名称</td><td>'+c.tmpl.name+'</td></tr><tr><td>模板 ID</td><td>'+c.tmpl.id+'</td></tr></table>'
+  +'<h5 class="doc-sec">字段属性（仅卡片字段区动态字段）</h5>'
+  +'<table class="doc-table"><tr><th>字段</th><th>演示数据</th><th>数据信息</th><th>交互</th></tr>'
+  +c.fields.map(f=>'<tr><td>'+f[0]+'</td><td>'+f[1]+'</td><td>'+f[2]+'</td><td>'+(f[3]||'无')+'</td></tr>').join('')+'</table>'
+  +'<ul class="doc-pts"><li><b>固定部件：</b>'+c.fixed+'</li></ul>';
+}
+/* 分享（F 模板）：①前置条件 ②用户定义和限制 ③字段卡片（固定3字段4列）④缺省逻辑 */
+function shareDoc(c){
+  const pts=a=>'<ul class="doc-pts">'+a.map(x=>'<li><b>'+x[0]+'：</b>'+x[1]+'</li>').join('')+'</ul>';
+  return '<div class="doc-head"><span class="doc-badge">'+c.badge+'</span><span class="doc-name">'+c.name+'</span></div>'
+  +'<h4>① 前置条件</h4>'+pts(c.pre)
+  +'<h4>② 用户定义和限制</h4>'+pts(c.users)
+  +'<h4>③ 字段卡片</h4><table class="doc-table"><tr><th>字段</th><th>演示数据</th><th>数据信息</th><th>交互</th></tr>'
+  +c.fields.map(f=>'<tr><td>'+f[0]+'</td><td>'+f[1]+'</td><td>'+f[2]+'</td><td>'+(f[3]||'无')+'</td></tr>').join('')+'</table>'
+  +'<ul class="doc-pts"><li><b>分享面板：</b>'+c.panel+'</li></ul>'
+  +'<h4>④ 缺省逻辑</h4>'+pts(c.empty);
+}
+/* 业务流程右侧：目标卡 + 前置限制卡 + ASCII + 环节清单 3 列（环节/页面信息/关键动作） */
+function bfDoc(p){
+  const F=BF_FLOWS[p];if(!F)return '';
+  const pageInfo=s=>'<div style="line-height:1.9"><div>所在页面：'+s.end+'</div><div>交互：'+s.interact+'</div><div>对下游影响：'+s.imp+'</div>'
+    +(s.port?'<div>所在端口：'+s.port+'</div>':'')+(s.limit?'<div>限制信息：'+s.limit+'</div>':'')+'</div>';
+  const actInfo=s=>'<div style="line-height:1.9"><div><b>主线任务：</b>'+s.act+'</div>'
+    +(s.branch?'<div><b>支线任务：</b>'+s.branch+'</div>':'')+(s.error?'<div><b>异常流程：</b>'+s.error+'</div>':'')+'</div>';
+  return '<div class="doc-head"><span class="doc-badge">'+F.no+'</span><span class="doc-name">'+F.title+'</span></div>'
+  +'<div class="doc-desc"><b>🎯 目标：</b>'+F.def+'</div>'
+  +'<div class="doc-card" style="background:#FFF8E1;border-left:3px solid #FFB300;margin:12px 0"><div style="font-weight:700;color:#E65100;margin-bottom:6px">🔒 进入此流程的前置限制</div><ul class="doc-list" style="margin:0">'+F.cond.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>'
+  +asc(F.flow,'🗺 流程图')
+  +'<h4>📍 环节清单（'+F.steps.length+' 环节 · 按执行顺序）</h4>'
+  +'<table class="doc-table"><colgroup><col style="width:18%"><col style="width:42%"><col style="width:40%"></colgroup><tr><th>环节</th><th>页面信息</th><th>关键动作</th></tr>'
+  +F.steps.map(s=>'<tr'+(s.fork?' style="background:#FDEBEE"':'')+'><td>'+(s.no?s.no+' ':'')+s.nm+(s.fork?'<br><span style="color:#C62828;font-size:10px;font-weight:700">◆ 分歧节点</span>':'')+'</td><td>'+pageInfo(s)+'</td><td>'+actInfo(s)+'</td></tr>').join('')
+  +'</table><div class="doc-desc" style="margin-top:10px">💡 分层说明：手机壳只呈现<b>真实页面快照与真实弹窗</b>；◆ 系统判定只在左侧控制器红卡表达，分支结果用支线按钮切换。</div>';
+}
+
+/* 功能总览（链路级步骤地图）：一句话目标 + ASCII 主线 + 全局步骤表（1-N 关键动作；
+   角色色标；分歧只在步内一行红字标注不占步号；归属列点击跳到对应 bf 流程的对应环节） */
+function goalOverviewDoc(c){
+  return '<div class="doc-head"><span class="doc-badge">'+c.badge+'</span><span class="doc-name">'+c.name+'</span></div>'
+  +'<div class="doc-desc"><b>🎯 目标：</b>'+c.goal+'</div>'
+  +asc(c.ascii.txt,'🗺 '+c.ascii.cap)
+  +'<h4>🧭 全局步骤（主线关键动作 1–'+c.steps.length+'）</h4>'
+  +'<table class="doc-table"><colgroup><col style="width:7%"><col style="width:11%"><col style="width:34%"><col style="width:24%"><col style="width:24%"></colgroup>'
+  +'<tr><th>步</th><th>角色</th><th>关键动作</th><th>页面 / 触达</th><th>归属流程（点击进入）</th></tr>'
+  +c.steps.map(s=>'<tr><td style="font-size:15px;font-weight:800;color:var(--brand)">'+s.g+'</td>'
+    +'<td><span class="role '+s.roleCls+'">'+s.role+'</span></td>'
+    +'<td>'+s.act+(s.fork?'<div style="color:#C62828;font-size:11px;margin-top:3px;line-height:1.6">◆ '+s.fork+'</div>':'')+'</td>'
+    +'<td>'+s.where+'</td>'
+    +'<td class="gjump" onclick="goalJump(\''+s.flow+'\','+s.step+')">'+BF_FLOWS[s.flow].icon+' '+BF_FLOWS[s.flow].title.split('·')[0]+' ›</td></tr>').join('')
+  +'</table>'
+  +'<ul class="doc-pts" style="margin-top:10px">'
+  +'<li><b>双编号说明：</b>本页 1–'+c.steps.length+' 是跨角色主线步骤号（权威）；侧边树①②③是按角色切片的流程编号；bf 控制器节点标注「总览第 N 步」，两套编号互相对应。</li>'
+  +'<li><b>视角说明：</b>本页是上帝视角步骤地图（无手机壳）；要看真实页面快照与弹窗，请点「归属流程」进入对应角色的流程页。</li>'
+  +'</ul>';
+}
+/* 总览跳角色流程：进流程页并定位到对应环节 */
+function goalJump(flow,step){nav(flow);bfGo(step)}
+function renderDoc(p){
+  if(bfPages.includes(p)){document.getElementById('docPanel').innerHTML=bfDoc(p);return}
+  document.getElementById('docPanel').innerHTML=DOCS[p]?DOCS[p]():'<div class="doc-desc">该页面无独立说明。</div>';
+}
+
+/* ================================================================
+   ⑥ 业务流程引擎（bf-mode；分歧只在控制器红卡，手机壳只放快照）
+   多角色拆分（B10+N5）：一个流程只允许一个操作主体；主体切换即截断，
+   拆成独立流程，叶子用跨角色连续编号 ①②③…；截断节点用「➡见流程X」互指
+================================================================ */
+let bfCur=null,bfStep=0,bfView='new';
+function bfRender(){
+  const F=BF_FLOWS[bfCur];if(!F)return;const cur=F.steps[bfStep];
+  const body=document.getElementById('bfBody-'+bfCur);if(body)body.innerHTML=BF_R[cur.r]();
+  if(cur.auto)showDrawer(cur.auto);
+  let h='<div class="bf-ctrl-head">'+F.icon+' '+F.title+'</div><div class="bf-axis">';
+  h+=F.steps.map((s,i)=>{
+    const cls='bf-node'+(i===bfStep?' cur':i<bfStep?' done':'')+(s.fork?' fork':'');
+    const sub='<div class="bf-sub bf-page">页面：'+s.end+'</div><div class="bf-sub">弹窗：'+s.drw+'</div>'+(s.g?'<div class="bf-sub">总览第 '+s.g+' 步</div>':'');
+    const q=s.fork?'<span class="bf-q" onclick="event.stopPropagation();bfForkInfo('+i+')">❓</span>':'';
+    const dot=s.fork?'':'<div class="bf-dot">'+s.no+'</div>';
+    return '<div class="'+cls+'" onclick="bfGo('+i+')">'+dot+'<div class="bf-text"><div class="bf-nm">'+s.nm+q+'</div>'+sub+'</div></div>';
+  }).join('')+'</div>';
+  if(cur.brs&&cur.brs.length)h+='<div class="bf-brs-t">🧩 本环节支线交互</div><div class="bf-brs">'+cur.brs.map(b=>'<div class="bf-br-b" onclick="'+(b.fn==='nav'?'nav(\''+b.arg+'\')':b.fn+(b.arg?'(\''+b.arg+'\')':'()'))+'">'+b.t+'</div>').join('')+'</div>';
+  h+='<div class="bf-nav-btns"><button class="btn btn-line" onclick="bfPrev()" '+(bfStep===0?'disabled':'')+'>◀ 上一步</button><button class="btn btn-primary" onclick="bfNext()" '+(bfStep===F.steps.length-1?'disabled':'')+'>下一步 ▶</button></div>';
+  h+='<div class="bf-reset" onclick="bfReset()">🔄 重置本流程</div>';
+  document.getElementById('bfCtrl').innerHTML=h;
+}
+function bfGo(i){hideDrawer();bfStep=i;bfRender()}
+function bfPrev(){if(bfStep>0)bfGo(bfStep-1)}
+function bfNext(){const F=BF_FLOWS[bfCur];if(bfStep<F.steps.length-1)bfGo(bfStep+1)}
+function bfReset(){bfStep=0;bfStateReset();bfRender();notice('已重置本流程')}
+function bfStateReset(){hideDrawer();bfView=BF_FLOWS[bfCur].init.view}
+function bfSetView(v){bfView=v;bfRender()}
+function bfForkInfo(i){
+  const s=BF_FLOWS[bfCur].steps[i];if(!s||!s.forks)return;
+  const cur=s.forks.find(f=>f.key===bfView)||s.forks[0];
+  let msg='【分歧详情】\n'+s.nm+'\n\n';
+  s.forks.forEach(f=>{const isC=f.key===cur.key;msg+=(isC?'▶ ':'  ')+f.label+(isC?'  ← 当前':'')+'\n    '+f.desc+'\n\n'});
+  msg+='（手机壳内展示当前分支判定后的页面快照）';alert(msg);
+}
+
+/* ================================================================
+   ⑦ SELF_CHECK 交付自检：控制台 SELF_CHECK() 或 URL ?selfcheck=1
+================================================================ */
+function SELF_CHECK(){
+  const e=[];const need=(c,m)=>{if(!c)e.push(m)};
+  // 1. 侧边树四分组齐全
+  const grps=[...document.querySelectorAll('.sidebar .tree-item.grp')].map(x=>x.textContent);
+  [['📑 总说明','📑'],['🗂 业务流程','🗂'],['📱 小程序页面','📱'],['🔧 其他页面','🔧']].forEach(([full,k])=>need(grps.some(g=>g.includes(k)),'侧边树缺少分组：'+full));
+  // 2. 业务流程组非空
+  const navs=[...document.querySelectorAll('.sidebar [data-nav]')].map(x=>x.dataset.nav);
+  need(navs.some(n=>n.indexOf('bf-')===0),'🗂 业务流程组必须非空（所有功能都有主流程）');
+  // 2b. 业务流程组多级结构（N5）：支持两种形态——平铺（单角色，直接挂 bf 叶子）或 功能目标文件夹 →（角色文件夹）→ 叶子
+  const bfGroup=[...document.querySelectorAll('.sidebar .tree-item.grp')].find(el=>el.textContent.includes('🗂'));
+  const bfBox=bfGroup&&bfGroup.nextElementSibling;
+  need(!!bfBox,'🗂 业务流程组缺少 tree-children 容器');
+  if(bfBox){
+    const isBfLeaf=el=>el.dataset&&el.dataset.nav&&el.dataset.nav.indexOf('bf-')===0;
+    const isNone=el=>el.classList.contains('none');
+    const isSubset=el=>el.classList.contains('bf-subset');
+    const isItem=el=>!el.classList.contains('tree-children');   // tree-children 是下级展开容器，不是条目
+    const kids=[...bfBox.children].filter(isItem);
+    const flatLeaves=kids.filter(isBfLeaf);
+    const goalFolders=kids.filter(el=>el.classList.contains('grp'));
+    need(kids.length===flatLeaves.length+goalFolders.length+kids.filter(isNone).length+kids.filter(isSubset).length,'🗂 业务流程组只允许直接挂「功能目标文件夹」、bf 流程叶子、子集标签或灰色「无」节点');
+    // 子集模式：每个子集标签后必须跟非空 tree-children，且叶子全部归入子集（平铺/文件夹不混排）
+    const subsetLabels=kids.filter(isSubset);
+    subsetLabels.forEach(sl=>{
+      const box=sl.nextElementSibling;
+      need(!!box&&box.classList.contains('tree-children'),'子集「'+sl.textContent.trim()+'」缺少 tree-children 容器');
+      if(!box)return;
+      const items=[...box.children].filter(isItem);
+      const leaves=items.filter(isBfLeaf);
+      need(leaves.length>0,'子集「'+sl.textContent.trim()+'」为空（至少 1 个 bf 叶子）');
+      need(items.length===leaves.length,'子集「'+sl.textContent.trim()+'」下只允许挂 bf 叶子');
+    });
+    if(subsetLabels.length)need(flatLeaves.length===0&&goalFolders.length===0,'🗂 子集模式不允许与平铺叶子 / 功能目标文件夹混排');
+    if(goalFolders.length){
+      // 文件夹模式：不允许叶子与文件夹混排（「无」节点除外）
+      need(flatLeaves.length===0,'🗂 功能目标文件夹模式下不允许与平铺叶子混排');
+      goalFolders.forEach(gf=>{
+        const box=gf.nextElementSibling;
+        need(!!box&&box.classList.contains('tree-children'),'功能目标文件夹「'+gf.textContent.trim()+'」缺少子容器');
+        if(!box)return;
+        const items=[...box.children].filter(isItem);
+        const roleFolders=items.filter(el=>el.classList.contains('grp'));
+        const directLeaves=items.filter(isBfLeaf);
+        need(items.length>0,'功能目标文件夹「'+gf.textContent.trim()+'」为空');
+        roleFolders.forEach(rf=>{
+          const rbox=rf.nextElementSibling;
+          const rkids=rbox?[...rbox.children].filter(isItem):[];
+          const leaves=rkids.filter(isBfLeaf);
+          need(leaves.length>0||rkids.some(isNone),'角色文件夹「'+rf.textContent.trim()+'」为空（空角色组请挂灰色「无」节点而非留空）');
+        });
+        // 多角色（≥2 个角色文件夹）时，流程叶子必须全部归在角色文件夹下
+        if(roleFolders.length>=2)need(directLeaves.length===0,'多角色功能的流程叶子必须全部归入角色文件夹（老客/新客），不允许散挂：'+directLeaves.map(x=>x.dataset.nav).join(','));
+      });
+    }
+  }
+  // 2c. 树 bf 叶子 / bfPages / BF_FLOWS 三方一致
+  const treeBf=navs.filter(n=>n.indexOf('bf-')===0).sort();
+  need(JSON.stringify(treeBf)===JSON.stringify([...bfPages].sort()),'树 bf 叶子与 bfPages 不一致：树['+treeBf+'] bfPages['+bfPages+']');
+  // 2d. 流程 icon（跨角色全局时序编号）必填且唯一
+  const icons=[];
+  bfPages.forEach(p=>{const F=BF_FLOWS[p];if(!F)return;need(typeof F.icon==='string'&&F.icon.length,'流程 '+p+' 缺 icon（跨角色全局时序编号 ①②③…）');if(F.icon){need(!icons.includes(F.icon),'流程编号 icon 重复：'+F.icon+'（多角色流程必须跨角色连续且唯一）');icons.push(F.icon)}});
+  // 2e. 功能目标文件夹 ↔ GOALS 总览页：可点注册、纯文档页、步骤连续唯一、g 与 BF 双向对齐
+  if(bfBox){
+    const folderEls=[...bfBox.children].filter(el=>el.classList&&el.classList.contains('tree-item')&&el.classList.contains('grp'));
+    folderEls.forEach(fe=>{
+      const key=fe.dataset.nav;
+      need(!!key,'功能目标文件夹「'+fe.textContent.trim()+'」必须可点进总览页（文字区 data-nav+nav，▾仅折叠）');
+      if(!key)return;
+      need(!!GOALS[key],'功能目标文件夹 '+key+' 在 GOALS 中无对应总览数据');
+      need(noPhonePages.includes(key),'功能总览页 '+key+' 必须是纯文档页（加入 noPhonePages，隐藏手机壳）');
+      const G=GOALS[key];if(!G)return;
+      need(G.steps&&G.steps.length>=2,'GOALS '+key+' 至少 2 个主线步骤');
+      G.steps.forEach((s,i)=>{
+        need(s.g===i+1,'GOALS '+key+' 步骤号不连续：第 '+(i+1)+' 行 g='+s.g);
+        need(bfPages.includes(s.flow),'GOALS '+key+' 第'+s.g+'步 flow「'+s.flow+'」不在 bfPages');
+        if(bfPages.includes(s.flow)){
+          const T=BF_FLOWS[s.flow].steps[s.step];
+          need(!!T,'GOALS '+key+' 第'+s.g+'步指向 '+s.flow+' 不存在的环节下标 '+s.step);
+          if(T)need(T.g===s.g,'GOALS '+key+' 第'+s.g+'步与 '+s.flow+'['+s.step+'] 的 g 标注不一致（控制器 g='+T.g+'）');
+        }
+      });
+    });
+    Object.keys(GOALS).forEach(k=>{
+      need(!!folderEls.find(fe=>fe.dataset.nav===k),'GOALS.'+k+' 在侧边树业务流程组没有对应功能目标文件夹');
+    });
+    bfPages.forEach(p=>{BF_FLOWS[p].steps.forEach((s,i)=>{
+      if(s.g){
+        const hit=Object.keys(GOALS).some(k=>GOALS[k].steps.some(t=>t.flow===p&&t.step===i&&t.g===s.g));
+        need(hit,'bf 环节 '+p+'['+i+'] 标注了总览第'+s.g+'步，但 GOALS 步骤表中没有对应登记');
+      }
+    })});
+  }
+  // 3. 每个树节点三处登记齐全
+  navs.forEach(p=>{
+    need(!!document.getElementById('p-'+p),'页面缺 DOM 容器：#p-'+p);
+    need(!!titles[p],'titles 未注册：'+p);
+    need(!!PAGE_META[p],'PAGE_META 未注册：'+p);
+    if(p.indexOf('bf-')===0)need(!!BF_FLOWS[p],'BF_FLOWS 未注册：'+p);
+    else need(!!DOCS[p],'DOCS 未注册：'+p);
+  });
+  // 4. 反向：注册的页面都在树里
+  Object.keys(PAGE_META).forEach(p=>need(navs.includes(p),'页面已注册但侧边树无节点：'+p));
+  // 5. tabBar 注册与 DOM 一致
+  tabPages.forEach(t=>need(!!document.querySelector('.tab[data-tab="'+t+'"]'),'tabBar 缺 tab：'+t));
+  // 6. bf 流程完整性
+  bfPages.forEach(p=>{
+    const F=BF_FLOWS[p];if(!F)return;
+    need(!!document.getElementById('bfBody-'+p),'bf 流程缺手机壳容器：#bfBody-'+p);
+    need(Array.isArray(F.cond)&&F.cond.length>0,p+' 缺前置限制卡片内容');
+    F.steps.forEach((s,i)=>{
+      ['nm','end','drw','interact','imp','act','r'].forEach(k=>need(typeof s[k]==='string'&&s[k].length,p+' 环节'+i+' 缺字段 '+k));
+      need(typeof BF_R[s.r]==='function',p+' 环节'+i+' 的渲染器 BF_R.'+s.r+' 不存在');
+      if(s.fork){need(Array.isArray(s.forks)&&s.forks.length>=2,p+' 分歧环节「'+s.nm+'」forks 必须≥2');need(s.no==='',p+' 分歧环节 no 必须为空字符串')}
+      if(s.auto)need(!!DRAWERS[s.auto],p+' 环节'+i+' auto 抽屉未注册：'+s.auto);
+      if(s.end!=='-'&&!(s.end in titles)&&!Object.values(titles).some(v=>v.indexOf(s.end)>=0))need(false,p+' 环节「'+s.nm+'」所在页面名不在 titles：'+s.end);
+      (s.brs||[]).forEach(b=>{
+        if(b.fn==='nav')need(navs.includes(b.arg),p+' 支线 nav 目标不存在：'+b.arg);
+        else if(b.fn==='showDrawer')need(!!DRAWERS[b.arg],p+' 支线抽屉未注册：'+b.arg);
+        else need(typeof window[b.fn]==='function',p+' 支线函数不存在：'+b.fn);
+      });
+    });
+  });
+  // 7. DOM 中所有抽屉引用都已注册
+  const used={};
+  document.querySelectorAll('[onclick]').forEach(el=>{const m=(el.getAttribute('onclick')||'').match(/(?:showDrawer|swapDrawer)\('([^']+)'/g)||[];m.forEach(x=>{const id=x.match(/'([^']+)'/)[1];used[id]=1})});
+  Object.keys(used).forEach(id=>need(!!DRAWERS[id],'DOM 引用了未注册抽屉：'+id));
+  // 7.5 手机壳「用户所见所得」红线（G 级）：静态业务页 / BF_R 快照 / 抽屉的可见文本禁元语言
+  //    豁免：.ph（非功能区占位方块）、.bf-sys（系统过渡态卡，规范允许标注「本环节无用户页面」）
+  const PHONE_BAD=['占位','支线','截断','快照','本流程','本环节','替换为','演示数据','演示值','u/a','不臆造','元信息','视角','弹业务抽屉','示例首页','示例小程序','点击支线'];
+  const phoneText=html=>{const d=document.createElement('div');d.innerHTML=html;d.querySelectorAll('.ph,.bf-sys').forEach(x=>x.remove());return (d.textContent||'').replace(/\s+/g,' ')};
+  const scanPhone=(where,txt)=>PHONE_BAD.forEach(w=>need(txt.indexOf(w)<0,'手机壳元语言「'+w+'」出现在用户可见区域：'+where+'（流程/视角说明只能进控制器红卡或右侧文档；非功能区只能用 .ph 方块）'));
+  Object.keys(PAGE_META).forEach(p=>{
+    if(noPhonePages.includes(p)||bfPages.includes(p))return;
+    const el=document.getElementById('p-'+p);if(el)scanPhone('页面 '+p,phoneText(el.innerHTML));
+  });
+  const savedView=bfView;
+  bfPages.forEach(p=>{
+    BF_FLOWS[p].steps.forEach((s,i)=>{
+      if(!BF_R[s.r])return;
+      ['new','old','pass','fail'].forEach(v=>{bfView=v;try{scanPhone('bf '+p+' 环节'+i+'['+v+']',phoneText(BF_R[s.r]()))}catch(_){}});
+    });
+  });
+  bfView=savedView;
+  Object.keys(DRAWERS).forEach(id=>{try{scanPhone('抽屉 '+id,phoneText(DRAWERS[id]()))}catch(_){}});
+  // 8. 所有文档/抽屉实际可渲染不抛异常
+  Object.keys(DOCS).forEach(p=>{try{const h=DOCS[p]();need(h.indexOf('doc-head')>=0,p+' 文档渲染缺 doc-head')}catch(err){e.push(p+' 文档渲染异常：'+err.message)}});
+  bfPages.forEach(p=>{try{const h=bfDoc(p);need(h.indexOf('doc-head')>=0,p+' bfDoc 渲染缺 doc-head')}catch(err){e.push(p+' bfDoc 异常：'+err.message)}});
+  Object.keys(DRAWERS).forEach(id=>{try{const h=DRAWERS[id]();need(h.indexOf('theDrawer')>=0,'抽屉 '+id+' 缺 id=theDrawer')}catch(err){e.push('抽屉 '+id+' 渲染异常：'+err.message)}});
+  return e;
+}
+function runSelfCheck(showBar){
+  const e=SELF_CHECK();
+  if(e.length){console.group('%c❌ SELF_CHECK 未通过（'+e.length+'）','color:#C62828;font-weight:700');e.forEach(x=>console.error('· '+x));console.groupEnd()}
+  else{console.log('%c✅ ALL CHECKS PASSED','color:#2E7D32;font-weight:700;font-size:14px')}
+  if(showBar){
+    const old=document.getElementById('checkBar');if(old)old.remove();
+    const bar=document.createElement('div');bar.id='checkBar';bar.className=e.length?'err':'ok';
+    bar.innerHTML=(e.length?'❌ SELF_CHECK 未通过 '+e.length+' 项（详见控制台）<b onclick="this.parentElement.remove()">✕ 关闭</b>':'✅ ALL CHECKS PASSED（点击关闭）<b onclick="this.parentElement.remove()">✕</b>');
+    document.body.appendChild(bar);
+  }
+  return e;
+}
+if(location.search.indexOf('selfcheck=1')>=0)setTimeout(()=>runSelfCheck(true),300);
+
+/* ================================================================
+   外卖积分 · 业务配置 30/41（v4.0 装配输入 · 会话4 TPL 化分片）
+   遮罩钩子 → 注册表 → 全局状态 / 格式化 / 三页同源回写
+================================================================ */
+// hideDrawer 遮罩钩子：简化后无遮罩弹窗，恒返回 false
+function drawerMaskHook(){
+  return false;
+}
+
+const titles={overview:'总说明 · 总览',home:'首页',mall:'积分商城',mine:'我的',sign:'签到',orders:'订单列表',points:'积分明细',cash:'提现记录',exchange:'兑换记录',share:'分享卡片页',wxmsgD:'订阅通知 · 每天召回','bf-new':'🆕 新用户-首单流程','bf-old':'🔁 老用户-下单流程','bf-sign':'📅 签到 · 每天召回','bf-recall':'📢 订阅每天召回策略'};
+const tabPages=['mall','home','mine'];
+const bfPages=['bf-new','bf-old','bf-sign','bf-recall'];
+const noPhonePages=['overview'];
+/* 页面注册表：tab=归属 tabBar 主页（左上返回/侧边树进入时先落该 tab）；onShow=切页初始化钩子
+   3c 已精修二级页 tab 归属：sign→home，exchange→mall，orders/points/cash→mine */
+const PAGE_META={
+  overview:{tab:'home'},
+  home:{tab:'home'},mall:{tab:'mall'},mine:{tab:'mine'},
+  sign:{tab:'home'},orders:{tab:'mine'},points:{tab:'mine'},cash:{tab:'mine'},exchange:{tab:'mall'},
+  share:{tab:'home'},
+  wxmsgD:{tab:'home'},
+  'bf-new':{tab:'home'},'bf-old':{tab:'home'},'bf-sign':{tab:'home'},'bf-recall':{tab:'home'}
+};
+/* —— 全局演示状态：积分余额（首页/商城/我的三页同源，syncUI 统一回写） —— */
+let userPts=D.userPts;
+function fmt(n){return n.toLocaleString('en-US')}
+function money(p){return '¥'+(p/D.rate).toFixed(2)}
+function syncUI(){
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.innerHTML=v};
+  set('hPts',fmt(userPts));set('hMoney','约合 '+money(userPts)+'（'+D.rateText+'）');
+  document.querySelectorAll('.hb-gain').forEach(s=>s.textContent=D.hb.gain);
+  set('mPts',fmt(userPts));
+  set('minePts',fmt(userPts));
+}
+/* ================================================================
+   31 动作函数 + 列表数据（订单/积分/提现/兑换）+ render
+   列表行：ptsRender/cashRender 复用 TPL.listRow；筛选高亮复用 TPL.tabPick
+   订单卡=加高变体、兑换记录右侧 12px 灰值=异变体 → 逃生门保留手写
+================================================================ */
+/* —— 首页：领红包（领取成功抽屉 → 积分 +5 → 按钮变「去下单」） —— */
+function getHb(btn){
+  userPts+=D.hb.gain;syncUI();showDrawer('d-get');
+  btn.outerHTML='<button style="width:100%;border:none;border-radius:14px;background:#fff;color:#388E3C;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="notice(\'已领过：去饿了么/美团下单可用\')">去下单</button>';
+}
+/* —— 商城：现金/实物任务 Tab 切换 —— */
+function mallTab(t){
+  document.getElementById('mallCash').style.display=t==='cash'?'block':'none';
+  document.getElementById('mallHw').style.display=t==='hw'?'block':'none';
+  const on='flex:1;text-align:center;font-size:13px;font-weight:600;padding:8px 0;border-radius:8px;background:#fff;color:var(--brand);cursor:pointer';
+  const off='flex:1;text-align:center;font-size:13px;font-weight:600;padding:8px 0;border-radius:8px;color:#888;cursor:pointer';
+  document.getElementById('tabCash').style.cssText=t==='cash'?on:off;
+  document.getElementById('tabHw').style.cssText=t==='hw'?on:off;
+}
+/* —— 商城：确认兑换（扣积分 → 兑换成功） —— */
+function doExchange(){userPts-=D.tasks[0].pts;syncUI();swapDrawer('d-ok')}
+/* —— 实物兑换：选地址 → 下单成功 —— */
+function doShip(){userPts-=D.goods[0].pts;syncUI();swapDrawer('d-ship')}
+/* —— 签到页：状态（签到即订阅·每天召回） —— */
+let signState={days:D.sign.days,signed:false};
+function doSign(){
+  if(signState.signed){notice('今日已签到');return}
+  showDrawer('d-sign-sub');
+}
+function doSignAfterSub(){
+  userPts+=D.sign.today;signState.days+=1;signState.signed=true;syncUI();signUI();showDrawer('d-sign-ok');
+}
+function signUI(){
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.innerHTML=v};
+  set('signDays',signState.days+' 天');
+  const btn=document.getElementById('signBtn');
+  if(btn){if(signState.signed){btn.textContent='今日已签到';btn.style.opacity=.5}else{btn.textContent='立即签到 +'+D.sign.today;btn.style.opacity=1}}
+  const d6=document.getElementById('signD6');
+  if(d6&&signState.signed){d6.style.background='var(--brand-soft)';d6.style.color='var(--brand)';d6.querySelectorAll('div')[2].textContent='已签'}
+}
+/* —— 订单列表：数据 + 平台×状态双维筛选（订单卡=加高变体，逃生门手写） —— */
+const ORDERS=[
+ {p:'elm',pn:'饿了么',c:'#2F7CF6',shop:'肯德基（世纪大道店）',time:'09-26 12:30',amt:'¥38.50',s:'done',sl:'已付款 · 积分已到账',pts:'+7,700 积分已到账'},
+ {p:'mt',pn:'美团',c:'#F6A300',shop:'麦当劳（张江店）',time:'09-25 18:02',amt:'¥26.00',s:'done',sl:'已付款 · 积分已到账',pts:'+5,200 积分已到账'},
+ {p:'elm',pn:'饿了么',c:'#2F7CF6',shop:'星巴克（陆家嘴店）',time:'09-24 09:15',amt:'¥42.00',s:'done',sl:'已付款 · 积分已到账',pts:'+8,400 积分已到账'},
+ {p:'elm',pn:'饿了么',c:'#2F7CF6',shop:'老乡鸡（五角场店）',time:'09-22 11:05',amt:'¥31.00',s:'done',sl:'已付款 · 积分已到账',pts:'+6,200 积分已到账'}
+];
+let ordP='all',ordS='all';
+function ordRender(){
+  const list=ORDERS.filter(o=>(ordP==='all'||o.p===ordP)&&(ordS==='all'||o.s===ordS));
+  const el=document.getElementById('ordList');if(!el)return;
+  el.innerHTML=list.length?list.map(o=>'<div class="card" style="padding:12px 14px;margin-bottom:10px">'
+   +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;font-weight:700;color:'+o.c+';border:1px solid '+o.c+';border-radius:6px;padding:2px 6px">'+o.pn+'</span>'
+   +'<span style="flex:1;font-size:14px;font-weight:700">'+o.shop+'</span>'
+   +'<span style="font-size:11px;color:'+(o.s==='done'?'#388E3C':o.s==='refund'?'var(--danger)':'#F6A300')+'">'+o.sl+'</span></div>'
+   +'<div style="display:flex;font-size:12px;color:#999"><span style="flex:1">'+o.time+'</span><span>'+o.amt+'</span></div>'
+   +'<div style="font-size:12px;color:var(--brand);margin-top:6px">'+o.pts+'</div></div>').join('')
+  :'<div class="card" style="text-align:center;color:#bbb;font-size:13px;padding:30px 0">当前筛选条件下暂无订单</div>';
+}
+function ordFilter(dim,v){
+  if(dim==='p')ordP=v;else ordS=v;
+  TPL.tabPick(dim==='p'?'ordPlatBar':'ordStateBar',dim==='p'?'data-p':'data-s',v);
+  ordRender();
+}
+/* —— 积分明细：数据 + 方向筛选（倒序，收入绿+/支出红-；行复用 TPL.listRow） —— */
+const PTS_LOG=[
+ {time:'09-26 12:30',tp:'订单到账',v:'+5,200',dir:'in',memo:'美团 · 麦当劳（张江店）已付款（佣金 ¥5.20 × 50% × 2000）'},
+ {time:'09-26 09:00',tp:'每日签到',v:'+'+D.sign.t5,dir:'in',memo:'连续签到第 '+D.sign.days+' 天'},
+ {time:'09-25 20:10',tp:'红包领取',v:'+'+D.hb.gain,dir:'in',memo:'领取饿了么红包 · 满 35 减 9'},
+ {time:'09-25 16:30',tp:'主动兑换',v:'-600',dir:'out',memo:'现金任务 '+D.tasks[0].name+' 主动兑换 → '+D.wxWay}
+];
+let ptsDir='all';
+function ptsRender(){
+  const list=PTS_LOG.filter(x=>ptsDir==='all'||x.dir===ptsDir);
+  const el=document.getElementById('ptsList');if(!el)return;
+  el.innerHTML=list.length?list.map(x=>TPL.listRow({
+    main:x.tp,sub:x.time+' · '+x.memo,right:x.v,
+    rightColor:x.dir==='in'?'#388E3C':'var(--danger)',
+    onclick:"showDrawer('d-detail')"
+  })).join('')
+  :'<div style="text-align:center;color:#bbb;font-size:13px;padding:30px 0">该方向下暂无流水</div>';
+}
+function ptsFilter(d){
+  ptsDir=d;
+  TPL.tabPick('ptsTabBar','data-d',d);
+  ptsRender();
+}
+/* —— 提现记录：累计 + 到账记录（行复用 TPL.listRow） —— */
+const CASH_LOG=[
+ {time:'09-14 16:20',tp:'主动兑换到账',amt:'+¥0.30',way:D.wxWay,st:'已到账'},
+ {time:'09-14 16:18',tp:'主动兑换到账',amt:'+¥0.30',way:D.wxWay,st:'已到账'}
+];
+function cashRender(){
+  const el=document.getElementById('cashList');if(!el)return;
+  el.innerHTML='<div style="font-size:14px;font-weight:700;margin-bottom:4px">到账记录</div>'
+  +CASH_LOG.map(x=>TPL.listRow({
+    main:x.tp,
+    sub:x.time+' · '+x.way,right:x.amt,rightColor:'#388E3C',
+    onclick:"showDrawer('d-cash-detail')"
+  })).join('');
+}
+/* —— 兑换记录：数据 + 类型筛选（右侧 12px 灰值=异变体，行保留手写） —— */
+const EX_LOG=[
+ {time:'09-14 16:20',nm:'现金 '+D.tasks[0].name,cost:D.tasks[0].ptsText,t:'cash',mark:'✓',desc:'主动兑换 → '+D.wxWay},
+ {time:'09-10 13:45',nm:D.goods[0].name,cost:D.goods[0].ptsText,t:'hw',mark:'✓',desc:'实物兑换 · 已寄出：上海市浦东新区世纪大道 100 号'}
+];
+let exT='all';
+function exRender(){
+  const list=EX_LOG.filter(x=>exT==='all'||x.t===exT);
+  const el=document.getElementById('exList');if(!el)return;
+  el.innerHTML=list.length?list.map(x=>'<div style="display:flex;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid #f5f5f7">'
+   +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+x.nm+' <span style="font-size:11px;color:#388E3C">'+x.mark+'</span></div><div style="font-size:11px;color:#999;margin-top:2px">'+x.time+' · '+x.desc+'</div></div>'
+   +'<div style="font-size:12px;color:#666;font-weight:600">'+x.cost+'</div></div>').join('')
+  :'<div style="text-align:center;color:#bbb;font-size:13px;padding:30px 0">暂无兑换记录</div>';
+}
+function exFilter(t){
+  exT=t;
+  TPL.tabPick('exTabBar','data-t',t);
+  exRender();
+}
+/* ================================================================
+   32 业务抽屉 A：首页/商城/签到 12 个
+   TPL：dGet/dOk/dSignOk=okDrawer；dConfirm/dCard/dResign=confirmDrawer；
+        dAuto(双态)/dConvert=convertDrawer
+   逃生门：dNochance（desc 无 line-height 槽）/dChance（110px 大圆计数器）/
+          dAddr（双地址卡）/dShip（16px 居中行，okDrawer 仅 22px main 槽）
+================================================================ */
+/* —— 组件：业务抽屉（承接按钮必须把用户引向下一步；新功能替换内容） —— */
+function dGet(){
+  return TPL.okDrawer({
+    title:'领取成功',icon:'🧧',main:'+'+D.hb.gain+' 积分',
+    sub:'红包已放入账户，下单自动抵扣',
+    rows:[['积分余额',fmt(userPts)]],
+    btns:[{t:'好的',fn:'hideDrawer()'}]
+  });
+}
+function dConfirm(){
+  return TPL.confirmDrawer({
+    title:'兑换确认',
+    rows:[['兑换任务','现金 '+D.tasks[0].name],
+      ['消耗积分',D.tasks[0].ptsText],
+      ['到账方式',D.wxWay]],
+    cancel:{t:'取消',fn:'hideDrawer()'},
+    ok:{t:'确认兑换',fn:'doExchange()'}
+  });
+}
+function dOk(){
+  return TPL.okDrawer({
+    title:'兑换成功',icon:'🎉',main:D.tasks[0].name+' 已发往'+D.wxWay,
+    sub:'积分余额 '+fmt(userPts),
+    btns:[{t:'我知道了',fn:'hideDrawer()'}]
+  });
+}
+function dAddr(){
+  return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3>选择收货地址</h3>'
+  +'<div style="border:1.5px solid var(--brand);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--brand-soft)">'
+  +'<div style="font-size:14px;font-weight:700">🏠 家里 · 张三 138****8888</div><div style="font-size:12px;color:#888;margin-top:4px">上海市浦东新区世纪大道 100 号</div></div>'
+  +'<div style="border:1.5px solid #eee;border-radius:12px;padding:12px;margin-bottom:10px">'
+  +'<div style="font-size:14px;font-weight:700">🏢 公司 · 张三 138****8888</div><div style="font-size:12px;color:#888;margin-top:4px">上海市徐汇区漕河泾开发区 xx 大厦</div></div>'
+  +'<div style="text-align:center;font-size:13px;color:var(--brand);font-weight:600;padding:8px 0;cursor:pointer" onclick="notice(\'演示：新增地址不展开\')">＋ 新增地址</div>'
+  +'<div class="btns"><button class="btn btn-line" onclick="hideDrawer()">取消</button>'
+  +'<button class="btn btn-primary" onclick="doShip()">下一步</button></div></div>';
+}
+function dShip(){
+  return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3>下单成功</h3>'
+  +'<div style="text-align:center;font-size:46px;margin:10px 0">📦</div>'
+  +'<div style="text-align:center;font-size:16px;font-weight:700">兑换成功，等待发货</div>'
+  +'<div class="row"><span>商品</span><span>'+D.goods[0].name+'</span></div>'
+  +'<div class="row"><span>消耗积分</span><span>'+D.goods[0].ptsText+'</span></div>'
+  +'<div class="btns"><button class="btn btn-primary" onclick="hideDrawer()">我知道了</button></div></div>';
+}
+/* —— 签到页抽屉：签到成功 / 转化提示 / 开通月卡 / 补签 —— */
+function dSignOk(){
+  return TPL.okDrawer({
+    title:'签到成功',icon:'✅',main:'+'+D.sign.today+' 积分',
+    sub:'连续签到 '+signState.days+' 天 · 明日 +'+D.sign.tomorrow,
+    rows:[['积分余额',fmt(userPts)]],
+    btns:[{t:'好的',fn:'hideDrawer()'}]
+  });
+}
+function dSignSub(){
+  return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3>订阅消息</h3>'
+  +'<div style="font-size:12px;color:#999;margin-bottom:6px">外卖积分助手 请求订阅以下消息</div>'
+  +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f5f5f7"><span style="font-size:14px;color:#1a1a1c">'+D.wxmsg.dTitle+'</span><span style="width:20px;height:20px;border-radius:4px;border:none;background:#07C160;color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center">✓</span></div>'
+  +'<div style="display:flex;align-items:center;gap:6px;padding:12px 0;font-size:12px;color:#999"><span style="width:16px;height:16px;border-radius:3px;border:1px solid #ccc;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</span>总是保持以上选择，不再询问</div>'
+  +'<div class="btns"><button class="btn btn-line" onclick="hideDrawer()">取消</button>'
+  +'<button class="btn btn-primary" style="background:#07C160" onclick="bfSignSubOk()">允许</button></div></div>';
+}
+/* ================================================================
+   33 业务抽屉 B：行详情 + bf 流程抽屉 + 抽屉注册表
+   TPL：dDetail/dCashDetail=infoDrawer；dBfConfirm=confirmDrawer(lead)
+   逃生门：dJump（无 h3 跳端）/dBfArrive（h3 居中，okDrawer 无此槽）
+================================================================ */
+/* —— 积分明细 / 提现记录：行详情抽屉 —— */
+function dDetail(){
+  return TPL.infoDrawer({
+    title:'明细详情',
+    rows:[['时间','09-26 12:30'],
+      ['类型','订单到账'],
+      ['变动','+5,200 积分','color:#388E3C;font-weight:700'],
+      ['备注','美团 · 麦当劳（张江店）已付款，佣金 ¥5.20 × 50% × 2000']]
+  });
+}
+function dCashDetail(){
+  return TPL.infoDrawer({
+    title:'提现详情',
+    rows:[['时间','09-14 16:20'],
+      ['类型','主动兑换到账'],
+      ['金额','+¥0.30','color:#388E3C;font-weight:700'],
+      ['到账方式',D.wxWay],
+      ['状态','已到账']]
+  });
+}
+/* —— bf-new 流程抽屉：跳端确认 / 到账通知 / 确认兑换 —— */
+function dJump(){
+  return '<div class="drawer" id="theDrawer"><div class="grab"></div>'
+  +'<div style="text-align:center;font-size:16px;font-weight:600;color:#1a1a1c;line-height:1.8;padding:26px 10px 22px">即将打开“'+D.jumpText+'”小程序</div>'
+  +'<div class="btns"><button class="btn btn-line" onclick="hideDrawer()">取消</button>'
+  +'<button class="btn btn-primary" style="background:#07C160" onclick="bfNJumpOk()">允许</button></div></div>';
+}
+function dBfArrive(){
+  const old=bfCur==='bf-old';
+  const btn=old?'<button class="btn btn-primary" onclick="bfNArriveOk()">我知道了</button>'
+              :'<button class="btn btn-primary" onclick="bfNArriveGo()">去兑换</button>';
+  return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3 style="text-align:center">🎉 积分到账通知</h3>'
+  +'<div style="text-align:center;font-size:46px;margin:10px 0">🎉</div>'
+  +'<div style="text-align:center;font-size:22px;color:var(--brand);font-weight:800">'+(old?D.old.ptsText:D.new.ptsText)+' 积分已到账</div>'
+  +'<div style="text-align:center;font-size:12px;color:#999;margin-top:6px">订单已付款，按预估佣金×50%×2000 折算</div>'
+  +'<div class="btns">'+btn+'</div></div>';
+}
+function dBfGuide(){
+  return TPL.okDrawer({
+    title:'积分兑换提示',icon:'💰',main:'积分可换现金',
+    sub:'积分直接换现金，打到'+D.wxWay,
+    rows:[['可兑换档位',D.tasks[0].name+' ~ '+D.tasks[4].name],['最低消耗',D.tasks[0].ptsText],['到账方式',D.wxWay]],
+    btns:[{t:'去兑换',fn:'bfNGoConfirm()'}]
+  });
+}
+function dBfConfirm(){
+  const t=bfNTask||{name:D.tasks[0].name+' 现金',pts:D.tasks[0].pts};
+  return TPL.confirmDrawer({
+    title:'确认兑换',
+    rows:[['任务',t.name],
+      ['消耗积分','-'+fmt(t.pts),'color:#FF3B30'],
+      ['到账方式',D.wxWay]],
+    cancel:{t:'暂不兑换',fn:'hideDrawer()'},
+    ok:{t:'确认兑换',fn:'bfNDoEx()'}
+  });
+}
+function landFromSubscribe(page,drw){
+  goPage(page);notice('打开订阅通知卡片');
+  if(drw)setTimeout(()=>showDrawer(drw),450);
+}
+/* —— 抽屉注册表：新抽屉必须在此登记 —— */
+const DRAWERS={'d-get':dGet,'d-confirm':dConfirm,'d-ok':dOk,'d-addr':dAddr,'d-ship':dShip,'d-sign-ok':dSignOk,'d-sign-sub':dSignSub,'d-detail':dDetail,'d-cash-detail':dCashDetail,'d-jump':dJump,'d-bf-arrive':dBfArrive,'d-bf-guide':dBfGuide,'d-bf-confirm':dBfConfirm};
+/* ================================================================
+   34 文档 A：DOCS 建对象（overview + home）；35/36 以 Object.assign 续挂
+================================================================ */
+const DOCS={
+overview:()=>overviewDoc({
+  badge:'N0',name:'总说明 · 总览',
+  goal:'外卖 CPS 场景的积分激励体系——用户领券下单/签到攒积分，通过积分商城任务（主动兑换）把积分换成现金打到'+D.wxWay+'；不含 B 端运营配置与订单同步后台逻辑',
+  logic:[
+    {t:'功能简介',items:['外卖 CPS 激励小程序','领红包跳转外卖平台下单，确认收货得积分','积分兑换现金任务，打款到微信零钱']},
+    {t:'获取积分',items:['下单回传佣金折算入账','每日签到得积分']},
+    {t:'积分消耗',items:['用户主动兑换现金任务']},
+    {t:'订阅通知',items:['积分到账：确认收货后积分实际入账','主动兑换到账：用户主动兑换打款结果','每天召回：签到订阅后每日推送召回卡片']},
+    {t:'后台配置项',items:['全局参数：积分汇率、折算比例、双平台拉单凭证','首页活动：红包卡面额、跳转方式、排序与上下架','签到规则：7档积分','现金任务：兑换档位与任务性质']}
+  ],
+  users:'面向外卖返利小程序的 C 端用户，无角色/权限差异',
+  limits:'现金任务一周一兑；签到同一自然日限 1 次；无其他特殊限制',
+  rules:[
+    ['积分比例',D.rateText+'（1 积分 = 0.0005 元）'],
+    ['积分来源','签到（'+D.sign.tiersText+'，第 6 档 '+D.sign.t6+' 封顶）+ 领券（+'+D.hb.gain+'/张，'+D.hb.daily+' 张/天，饿了么 '+D.hb.elm+' + 美团 '+D.hb.mt+'）+ 订单收货折算（平台佣金 × 50% × 2000）'],
+    ['积分消耗','积分商城任务兑换（现金任务 + 实物任务）'],
+    ['现金到账',D.wxWay+'；现金任务最低档 '+D.tasks[0].name.slice(1)+' 元（'+D.tasks[0].ptsText+'），约 20 元/周'],
+    ['签到口径','服务器时间（东八区）自然日，每日 00:00 切换「今日」；同一自然日限签 1 次'],
+    ['订阅召回','签到时订阅「每天召回」（'+D.tm.d+'），系统每日推送召回卡片，点卡直接进首页；同一自然日最多 1 条']
+  ],
+  branches:[
+    {name:'🆕 新用户-首单流程',nav:'bf-new',cond:'首次进入小程序并领券下单',result:'积分到账 → 商城兑换闭环'},
+    {name:'🔁 老用户-下单流程',nav:'bf-old',cond:'老用户再次领券下单',result:'积分到账即止（不含兑换）'},
+    {name:'📅 签到 · 每天召回',nav:'bf-sign',cond:'用户进入签到页',result:'订阅每天召回 → 立即签到 → 签到成功'},
+    {name:'📢 订阅每天召回策略',nav:'bf-recall',cond:'签到时已订阅「每天召回」（TM1004）',result:'系统每日推送召回卡片 → 点卡直接进首页'}
+  ],
+  ascii:{cap:'积分整体闭环（来源 → 余额 → 兑换 → 零钱 → 召回）',txt:'领券 +5/张·6张/天   签到 5/10/15/20/25/35/35   下单收货 实付×2000\n      └──────────────┴──────→  积分余额  ←──────┘\n                                  │\n                    积分商城任务（主动兑换）\n                                  │\n        主动兑换（现金/实物）→ 微信零钱到账\n                                  │\n                    订阅每天召回（TM1004）'},
+  image:{src:'总览_业务闭环图.jpg',cap:'业务闭环总览图 · 点击放大'},
+  guides:[{t:'🏠 首页',nav:'home'},{t:'🏪 积分商城',nav:'mall'},{t:'👤 我的',nav:'mine'},{t:'📅 签到',nav:'sign'},{t:'📦 订单列表',nav:'orders'},{t:'📊 积分明细',nav:'points'},{t:'💸 提现记录',nav:'cash'},{t:'🧾 兑换记录',nav:'exchange'},{t:'🔗 分享卡片页',nav:'share'},{t:'🔔 订阅·每天召回',nav:'wxmsgD'},{t:'🆕 新用户-首单',nav:'bf-new'},{t:'🔁 老用户-下单',nav:'bf-old'},{t:'📅 签到·每天召回',nav:'bf-sign'},{t:'📢 订阅每天召回',nav:'bf-recall'}]
+}),
+home:()=>docCard('P1','首页（Tab · 领券中心）',
+ ['页面说明：小程序 Landing 页，领券中心；展示积分总览与每日红包，是攒积分的主入口',
+  '承接流程：3 个 —— 🆕新用户-首单流程（环节①②③④、⑤到账弹窗）、🔁老用户-下单流程（环节①②③④、⑤到账弹窗）、📢订阅每天召回策略（环节③点通知卡片直接进首页）'],
+ ['操作链路：点未领红包卡「领取 +5」→ 用户积分 +5 → 顶部积分余额与「约合金额」同步刷新 → 该卡按钮变绿色「去下单」',
+  '通知回链：每天召回卡片（wxmsgD · TM1004）→ 点卡直接进首页，不弹抽屉'],
+ [['积分总览（顶部渐变 hero）',[
+   ['积分余额',D.userPtsText,'来源：用户积分账户<br>限制：整数千分位<br>更新：实时','无'],
+   ['约合金额',D.userMoney,'来源：积分÷2000<br>限制：保留 2 位小数<br>更新：随积分同步','无']
+ ]],['签到提醒条',[
+   ['提醒文案',D.sign.remind,'来源：签到系统当日状态<br>限制：仅未签到显示<br>更新：跨天 0 点/签到后','点整条 → 签到页'],
+   ['辅助文案',D.sign.tip2,'来源：业务规则静态文案<br>限制：—<br>更新：不更新','无'],
+   ['去签到按钮','去签到','来源：前端固定<br>限制：—<br>更新：不更新','点击 → 签到页']
+ ]],['红包网格（2列×3行）',[
+   ['红包卡-饿了么',D.redPackets[0].pf+'红包 '+D.redPackets[0].amt+' / '+D.redPackets[2].amt+' / '+D.redPackets[4].amt,'来源：运营配置<br>限制：第一列固定饿了么 3 张<br>更新：每日 0 点刷新','点「领取 +5」→【领取成功】'],
+   ['红包卡-美团',D.redPackets[1].pf+'红包 '+D.redPackets[1].amt+' / '+D.redPackets[3].amt+' / '+D.redPackets[5].amt,'来源：运营配置<br>限制：第二列固定美团 3 张<br>更新：每日 0 点刷新','点「领取 +5」→【领取成功】'],
+   ['领取按钮','领取 +5（领取后变绿色「去下单」）','来源：前端<br>限制：每卡每日限领 1 次<br>更新：领取后','点击 →【领取成功】抽屉'],
+   ['卡面收益文案','领券 +'+D.hb.gain+'，下单得积分','来源：领券积分读后台配置（领取积分 D.hb.gain），下单得积分写死<br>限制：+N 随后台「领取积分」实时同步，下单得积分不更新<br>更新：syncUI 回写 .hb-gain','无'],
+   ['收益文案',D.hb.tip,'来源：业务规则静态文案<br>限制：下单积分=平台佣金×50%×2000<br>更新：不更新','无']
+ ]],['积分商城入口卡',[
+   ['入口信息','积分商城 / '+D.mallEntrySub,'来源：前端固定<br>限制：静态展示<br>更新：不更新','点击 → goTab 积分商城']
+ ]]],
+ ['【领取成功】：点未领红包卡「领取 +5」；+5 积分；「好的」关闭',
+  '【跳端确认】：点「去下单」自动弹；即将打开"美团丨外卖团购特价美食酒店电影"小程序；「取消」/「允许」（bf-new③/bf-old③）',
+  '【积分到账通知】：支付成功后自动弹；积分已到账+折算规则；新客「好的」/「去兑换」，老客「我知道了」（bf-new⑤/bf-old⑤）'],
+ ['左上返回：无（首页为 tabBar 主页面）'],
+ '',
+ ['空态（新用户）：无签到记录时连续 0 天，签到按钮显示「签到 +5 积分」','加载态：进入页面数据拉取中，余额区显示骨架占位','错误态：拉取失败提示点击重试'])
+};
+/* ================================================================
+   35 文档 B：mall / mine / sign（Object.assign 续挂 DOCS）
+================================================================ */
+Object.assign(DOCS,{
+mall:()=>docCard('P2','积分商城（Tab · 核心消耗页）',
+ ['页面说明：积分消耗的唯一系统，任务制兑换现金/实物',
+  '承接流程：1 个 —— 🆕新用户-首单流程（环节⑥ 商城兑换·首次打款）'],
+ ['操作链路：点 ok 卡「兑换」→【兑换确认】抽屉 → 扣积分 →【兑换成功】抽屉'],
+ [['顶部积分',[
+   ['积分余额',D.userPtsText,'来源：用户积分账户<br>限制：整数千分位<br>更新：兑换扣减/获取增加时实时','无']
+ ]],['现金任务 Tab（8 张演示卡，2 态同屏）',[
+   ['Tab 切换','现金任务 / 实物任务','来源：前端筛选状态<br>限制：互斥单选<br>更新：点击切换','点击切换面板'],
+   ['ok 卡',D.tasks[0].name+'～'+D.tasks[4].name+'（前 5 档 '+D.tasks[0].ptsText+'～'+D.tasks[4].ptsText+'，按钮「兑换」）','来源：运营配置<br>限制：积分足够可兑换<br>更新：积分足够后实时变 ok','点「兑换」→【兑换确认】'],
+   ['short 卡',D.tasks[5].name+'～'+D.tasks[7].name+'（后 3 档 '+D.tasks[5].ptsText+'～'+D.tasks[7].ptsText+'，按钮「积分不足」置灰）','来源：运营配置<br>限制：积分不足<br>更新：积分足够后变 ok','无']
+ ]],['实物任务 Tab',[
+   ['商品卡-可兑',D.goods[0].name+' '+D.goods[0].ptsText+'（按钮「兑换」）','来源：运营配置+库存<br>限制：积分足且有库存<br>更新：兑换后库存扣减','点「兑换」→【选择收货地址】'],
+   ['商品卡-缺货',D.goods[1].name+' '+D.goods[1].ptsText+'（按钮「已售罄」置灰）','来源：运营配置+库存<br>限制：库存=0<br>更新：补货后恢复','无']
+ ]],['底部入口',[
+   ['兑换记录入口','兑换记录 ›','来源：前端固定<br>限制：—<br>更新：不更新','点击 → 兑换记录页']
+ ]]],
+ ['【兑换确认】：点 ok 卡「兑换」；任务/消耗积分/到账方式；「取消」+「确认兑换」',
+  '【兑换成功】：确认兑换后；现金已发往微信零钱；「我知道了」',
+  '【选择收货地址】：点实物「兑换」；地址列表 + 新增地址；「取消」+「下一步」',
+  '【下单成功】：实物兑换确认后；兑换成功等待发货；「我知道了」'],
+ ['左上返回：无（积分商城为 tabBar 主页面）'],
+ '现金任务卡 · 2 态变动\n\n✅ 可兑换 [兑换] ──兑换完成→ 🎉 兑换成功\n      │\n      │ 积分不足\n      ↓\n⚠️ 积分不足 [置灰] ──积分足够→ ✅ 可兑换',
+ ['空态：无现金任务时列表显示空态','加载态：任务卡区骨架占位','错误态：兑换接口失败时弹窗不关闭、本次不扣积分']),
+mine:()=>docCard('P3','我的（Tab）',
+ ['页面说明：个人中心，聚合订单/积分明细/提现记录入口',
+  '承接流程：0 个 —— 无（仅作入口页，无流程环节落在本页）'],
+ [],
+ [['顶部资料',[
+   ['头像/昵称','🧑 外卖小达人','来源：微信授权<br>限制：只读<br>更新：不更新','无'],
+   ['积分','积分 '+D.userPtsText,'来源：积分账户<br>限制：与首页/商城同源<br>更新：实时','无']
+ ]],['功能菜单',[
+   ['菜单入口 ×3','我的订单 / 积分明细 / 提现记录','来源：前端固定菜单<br>限制：只读入口<br>更新：不更新','分别点击 → 订单列表 / 积分明细 / 提现记录']
+ ]]],
+ [],
+ ['左上返回：无（「我的」为 tabBar 主页面）'],
+ '',
+ ['加载态：资料区骨架占位']),
+sign:()=>docCard('P4','签到（二级页 · 首页下）',
+ ['页面说明：每日签到攒积分页，连续越久档位越高；签到前先订阅「每天召回」模板',
+  '承接流程：1 个 —— 📅签到·每天召回流程（订阅 → 立即签到 → 签到成功）'],
+ ['主链路：进入签到页 → 微信订阅弹窗（每天召回 TM1004）→ 允许后点「立即签到」→【签到成功】抽屉 → D6 变已签、按钮置灰「今日已签到」'],
+ [['顶部信息',[
+   ['连续签到天数','已连续签到 '+D.sign.days+' 天','来源：签到系统统计<br>限制：断签从 D1 重计<br>更新：签到后','无'],
+   ['今日签到提示',D.sign.tip,'来源：档位表按连续天数取值<br>限制：档位 '+D.sign.tiersText+'（第 6 档封顶）<br>更新：跨天 0 点重置','无'],
+   ['已订阅·每天召回','已订阅 / 未订阅','来源：订阅状态<br>限制：未订阅时不允许签到<br>更新：订阅授权后','无']
+ ]],['7 日档位横条',[
+   ['D1-D5 已签档','D1 +'+D.sign.t1+' / D2 +'+D.sign.t2+' / D3 +'+D.sign.t3+' / D4 +'+D.sign.t4+' / D5 +'+D.sign.t5+'（橙色底「已签」）','来源：档位配置+签到记录<br>限制：已签橙色底<br>更新：不更新','无'],
+   ['D6 今日档','D6 +'+D.sign.t6+'（渐变橙底「今日」，签到后变已签）','来源：档位配置+签到记录<br>限制：今日橙色底，签到后变已签<br>更新：签到后','无'],
+   ['D7 预告档','D7 +'+D.sign.t7+'（白底「明日」，预告明日档位）','来源：档位配置<br>限制：默认白底<br>更新：跨天','无']
+ ]],['操作区',[
+   ['立即签到按钮','立即签到 +'+D.sign.today+'（已签置灰「今日已签到」）','来源：前端固定<br>限制：同一自然日限 1 次，已签置灰；未订阅时置灰<br>更新：签到后','点击 →【签到成功】；未订阅时点击 →【订阅授权】']
+ ]]],
+ ['【订阅授权】：未订阅时点「立即签到」自动弹；微信原生订阅弹窗：每天召回（TM1004）；「取消」/「允许」（bf-sign②）',
+  '【签到成功】：点「立即签到」；+'+D.sign.today+' 积分 / 连续 N 天；「好的」'],
+ ['左上返回：goBack → 首页'],
+ '签到 · 每天召回流程\n\n  进入签到页\n      │\n      ↓\n  订阅授权（每天召回 TM1004）\n      │\n      ↓\n  立即签到\n      │\n      ↓\n  签到成功',
+ ['空态（新用户）：连续 0 天，按钮显示「签到 +'+D.sign.t1+' 积分」','加载态：档位横条骨架占位'])
+});
+/* ================================================================
+   36 文档 C：orders/points/cash/exchange + 订阅通知文档（每天召回 wxmsgD）
+   订单/积分类目文档中的流水为代表性记录（与列表同源），保留记录字面量
+================================================================ */
+Object.assign(DOCS,{
+orders:()=>docCard('P5','订单列表（二级页 · 我的下）',
+ ['页面说明：饿了么/美团订单状态与积分到账进度查询页',
+  '承接流程：0 个 —— 无（仅查询页，无流程环节落在本页）'],
+ ['筛选链路：点平台 Tab「饿了么」+ 状态 Tab「进行中」→ 列表按两条件交集实时过滤 → 仅显示饿了么平台且进行中的订单'],
+ [['筛选区',[
+   ['平台筛选','全部平台 / 饿了么 / 美团','来源：前端筛选状态<br>限制：与状态筛选组合生效<br>更新：点击切换','点击切换过滤'],
+   ['状态筛选','全部状态 / 进行中 / 已收货','来源：前端筛选状态<br>限制：进行中含已下单/已付款<br>更新：点击切换','点击切换过滤']
+ ]],['订单卡列表',[
+   ['平台标识','饿了么（蓝）/ 美团（黄）','来源：平台订单同步<br>限制：饿了么蓝/美团黄<br>更新：不更新','无'],
+   ['商家名/时间/金额','肯德基（世纪大道店） · 09-26 12:30 · ¥38.50','来源：平台订单数据<br>限制：只读<br>更新：不更新','无'],
+   ['状态标签-进行中','进行中 · 已下单','来源：平台状态映射<br>限制：进行中=已下单<br>更新：状态回传后','无'],
+   ['状态标签-已付款·积分已到账','已付款 · 积分已到账','来源：平台状态映射<br>限制：已付款即积分到账<br>更新：状态回传后','无'],
+   ['状态标签-已收货','已收货','来源：平台状态映射<br>限制：—<br>更新：状态回传后','无'],
+   ['积分文案-已到账','+5,200 积分已到账','来源：订单状态+佣金×50%×2000<br>限制：已付款即到账<br>更新：付款后','无']
+ ]]],
+ [],
+ ['左上返回：goBack → 我的'],
+ '',
+ ['空态（筛选无结果）：当前筛选条件下无订单，列表区显示「暂无订单」','加载态：列表骨架占位']),
+points:()=>docCard('P6','积分明细（二级页）',
+ ['页面说明：积分收支流水查询页，倒序展示，收入绿+/支出红-',
+  '承接流程：0 个 —— 无（仅查询页，无流程环节落在本页）'],
+ ['筛选链路：点「收入」Tab → 列表按方向实时过滤 → 仅显示收入类流水记录'],
+ [['筛选区',[
+   ['筛选 Tab','全部 / 收入 / 支出','来源：前端筛选状态<br>限制：互斥单选<br>更新：点击切换','点击切换过滤']
+ ]],['流水列表',[
+   ['时间','09-26 12:30','来源：业务事件记录<br>限制：倒序，新事件置顶<br>更新：新事件发生时','无'],
+   ['类型-收入','每日签到 / 红包领取 / 订单到账','来源：业务事件枚举<br>限制：收入=每日签到/红包领取/订单到账<br>更新：不更新','无'],
+   ['类型-支出','主动兑换','来源：业务事件枚举<br>限制：支出=主动兑换<br>更新：不更新','无'],
+   ['变动值','+5,200（收入绿）/ -2,400（支出红）','来源：事件发生时积分量<br>限制：收入绿+/支出红-<br>更新：不更新','无'],
+   ['备注','美团 · 麦当劳（张江店）确认收货','来源：事件上下文<br>限制：描述变动来源<br>更新：不更新','无']
+ ]]],
+ ['【明细详情】：点积分明细任一行；时间/类型/变动/备注；「关闭」'],
+ ['左上返回：goBack → 我的'],
+ '',
+ ['空态（筛选无记录）：该方向下暂无流水','加载态：列表骨架占位']),
+cash:()=>docCard('P7','提现记录（二级页 · 我的下）',
+ ['页面说明：现金到账记录查询页，含主动兑换到账',
+  '承接流程：0 个 —— 无（仅查询页，无流程环节落在本页）'],
+ [],
+ [['累计金额',[
+   ['累计提现',D.cashTotal,'来源：提现记录汇总<br>限制：保留 2 位小数<br>更新：有新到账后','无']
+ ]],['到账记录',[
+   ['主动兑换到账','主动兑换到账 +¥0.30','来源：用户商城主动兑换<br>限制：实时单笔入'+D.wxWay+'<br>更新：不更新','点击 →【提现详情】'],
+   ['到账方式',D.wxWay,'来源：打款渠道<br>限制：现金到账='+D.wxWay+'<br>更新：不更新','无']
+ ]]],
+ ['【提现详情】：点提现记录任一行；时间/类型/金额/到账方式/状态；「关闭」'],
+ ['左上返回：goBack → 我的'],
+ '',
+ ['空态（无提现）：无任何到账记录时，累计 ¥0.00、列表区显示空态','加载态：列表骨架占位']),
+exchange:()=>docCard('P8','兑换记录（二级页 · 积分商城下）',
+ ['页面说明：商城兑换历史查询页，含现金兑换与实物兑换',
+  '承接流程：0 个 —— 无（仅查询页）'],
+ [],
+ [['筛选区',[
+   ['筛选 Tab','全部 / 现金 / 实物','来源：前端筛选状态<br>限制：互斥单选<br>更新：点击切换','点击切换过滤']
+ ]],['兑换列表',[
+   ['现金兑换-主动','现金 '+D.tasks[0].name+' · '+D.tasks[0].ptsText+' · 标注 ✓','来源：商城主动兑换<br>限制：一周一兑，标注 ✓<br>更新：不更新','无'],
+   ['实物兑换',D.goods[0].name+' · '+D.goods[0].ptsText+' · 已寄出含地址','来源：实物任务兑换<br>限制：含地址下单流程<br>更新：不更新','无']
+ ]]],
+ [],
+ ['左上返回：goBack → 积分商城'],
+ '',
+ ['空态（无兑换）：列表区显示空态','加载态：列表骨架占位']),
+share:()=>shareDoc({
+  badge:'F',name:'外卖红包分享卡片',
+  pre:[
+    ['分享入口','首页底部「分享给好友」入口卡'],
+    ['分享形态','小程序卡片：红包主题封面为纯视觉块，标题文案来自 SHARE.title'],
+    ['落地页','小程序首页（红包活动有效时）']
+  ],
+  users:[
+    ['分享者定义','已登录小程序用户，均可从首页发起分享'],
+    ['被分享者','微信好友 / 群成员，点卡片进入小程序首页'],
+    ['分享限制','支持单聊与群聊；活动结束后卡片置灰，点击不跳转']
+  ],
+  fields:[
+    ['卡片标题',D.share.title,'来源：SHARE.title 业务配置<br>限制：不超过微信标题长度<br>更新：活动文案变更','无'],
+    ['卡片封面','🧧 视觉块','来源：纯视觉块（无文字）<br>限制：按微信卡片比例裁剪<br>更新：活动物料变更','无'],
+    ['落地参数',D.share.param,'来源：分享时生成<br>限制：u=分享者标识，a=红包活动 id<br>更新：每次分享生成','点击卡片 → 校验活动有效后落地首页']
+  ],
+  panel:'微信分享面板为系统组件（d-share）：转发列表与操作格为微信写死部件，不进字段表；bf 流程内选联系人发送自动推进下一环节，真实首页发送后跳分享卡片页看结果',
+  empty:[
+    ['活动已结束','打开置灰卡片 → toast「'+D.share.invalid+'」，停留在微信会话'],
+    ['取消发送','分享面板点「取消」→ 留在首页']
+  ]
+}),
+wxmsgD:()=>subscribeDoc({
+  badge:'S5',name:'订阅通知 · 每天召回（'+D.tm.d+'）',
+  scenes:[['功能简介','用户签到时订阅「每天召回」模板（TM1004），系统每日定时推送召回卡片；点卡片直接进入首页，形成「签到 → 每日召回 → 领券下单」的每日召回闭环'],
+    ['订阅入口','bf-sign ② 环节「订阅授权」：进入签到页后弹微信订阅弹窗请求订阅本模板，允许后才能签到'],
+    ['通知节点','订阅后系统每日定时触发，每用户推送 1 条'],
+    ['通知限制','未订阅 / 订阅次数已用尽不推送；点卡片不弹抽屉，直接落首页；同一自然日每用户最多 1 条'],
+    ['落地页面','点通知卡片 → 直接进入首页（签到提醒条 + 红包网格一起可见）']],
+  tmpl:{name:D.wxmsg.dTitle,id:D.tm.d+'（以微信公众平台申请结果为准）'},
+  fields:[['提醒内容',D.wxmsg.dTip,'来源：运营配置<br>限制：—<br>更新：消息生成时写入','无'],
+    ['按钮文案',D.wxmsg.dBtn,'来源：业务规则静态文案<br>限制：—<br>更新：消息生成时写入','点击卡片 → 直接进入首页']],
+  fixed:'品牌行（头像+名称）/ 通知标题+🔔 / 关键词底栏+「小程序 ›」均为微信订阅消息标准部件，系统写死，不进字段表'
+})
+});
+/* ================================================================
+   37 流程数据 A：bf-new 演示状态 + GOALS + BF_FLOWS（bf-new/bf-old）
+   bf-sign/bf-back 由 38 以 Object.assign 续挂
+================================================================ */
+/* —— bf-new 流程演示状态：兑换结果/卡片阶段（仅服务新用户首单流程，与全局 userPts 隔离） —— */
+let bfNExDone=false,bfNPhase='',bfMask=null,bfNPts=D.bfPtsInit,bfNDone={},bfNTask=null;
+/* —— 功能目标总览（链路级）：一个功能目标一个 GOALS 条目；
+   steps=全局主线关键动作（g 连续 1-N，分歧不占步只写 fork 标注）；
+   flow/step 指向 bf 流程环节，须与 BF_FLOWS 里的 g 双向对齐 —— */
+const GOALS={};
+const BF_FLOWS={
+'bf-new':{
+  no:'B1',icon:'①',title:'新用户-首单流程',
+  def:'目标：新用户从进入小程序到完成「领券 → 下单 → 已付款积分到账 → 商城兑换打款」完整闭环，建立积分价值认知。已付款即积分到账（无订阅授权/无积分预告/无微信卡片）；到账抽屉【好的】停首页即结束，【去兑换】连续完成首次兑换。',
+  init:{view:'go'},
+  cond:['新用户首次进入','已付款即积分到账，无需订阅授权'],
+  steps:[
+    {no:'①',nm:'进入首页领红包',end:'首页',drw:'否',interact:'浏览红包网格',imp:'入口可见性是首单转化前提',act:'新人进入首页看到 '+D.hb.daily+' 张红包（饿 '+D.hb.elm+' + 美 '+D.hb.mt+'）',r:'newHome',brs:[]},
+    {no:'②',nm:'领取红包 +'+D.hb.gain,end:'首页',drw:'【领取成功】',interact:'点「领取 +5」',imp:'积分 +'+D.hb.gain+'，按钮变「去下单」',act:'领红包得积分',branch:'弹【领取成功】',r:'newGet',auto:'d-get',brs:[]},
+    {no:'③',nm:'跳转外卖平台',end:'首页',drw:'【即将打开"美团"小程序】',interact:'点「允许」',imp:'跳端确认后携带 CPS 归因',act:'点「去下单」弹微信跳端确认，允许后进入美团/饿了么下单页',branch:'取消则停留首页',r:'newJump',auto:'d-jump',brs:[]},
+    {no:'⇄',nm:'生态转化：小程序 → 第三方平台',end:'-',drw:'否',interact:'无（系统跳转）',imp:'CPS 归因跳出，订单/付款状态后续回传积分体系',act:'自家小程序跳转到第三方小程序（饿了么/美团）完成下单',r:'ecoOut',brs:[]},
+    {no:'④',nm:'首次下单·支付成功',end:'-',drw:'否',interact:'点「立即支付 '+D.new.payYuan+'」',imp:'生成平台订单',act:'下单并付款 '+D.new.payYuan+'（'+D.new.platform+' · 肯德基）',r:'newOrder',brs:[]},
+    {no:'⑤',nm:'已付款·积分到账',end:'首页',drw:'【积分到账通知】',interact:'点【去兑换】→【引导兑换】→【确认兑换】',imp:'已付款即入账 佣金×50%×2000，3 连弹引导首次兑换',act:'支付成功 → 自动弹到账通知（'+D.new.ptsText+' 入池）→ 点【去兑换】连续3连弹完成首次兑换',branch:'3 连弹：到账→引导→确认兑换',r:'newArrive',brs:[{t:'再看到账弹窗',fn:'showDrawer',arg:'d-bf-arrive'}]},
+    {no:'⑥',nm:'商城兑换·首次打款',end:'积分商城',drw:'【确认兑换】',interact:'看打款成功悬浮 → 点【结束】',imp:'积分够即可直接兑换，扣积分',act:'承接⑤3连弹：扣 '+D.tasks[0].ptsText+' → 顶部悬浮打款成功 → 停回商城点【结束】',r:'newExch',brs:[{t:'📱 打开真实积分商城',fn:'nav',arg:'mall'}]},
+    {no:'✅',nm:'流程结束',end:'-',drw:'否',interact:'点商城【结束】进完成页',imp:'完成页标注兑换结果',act:'现金到账微信零钱，完成页闭环',r:'newEnd',brs:[]}
+  ],
+  flow:`🆕 新用户-首单流程
+│
+├─ ① 进入首页领红包（小程序-首页）
+├─ ② 领取红包 +5（小程序-首页 ·【领取成功】）
+├─ ③ 跳转外卖平台：【即将打开"美团"小程序】→ 允许
+├─ ⇄ 生态转化：小程序 → 第三方平台（CPS 归因跳出下单）
+├─ ④ 首次下单·支付成功 ${D.new.payYuan}（外部-饿了么）
+├─ ⑤ 已付款·积分到账 ${D.new.ptsText}：自动弹【积分到账通知】→ 点【去兑换】连续3连弹
+│        【积分到账通知】→【引导兑换】→【确认兑换】扣 ${D.tasks[0].ptsText}
+│
+├─ ⑥ 商城兑换·首次打款：扣积分 → 悬浮打款成功 → 停回商城点【结束】
+│
+└─ ✅ 流程结束：现金到微信零钱，完成页闭环`},
+'bf-old':{
+  no:'B2',icon:'②',title:'老用户-下单流程',
+  def:'目标：老用户再次领券下单，已付款积分到账即止（不含兑换），链路与新用户首单一致。',
+  init:{view:'ok'},
+  cond:['无特殊限制（老用户已完成首单）'],
+  steps:[
+    {no:'①',nm:'进入首页领红包',end:'首页',drw:'否',interact:'-',imp:'老客进入，本周红包已刷新',act:'进入首页',r:'newHome',brs:[]},
+    {no:'②',nm:'领取红包 +'+D.hb.gain,end:'首页',drw:'【领取成功】',interact:'点「领取 +5」',imp:'积分 +'+D.hb.gain+'，按钮变「去下单」',act:'领红包得积分',r:'newGet',auto:'d-get',brs:[]},
+    {no:'③',nm:'跳转外卖平台',end:'首页',drw:'跳端确认',interact:'点「允许」',imp:'跳转饿了么/美团下单',act:'微信跳端确认弹窗',r:'newJump',auto:'d-jump',brs:[]},
+    {no:'⇄',nm:'生态转化：小程序 → 第三方平台',end:'-',drw:'否',interact:'无（系统跳转）',imp:'CPS 归因跳出，订单/付款状态后续回传积分体系',act:'自家小程序跳转到第三方小程序（美团/饿了么）完成下单',r:'ecoOut',brs:[]},
+    {no:'④',nm:'再次下单·支付成功',end:'-',drw:'否',interact:'完成支付',imp:'订单金额 '+D.old.pay+' 元',act:'支付成功页',r:'oldOrder',brs:[]},
+    {no:'⑤',nm:'已付款·积分到账',end:'首页',drw:'【积分到账通知】',interact:'点【我知道了】',imp:'已付款即入账 佣金×50%×2000',act:'支付成功 → 自动弹到账通知（'+D.old.ptsText+' 入池）→【我知道了】停首页',r:'oldArrive',brs:[]},
+    {no:'✅',nm:'流程结束',end:'首页',drw:'否',interact:'无',imp:'无',act:'到账即止 ✅（不含兑换）',r:'oldEnd',brs:[]}
+  ],
+  flow:`🔁 老用户-下单流程
+│
+├─ ① 进入首页领红包（小程序-首页）
+├─ ② 领取红包 +5（首页 ·【领取成功】）
+├─ ③ 跳转外卖平台（首页 · 跳端确认弹窗）
+├─ ⇄ 生态转化：小程序 → 第三方平台（CPS 归因跳出下单）
+├─ ④ 再次下单 · 支付成功（外部-美团 ${D.old.payYuan}）
+├─ ⑤ 已付款 · 积分到账：自动弹【积分到账通知】（${D.old.ptsText} 入池）→【我知道了】停首页
+│
+└─ ✅ 流程结束：积分到账即止（不含兑换）`}
+};
+/* ================================================================
+   38 流程数据 B：bf-sign / bf-back（Object.assign 续挂 BF_FLOWS）
+================================================================ */
+Object.assign(BF_FLOWS,{
+'bf-sign':{
+  no:'B3',icon:'③',title:'签到 · 每天召回',
+  def:'目标：用户进入签到页，先订阅「每天召回」模板（TM1004），系统每日推送召回卡片到首页；订阅后立即签到得积分（按档位递增）。无月卡补签/无断签转化。',
+  init:{view:'cont'},
+  cond:['签到前先订阅 1 条「每天召回」模板（TM1004），允许后才能签到','连续签到档位 '+D.sign.t1+'→'+D.sign.t6+' 递增，断签从 +'+D.sign.t1+' 重计（仅演示，无补签）'],
+  steps:[
+    {no:'①',nm:'进入签到页',end:'签到',drw:'否',interact:'首页提醒条进入',imp:'无',act:'查看连续天数与 7 日档位',r:'signHome',brs:[]},
+    {no:'②',nm:'订阅「每天召回」',end:'签到',drw:'【订阅授权】',interact:'点「允许」',imp:'订阅 TM1004，系统每天推送召回卡片',act:'微信原生订阅弹窗：每天召回（TM1004）',branch:'取消则不能签到，停留本步',r:'signSub',auto:'d-sign-sub',brs:[]},
+    {no:'③',nm:'点「立即签到 +'+D.sign.today+'」',end:'签到',drw:'否',interact:'点立即签到',imp:'触发签到',act:'发起签到',r:'signTap',brs:[]},
+    {no:'④',nm:'签到成功 +'+D.sign.today,end:'签到',drw:'【签到成功】',interact:'-',imp:'按档位发放',act:'弹【签到成功】，档位 '+D.sign.t1+'→'+D.sign.t6+' 递增',r:'signOkA',auto:'d-sign-ok',brs:[]},
+    {no:'✅',nm:'流程结束',end:'签到',drw:'否',interact:'无',imp:'无',act:'签到完成 ✅（系统每日推召回卡）',r:'signEnd',brs:[]}
+  ],
+  flow:`📅 签到 · 每天召回
+│
+├─ ① 进入签到页（小程序-签到）
+├─ ② 订阅「每天召回」：微信订阅弹窗（TM1004）→ 允许
+├─ ③ 点「立即签到 +${D.sign.today}」
+├─ ④ 签到成功 +${D.sign.today}【签到成功】按档位发放
+│
+└─ ✅ 流程结束：系统每日推召回卡片到首页`}
+});
+/* ================================================================
+   39 BF_R 快照 A：bfNHome 首页快照工厂 + BF_R 新建（newHome…newEnd）
+   hero 复用 TPL.heroCard；红包卡为彩色渐变 4 态变体 → card() 逃生门
+   old/sign 渲染器由 40 以 Object.assign 续挂
+================================================================ */
+/* —— bf-new 首页快照：复刻真实首页 p-home（积分 hero + 签到提醒 + 2×3 红包网格 + 商城入口） —— */
+function bfNHome(stage){
+  const isOld=bfCur==='bf-old';
+  const ptsMap=isOld?D.snap.oldPts:D.snap.newPts;
+  const subMap=isOld?D.snap.oldSub:D.snap.newSub;
+  const card=(pf,amt,c1,c2,tc,st)=>{
+    const btnC=tc;
+    const bg='background:linear-gradient(135deg,'+c1+','+c2+')';
+    let btn;
+    if(st==='got')btn='<button style="width:100%;border:none;border-radius:14px;background:rgba(255,255,255,.55);color:#fff;font-size:12px;font-weight:700;padding:7px 0" disabled>已领取 ✓</button>';
+    else if(st==='go')btn='<button style="width:100%;border:none;border-radius:14px;background:#fff;color:'+btnC+';font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="bfNext()">去下单</button>';
+    else if(st==='get')btn='<button style="width:100%;border:none;border-radius:14px;background:#fff;color:'+btnC+';font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="bfNext()">领取 +5</button>';
+    else btn='<button style="width:100%;border:none;border-radius:14px;background:#fff;color:'+btnC+';font-size:12px;font-weight:700;padding:7px 0">领取 +5</button>';
+    return '<div style="'+bg+';border-radius:12px;padding:12px 10px;color:#fff"><div style="font-size:11px;opacity:.9">'+pf+'红包</div><div style="font-size:17px;font-weight:800;margin:4px 0 8px">'+amt+'</div>'+btn+'</div>';
+  };
+  const st=i=>{
+    if(stage==='fresh')return i===0?'get':'idle';
+    if(stage==='got')return i===0?'got':(i===1?'go':'idle');
+    if(stage==='back')return 'idle';
+    return i===0?'got':'idle';
+  };
+  return TPL.heroCard({label:D.heroLabel,value:ptsMap[stage],sub:subMap[stage],fs:26})
+  +'<div class="card" style="display:flex;align-items:center;gap:10px;padding:13px 16px">'
+  +'<div style="font-size:22px">📅</div><div style="flex:1"><div style="font-size:14px;font-weight:700">'+D.sign.remind+'</div><div style="font-size:11px;color:#999;margin-top:2px">'+D.sign.tip2+'</div></div>'
+  +'<div style="background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:16px">去签到</div></div>'
+  +'<div class="card"><div style="font-size:15px;font-weight:700;margin-bottom:4px">🧧 领外卖红包</div>'
+  +'<div style="font-size:11px;color:#999;margin-bottom:12px">'+D.hb.tip+'</div>'
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+  +card(D.redPackets[0].pf,D.redPackets[0].amt,D.redPackets[0].c1,D.redPackets[0].c2,D.redPackets[0].tc,st(0))
+  +card(D.redPackets[1].pf,D.redPackets[1].amt,D.redPackets[1].c1,D.redPackets[1].c2,D.redPackets[1].tc,st(1))
+  +card(D.redPackets[2].pf,D.redPackets[2].amt,D.redPackets[2].c1,D.redPackets[2].c2,D.redPackets[2].tc,st(2))
+  +card(D.redPackets[3].pf,D.redPackets[3].amt,D.redPackets[3].c1,D.redPackets[3].c2,D.redPackets[3].tc,st(3))
+  +card(D.redPackets[4].pf,D.redPackets[4].amt,D.redPackets[4].c1,D.redPackets[4].c2,D.redPackets[4].tc,st(4))
+  +card(D.redPackets[5].pf,D.redPackets[5].amt,D.redPackets[5].c1,D.redPackets[5].c2,D.redPackets[5].tc,st(5))
+  +'</div></div>'
+  +'<div class="card" style="display:flex;align-items:center;gap:10px;padding:14px 16px">'
+  +'<div style="font-size:24px">🏪</div><div style="flex:1"><div style="font-size:14px;font-weight:700">积分商城</div><div style="font-size:11px;color:#999;margin-top:2px">'+D.mallEntrySub+'</div></div><div style="color:#ccc;font-size:14px">›</div></div>';
+}
+const BF_R={
+  /* ① 新用户-首单流程：首页/商城快照复刻真实 Tab 页（hero+签到提醒+红包网格+商城入口） */
+  newHome(){return bfNHome('fresh')},
+  newGet(){return bfNHome('got')},
+  newSub(){return bfNHome('got')},
+  newJump(){return bfNHome('got')},
+  newOrder(){
+    return '<div style="padding:24px 16px 0;text-align:center"><div style="font-size:52px">✅</div>'
+    +'<div style="font-size:20px;font-weight:800;margin:12px 0 4px">支付成功</div>'
+    +'<div style="font-size:13px;color:#999">¥ '+D.new.pay+' · '+D.new.platform+'</div></div>'
+    +'<div class="card" style="margin-top:16px"><div class="row"><span>支付方式</span><span>'+D.new.payWay+'</span></div>'
+    +'<div class="row"><span>下单门店</span><span>'+D.new.shop+'</span></div></div>'
+    +'<div style="padding:12px 16px 0"><button class="btn btn-primary" onclick="bfNext()">完成</button></div>';
+  },
+  newArrive(){
+    if(bfNPhase!=='home'){bfNPhase='home';setTimeout(()=>showDrawer('d-bf-arrive'),350)}
+    return bfNHome('arrived');
+  },
+  newExch(){
+    const tasks=D.tasks.map(t=>[t.name,t.pts]);
+    const grid=tasks.map(t=>{
+      const name=t[0],pts=t[1];
+      let btn;
+      if(bfNPts<pts)btn='<button style="width:100%;border:none;border-radius:14px;background:#f0f0f0;color:#bbb;font-size:12px;font-weight:700;padding:7px 0" disabled>积分不足</button>';
+      else btn='<button style="width:100%;border:none;border-radius:14px;background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer" onclick="bfNOpenConfirm(\''+name+' 现金\','+pts+')">兑换</button>';
+      const dim=bfNPts<pts?'color:#bbb':'color:var(--brand)';
+      return '<div style="border:1px solid #f0f0f0;border-radius:12px;padding:12px 10px">'
+      +'<div style="font-size:18px;font-weight:800;'+dim+'">'+name+'</div><div style="font-size:11px;color:#999;margin:3px 0 10px">'+fmt(pts)+' 积分</div>'+btn+'</div>';
+    }).join('');
+    let h=TPL.heroCard({label:D.heroLabel,value:fmt(bfNPts),sub:D.rateText,fs:26})
+    +'<div class="card"><div style="display:flex;background:#f5f5f7;border-radius:10px;padding:3px;margin-bottom:12px">'
+    +'<div style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:8px 0;border-radius:8px;background:#fff;color:var(--brand)">现金任务</div>'
+    +'<div style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:8px 0;border-radius:8px;color:#888">实物任务</div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+grid+'</div></div>'
+    +'<div class="ph">⬜ 实物任务（非本次功能区）</div>';
+    if(bfNExDone)h+='<div style="padding:12px 16px 0"><button class="btn btn-primary" style="background:linear-gradient(90deg,#1a1a1c,#42424a)" onclick="bfNFinish()">结束</button></div>';
+    return h;
+  },
+  newEnd(){
+    return '<div style="background:linear-gradient(135deg,var(--brand),var(--brand2));margin:12px;border-radius:16px;padding:34px 16px 28px;text-align:center;color:#fff"><div style="font-size:44px">🎉</div><div style="font-size:19px;font-weight:800;margin-top:8px">新用户首单流程完成</div><div style="font-size:12px;opacity:.85;margin-top:6px">首次兑换已到账 · 闭环完成</div></div>'
+    +'<div class="card"><div class="row"><span>首单</span><span>'+D.new.payYuan+' → '+D.new.ptsText+' 积分</span></div>'
+    +'<div class="row"><span>首次兑换</span><span style="color:var(--brand)">'+(Object.keys(bfNDone).length?Object.keys(bfNDone).join('、'):'—')+' · 已到账'+D.wxWay+'</span></div></div>'
+    +'<div style="padding:12px 16px 0"><button class="btn btn-primary" onclick="bfReset()">🔄 再走一遍</button></div>';
+  }
+};
+/* —— 生态转化过渡卡（⇄ 无编号环节专用，bf-new/bf-old ⑤⑥⑦ 前共用；形态规范 B12） —— */
+Object.assign(BF_R,{
+  ecoOut(){
+    return '<div class="bf-sys"><div class="ico">🔁</div>'
+    +'<div class="tag">生态转化 · 跨端过渡</div>'
+    +'<div class="t">自家小程序 → 第三方小程序</div>'
+    +'<div class="s">跳出「饿了么/美团」完成下单，CPS 归因使订单与付款状态回流积分体系</div></div>';
+  },
+});
+/* ================================================================
+   39c 流程数据 D + BF_R 快照 D：bf-recall 订阅每天召回策略（B6）
+   签到时订阅 TM1004（每天召回），系统每天推送召回卡片 → 用户点卡进入首页
+   数据：Object.assign 续挂 BF_FLOWS（37 定义）；渲染器复用 newOrder（39）/bfNHome（39）
+================================================================ */
+Object.assign(BF_FLOWS,{
+'bf-recall':{
+  no:'B6',icon:'⑤',title:'订阅每天召回策略',
+  def:'目标：系统每天推送召回卡片，用户点卡片直接进入首页，形成「签到 → 每日召回 → 领券下单」的闭环。前置：用户在签到场景已订阅「每天召回」（TM1004）。<span style="color:#C62828;font-weight:700">🔴 红字注：产品需出订阅观测数据观测方案（送达 / 点击 / 回访转化），用于后续迭代订阅逻辑。</span>',
+  init:{view:'ok'},
+  cond:[
+    '用户已在签到场景订阅「每天召回」模板（TM1004，承接 bf-sign ②）',
+    '召回模板「每天召回」（'+D.tm.d+'）订阅后系统每日定时推送 1 条召回卡片',
+    '未订阅 / 订阅次数已用尽则对该用户停发；同一自然日每用户最多推送 1 条'
+  ],
+  steps:[
+    {no:'①',nm:'系统每天推送召回卡片',end:'-',drw:'否',interact:'无',imp:'每日定时推送',act:'系统每天定时推送「每天召回」卡片到微信服务通知，用户在微信聊天列表可见',r:'recallNotify',brs:[]},
+    {no:'②',nm:'用户点卡片 → 进入首页',end:'首页',drw:'否',interact:'点微信服务通知卡片',imp:'直接落首页，不弹抽屉',act:'点卡片直接进入首页（签到提醒条 + 红包网格一起可见），形成每日召回闭环',r:'recallLand',brs:[{t:'📱 打开真实首页',fn:'nav',arg:'home'}]},
+    {no:'✅',nm:'流程结束',end:'首页',drw:'否',interact:'无',imp:'无',act:'召回完成 ✅',r:'recallEnd',brs:[{t:'🆕 看新用户-首单流程',fn:'nav',arg:'bf-new'},{t:'🔄 再走一遍',fn:'bfReset'}]}
+  ],
+  flow:`📢 订阅每天召回策略
+│
+├─ ① 系统每天推送召回卡片到微信服务通知（每日 1 条）
+├─ ② 用户点通知卡片 → 直接进入首页
+│
+└─ ✅ 流程结束：召回完成（同一自然日最多 1 条）`}
+});
+Object.assign(BF_R,{
+  /* ① 微信服务通知卡片（与 p-wxmsgD 同源字面量） */
+  recallNotify(){
+    return '<div style="padding-top:12px;background:#EDEDED;min-height:100%;padding-bottom:16px">'
+    +'<div class="wx-date">'+D.wxmsg.dDate+'</div>'
+    +'<div class="wx-card" onclick="bfNext()"><div class="wx-brand"><span class="wx-ava">'+APP.ava+'</span><span class="wx-name">'+APP.name+'</span></div>'
+    +'<div class="wx-tt">'+D.wxmsg.dTitle+' <span class="wx-bell">🔔</span></div>'
+    +'<div class="wx-f"><span>提醒内容</span><b>'+D.wxmsg.dTip+'</b></div>'
+    +'<div class="wx-f"><span>到账方式</span><b>'+D.wxmsg.dBtn+'</b></div>'
+    +'<div class="wx-sep"></div><div class="wx-foot"><span class="wx-ava-s">'+APP.ava+'</span><span class="wx-kw">'+D.msgs.kwD+'</span><span class="wx-go">小程序 ›</span></div>'
+    +'</div></div>';
+  },
+  /* ② 点卡落地首页：复用首页快照工厂 */
+  recallLand(){return bfNHome('fresh')},
+  recallEnd(){
+    return '<div class="card" style="text-align:center;padding:40px 16px"><div style="font-size:48px">✅</div>'
+    +'<div style="font-size:16px;font-weight:700;margin-top:12px">召回完成</div>'
+    +'<div style="font-size:12px;color:#999;margin-top:6px">每天召回通知已把用户带回首页</div></div>';
+  }
+});
+/* ================================================================
+   40 BF_R 快照 B：oldOrder…oldEnd + sign* + back*（Object.assign 续挂）
+================================================================ */
+Object.assign(BF_R,{
+  /* ② 老用户-下单流程（①~④ 复用 newHome/newGet/newSub/newJump） */
+  oldOrder(){
+    return '<div style="padding:24px 16px 0;text-align:center"><div style="font-size:52px">✅</div>'
+    +'<div style="font-size:20px;font-weight:800;margin:12px 0 4px">支付成功</div>'
+    +'<div style="font-size:13px;color:#999">¥ '+D.old.pay+' · '+D.old.platform+'</div></div>'
+    +'<div class="card" style="margin-top:16px"><div class="row"><span>支付方式</span><span>'+D.old.payWay+'</span></div>'
+    +'<div class="row"><span>下单门店</span><span>'+D.old.shop+'</span></div></div>'
+    +'<div style="padding:12px 16px 0"><button class="btn btn-primary" onclick="bfNext()">完成</button></div>';
+  },
+  oldArrive(){
+    if(bfNPhase!=='home'){bfNPhase='home';setTimeout(()=>showDrawer('d-bf-arrive'),350)}
+    return bfNHome('arrived');
+  },
+  oldEnd(){
+    if(bfView==='ok')return bfNHome('arrived');
+    return '<div class="card" style="text-align:center;padding:40px 16px"><div style="font-size:48px">✅</div>'
+    +'<div style="font-size:16px;font-weight:700;margin-top:12px">积分到账即止</div>'
+    +'<div style="font-size:12px;color:#999;margin-top:6px">老用户下单流程已完成</div></div>';
+  },
+  /* ③ 签到流程：签到即订阅·每天召回 */
+  signHome(){return signHomeSnap()},
+  signSub(){return signHomeSnap()},
+  signTap(){return signHomeSnap()},
+  signOkA(){return signHomeSnapAfter()},
+  signEnd(){
+    return '<div class="card" style="text-align:center;padding:40px 16px"><div style="font-size:48px">✅</div>'
+    +'<div style="font-size:16px;font-weight:700;margin-top:12px">签到完成</div>'
+    +'<div style="font-size:12px;color:#999;margin-top:6px">已订阅每天召回 · 系统每日推送</div></div>';
+  }
+
+});
+/* ================================================================
+   41 签到页快照：signHomeSnap / signHomeSnapAfter
+   蓝底 #4A90D9 hero 与真实首页 hero 不同（逃生门保留手写），数字引 D.sign
+================================================================ */
+/* 签到页快照：今日待签到（D6 高亮今日） */
+function signHomeSnap(){
+  const d6='<div style="flex:1;text-align:center;padding:8px 0;background:var(--brand-soft);border-radius:8px;font-size:11px;color:var(--brand)">D6<br>+'+D.sign.t6+'<br>今日</div>';
+  return '<div class="hero" style="background:linear-gradient(135deg,#4A90D9,#6BA8E8)"><div style="font-size:12px;opacity:.85">连续签到</div><div style="font-size:28px;font-weight:800;margin-top:2px">'+D.sign.days+' 天</div><div style="font-size:11px;opacity:.85;margin-top:4px">今日签到 +'+D.sign.today+' 积分</div></div>'
+  +'<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px">📅 7 日档位</div>'
+  +'<div style="display:flex;gap:4px">'
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D1<br>+'+D.sign.t1+'<br>已签</div>'
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D2<br>+'+D.sign.t2+'<br>已签</div>'
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D3<br>+'+D.sign.t3+'<br>已签</div>'
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D4<br>+'+D.sign.t4+'<br>已签</div>'
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D5<br>+'+D.sign.t5+'<br>已签</div>'
+  +d6
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#F5F5F7;border-radius:8px;font-size:11px;color:#999">D7<br>+'+D.sign.t7+'<br>明日</div>'
+  +'</div></div>'
+  +'<div style="padding:12px 16px 0"><button class="btn btn-primary" onclick="bfNext()">立即签到 +'+D.sign.today+'</button></div>'
+  +'<div style="padding:8px 16px 0;text-align:center;font-size:11px;color:#999">已订阅每天召回 · 系统每日推送召回卡片</div>';
+}
+/* 签到成功后的档位快照：D6 已签、D7 明日 */
+function signHomeSnapAfter(){
+  const d6='<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D6<br>+'+D.sign.t6+'<br>已签</div>';
+  const d7='<div style="flex:1;text-align:center;padding:8px 0;background:#F5F5F7;border-radius:8px;font-size:11px;color:#999">D7<br>+'+D.sign.t7+'<br>明日</div>';
+  return '<div class="hero" style="background:linear-gradient(135deg,#4A90D9,#6BA8E8)"><div style="font-size:12px;opacity:.85">连续签到</div><div style="font-size:28px;font-weight:800;margin-top:2px">6 天</div><div style="font-size:11px;opacity:.85;margin-top:4px">今日已签到 +'+D.sign.today+'</div></div>'
+  +'<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px">📅 7 日档位</div>'
+  +'<div style="display:flex;gap:4px">'
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D1<br>+'+D.sign.t1+'<br>已签</div>'
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D2<br>+'+D.sign.t2+'<br>已签</div>'
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D3<br>+'+D.sign.t3+'<br>已签</div>'
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D4<br>+'+D.sign.t4+'<br>已签</div>'
+  +'<div style="flex:1;text-align:center;padding:8px 0;background:#E8F5E9;border-radius:8px;font-size:11px;color:#388E3C">D5<br>+'+D.sign.t5+'<br>已签</div>'
+  +d6+d7
+  +'</div></div>'
+  +'<div style="padding:12px 16px 0"><button class="btn btn-line" disabled>今日已签到</button></div>';
+}
+/* ================================================================
+   42 流程导航 + bf-new/bf-sign 动作函数 + 业务初始化
+================================================================ */
+function bfGo(i){hideDrawer();bfNPhase='';bfStep=i;bfRender()}
+function bfPrev(){if(bfStep>0)bfGo(bfStep-1)}
+function bfNext(){const F=BF_FLOWS[bfCur];if(bfStep<F.steps.length-1)bfGo(bfStep+1)}
+function bfReset(){bfStep=0;bfStateReset();bfRender();notice('已重置本流程')}
+function bfStateReset(){hideDrawer();bfView=BF_FLOWS[bfCur].init.view;
+  if(bfCur==='bf-new'||bfCur==='bf-old'){bfNExDone=false;bfNPhase='';bfMask=null;bfNPts=D.bfPtsInit;bfNDone={};bfNTask=null}}
+function bfSetView(v){bfView=v;bfRender()}
+/* —— bf-new 动作函数：到账弹窗/3连弹引导/商城兑换链 —— */
+function bfNCardArrive(){bfNPhase='home';bfRender();showDrawer('d-bf-arrive')}
+function bfNArriveOk(){hideDrawer();bfGo(BF_FLOWS[bfCur].steps.length-1)}
+function bfNArriveGo(){swapDrawer('d-bf-guide')}
+function bfNJumpOk(){hideDrawer();bfNext()}
+function bfNGoConfirm(){
+  const t=D.tasks.find(x=>bfNPts>=x.pts)||D.tasks[0];
+  bfNTask={name:t.name+' 现金',pts:t.pts};
+  swapDrawer('d-bf-confirm');
+}
+function bfNOpenConfirm(name,pts){bfNTask={name:name,pts:pts};bfMask=null;showDrawer('d-bf-confirm')}
+function bfNDoEx(){
+  const t=bfNTask||{name:D.tasks[0].name+' 现金',pts:D.tasks[0].pts};
+  bfNPts-=t.pts;bfNDone[t.name]=true;bfNExDone=true;
+  hideDrawer();
+  const F=BF_FLOWS[bfCur];
+  const idx=F?F.steps.findIndex(s=>s.r==='newExch'):-1;
+  if(idx>=0)bfStep=idx;
+  bfRender();
+  setTimeout(()=>notice('✓ 打款成功，'+t.name+' 已发往微信零钱'),350)
+}
+function bfNFinish(){bfGo(BF_FLOWS['bf-new'].steps.length-1)}
+/* —— bf-sign 动作函数：签到订阅授权 —— */
+function bfSignSubOk(){hideDrawer();if(bfPages.includes(curPage)){bfNext();}else{doSignAfterSub();}}
+
+/* —— TPL 运行时 hydrate（会话5 通用性验证）：筛选条/我的菜单/商城演示条/现金卡网格
+   统一改由 TPL 渲染挂载；挂载后 DOM 与原静态片段逐字节一致（data-* 属性保留，
+   ordFilter/ptsFilter/exFilter 等交互函数零改动） —— */
+function tplHydrate(){
+  document.getElementById('ordPlatBarHook').outerHTML=TPL.filterTabs({id:'ordPlatBar',attr:'data-p',cur:'all',tabs:[['all','全部平台'],['elm','饿了么'],['mt','美团']],onpick:"ordFilter('p','{v}')",mb:1});
+  document.getElementById('ordStateBarHook').outerHTML=TPL.filterTabs({id:'ordStateBar',attr:'data-s',cur:'all',tabs:[['all','全部状态'],['done','已付款']],onpick:"ordFilter('s','{v}')"});
+  document.getElementById('ptsTabBarHook').outerHTML=TPL.filterTabs({id:'ptsTabBar',attr:'data-d',cur:'all',tabs:[['all','全部'],['in','收入'],['out','支出']],onpick:"ptsFilter('{v}')"});
+  document.getElementById('exTabBarHook').outerHTML=TPL.filterTabs({id:'exTabBar',attr:'data-t',cur:'all',tabs:[['all','全部'],['cash','现金'],['hw','实物']],onpick:"exFilter('{v}')"});
+  document.getElementById('mineMenuHook').outerHTML=TPL.menuList([
+    {ico:'📦',t:'我的订单',fn:"nav('orders')"},
+    {ico:'📊',t:'积分明细',fn:"nav('points')"},
+    {ico:'🧾',t:'兑换记录',fn:"nav('exchange')"},
+    {ico:'💸',t:'提现记录',fn:"nav('cash')"},
+    {ico:'📅',t:'签到',fn:"nav('sign')"}
+  ]);
+  const cashBtns=[
+    {t:'兑换',fn:"showDrawer('d-confirm')",st:'go'},
+    {t:'兑换',fn:"showDrawer('d-confirm')",st:'go'},
+    {t:'兑换',fn:"showDrawer('d-confirm')",st:'go'},
+    {t:'兑换',fn:"showDrawer('d-confirm')",st:'go'},
+    {t:'兑换',fn:"showDrawer('d-confirm')",st:'go'},
+    {t:'积分不足',st:'off'},
+    {t:'积分不足',st:'off'},
+    {t:'积分不足',st:'off'}
+  ];
+  document.getElementById('cashGridHook').outerHTML=TPL.gridCards({cols:2,cards:D.tasks.map((t,i)=>({
+    main:t.name,
+    sub:t.ptsText,btn:cashBtns[i]
+  }))});
+}
+tplHydrate();
+
+/* —— 业务初始化（BIZ 区位于骨架 ⑧ 之前，DOM 已就绪可直接执行；页面标题与 goTab 由骨架 ⑧ 完成） —— */
+syncUI();ordRender();ptsRender();cashRender();exRender();
+
+
+/* ================================================================
+   ⑧ 初始化（v4.0 防御式判空：装配产物中 wxmsg/share 等 DOM 可能被业务配置替换，缺节点不炸）
+================================================================ */
+const _ovT=document.getElementById('ovTitle');if(_ovT)_ovT.textContent=APP.name+' · 总说明';
+const _wxN=document.getElementById('wxName');if(_wxN)_wxN.textContent=APP.name;
+const _shT=document.getElementById('shareTitle');if(_shT&&typeof SHARE==='object'&&SHARE)_shT.textContent=SHARE.title;
+goTab('home');
+</script>
+</body>
+</html>

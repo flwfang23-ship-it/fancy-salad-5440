@@ -1,0 +1,979 @@
+<script type="text/plain" data-ai-only>
+# 激励日报（美团激励）
+
+> 在现有日报功能基础上追加激励模块：统计后台采集美团激励订单数据和单均，运营在统计后台"每日数据"点"重新计算"触发自动推送，总后台按推广位匹配并自动计算预估激励收入，自动分发到客户端。本次只做美团激励，京东等暂不纳入。
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+现有日报功能已打通"联盟收入采集 → 推广位匹配 → 商户归属 → 效果报表"的链路，但只覆盖联盟佣金收入。美团激励（平台活动返佣）是另一条收入渠道，其数据口径、单均计算方式与联盟佣金不同，需要独立的日报页面承载。
+
+- **统计后台侧：** 已有美团激励订单原始数据（一行一笔订单，详情含推广位信息），以及"数据监控 → 奖励单佣金"中的单均数据（单均已预先绑定到每个激励活动）。运营每天在"每日数据"页面点"重新计算"，计算完自动推送。
+- **总后台侧：** 新开"激励日报"页面，承接统计后台推送数据，按推广位匹配，自动计算预估激励收入并分发到客户端。
+- **客户端侧：** 新开激励日报页面，展示收到的激励数据（每推广位一行）。
+
+### 1.2 一句话业务模型
+
+```text
+美团激励订单原始数据（一行一笔订单，详情含推广位信息）
+        +
+奖励单佣金单均数据（已预先绑定到活动）
+        +
+推广位匹配参数（APPKEY + SID，与日报同规则）
+        ↓
+形成商户可查看的推广位激励日报
+```
+
+### 1.3 最终目标
+
+- **数据承接：** 总后台能从统计后台自动接收美团激励订单和单均数据。
+- **数据同步：** 运营在统计后台"每日数据"→"重新计算"触发自动推送，无需手动拉取。
+- **自动计算：** 按推广位匹配后自动计算预估激励收入（订单数 × 单均）。
+- **自动分发：** 已归属数据自动分发到客户端，商户可查看推广位激励日报。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌────────────────────────┬────────────────────────────┬──────────────────────────────┐
+│ 统计后台（运营）       │ 总后台（SaaS）             │ 客户端后台（商户）           │
+├────────────────────────┼────────────────────────────┼──────────────────────────────┤
+│ ① 采集激励订单数据     │                            │                              │
+│   及奖励单佣金单均      │                            │                              │
+│        │               │                            │                              │
+│ ② 运营在每日数据点     │                            │                              │
+│   重新计算             │                            │                              │
+│        │               │                            │                              │
+│        └──────────────→│ ③ 统计后台自动推送数据       │                              │
+│                        │        │                   │                              │
+│                        │ ④ 接收数据，按推广位匹配   │                              │
+│                        │        │                   │                              │
+│                        │ ⑤ 自动计算预估激励收入      │                              │
+│                        │        │                   │                              │
+│                        │ ⑥ 自动分发到客户端          │                              │
+│                        │        │                   │                              │
+│                        │        └──────────────────→│ ⑦ 查看激励日报               │
+│                        │                            │                              │
+└────────────────────────┴────────────────────────────┴──────────────────────────────┘
+```
+
+### 2.2 阶段划分与阅读说明
+
+1. **第一阶段：数据采集与触发（主要参与方：统计后台运营）** — 本章拆为四个模块：3.1 订单原始数据（订单明细在哪、长什么样）、3.2 单均数据（奖励单佣金页怎么维护单均）、3.3 匹配逻辑（复用日报 APPKEY+SID 规则）、3.4 预估激励收入计算。运营在"每日数据"页面点"重新计算"触发自动推送。
+2. **第二阶段：激励日报处理（主要参与方：总后台 SaaS）** — 总后台接收统计后台推送数据后，按推广位匹配，自动计算预估激励收入，完成后自动分发。
+3. **第三阶段：查看激励日报（主要参与方：客户端后台商户）** — 商户在客户端后台查看激励日报，每推广位一行，展示推广位信息、活动信息、支付时间、订单数、单均和预估激励收入。
+
+```text
+第一阶段：数据采集与触发
+① 采集激励订单数据及奖励单佣金单均 → ② 运营在每日数据点重新计算 → ③ 统计后台自动推送数据
+                    ↓
+第二阶段：激励日报处理
+④ 接收数据，按推广位匹配 → ⑤ 自动计算预估激励收入 → ⑥ 自动分发到客户端
+                    ↓
+第三阶段：查看激励日报
+⑦ 查看激励日报
+```
+
+---
+
+## 3. 第一阶段：数据采集与触发
+
+### 3.1 订单原始数据（外部系统）
+
+#### 业务背景
+
+当前环节：① 采集激励订单数据<br>
+页面路径：统计后台 / 激励收入明细<br>
+对下游影响：订单原始数据是匹配推广位、计算预估激励收入的上游输入。<br>
+系统定位：外部系统，不等同于总后台。
+
+激励的订单原始数据落在统计后台的激励收入明细表中，**一行对应一笔订单**。该页面为数据沉淀页，运营无需配置，数据由统计后台采集生成。
+
+#### 字段说明
+
+| 字段名称 | 字段类型 | 说明 |
+| --- | --- | --- |
+| ID | number | 订单记录编号，一行一笔订单 |
+| 推广位名称 | string | 该笔订单归属的推广位名称 |
+| 订单支付时间 | date | 订单支付时间，作为数据日期 |
+| 活动名称 | string | 订单所属的激励活动 |
+| 活动起止时间 | string | 激励活动的起止时间范围 |
+
+#### 示意数据（节选）
+
+| ID | 推广位名称 | 订单支付时间 | 活动名称 | 活动起止时间 |
+| --- | --- | --- | --- | --- |
+| 2030 | （脱敏） | 2026-10-07 | 【10.1-10.12外卖企业媒体日常奖励赛-第36期】 | 2026-10-01 00:00:00 ~ 2026-10-12 23:59:59 |
+| 2031 | （脱敏） | 2026-10-07 | 【10.1-10.12外卖企业媒体日常奖励赛-第36期】 | 2026-10-01 00:00:00 ~ 2026-10-12 23:59:59 |
+| 2035 | （脱敏） | 2026-10-06 | 【10.1-10.12外卖企业媒体日常奖励赛-第36期】 | 2026-10-01 00:00:00 ~ 2026-10-12 23:59:59 |
+
+#### 详情信息
+
+每条订单数据都有**详情**，点开详情可见该笔订单的推广位信息（含 APPKEY、SID 等匹配参数）。3.3 的匹配逻辑即基于详情中的推广位信息进行，列表页本身不展示匹配参数。
+
+#### 业务逻辑
+
+**数据只读：** 统计后台只提交原始订单数据，预估激励收入由总后台在下一阶段计算，不在统计后台展示。
+
+### 3.2 单均数据（外部系统）
+
+#### 业务背景
+
+当前环节：① 采集激励订单数据及奖励单佣金单均<br>
+页面路径：统计后台 / 数据监控 / 奖励单佣金<br>
+对下游影响：单均是预估激励收入计算的第二个输入，已预先绑定到激励活动。<br>
+系统定位：外部系统，不等同于总后台。
+
+单均数据在统计后台左侧导航「数据监控 → 奖励单佣金」页面维护：**一行对应一个日期，一列对应一个渠道**，单元格为该渠道当日的单均金额。页面支持编辑与保存（每行行尾有编辑按钮），单均已预先绑定到各激励活动，总后台计算时按活动直接取用。
+
+#### 字段说明
+
+| 字段名称 | 字段类型 | 说明 |
+| --- | --- | --- |
+| 日期 | date | 单均数据所属自然日，一行一个日期 |
+| 渠道单均 | number | 每列一个渠道，单元格为该渠道当日的单均金额 |
+
+渠道列包括：直推-美团激励、美团联盟激励、云瞻-美团激励、推客-美团激励、万单宝-美团激励、花小格-外卖节、花小格-推选好店等（本次激励日报只消费美团激励相关渠道）。
+
+#### 示意结构（节选）
+
+| 日期 | 直推-美团激励 | 美团联盟激励 | 云瞻-美团激励 | 推客-美团激励 | 万单宝-美团激励 | 花小格-外卖节 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2026-09-14 | 0.75 | 0.50 | 0.00 | 0.46 | 0.00 | 0.00 |
+| 2026-09-13 | 0.50 | 0.50 | 0.00 | 0.40 | 0.00 | 0.00 |
+
+#### 业务逻辑
+
+**预先绑定：** 单均已预先绑定到每个激励活动，运行时无需临时匹配，总后台计算时按活动直接取用。
+
+**页面可维护：** 运营可在奖励单佣金页面编辑各渠道每日单均，保存后生效。
+
+### 3.3 匹配逻辑（复用日报规则）
+
+#### 业务背景
+
+当前环节：③ 统计后台自动推送数据、④ 接收数据按推广位匹配<br>
+页面路径：总后台（系统处理逻辑，无独立页面）<br>
+对下游影响：匹配结果决定数据归属到哪个商户，未匹配数据不进报表。
+
+本模块为**逻辑说明，无独立页面**。激励数据的推广位匹配规则复用现有日报的匹配逻辑：3.1 订单明细的每条数据详情中带有推广位信息（APPKEY、SID），匹配方式与日报完全一致。
+
+#### 匹配规则（复制自日报）
+
+- 数据来源只提交原始数据，不直接指定 SaaS 商户和推广位。
+- SaaS 先匹配推广位，再通过推广位确定商户归属。
+- 美团使用 APPKEY 和原始 SID 共同匹配同一个推广位：原始 APPKEY 与推广位的美团 APPKEY 一致，且原始 SID 与同一推广位的美团 SID 一致，两者全部满足才能确定唯一推广位。
+- 只匹配其中一个字段，或无法确定唯一推广位时，记录不进入商户报表。
+- 客户端后台只展示当前商户的已归属数据。
+- 平台匹配参数不向客户端和 C 端用户展示。
+
+### 3.4 预估激励收入计算
+
+#### 业务背景
+
+当前环节：⑤ 自动计算预估激励收入<br>
+页面路径：总后台（系统处理逻辑，无独立页面）<br>
+对下游影响：计算结果进入 4.1 激励日报页面展示，并自动分发到客户端。
+
+本模块为**逻辑说明，无独立页面**。总后台获取数据后自动完成计算。
+
+#### 计算衔接
+
+```text
+3.1 订单原始数据（按推广位汇总得到订单数）
+        +
+3.2 单均数据（活动已预先绑定单均）
+        +
+3.3 匹配逻辑（确定推广位与商户归属）
+        ↓
+预估激励收入 = 订单数 × 单均
+        ↓
+进入 4.1 激励日报展示，并自动分发到客户端
+```
+
+#### 业务逻辑
+
+**自动计算：** 预估激励收入 = 订单数 × 单均，由总后台在数据处理阶段自动完成，不在统计后台计算，无需人工干预。
+
+---
+
+## 4. 第二阶段：激励日报处理
+
+### 4.1 激励日报（新增页面）
+
+#### 业务背景
+
+当前环节：⑤ 自动计算预估激励收入、⑥ 自动分发到客户端<br>
+页面路径：总后台 / 激励日报<br>
+对下游影响：已归属的激励日报数据自动分发到客户端，供商户查看。<br>
+表格类型：列表页
+
+本次在总后台新开"激励日报"列表页，承接统计后台自动推送的美团激励订单数据和单均数据（经 3.3 匹配、3.4 计算后落表），完成后自动分发到客户端。
+
+#### 字段说明
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 推广位ID | string | 是 | 是 | 否 | **数据来源：** 统计后台美团激励收入数据。<br>**逻辑：** 推广位的唯一标识，总后台据此匹配推广位台账。<br>**用途：** 用于系统识别和追溯推广位。 |
+| 推广位名称 | string | 是 | 是 | 否 | **数据来源：** 推广位台账（用户自定义命名）。<br>**逻辑：** SaaS/客户端侧字段，由商户在推广位台账中自定义命名，非统计后台传入。<br>**用途：** 推广位业务名称，用于商户识别推广位。 |
+| 项目 | string | 是 | 是 | 否 | **数据来源：** 统计后台美团激励收入数据。<br>**逻辑：** 管理后台维度字段，客户端不展示。<br>**用途：** 用于总后台内部区分不同项目。 |
+| 活动名称 | string | 是 | 是 | 否 | **数据来源：** 统计后台美团激励收入数据。<br>**逻辑：** 激励活动的业务名称。<br>**用途：** 用于识别激励活动。 |
+| 活动起止时间 | string | 是 | 是 | 否 | **数据来源：** 统计后台美团激励收入数据。<br>**逻辑：** 激励活动的起止时间范围。<br>**用途：** 用于明确活动有效期。 |
+| 订单支付时间 | date | 是 | 是 | 否 | **数据来源：** 统计后台美团激励收入数据。<br>**逻辑：** 订单支付日期，统计后台传入。<br>**用途：** 用于按日期筛选和统计。 |
+| 订单数 | number | 是 | 是 | 否 | **数据来源：** 统计后台美团激励收入数据。<br>**逻辑：** 该推广位在活动内的订单数量。<br>**用途：** 参与预估激励收入计算。 |
+| 单均 | number | 是 | 是 | 否 | **数据来源：** 统计后台奖励单佣金数据（已绑定到活动）。<br>**逻辑：** 每个激励活动预先绑定的单均金额。<br>**用途：** 参与预估激励收入计算。 |
+| 预估激励收入 | number | 是 | 是 | 否 | **数据来源：** 总后台自动计算。<br>**逻辑：** 预估激励收入 = 订单数 × 单均。<br>**用途：** 展示该推广位在该激励活动下的预估收入。 |
+
+#### 列表交互
+
+**交互：筛选**<br>
+**业务用途**：按日期范围、项目、推广位或活动筛选列表，缩小查看范围。
+
+#### 业务逻辑
+
+**数据同步节点：** 数据由统计后台自动推送触发——运营在统计后台"每日数据"页面点"重新计算"，计算完成后统计后台自动推送到总后台，总后台接收后自动完成匹配、计算和分发，无需人工干预。
+
+**数据只读：** 激励日报中的数据均为只读，总后台不能修改联盟原始数据。
+
+**自动分发：** 匹配归属和计算完成后，数据自动分发到客户端，无需人工操作。
+
+**项目字段：** 仅总后台可见，客户端不展示。
+
+**预估激励收入计算：** 预估激励收入 = 订单数 × 单均，计算过程见 3.4。
+
+---
+
+## 5. 第三阶段：查看激励日报
+
+### 5.1 客户端激励日报（新增页面）
+
+#### 业务背景
+
+当前环节：⑦ 查看激励日报<br>
+页面路径：客户端后台 / 数据报表 / 激励日报<br>
+对下游影响：本页为只读结果展示，无下游配置影响。<br>
+表格类型：列表页
+
+本次在客户端后台"数据报表"下新增"激励日报"入口，承载推广位激励数据的列表查看。页面以推广位为主要汇总对象，每推广位一行。
+
+#### 字段说明
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 推广位ID | string | 是 | 是 | 否 | **数据来源：** 总后台分发。<br>**逻辑：** 推广位的唯一标识。<br>**用途：** 用于系统识别。 |
+| 推广位名称 | string | 是 | 是 | 否 | **数据来源：** 推广位台账（用户自定义命名）。<br>**逻辑：** SaaS/客户端侧字段，由商户在推广位台账中自定义命名，经总后台分发展示。<br>**用途：** 推广位业务名称，用于商户识别推广位。 |
+| 活动名称 | string | 是 | 是 | 否 | **数据来源：** 总后台分发。<br>**逻辑：** 激励活动的业务名称。<br>**用途：** 用于识别激励活动。 |
+| 活动起止时间 | string | 是 | 是 | 否 | **数据来源：** 总后台分发。<br>**逻辑：** 激励活动的起止时间范围。<br>**用途：** 用于明确活动有效期。 |
+| 订单支付时间 | date | 是 | 是 | 否 | **数据来源：** 总后台分发。<br>**逻辑：** 订单支付日期。<br>**用途：** 用于按日期筛选。 |
+| 订单数 | number | 是 | 是 | 否 | **数据来源：** 总后台分发。<br>**逻辑：** 该推广位在活动内的订单数量。<br>**用途：** 用于比较推广位订单效果。 |
+| 单均 | number | 是 | 是 | 否 | **数据来源：** 总后台分发。<br>**逻辑：** 每个激励活动预先绑定的单均金额。<br>**用途：** 用于理解收入构成。 |
+| 预估激励收入 | number | 是 | 是 | 否 | **数据来源：** 总后台分发。<br>**逻辑：** 预估激励收入 = 订单数 × 单均（总后台已计算）。<br>**用途：** 用于比较推广位的激励收入效果。 |
+
+#### 列表交互
+
+**交互：筛选**<br>
+**业务用途**：按日期范围、推广位或活动筛选列表，缩小查看范围。
+
+#### 业务逻辑
+
+**数据只读：** 激励日报中的数据均为只读，客户端不能修改。
+
+**统一数据源：** 客户端数据全部来自总后台自动分发，不单独生成另一套数据。
+
+**项目字段不展示：** 统计后台的"项目"字段仅总后台可见，客户端不展示。
+
+### 5.2 客户端数据大盘（新增页面）
+
+#### 业务背景
+
+当前环节：⑦ 查看激励日报<br>
+页面路径：客户端后台 / 数据报表 / 数据大盘<br>
+对下游影响：本页为只读结果展示，汇总收入公式变更（新增激励收入项）。
+
+本次在客户端后台"数据报表"下新增"数据大盘"叶子页，**在现有大盘基础上只改汇总收入逻辑**，其他区域（订单汇总、折线图、饿了么/美团明细）保持不变。
+
+参考客户端现有数据大盘布局，结构如下：
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  顶部概览卡                                                  │
+│  ┌───────────────────────┐  ┌───────────────────────────┐   │
+│  │ 收入汇总               │  │ 订单汇总                   │   │
+│  │  ¥ xxx.xx              │  │  x 单                      │   │
+│  └───────────────────────┘  └───────────────────────────┘   │
+│                                                             │
+│  ┌───────────────────────┐  ┌───────────────────────────┐   │
+│  │ 收入折线图（近7天）    │  │ 订单折线图（近15天）        │   │
+│  └───────────────────────┘  └───────────────────────────┘   │
+│                                                             │
+│  收入与订单数据明细                                          │
+│  ┌──────────┬──────────┬──────────┬──────────┐              │
+│  │收入汇总   │饿了么收入  │美团收入   │激励收入 🆕│              │
+│  ├──────────┼──────────┼──────────┼──────────┤              │
+│  │¥ xxx.xx  │¥ xxx.xx  │¥ xxx.xx  │¥ xxx.xx  │              │
+│  └──────────┴──────────┴──────────┴──────────┘              │
+│  ┌──────────┬──────────┬──────────┐                          │
+│  │订单汇总   │饿了么订单  │美团订单   │                          │
+│  ├──────────┼──────────┼──────────┤                          │
+│  │x 单      │x 单      │x 单      │                          │
+│  └──────────┴──────────┴──────────┘                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 汇总收入公式变更（唯一改动）
+
+| | 原公式 | 新公式 |
+|---|---|---|
+| 收入汇总 | 饿了么收入 + 美团收入 | 饿了么收入 + 美团收入 + **激励收入** |
+| 订单汇总 | 饿了么订单 + 美团订单 | 饿了么订单 + 美团订单（**不变**） |
+
+**激励收入数值来源：** 5.1 激励日报列表中所有推广位的「预估激励收入之和」，由总后台自动推送到客户端。
+
+#### 字段说明
+
+##### [数据大盘字段]
+
+| 字段名称 | 字段类型 | 数据来源 | 逻辑 |
+| --- | --- | --- | --- |
+| 收入汇总 | number | 总后台分发 | = 饿了么收入 + 美团收入 + 激励收入 |
+| 订单汇总 | number | 总后台分发 | = 饿了么订单 + 美团订单（不变） |
+| 饿了么收入 | number | 总后台分发 | 原有联盟佣金收入 |
+| 美团收入 | number | 总后台分发 | 原有联盟佣金收入 |
+| **激励收入** | number | 总后台分发 | 5.1 激励日报预估激励收入之和（🆕 新增） |
+| 饿了么订单 | number | 总后台分发 | 不变 |
+| 美团订单 | number | 总后台分发 | 不变 |
+| **总单均** | number | 总后台自动计算 | = 收入汇总 / 订单汇总 🆕 |
+| **饿了么单均** | number | 总后台自动计算 | = 饿了么收入 / 饿了么订单 🆕 |
+| **美团单均** | number | 总后台自动计算 | = 美团收入 / 美团订单 🆕 |
+
+#### 业务逻辑
+
+**只改汇总收入公式：** 数据大盘本次唯一改动是收入汇总公式新增激励收入项，折线图、订单汇总、饿了么/美团明细均保持原有逻辑不变。
+
+**激励收入只读：** 激励收入数值由总后台从 5.1 激励日报汇总后自动推送，客户端只读。
+
+**与 5.1 联动：** 激励收入数值 = 5.1 激励日报所有推广位预估激励收入之和，同一数据源。
+
+**单均数据行（收入效率指标）：** 在订单明细卡片行下方追加一行单均数据卡片（总单均 / 饿了么单均 / 美团单均），标注为"收入效率指标"。计算口径：总单均 = 收入汇总 / 订单汇总（简化公式，等价于含激励收入的总和比）；饿了么单均 = 饿了么收入 / 饿了么订单；美团单均 = 美团收入 / 美团订单。
+
+**置灰标记：** 数据大盘中，涉及本次改动的三项（收入汇总、激励收入、总单均）保持正常亮色显示；所有未涉及改动的区域（订单汇总、饿了么/美团收入、饿了么/美团订单、饿了么/美团单均、折线图）整体置灰（浅灰背景+浅灰文字），突出改动范围。
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>激励日报</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用壳 { display: grid; grid-template-columns: var(--泳道宽) var(--菜单宽) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+
+/* ── 中：后台菜单（白底黑字，全铺开，父节点不可点） ── */
+.菜单区 { background: #fff; color: #334155; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+.菜单品牌 { padding: 18px 18px 14px; border-bottom: 1px solid #eef2f7; }
+.菜单品牌名 { font-size: 16px; font-weight: 700; color: #172033; line-height: 1.4; }
+.菜单品牌小 { font-size: 11px; color: #94a3b8; margin-top: 3px; letter-spacing: .5px; }
+.菜单父 { padding: 16px 18px 4px; font-size: 12px; color: #0f6b8f; font-weight: 700; letter-spacing: .5px; }
+.菜单文档, .菜单叶子 { display: flex; align-items: center; gap: 8px; color: #334155; font-size: 13.5px; cursor: pointer; user-select: none; border-left: 3px solid transparent; }
+.菜单文档 { padding: 9px 18px; }
+.菜单叶子 { padding: 8px 18px 8px 30px; font-size: 13px; }
+.菜单文档.子级 { padding: 9px 18px 9px 30px; font-size: 13px; }
+.菜单文档:hover, .菜单叶子:hover { background: #f1f5f9; color: #0f172a; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.菜单号 { font-family: Consolas, monospace; font-size: 11px; color: #94a3b8; min-width: 26px; }
+.菜单文档.激活 .菜单号, .菜单叶子.激活 .菜单号 { color: #0f6b8f; }
+.菜单图标 { font-size: 13px; }
+
+/* ── 中：内容工作区 ── */
+.内容区 { overflow-y: auto; background: #f1f5f9; }
+.页面面板 { display: none; padding: 22px 26px 48px; }
+.页面面板.激活 { display: block; }
+.页面卡 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(15,35,52,.04); margin-bottom: 18px; }
+.页面头 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.页面头 h2 { margin: 0; font-size: 19px; color: #172033; }
+.主按钮 { padding: 7px 16px; border: 1px solid #0f6b8f; border-radius: 6px; background: #0f6b8f; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.主按钮:hover { background: #0c5673; }
+
+/* ── 左：常驻泳道栏 ── */
+.泳道区 { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 14px 12px 28px; }
+.泳道区 > h3 { margin: 2px 4px 10px; font-size: 14px; color: #334155; }
+.泳道简介 { margin: 0 4px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.75; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分点 { margin: 0 4px 12px; padding: 9px 11px; list-style: none; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分点 li { padding: 4px 0; font-size: 12px; line-height: 1.65; color: #475569; border-bottom: 1px dashed #e2e8f0; }
+.泳道简介-分点 li:last-child { border-bottom: none; }
+.泳道简介-分点 li strong { color: #2b6cb0; margin-right: 4px; }
+.泳道简介-分组 { margin: 0 4px 12px; padding: 5px 11px; font-size: 12px; line-height: 1.7; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分组 .简介组 { padding: 5px 0 4px; border-bottom: 1px dashed #e2e8f0; }
+.泳道简介-分组 .简介组:last-child { border-bottom: none; }
+.泳道简介-分组 .简介组标题 { display: block; color: #2b6cb0; font-weight: 700; margin-right: 4px; white-space: nowrap; }
+.泳道简介-分组 .简介组条目 { padding: 2px 0 0 20px; color: #475569; }
+.泳道简介-分组 .简介跳转, .泳道简介-分点 .简介跳转 { color: #1d4ed8; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.泳道区 .泳道图 { font-size: 13px; }
+</style>
+<style id="css-组件">
+/* ── 文档页排版 ── */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 26px 0 12px; font-size: 20px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.阅读标题 { line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 20px; margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 16px; margin: 22px 0 8px; } .文档正文 h5 { font-size: 14px; margin: 18px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.行内代码 { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; }
+.代码块 pre { margin: 0; padding: 16px; background: #fff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; }
+.代码块 code { display: block; font-family: Consolas, Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ── 流程信息卡 ── */
+.流程信息卡 { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; background: linear-gradient(180deg,#f8fbff,#f1f7ff); margin-bottom: 16px; overflow: hidden; }
+.流程信息卡-头部 { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #dbeafe; }
+.流程步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.流程信息卡-环节名 { font-size: 13.5px; font-weight: 600; color: #1e3a8a; }
+.流程信息卡-正文 { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+.流程信息卡-行 { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.流程信息卡-标签 { flex-shrink: 0; display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+
+/* ── 列表页 ── */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 150px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 150px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; white-space: nowrap; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+/* v2 详情/编辑合并后沿用旧名，保持 CSS 稳定，产出后人类可自行矫正 */
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; margin-right: 6px; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.删除按钮 { padding: 4px 12px; border: 1px solid #ef4444; border-radius: 4px; background: #fff; color: #ef4444; font-size: 12px; cursor: pointer; } .删除按钮:hover { background: #ef4444; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+
+/* ── 字段卡（弹窗表单与详情抽屉共用） ── */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 20px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius:  10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 120px 1fr 28px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 140px; }
+.field-input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; width: 100%; max-width: 360px; font-family: inherit; }
+textarea.field-input { max-width: 100%; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; pointer-events: auto; }
+.field-info-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ── 详情抽屉 / 表单弹窗（右侧滑出） ── */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; max-width: 94vw; height: 100vh; background: #f8fafc; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 60px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: #fff; }
+.panel-title { font-size: 17px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ── 字段弹窗 ── */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ── 泳道图组件（2026 蓝圈号标准版） ── */
+.泳道图 { margin: 0; font-size: 13px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道圆圈 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支说明 { font-size: 12px; color: #b45309; padding: 2px 0 0 26px; line-height: 1.6; }
+.泳道行 { transition: opacity .25s ease; }
+.泳道图[class*="高亮阶段"] .泳道行[data-node-phase] { opacity: .35; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"], .泳道图.高亮阶段2 .泳道行[data-node-phase="2"],
+.泳道图.高亮阶段3 .泳道行[data-node-phase="3"], .泳道图.高亮阶段4 .泳道行[data-node-phase="4"],
+.泳道图.高亮阶段5 .泳道行[data-node-phase="5"], .泳道图.高亮阶段6 .泳道行[data-node-phase="6"],
+.泳道图.高亮阶段7 .泳道行[data-node-phase="7"], .泳道图.高亮阶段8 .泳道行[data-node-phase="8"],
+.泳道图.高亮阶段9 .泳道行[data-node-phase="9"], .泳道图.高亮阶段10 .泳道行[data-node-phase="10"] { opacity: 1; }
+.泳道行.置灰 { opacity: .25 !important; pointer-events: none; }
+.泳道行.正常 { opacity: 1 !important; }
+
+/* ── 提示消息 / 灯箱 / 杂项 ── */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+</style>
+<style id="css-状态">
+.页面面板.激活 { display: block; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.图片灯箱.可见 { display: flex; }
+</style>
+</head>
+<body>
+<div class="应用壳">
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<p class="泳道简介">现有日报功能已打通"联盟收入采集 → 推广位匹配 → 商户归属 → 效果报表"的链路，但只覆盖联盟佣金收入。美团激励（平台活动返佣）是另一条收入渠道，其数据口径、单均计算方式与联盟佣金不同，需要独立的日报页面承载。</p>
+<ul class="泳道简介-分点"><li><strong>统计后台侧：</strong> 已有美团激励订单原始数据（一行一笔订单，详情含推广位信息），以及"数据监控 → 奖励单佣金"中的单均数据（单均已预先绑定到每个激励活动）。运营每天在"每日数据"页面点"重新计算"，计算完自动推送。</li><li><strong>总后台侧：</strong> 新开"激励日报"页面，承接统计后台推送数据，按推广位匹配，自动计算预估激励收入并分发到客户端。</li><li><strong>客户端侧：</strong> 新开激励日报页面，展示收到的激励数据（每推广位一行）。</li></ul>
+<div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;">
+<div class="泳道图-头" style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid #e2e8f0;">
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">统计后台（运营）</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">总后台（SaaS）</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">客户端后台（商户）</div>
+</div><div class="泳道图-体">
+<div class="泳道行" data-swimlane-node="1" data-node-phase="1" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">①</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">采集激励订单数据</span></div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="2" data-node-phase="1" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">②</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">运营在每日数据点</span></div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="3" data-node-phase="1" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">③</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">统计后台自动推送数据</span></div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="4" data-node-phase="2" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">④</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">接收数据，按推广位匹配</span></div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="5" data-node-phase="2" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑤</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">自动计算预估激励收入</span></div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="6" data-node-phase="2" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑥</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">自动分发到客户端</span></div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="7" data-node-phase="3" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑦</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">查看激励日报</span></div></div>
+</div>
+</div></div>
+</aside>
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">激励日报</div><div class="菜单品牌小">B 端业务原型 · v2 母版</div></div>
+<div class="菜单父"><span>需求与流程</span></div>
+<div class="菜单文档 子级 激活" data-menu-page="1" onclick="切换页面('1')"><span class="菜单号">001</span><span>需求背景与目标</span></div>
+<div class="菜单文档 子级" data-menu-page="2" onclick="切换页面('2')"><span class="菜单号">002</span><span>业务流程</span></div>
+<div class="菜单父"><span>第一阶段：数据采集与触发</span></div>
+<div class="菜单叶子" data-menu-page="3.1" onclick="切换页面('3.1')"><span class="菜单号">3.1</span><span class="菜单图标">📋</span><span>订单原始数据</span></div>
+<div class="菜单叶子" data-menu-page="3.2" onclick="切换页面('3.2')"><span class="菜单号">3.2</span><span class="菜单图标">📊</span><span>单均数据</span></div>
+<div class="菜单叶子" data-menu-page="3.3" onclick="切换页面('3.3')"><span class="菜单号">3.3</span><span class="菜单图标">🔗</span><span>匹配逻辑</span></div>
+<div class="菜单叶子" data-menu-page="3.4" onclick="切换页面('3.4')"><span class="菜单号">3.4</span><span class="菜单图标">🧮</span><span>预估激励收入计算</span></div>
+<div class="菜单父"><span>第二阶段：激励日报处理</span></div>
+<div class="菜单叶子" data-menu-page="4.1" onclick="切换页面('4.1')"><span class="菜单号">4.1</span><span class="菜单图标">📋</span><span>激励日报</span></div>
+<div class="菜单父"><span>第三阶段：查看激励日报</span></div>
+<div class="菜单叶子" data-menu-page="5.1" onclick="切换页面('5.1')"><span class="菜单号">5.1</span><span class="菜单图标">📋</span><span>客户端激励日报</span></div>
+<div class="菜单叶子" data-menu-page="5.2" onclick="切换页面('5.2')"><span class="菜单号">5.2</span><span class="菜单图标">📈</span><span>客户端数据大盘</span></div>
+</nav>
+<main class="内容区" id="内容区">
+<section class="页面面板 激活" id="面_1" data-page="1"><div class="页面卡"><div class="页面头"><h2>需求背景与目标</h2></div><div class="文档正文"><h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>现有日报功能已打通"联盟收入采集 → 推广位匹配 → 商户归属 → 效果报表"的链路，但只覆盖联盟佣金收入。美团激励（平台活动返佣）是另一条收入渠道，其数据口径、单均计算方式与联盟佣金不同，需要独立的日报页面承载。</p>
+<ul>
+<li><strong>统计后台侧：</strong> 已有美团激励订单原始数据（一行一笔订单，详情含推广位信息），以及"数据监控 → 奖励单佣金"中的单均数据（单均已预先绑定到每个激励活动）。运营每天在"每日数据"页面点"重新计算"，计算完自动推送。</li>
+<li><strong>总后台侧：</strong> 新开"激励日报"页面，承接统计后台推送数据，按推广位匹配，自动计算预估激励收入并分发到客户端。</li>
+<li><strong>客户端侧：</strong> 新开激励日报页面，展示收到的激励数据（每推广位一行）。</li>
+</ul>
+
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>美团激励订单原始数据（一行一笔订单，详情含推广位信息）
+        +
+奖励单佣金单均数据（已预先绑定到活动）
+        +
+推广位匹配参数（APPKEY + SID，与日报同规则）
+        ↓
+形成商户可查看的推广位激励日报</code></pre></div>
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>数据承接：</strong> 总后台能从统计后台自动接收美团激励订单和单均数据。</li>
+<li><strong>数据同步：</strong> 运营在统计后台"每日数据"→"重新计算"触发自动推送，无需手动拉取。</li>
+<li><strong>自动计算：</strong> 按推广位匹配后自动计算预估激励收入（订单数 × 单均）。</li>
+<li><strong>自动分发：</strong> 已归属数据自动分发到客户端，商户可查看推广位激励日报。</li>
+</ul>
+</div></div></section>
+<section class="页面面板" id="面_2" data-page="2"><div class="页面卡"><div class="页面头"><h2>业务流程</h2></div><div class="文档正文"><h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>1. <strong>第一阶段：数据采集与触发（主要参与方：统计后台运营）</strong> — 本章拆为四个模块：3.1 订单原始数据（订单明细在哪、长什么样）、3.2 单均数据（奖励单佣金页怎么维护单均）、3.3 匹配逻辑（复用日报 APPKEY+SID 规则）、3.4 预估激励收入计算。运营在"每日数据"页面点"重新计算"触发自动推送。</p>
+<p>2. <strong>第二阶段：激励日报处理（主要参与方：总后台 SaaS）</strong> — 总后台接收统计后台推送数据后，按推广位匹配，自动计算预估激励收入，完成后自动分发。</p>
+<p>3. <strong>第三阶段：查看激励日报（主要参与方：客户端后台商户）</strong> — 商户在客户端后台查看激励日报，每推广位一行，展示推广位信息、活动信息、支付时间、订单数、单均和预估激励收入。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：数据采集与触发
+① 采集激励订单数据及奖励单佣金单均 → ② 运营在每日数据点重新计算 → ③ 统计后台自动推送数据
+                    ↓
+第二阶段：激励日报处理
+④ 接收数据，按推广位匹配 → ⑤ 自动计算预估激励收入 → ⑥ 自动分发到客户端
+                    ↓
+第三阶段：查看激励日报
+⑦ 查看激励日报</code></pre></div>
+<hr></div></div></section>
+<section class="页面面板" id="面_3_1" data-page="3.1"><div class="页面卡"><div class="页面头"><h2>订单原始数据</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 采集激励订单数据</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">统计后台 / 激励收入明细</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">订单原始数据是匹配推广位、计算预估激励收入的上游输入。</span></div></div></div>
+<h4 style="margin:14px 0 6px;font-size:13.5px;color:#0f172a;">订单数据在哪</h4><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;">激励的订单原始数据落在统计后台的<b>激励收入明细表</b>中，<b>一行对应一笔订单</b>。该页面为数据沉淀页，运营无需配置，数据由统计后台采集生成。</p><h4 style="margin:14px 0 6px;font-size:13.5px;color:#0f172a;">字段说明</h4><table style="border-collapse:collapse;width:100%;margin:10px 0;"><thead><tr><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">字段名称</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">字段类型</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">说明</th></tr></thead><tbody><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">ID</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">number</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">订单记录编号，一行一笔订单</td></tr><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">推广位名称</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">string</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">该笔订单归属的推广位名称</td></tr><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">订单支付时间</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">date</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">订单支付时间，作为数据日期</td></tr><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">活动名称</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">string</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">订单所属的激励活动</td></tr><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">活动起止时间</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">string</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">激励活动的起止时间范围</td></tr></tbody></table><h4 style="margin:14px 0 6px;font-size:13.5px;color:#0f172a;">示意数据（节选）</h4><table style="border-collapse:collapse;width:100%;margin:10px 0;"><thead><tr><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">ID</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">推广位名称</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">订单支付时间</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">活动名称</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">活动起止时间</th></tr></thead><tbody><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2030</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">（脱敏）</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2026-10-07</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td></tr><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2031</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">（脱敏）</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2026-10-07</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td></tr><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2035</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">（脱敏）</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2026-10-06</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td></tr></tbody></table><h4 style="margin:14px 0 6px;font-size:13.5px;color:#0f172a;">详情信息</h4><div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin:10px 0;font-size:13px;color:#1e40af;line-height:1.7;"><b>每条订单数据都有详情</b>，点开详情可见该笔订单的推广位信息（含 APPKEY、SID 等匹配参数）。3.3 的匹配逻辑即基于详情中的推广位信息进行，列表页本身不展示匹配参数。</div><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;"><b>数据只读：</b>统计后台只提交原始订单数据，预估激励收入由总后台在下一阶段计算，不在统计后台展示。</p></div></section>
+<section class="页面面板" id="面_3_2" data-page="3.2"><div class="页面卡"><div class="页面头"><h2>单均数据</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 采集激励订单数据及奖励单佣金单均</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">统计后台 / 数据监控 / 奖励单佣金</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">单均是预估激励收入计算的第二个输入，已预先绑定到激励活动。</span></div></div></div>
+<h4 style="margin:14px 0 6px;font-size:13.5px;color:#0f172a;">单均数据在哪</h4><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;">单均数据在统计后台左侧导航<b>「数据监控 → 奖励单佣金」</b>页面维护：<b>一行对应一个日期，一列对应一个渠道</b>，单元格为该渠道当日的单均金额。页面支持编辑与保存（每行行尾有编辑按钮），单均已预先绑定到各激励活动，总后台计算时按活动直接取用。</p><h4 style="margin:14px 0 6px;font-size:13.5px;color:#0f172a;">字段说明</h4><table style="border-collapse:collapse;width:100%;margin:10px 0;"><thead><tr><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">字段名称</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">字段类型</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">说明</th></tr></thead><tbody><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">日期</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">date</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">单均数据所属自然日，一行一个日期</td></tr><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">渠道单均</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">number</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">每列一个渠道，单元格为该渠道当日的单均金额</td></tr></tbody></table><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;">渠道列包括：直推-美团激励、美团联盟激励、云瞻-美团激励、推客-美团激励、万单宝-美团激励、花小格-外卖节、花小格-推选好店等（本次激励日报只消费美团激励相关渠道）。</p><h4 style="margin:14px 0 6px;font-size:13.5px;color:#0f172a;">示意结构（节选）</h4><table style="border-collapse:collapse;width:100%;margin:10px 0;"><thead><tr><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">日期</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">直推-美团激励</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">美团联盟激励</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">云瞻-美团激励</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">推客-美团激励</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">万单宝-美团激励</th><th style="padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12.5px;color:#334155;text-align:left;white-space:nowrap;">花小格-外卖节</th></tr></thead><tbody><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2026-09-14</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.75</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.50</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.00</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.46</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.00</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.00</td></tr><tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">2026-09-13</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.50</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.50</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.00</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.40</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.00</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12.5px;color:#475569;">0.00</td></tr></tbody></table><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;"><b>预先绑定：</b>单均已预先绑定到每个激励活动，运行时无需临时匹配，总后台计算时按活动直接取用。</p><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;"><b>页面可维护：</b>运营可在奖励单佣金页面编辑各渠道每日单均，保存后生效。</p></div></section>
+<section class="页面面板" id="面_3_3" data-page="3.3"><div class="页面卡"><div class="页面头"><h2>匹配逻辑</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">③</span><span class="流程信息卡-环节名">当前环节：③ 统计后台自动推送数据、④ 接收数据按推广位匹配</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">总后台（系统处理逻辑，无独立页面）</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">匹配结果决定数据归属到哪个商户，未匹配数据不进报表。</span></div></div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin:10px 0;font-size:13px;color:#1e40af;line-height:1.7;">本模块为<b>逻辑说明，无独立页面</b>。激励数据的推广位匹配规则复用现有日报的匹配逻辑：3.1 订单明细的每条数据<b>详情</b>中带有推广位信息（APPKEY、SID），匹配方式与日报完全一致。</div><h4 style="margin:14px 0 6px;font-size:13.5px;color:#0f172a;">匹配规则（复制自日报）</h4><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;">• 数据来源只提交原始数据，不直接指定 SaaS 商户和推广位。</p><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;">• SaaS 先匹配推广位，再通过推广位确定商户归属。</p><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;">• 美团使用 APPKEY 和原始 SID 共同匹配同一个推广位：原始 APPKEY 与推广位的美团 APPKEY 一致，且原始 SID 与同一推广位的美团 SID 一致，两者全部满足才能确定唯一推广位。</p><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;">• 只匹配其中一个字段，或无法确定唯一推广位时，记录不进入商户报表。</p><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;">• 客户端后台只展示当前商户的已归属数据。</p><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;">• 平台匹配参数不向客户端和 C 端用户展示。</p></div></section>
+<section class="页面面板" id="面_3_4" data-page="3.4"><div class="页面卡"><div class="页面头"><h2>预估激励收入计算</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑤</span><span class="流程信息卡-环节名">当前环节：⑤ 自动计算预估激励收入</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">总后台（系统处理逻辑，无独立页面）</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">计算结果进入 4.1 激励日报页面展示，并自动分发到客户端。</span></div></div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin:10px 0;font-size:13px;color:#1e40af;line-height:1.7;">本模块为<b>逻辑说明，无独立页面</b>。总后台获取数据后自动完成计算。</div><h4 style="margin:14px 0 6px;font-size:13.5px;color:#0f172a;">计算衔接</h4><pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;font-size:13px;line-height:1.8;color:#334155;overflow-x:auto;">3.1 订单原始数据（按推广位汇总得到订单数）
+        +
+3.2 单均数据（活动已预先绑定单均）
+        +
+3.3 匹配逻辑（确定推广位与商户归属）
+        ↓
+预估激励收入 = 订单数 × 单均
+        ↓
+进入 4.1 激励日报展示，并自动分发到客户端</pre><p style="margin:8px 0;font-size:13.5px;line-height:1.8;color:#334155;"><b>自动计算：</b>预估激励收入 = 订单数 × 单均，由总后台在数据处理阶段自动完成，不在统计后台计算，无需人工干预。</p></div></section>
+<section class="页面面板" id="面_4_1" data-page="4.1"><div class="页面卡"><div class="页面头"><h2>激励日报</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑤</span><span class="流程信息卡-环节名">当前环节：⑤ 自动计算预估激励收入、⑥ 自动分发到客户端</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">总后台 / 激励日报</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">已归属的激励日报数据自动分发到客户端，供商户查看。</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索推广位ID或名称"></div><div class="筛选区"><span class="筛选标签">项目：</span><select class="筛选下拉"><option>全部</option><option>外卖业务</option><option>到店业务</option></select><span class="筛选标签">支付日期：</span><select class="筛选下拉"><option>2026-10-07</option><option>2026-10-06</option></select><span class="筛选标签">活动：</span><select class="筛选下拉"><option>全部</option><option>第36期</option></select></div></div>
+<div style="background:#ecfdf5;border:1px solid #86efac;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#15803d;">已归属 <strong>6</strong> 个推广位，预估激励收入合计 <strong>¥579.65</strong>；数据由统计后台自动推送，自动分发已开启。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">推广位ID<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('推广位ID', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">推广位名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('推广位名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">项目<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('项目', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">活动名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('活动名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">活动起止时间<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('活动起止时间', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">支付时间<span class="类型标签 date">date</span></span><button class="信息按钮" onclick="显示字段弹窗('支付时间', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">订单数<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('订单数', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">单均<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('单均', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">预估激励收入<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('预估激励收入', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">TUI001</td><td class="列表单元格">万单宝饿了么主推</td><td class="列表单元格">外卖业务</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-07</td><td class="列表单元格">156</td><td class="列表单元格">0.5</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">78.0</td></tr>
+<tr class="数据行"><td class="列表单元格">TUI002</td><td class="列表单元格">云瞻美团推广位A</td><td class="列表单元格">外卖业务</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-07</td><td class="列表单元格">203</td><td class="列表单元格">0.6</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">121.8</td></tr>
+<tr class="数据行"><td class="列表单元格">TUI003</td><td class="列表单元格">推客-美团激励位</td><td class="列表单元格">到店业务</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-07</td><td class="列表单元格">89</td><td class="列表单元格">0.4</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">35.6</td></tr>
+<tr class="数据行"><td class="列表单元格">TUI004</td><td class="列表单元格">美团联盟推广位B</td><td class="列表单元格">外卖业务</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-06</td><td class="列表单元格">312</td><td class="列表单元格">0.7</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">218.4</td></tr>
+<tr class="数据行"><td class="列表单元格">TUI005</td><td class="列表单元格">花小格-外卖节位</td><td class="列表单元格">到店业务</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-06</td><td class="列表单元格">67</td><td class="列表单元格">0.55</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">36.85</td></tr>
+<tr class="数据行"><td class="列表单元格">TUI006</td><td class="列表单元格">直推-美团激励位</td><td class="列表单元格">外卖业务</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-06</td><td class="列表单元格">178</td><td class="列表单元格">0.5</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">89.0</td></tr>
+</tbody></table>
+<div class="列表脚注">共 6 条记录 | 预估激励收入 = 订单数 × 单均（自动计算）</div>
+</div></section>
+<section class="页面面板" id="面_5_1" data-page="5.1"><div class="页面卡"><div class="页面头"><h2>客户端激励日报</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑦</span><span class="流程信息卡-环节名">当前环节：⑦ 查看激励日报</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">客户端后台 / 数据报表 / 激励日报</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本页为只读结果展示，无下游配置影响。</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索推广位ID或名称"></div><div class="筛选区"><span class="筛选标签">支付日期：</span><select class="筛选下拉"><option>2026-10-07</option><option>2026-10-06</option></select><span class="筛选标签">活动：</span><select class="筛选下拉"><option>全部</option><option>第36期</option></select></div></div>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#475569;">本商户 <strong>6</strong> 个推广位参与美团激励活动，合计预估收入 <strong style="color:#16a34a;">¥579.65</strong>。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">推广位ID<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('推广位ID', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">推广位名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('推广位名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">活动名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('活动名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">活动起止时间<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('活动起止时间', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">支付时间<span class="类型标签 date">date</span></span><button class="信息按钮" onclick="显示字段弹窗('支付时间', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">订单数<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('订单数', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">单均<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('单均', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">预估激励收入<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('预估激励收入', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">TUI001</td><td class="列表单元格">万单宝饿了么主推</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-07</td><td class="列表单元格">156</td><td class="列表单元格">0.5</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">78.0</td></tr>
+<tr class="数据行"><td class="列表单元格">TUI002</td><td class="列表单元格">云瞻美团推广位A</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-07</td><td class="列表单元格">203</td><td class="列表单元格">0.6</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">121.8</td></tr>
+<tr class="数据行"><td class="列表单元格">TUI003</td><td class="列表单元格">推客-美团激励位</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-07</td><td class="列表单元格">89</td><td class="列表单元格">0.4</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">35.6</td></tr>
+<tr class="数据行"><td class="列表单元格">TUI004</td><td class="列表单元格">美团联盟推广位B</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-06</td><td class="列表单元格">312</td><td class="列表单元格">0.7</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">218.4</td></tr>
+<tr class="数据行"><td class="列表单元格">TUI005</td><td class="列表单元格">花小格-外卖节位</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-06</td><td class="列表单元格">67</td><td class="列表单元格">0.55</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">36.85</td></tr>
+<tr class="数据行"><td class="列表单元格">TUI006</td><td class="列表单元格">直推-美团激励位</td><td class="列表单元格">【10.1-10.12外卖企业媒体日常奖励赛-第36期】</td><td class="列表单元格">2026-10-01 00:00:00 ~ 2026-10-12 23:59:59</td><td class="列表单元格">2026-10-06</td><td class="列表单元格">178</td><td class="列表单元格">0.5</td><td class="列表单元格" style="color:#16a34a;font-weight:600;">89.0</td></tr>
+</tbody></table>
+<div class="列表脚注">共 6 条记录 | 数据只读，项目字段不展示</div>
+</div></section>
+<section class="页面面板" id="面_5_2" data-page="5.2"><div class="页面卡"><div class="页面头"><h2>客户端数据大盘</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑦</span><span class="流程信息卡-环节名">当前环节：⑦ 查看激励日报</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">客户端后台 / 数据报表 / 数据大盘</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本页为只读结果展示，汇总收入公式变更（新增激励收入项）。</span></div></div></div>
+<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 16px;margin:10px 0;font-size:13px;color:#92400e;line-height:1.7;"><b>本次唯一改动：</b>收入汇总公式新增「激励收入」项，折线图、订单汇总、饿了么/美团明细均保持原有逻辑不变。<br>原公式：收入汇总 = 饿了么收入 + 美团收入<br><b>新公式：收入汇总 = 饿了么收入 + 美团收入 + 激励收入</b>（激励收入 = 5.1 激励日报预估激励收入之和）</div>
+<div style="display:flex;gap:12px;margin:12px 0;">
+<div style="flex:1;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;border-radius:10px;padding:16px 20px;"><div style="font-size:12px;color:#64748b;margin-bottom:6px;">收入汇总 <span style="color:#dc2626;font-size:11px;">🆕含激励</span></div><div style="font-size:26px;font-weight:700;color:#1e40af;">¥ 1,756.85</div><div style="font-size:11px;color:#94a3b8;margin-top:4px;">饿了么 ¥820.00 + 美团 ¥357.20 + <b style="color:#16a34a;">激励 ¥579.65</b></div></div>
+<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;"><div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">订单汇总</div><div style="font-size:26px;font-weight:700;color:#94a3b8;">1,005 单</div><div style="font-size:11px;color:#94a3b8;margin-top:4px;">饿了么 312 单 + 美团 693 单（不变）</div></div>
+</div>
+<div style="display:flex;gap:12px;margin:12px 0;">
+<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;"><div style="font-size:13px;color:#94a3b8;font-weight:600;margin-bottom:8px;">收入折线图 · 近7天（不变）</div><div style="height:120px;background:#f1f5f9;border-radius:6px;position:relative;overflow:hidden;"><svg width="100%" height="100%" viewBox="0 0 400 120" preserveAspectRatio="none"><polyline points="20,80 80,60 140,70 200,45 260,55 320,35 380,25" fill="none" stroke="#94a3b8" stroke-width="2"/></svg></div></div>
+<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;"><div style="font-size:13px;color:#94a3b8;font-weight:600;margin-bottom:8px;">订单折线图 · 近15天（不变）</div><div style="height:120px;background:#f1f5f9;border-radius:6px;position:relative;overflow:hidden;"><svg width="100%" height="100%" viewBox="0 0 400 120" preserveAspectRatio="none"><polyline points="10,70 40,65 70,75 100,55 130,60 160,50 190,45 220,55 250,40 280,50 310,35 340,45 370,30 395,38" fill="none" stroke="#cbd5e1" stroke-width="2"/></svg></div></div>
+</div>
+<div style="margin:14px 0 6px;font-size:13px;color:#0f172a;font-weight:600;">收入与订单数据明细</div>
+<div style="display:flex;gap:10px;margin:8px 0;">
+<div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#64748b;margin-bottom:4px;">收入汇总</div><div style="font-size:20px;font-weight:700;color:#1e40af;">¥1,756.85</div><div style="font-size:10px;color:#94a3b8;margin-top:3px;">= 饿了么 + 美团 + 激励 🆕</div></div>
+<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#64748b;margin-bottom:4px;">饿了么收入</div><div style="font-size:20px;font-weight:700;color:#94a3b8;">¥820.00</div><div style="font-size:10px;color:#94a3b8;margin-top:3px;">原有联盟佣金</div></div>
+<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#64748b;margin-bottom:4px;">美团收入</div><div style="font-size:20px;font-weight:700;color:#94a3b8;">¥357.20</div><div style="font-size:10px;color:#94a3b8;margin-top:3px;">原有联盟佣金</div></div>
+<div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#64748b;margin-bottom:4px;">激励收入 🆕</div><div style="font-size:20px;font-weight:700;color:#16a34a;">¥579.65</div><div style="font-size:10px;color:#94a3b8;margin-top:3px;">= 5.1 预估激励收入之和</div></div>
+</div>
+<div style="display:flex;gap:10px;margin:8px 0 6px;">
+<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">订单汇总</div><div style="font-size:20px;font-weight:700;color:#94a3b8;">1,005 单</div></div>
+<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">饿了么订单</div><div style="font-size:20px;font-weight:700;color:#94a3b8;">312 单</div></div>
+<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">美团订单</div><div style="font-size:20px;font-weight:700;color:#94a3b8;">693 单</div></div>
+</div>
+<div style="display:flex;gap:10px;margin:14px 0 6px;align-items:center;">
+<div style="font-size:13px;color:#0f172a;font-weight:600;">单均数据</div>
+<div style="flex:1;"></div>
+<div style="font-size:11px;color:#94a3b8;">收入效率指标</div>
+</div>
+<div style="display:flex;gap:10px;margin:6px 0 12px;">
+<div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">总单均 🆕</div><div style="font-size:20px;font-weight:700;color:#1e40af;">¥1.75</div><div style="font-size:10px;color:#94a3b8;margin-top:3px;">= 收入汇总 / 订单汇总</div></div>
+<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">饿了么单均</div><div style="font-size:20px;font-weight:700;color:#94a3b8;">¥2.63</div><div style="font-size:10px;color:#94a3b8;margin-top:3px;">= 饿了么收入 / 饿了么订单</div></div>
+<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">美团单均</div><div style="font-size:20px;font-weight:700;color:#94a3b8;">¥0.52</div><div style="font-size:10px;color:#94a3b8;margin-top:3px;">= 美团收入 / 美团订单</div></div>
+</div>
+</div></section>
+</main>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭表单弹窗()"></div>
+<aside id="表单弹窗面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="表单弹窗标题">新增</div>
+    <button class="btn-close" onclick="关闭表单弹窗()">×</button>
+  </div>
+  <div id="表单弹窗正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭表单弹窗()">取消</button>
+    <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-泳道映射">
+window._泳道节点映射 = {"3.1": [1], "3.2": [1], "3.3": [3, 4], "3.4": [5], "4.1": [5, 6], "5.1": [7], "5.2": [7]};
+window._阶段泳道映射 = {"3": 1, "4": 2, "5": 3};
+</script>
+<script id="js-页面切换">
+// 唯一导航函数：叶子菜单 onclick="切换页面('4.1')"。父节点不可点，无展开收起逻辑。
+function 切换页面(页码) {
+  document.querySelectorAll('.页面面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(页码).replace('.', '_'));
+  if (panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单文档,.菜单叶子').forEach(function(a) { a.classList.remove('激活'); });
+  var link = document.querySelector('[data-menu-page="' + 页码 + '"]');
+  if (link) link.classList.add('激活');
+  var c = document.getElementById('内容区'); if (c) c.scrollTop = 0;
+  更新泳道高亮(页码);
+}
+// 泳道两级高亮合并：已过+当前正常显示（opacity 1），未来节点置灰（opacity .25）；文档页(1/2)自动清空
+function 更新泳道高亮(页码) {
+  var 图 = document.getElementById('全局泳道图'); if (!图) return;
+  图.className = 图.className.replace(/ ?高亮阶段\d+/g, '');
+  var 阶段号 = String(页码).split('.')[0];
+  var k = (window._阶段泳道映射 || {})[阶段号];
+  if (k) 图.classList.add('高亮阶段' + k);
+  var nums = (window._泳道节点映射 || {})[页码];
+  图.querySelectorAll('.泳道行').forEach(function(r) {
+    if (!nums) { r.classList.remove('置灰'); r.classList.remove('正常'); return; }
+    var nodeNum = parseInt(r.getAttribute('data-swimlane-node'), 10);
+    var max = Math.max.apply(null, nums);
+    r.classList.toggle('正常', nodeNum <= max);
+    r.classList.toggle('置灰', nodeNum > max);
+  });
+}
+</script>
+<script id="js-字段联动">
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); }
+}
+// 枚举置灰通用函数：受控分组在「启用值」命中时正常，否则整组变淡且不可点。
+// 用法：置灰切换_模板('grp_退货设置', this.value, ['是'])；多组受控就在适配函数里多调几次。
+function 置灰切换_模板(组id, val, 启用值列表) {
+  var on = 启用值列表.indexOf(val) >= 0;
+  var el = document.getElementById(组id);
+  if (el) { el.style.opacity = on ? '1' : '0.35'; el.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+</script>
+<script id="js-表单弹窗">
+// 数据驱动的新增/编辑弹窗：window._表单字段按节['4.1'] + window._新增字段分组['4.1']
+// 三个可选扩展（枚举置灰场景三件套）：
+//   window._新增控制逻辑['4.1'] = 规则摘要框 HTML（弹窗顶部说明）
+//   字段对象加 联动:'置灰切换_xx(this.value)'（enum 下拉 onchange，串内只用单引号）
+//   分组对象加 id:'grp_xx'；window._弹窗初始化['4.1'] = function(){...}（弹窗打开后执行一次初始置灰）
+function 打开表单弹窗(节编号, 模式, 行数据) {
+  var drawer = document.getElementById('表单弹窗面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('表单弹窗正文'); var titleEl = document.getElementById('表单弹窗标题');
+  if (!drawer || !body) return;
+  模式 = 模式 || '新增';
+  行数据 = 行数据 || null;
+  var 字段列表 = (window._表单字段按节 && window._表单字段按节[节编号]) ? window._表单字段按节[节编号] : [];
+  titleEl.textContent = 模式 + ' · ' + 节编号;
+  var html = '<div class="编辑卡片区">';
+  var 控制逻辑块 = (window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  function 取值(f) { return (行数据 && 行数据[f.名称] !== undefined && 行数据[f.名称] !== '') ? 行数据[f.名称] : (f.示例值 || ''); }
+  function 控件(f) {
+    if (f.编辑性 === '只读') return '<span class="field-readonly">' + (取值(f) || '系统自动生成') + '</span>';
+    if (f.基础类型 === 'enum') {
+      var opts = (f.枚举值 || '').split(/[、,，]/).filter(Boolean);
+      var ev = f.联动 ? ' onchange="' + f.联动 + '"' : '';
+      var cur = String(取值(f));
+      var o = '<select class="field-select"' + ev + '>';
+      for (var i = 0; i < opts.length; i++) o += '<option' + (opts[i] === cur ? ' selected' : '') + '>' + opts[i] + '</option>';
+      return o + '</select>';
+    }
+    if (f.基础类型 === '富文本') return '<textarea class="field-input" rows="3" placeholder="请输入">' + 取值(f) + '</textarea>';
+    return '<input class="field-input" value="' + 取值(f) + '" placeholder="请输入">';
+  }
+  function 渲染字段行(f) {
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">' + 控件(f) + '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  function 字段可在新增显示(f) { return !(模式 === '新增' && f.新增可见 === false); }
+  var 分组配置 = (window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"' + (组.id ? ' id="' + 组.id + '"' : '') + '><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 字段列表.length; k++) {
+          if (字段列表[k].名称 === 组.字段[j]) { if (字段可在新增显示(字段列表[k])) html += 渲染字段行(字段列表[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>' + 模式 + '</h4></div><div class="field-card-body">';
+    if (字段列表.length === 0) html += '<div class="空状态">未注册弹窗字段（_表单字段按节 / _新增字段分组）</div>';
+    else for (var i = 0; i < 字段列表.length; i++) { if (字段可在新增显示(字段列表[i])) html += 渲染字段行(字段列表[i]); }
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+  if (window._弹窗初始化 && window._弹窗初始化[节编号]) { try { window._弹窗初始化[节编号](); } catch (e) {} }
+}
+function 关闭表单弹窗() { var d = document.getElementById('表单弹窗面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+// 行内「删除」按钮入口：二次确认后提示（演示环境不落库）。
+function 确认删除(节编号, 行数据) {
+  if (!confirm('确定删除该记录？删除后不可恢复。')) return;
+  显示提示('已删除（演示环境，不落库）', '成功', 2200);
+}
+</script>
+<script id="js-单元格截断">
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script>
+window._表单字段按节=window._表单字段按节||{};
+window._表单字段按节["3.1"]=[
+  {名称:"ID",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"2030",数据来源:"统计后台激励收入明细表",用途:"订单记录编号，一行一笔订单",节编号:"3.1"},
+  {名称:"推广位名称",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"（脱敏）",数据来源:"统计后台激励收入明细表",用途:"该笔订单归属的推广位名称",节编号:"3.1"},
+  {名称:"订单支付时间",类型原文:"date",基础类型:"date",编辑性:"只读",示例值:"2026-10-07",数据来源:"统计后台激励收入明细表",用途:"订单支付时间，作为数据日期",节编号:"3.1"},
+  {名称:"活动名称",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"【10.1-10.12外卖企业媒体日常奖励赛-第36期】",数据来源:"统计后台激励收入明细表",用途:"订单所属的激励活动",节编号:"3.1"},
+  {名称:"活动起止时间",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"2026-10-01 00:00:00 ~ 2026-10-12 23:59:59",数据来源:"统计后台激励收入明细表",用途:"激励活动的起止时间范围",节编号:"3.1"}
+];
+window._新增字段分组=window._新增字段分组||{};
+window._新增字段分组["3.1"]=[{组名:"订单原始数据（只读）",字段:["ID","推广位名称","订单支付时间","活动名称","活动起止时间"]}];
+
+window._表单字段按节["4.1"]=[
+  {名称:"推广位ID",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"TUI001",数据来源:"统计后台自动推送",用途:"推广位唯一标识",节编号:"4.1"},
+  {名称:"推广位名称",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"万单宝饿了么主推",数据来源:"推广位台账（用户自定义命名）",逻辑:"SaaS/客户端侧字段，由商户在推广位台账中自定义命名，非统计后台传入",用途:"推广位业务名称",节编号:"4.1"},
+  {名称:"项目",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"外卖业务",数据来源:"统计后台自动推送",用途:"管理后台维度，客户端不展示",节编号:"4.1"},
+  {名称:"活动名称",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"【10.1-10.12外卖企业媒体日常奖励赛-第36期】",数据来源:"统计后台自动推送",用途:"激励活动名称",节编号:"4.1"},
+  {名称:"活动起止时间",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"2026-10-01 00:00:00 ~ 2026-10-12 23:59:59",数据来源:"统计后台自动推送",用途:"活动有效期",节编号:"4.1"},
+  {名称:"支付时间",类型原文:"date",基础类型:"date",编辑性:"只读",示例值:"2026-10-07",数据来源:"统计后台自动推送",用途:"订单支付日期，用于按日期筛选",节编号:"4.1"},
+  {名称:"订单数",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"156",数据来源:"统计后台自动推送",用途:"参与预估激励收入计算",节编号:"4.1"},
+  {名称:"单均",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"0.50",数据来源:"统计后台奖励单佣金数据（已绑定到活动）",用途:"参与预估激励收入计算",节编号:"4.1"},
+  {名称:"预估激励收入",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"78.00",数据来源:"总后台自动计算",逻辑:"预估激励收入 = 订单数 × 单均",用途:"该推广位的预估激励收入",节编号:"4.1"}
+];
+window._新增字段分组["4.1"]=[{组名:"激励数据（只读）",字段:["推广位ID","推广位名称","项目","活动名称","活动起止时间","支付时间","订单数","单均","预估激励收入"]}];
+
+window._表单字段按节["5.1"]=[
+  {名称:"推广位ID",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"TUI001",数据来源:"总后台分发",用途:"推广位唯一标识",节编号:"5.1"},
+  {名称:"推广位名称",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"万单宝饿了么主推",数据来源:"推广位台账（用户自定义命名）",逻辑:"SaaS/客户端侧字段，由商户在推广位台账中自定义命名，经总后台分发展示",用途:"商户识别推广位",节编号:"5.1"},
+  {名称:"活动名称",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"【10.1-10.12外卖企业媒体日常奖励赛-第36期】",数据来源:"总后台分发",用途:"激励活动名称",节编号:"5.1"},
+  {名称:"活动起止时间",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"2026-10-01 00:00:00 ~ 2026-10-12 23:59:59",数据来源:"总后台分发",用途:"活动有效期",节编号:"5.1"},
+  {名称:"支付时间",类型原文:"date",基础类型:"date",编辑性:"只读",示例值:"2026-10-07",数据来源:"总后台分发",用途:"订单支付日期，用于按日期筛选",节编号:"5.1"},
+  {名称:"订单数",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"156",数据来源:"总后台分发",用途:"比较推广位订单效果",节编号:"5.1"},
+  {名称:"单均",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"0.50",数据来源:"总后台分发",用途:"理解收入构成",节编号:"5.1"},
+  {名称:"预估激励收入",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"78.00",数据来源:"总后台分发",用途:"比较推广位激励收入效果",节编号:"5.1"}
+];
+window._新增字段分组["5.1"]=[{组名:"激励数据（只读）",字段:["推广位ID","推广位名称","活动名称","活动起止时间","支付时间","订单数","单均","预估激励收入"]}];
+
+window._表单字段按节["5.2"]=[
+  {名称:"收入汇总",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"1756.85",数据来源:"总后台分发",逻辑:"= 饿了么收入 + 美团收入 + 激励收入",用途:"顶部概览卡+明细行",节编号:"5.2"},
+  {名称:"订单汇总",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"1005",数据来源:"总后台分发",逻辑:"= 饿了么订单 + 美团订单（不变）",用途:"顶部概览卡+明细行",节编号:"5.2"},
+  {名称:"饿了么收入",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"820.00",数据来源:"总后台分发",用途:"原有联盟佣金收入",节编号:"5.2"},
+  {名称:"美团收入",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"357.20",数据来源:"总后台分发",用途:"原有联盟佣金收入",节编号:"5.2"},
+  {名称:"激励收入",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"579.65",数据来源:"总后台分发",逻辑:"= 5.1 激励日报预估激励收入之和",用途:"🆕 新增项，参与收入汇总计算",节编号:"5.2"},
+  {名称:"饿了么订单",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"312",数据来源:"总后台分发",用途:"不变",节编号:"5.2"},
+  {名称:"美团订单",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"693",数据来源:"总后台分发",用途:"不变",节编号:"5.2"},
+  {名称:"总单均",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"1.75",数据来源:"总后台自动计算",逻辑:"= 收入汇总 / 订单汇总",用途:"收入效率指标",节编号:"5.2"},
+  {名称:"饿了么单均",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"2.63",数据来源:"总后台自动计算",逻辑:"= 饿了么收入 / 饿了么订单",用途:"收入效率指标",节编号:"5.2"},
+  {名称:"美团单均",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"0.52",数据来源:"总后台自动计算",逻辑:"= 美团收入 / 美团订单",用途:"收入效率指标",节编号:"5.2"}
+];
+window._新增字段分组["5.2"]=[{组名:"数据大盘（只读）",字段:["收入汇总","订单汇总","饿了么收入","美团收入","激励收入","饿了么订单","美团订单","总单均","饿了么单均","美团单均"]}];
+
+(window._字段总库||[]).push(
+{名称:"ID",类型原文:"number",基础类型:"number",编辑性:"只读",数据来源:"统计后台激励收入明细表",用途:"订单记录编号，一行一笔订单",节编号:"3.1"},
+{名称:"推广位名称",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"推广位台账（用户自定义命名）",逻辑:"SaaS/客户端侧字段，由商户在推广位台账中自定义命名",用途:"推广位业务名称",节编号:"3.1"},
+{名称:"订单支付时间",类型原文:"date",基础类型:"date",编辑性:"只读",数据来源:"统计后台激励收入明细表",用途:"订单支付时间，作为数据日期",节编号:"3.1"},
+{名称:"活动名称",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"统计后台激励收入明细表",用途:"订单所属的激励活动",节编号:"3.1"},
+{名称:"活动起止时间",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"统计后台激励收入明细表",用途:"激励活动的起止时间范围",节编号:"3.1"},
+{名称:"日期",类型原文:"date",基础类型:"date",编辑性:"可编辑",数据来源:"统计后台奖励单佣金页面",用途:"单均数据所属自然日",节编号:"3.2"},
+{名称:"渠道单均",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"统计后台奖励单佣金页面（已绑定到活动）",用途:"该渠道当日的单均金额",节编号:"3.2"},
+{名称:"预估激励收入",类型原文:"number",基础类型:"number",编辑性:"只读",数据来源:"总后台自动计算",逻辑:"预估激励收入 = 订单数 × 单均",用途:"该推广位的预估激励收入",节编号:"4.1"},
+{名称:"激励收入",类型原文:"number",基础类型:"number",编辑性:"只读",数据来源:"总后台分发",逻辑:"= 5.1 激励日报预估激励收入之和",用途:"数据大盘汇总项，参与收入汇总计算",节编号:"5.2"},
+{名称:"总单均",类型原文:"number",基础类型:"number",编辑性:"只读",数据来源:"总后台自动计算",逻辑:"= 收入汇总 / 订单汇总",用途:"收入效率指标",节编号:"5.2"},
+{名称:"饿了么单均",类型原文:"number",基础类型:"number",编辑性:"只读",数据来源:"总后台自动计算",逻辑:"= 饿了么收入 / 饿了么订单",用途:"收入效率指标",节编号:"5.2"},
+{名称:"美团单均",类型原文:"number",基础类型:"number",编辑性:"只读",数据来源:"总后台自动计算",逻辑:"= 美团收入 / 美团订单",用途:"收入效率指标",节编号:"5.2"}
+);
+</script>
+</body>
+</html>

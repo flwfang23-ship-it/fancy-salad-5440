@@ -1,0 +1,801 @@
+<script type="text/plain" data-ai-only>
+# 投诉单页
+
+> 使用说明：本文档只保留面向人类读者的业务正文，应优先保证业务主线连续、真实、简洁、好读。  
+> 章节按实际业务增删，不要求填满所有栏目；替换所有 `[方括号占位内容]`，删除不适用的示例和提示文字。
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+某 SaaS 平台为商家提供"投诉单页"能力。当前商家缺乏统一的投诉单页管理工具，无法快速生成对外承接投诉的链接，也无法快速查看每天的投诉量。需要一套简洁的投诉单页管理功能，让商家在后台创建投诉单页（系统自动生成 3 个对外链接）、按需启停，并按天查看投诉数据。
+
+```text
+改造前
+
+商家通过线下表格或第三方工具管理投诉链接，
+投诉量统计依赖人工汇总，效率低、易出错。
+
+改造后
+
+商家在后台创建投诉单页
+        ↓
+系统自动生成 3 个对外链接 + 缩略图 + 备注
+        ↓
+商家在用/停推管理 → 数据明细按天查看投诉量
+```
+
+### 1.2 一句话业务模型
+
+```text
+商家创建投诉单页
+        +
+系统按已有规则自动生成 3 个链接（好单裤短链 / 小码短链 / 内部H5链接）
+        +
+按天聚合外部投诉数据
+        ↓
+投诉单页管理 → 数据明细查看 → 投诉量趋势复盘
+```
+
+### 1.3 最终目标
+
+- **快速创建并管理投诉单页：** 商家在后台一键创建投诉单页，系统自动生成 3 个对外链接，并可在用/停推切换。
+- **按天查看投诉量：** 商家可对任意投诉单页打开数据明细，按天（0:00~23:59）查看每天的投诉数量。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌────────────────────────────────────┐
+│ 客户端后台（商户运营人员）          │
+├────────────────────────────────────┤
+│ ① 新建投诉单页                     │
+│ 【单页状态：在用】                  │
+│          │                         │
+│ ② 编辑投诉单页（名称/状态/备注）    │
+│          │                         │
+│ ③ 停推/启用投诉单页                │
+│ 【单页状态：在用 / 停推】            │
+│          │                         │
+│ ④ 查看数据明细（行内右侧抽屉）      │
+│ 【按天统计：0:00~23:59】             │
+└────────────────────────────────────┘
+```
+
+- 编号节点只写参与方实际执行的业务动作。
+- 状态标注写在触发该状态的动作之后，不占用新的流程序号。
+- 一张泳道图原则上只展示核心状态主线。本功能涉及一个核心业务对象：**投诉单页**（状态：在用 / 停推）。节点 ④ 数据明细为行内查看动作，通过 3.1 行内按钮触发的右侧抽屉实现，不单独占页面。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序线性展开。本功能仅涉及客户端后台一个端，所有动作在同一端连续发生，合并为单一阶段。节点 ④ 数据明细作为 3.1 的行内交互实现，不单独成页：
+
+1. **第一阶段：投诉单页管理（主要参与方：客户端后台）**：商户运营人员创建、编辑、启停投诉单页，每个单页由系统自动生成 3 个对外链接、缩略图和备注；行内"数据明细"按钮以右侧抽屉形式按天查看每天的投诉量。
+
+```text
+第一阶段：投诉单页管理
+① 新建投诉单页 → ② 编辑投诉单页 → ③ 停推/启用投诉单页 → ④ 查看数据明细（行内抽屉）
+```
+
+每个页面/功能小节的 `#### 业务背景` 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。
+
+### 2.3 页面类型说明
+
+后续各阶段的模块页面分为三种业务页面类型。
+
+| 页面类型 | 面向对象 | 含义 | 正文字段表格列 |
+| --- | --- | --- | --- |
+| 页面编辑类 | 后台操作人员 | 操作人员在当前页面编辑所有字段，不存在"列表 / 详情"的视图区分 | 配置项、字段类型、配置值、编辑性、适用场景、说明、枚举值控制逻辑 |
+| 列表页 | 后台操作人员 | 操作人员看到的当前页面是一张列表，字段在列表和详情中可能分别展示 | 字段名称、字段类型、列表、详情、新增、字段解释 |
+| 移动端展示页 | C 端用户 | 用户在小程序/H5 中实际看到和操作的页面 | （本功能不涉及 C 端） |
+
+**字段类型**列的值域：
+
+| 字段类型 | 说明 | 示例 |
+| --- | --- | --- |
+| string | 字符串 | `string` |
+| number | 数值 | `number` |
+| date | 日期 | `date` |
+| datetime | 日期时间 | `datetime` |
+| enum | 枚举，必须用括号罗列全部枚举值 | `enum（在用、停推）` |
+| file | 文件 | `file` |
+| 组合字段 | 复合字段 | `组合字段` |
+
+---
+
+## 3. 第一阶段：投诉单页管理
+
+### 3.1 投诉单页列表 — 列表页（新增页面）
+
+<!-- @壳:阶段3编辑区 -->
+<!-- @页面类型: 列表页 -->
+
+#### 业务背景
+
+<!-- @块: 业务背景 -->
+
+当前环节：① 新建投诉单页 / ② 编辑投诉单页 / ③ 停推/启用投诉单页 / ④ 查看数据明细（行内右侧抽屉）<br>
+页面路径：客户端后台 > 投诉管理 > 投诉单页列表<br>
+对下游影响：新建/编辑后的投诉单页产生对外链接供 C 端承接投诉；停推后链接对外不可用；行内"数据明细"按钮触发右侧抽屉，按天查看每天的投诉量。<br>
+表格类型：列表页
+
+#### 字段说明
+
+<!-- @块: 字段表 -->
+
+##### [列表页字段]
+路径：客户端后台 > 投诉管理 > 投诉单页列表
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 链接名称 | string | 是 | 是 | 是（可编辑） | **数据来源：** 商户运营人员填写。<br>**逻辑：** 用于识别投诉单页，列表主标题展示。<br>**用途：** 列表主标识，便于运营管理。 |
+| 缩略图 | file | 是 | 是 | 否 | **数据来源：** 系统固定图片，写死一张页面缩略图。<br>**逻辑：** 列表与详情均展示同一张固定占位图，不区分单页。<br>**用途：** 列表视觉占位。 |
+| 投诉链接 | 组合字段 | 是 | 是 | 否 | **数据来源：** 系统按已有规则自动生成。<br>**逻辑：** 一个格子内 3 行展示：好单裤短链（Axxxx）、小码短链（Bxxxxx）、内部H5链接（Cxxxxxx）。无数据时显示"-"。<br>**用途：** 对外承接投诉的 3 个链接，本次功能不展开生成规则。 |
+| 备注 | string | 是 | 是 | 是（可编辑） | **数据来源：** 商户运营人员填写。<br>**逻辑：** 列表与详情均展示；新建与编辑均可修改。<br>**用途：** 补充说明，便于运营管理。 |
+| 更新时间 | datetime | 是 | 是 | 否 | **数据来源：** 系统自动记录最近一次编辑时间。<br>**逻辑：** 格式 YYYY-MM-DD HH:mm；新建或编辑保存后刷新。<br>**用途：** 追溯最近修改时间。 |
+| 展示状态 | enum（在用、停推） | 是 | 是 | 是（可编辑） | **数据来源：** 商户运营人员选择，默认"在用"。<br>**逻辑：** 新建时默认"在用"；可通过"停推"操作切换为"停推"，再切换回"在用"。<br>**用途：** 控制投诉单页是否对外可用。 |
+| 投诉总量 | number | 是 | 是 | 否 | **数据来源：** 系统按已生成的链接统计历史所有投诉量累计值。<br>**逻辑：** 每天凌晨 1:00 跑定时任务，将前一日（0:00:00~23:59:59）新增投诉累加到总量；当天产生的投诉在次日 1:00 后才反映到本列。<br>**用途：** 商家快速判断单页投诉规模。 |
+
+"操作"属于页面功能，不作为业务字段保存。
+
+#### 弹窗字段分组
+
+<!-- @块: 弹窗字段分组 -->
+
+> 新建/编辑共用弹窗。仅"链接名称"、"展示状态"和"备注"可编辑，其他字段为只读回显。
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 链接名称、展示状态、备注 |
+| 系统生成信息 | 缩略图、投诉链接、更新时间、投诉总量 |
+
+- 新建弹窗：仅"基本信息"组展示并可填写（含备注）；"系统生成信息"组在新建阶段不展示，提交完成后由系统填充。
+- 编辑弹窗：两组均展示，"基本信息"组（含备注）可编辑，"系统生成信息"组只读回显。
+
+#### 列表交互
+
+<!-- @块: 列表交互 -->
+
+**交互：新建投诉单页**  
+**业务用途**：点击列表头"+ 新增"按钮，右侧抽屉打开空白表单，可填"链接名称"、"展示状态"（默认"在用"）和"备注"。提交后系统自动生成 3 个对外链接、缩略图，并记录更新时间。新建后单页状态默认"在用"，投诉总量初始为 0。
+
+**交互：编辑投诉单页**  
+**业务用途**：点击行内"编辑"按钮，右侧抽屉打开并回填行数据。仅"链接名称"、"展示状态"和"备注"可改；缩略图、投诉链接、更新时间、投诉总量为只读回显。保存后更新时间自动刷新为当前时间。
+
+**交互：停推 / 启用**  
+**业务用途**：点击行内"停推"按钮，二次确认后将展示状态从"在用"切为"停推"，单页对外链接失效。再次点击切换为"在用"恢复链接。已有功能，本次不展开。
+
+**交互：更多**  
+**业务用途**：行内"更多"按钮展开已有功能菜单。已有功能，本次不展开。
+
+**交互：数据明细**  
+**业务用途**：点击行内"数据明细"按钮，右侧抽屉弹出。抽屉顶部展示 4 个只读字段：**推广位名称、投诉总数、更新时间、投诉链接**（好单裤短链 / 小码短链 / 内部H5链接 3 行）；下方接"日期 + 投诉量"两列的按天数据表格，按日期倒序，统计周期为 0:00~23:59，每天凌晨 1:00 跑定时任务统计前一日数据（T+1）。
+
+#### 业务逻辑
+
+<!-- @块: 业务逻辑 -->
+
+**新建弹窗字段约束：** 新建弹窗允许填"链接名称"、"展示状态"和"备注"；其他字段（缩略图、投诉链接、更新时间、投诉总量）由系统在新建完成后自动生成或填充，新建阶段不展示。
+
+**编辑弹窗字段约束：** 编辑弹窗中"链接名称"、"展示状态"和"备注"可编辑，其余字段为只读回显。
+
+**展示状态默认值：** 新建时"展示状态"默认"在用"；"停推"为非默认值，需运营主动切换。
+
+**链接生成规则：** 3 个链接（好单裤短链、小码短链、内部H5链接）按系统已有规则自动生成，本功能不展开。
+
+**投诉总量统计任务：** 系统每天凌晨 1:00 跑定时任务，将该投诉单页前一日（0:00:00~23:59:59）新增的投诉累加到"投诉总量"；当天产生的投诉在次日 1:00 后才反映到列表"投诉总量"列（T+1）。
+
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>09-20投诉单页_v2</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用壳 { display: grid; grid-template-columns: var(--泳道宽) var(--菜单宽) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+
+/* ── 中：后台菜单（白底黑字，全铺开，父节点不可点） ── */
+.菜单区 { background: #fff; color: #334155; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+.菜单品牌 { padding: 18px 18px 14px; border-bottom: 1px solid #eef2f7; }
+.菜单品牌名 { font-size: 16px; font-weight: 700; color: #172033; line-height: 1.4; }
+.菜单品牌小 { font-size: 11px; color: #94a3b8; margin-top: 3px; letter-spacing: .5px; }
+.菜单父 { padding: 16px 18px 4px; font-size: 12px; color: #0f6b8f; font-weight: 700; letter-spacing: .5px; }
+.菜单文档, .菜单叶子 { display: flex; align-items: center; gap: 8px; color: #334155; font-size: 13.5px; cursor: pointer; user-select: none; border-left: 3px solid transparent; }
+.菜单文档 { padding: 9px 18px; }
+.菜单叶子 { padding: 8px 18px 8px 30px; font-size: 13px; }
+.菜单文档.子级 { padding: 9px 18px 9px 30px; font-size: 13px; }
+.菜单文档:hover, .菜单叶子:hover { background: #f1f5f9; color: #0f172a; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.菜单号 { font-family: Consolas, monospace; font-size: 11px; color: #94a3b8; min-width: 26px; }
+.菜单文档.激活 .菜单号, .菜单叶子.激活 .菜单号 { color: #0f6b8f; }
+.菜单图标 { font-size: 13px; }
+
+/* ── 中：内容工作区 ── */
+.内容区 { overflow-y: auto; background: #f1f5f9; }
+.页面面板 { display: none; padding: 22px 26px 48px; }
+.页面面板.激活 { display: block; }
+.页面卡 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(15,35,52,.04); margin-bottom: 18px; }
+.页面头 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.页面头 h2 { margin: 0; font-size: 19px; color: #172033; }
+.主按钮 { padding: 7px 16px; border: 1px solid #0f6b8f; border-radius: 6px; background: #0f6b8f; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.主按钮:hover { background: #0c5673; }
+
+/* ── 左：常驻泳道栏 ── */
+.泳道区 { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 14px 12px 28px; }
+.泳道区 > h3 { margin: 2px 4px 10px; font-size: 14px; color: #334155; }
+.泳道简介 { margin: 0 4px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.75; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道区 .泳道图 { font-size: 13px; }
+</style>
+<style id="css-组件">
+/* ── 文档页排版 ── */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 26px 0 12px; font-size: 20px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.阅读标题 { line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 20px; margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 16px; margin: 22px 0 8px; } .文档正文 h5 { font-size: 14px; margin: 18px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.行内代码 { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; }
+.代码块 pre { margin: 0; padding: 16px; background: #fff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; }
+.代码块 code { display: block; font-family: Consolas, Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ── 流程信息卡 ── */
+.流程信息卡 { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; background: linear-gradient(180deg,#f8fbff,#f1f7ff); margin-bottom: 16px; overflow: hidden; }
+.流程信息卡-头部 { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #dbeafe; }
+.流程步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.流程信息卡-环节名 { font-size: 13.5px; font-weight: 600; color: #1e3a8a; }
+.流程信息卡-正文 { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+.流程信息卡-行 { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.流程信息卡-标签 { flex-shrink: 0; display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+
+/* ── 列表页 ── */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 150px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 150px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; white-space: nowrap; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; margin-right: 6px; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.删除按钮 { padding: 4px 12px; border: 1px solid #ef4444; border-radius: 4px; background: #fff; color: #ef4444; font-size: 12px; cursor: pointer; } .删除按钮:hover { background: #ef4444; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+
+/* ── 字段卡（弹窗表单与详情抽屉共用） ── */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 20px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius:  10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 120px 1fr 28px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 140px; }
+.field-input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; width: 100%; max-width: 360px; font-family: inherit; }
+textarea.field-input { max-width: 100%; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+.field-info-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ── 详情抽屉 / 表单弹窗（右侧滑出） ── */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; max-width: 94vw; height: 100vh; background: #f8fafc; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 60px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: #fff; }
+.panel-title { font-size: 17px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ── 字段弹窗 ── */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ── 泳道图组件（2026 蓝圈号标准版） ── */
+.泳道图 { margin: 0; font-size: 13px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道圆圈 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支说明 { font-size: 12px; color: #b45309; padding: 2px 0 0 26px; line-height: 1.6; }
+.泳道行 { transition: opacity .25s ease; }
+.泳道图[class*="高亮阶段"] .泳道行[data-node-phase] { opacity: .35; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"], .泳道图.高亮阶段2 .泳道行[data-node-phase="2"],
+.泳道图.高亮阶段3 .泳道行[data-node-phase="3"], .泳道图.高亮阶段4 .泳道行[data-node-phase="4"],
+.泳道图.高亮阶段5 .泳道行[data-node-phase="5"], .泳道图.高亮阶段6 .泳道行[data-node-phase="6"],
+.泳道图.高亮阶段7 .泳道行[data-node-phase="7"], .泳道图.高亮阶段8 .泳道行[data-node-phase="8"],
+.泳道图.高亮阶段9 .泳道行[data-node-phase="9"], .泳道图.高亮阶段10 .泳道行[data-node-phase="10"] { opacity: 1; }
+.泳道行.置灰 { opacity: .25 !important; pointer-events: none; }
+.泳道行.当前 { opacity: 1 !important; }
+
+/* ── 提示消息 / 灯箱 / 杂项 ── */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+</style>
+<style id="css-状态">
+.页面面板.激活 { display: block; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.图片灯箱.可见 { display: flex; }
+</style>
+</head>
+<body>
+<div class="应用壳">
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<p class="泳道简介">某 SaaS 平台为商家提供"投诉单页"能力。当前商家缺乏统一的投诉单页管理工具，无法快速生成对外承接投诉的链接，也无法快速查看每天的投诉量。需要一套简洁的投诉单页管理功能，让商家在后台创建投诉单页（系统自动生成 3 个对外链接）、按需启停，并按天查看投诉数据。</p>
+<div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;">
+<div class="泳道图-头" style="display:grid;grid-template-columns:repeat(1,1fr);border-bottom:2px solid #e2e8f0;">
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">客户端后台（商户运营人员）</div>
+</div><div class="泳道图-体">
+<div class="泳道行" data-swimlane-node="1" data-node-phase="1" style="display:grid;grid-template-columns:repeat(1,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">①</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">新建投诉单页</span></div><span class="泳道状态徽章 信息色">单页状态：在用</span></div>
+</div>
+<div class="泳道行" data-swimlane-node="2" data-node-phase="1" style="display:grid;grid-template-columns:repeat(1,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">②</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">编辑投诉单页（名称/状态/备注）</span></div></div>
+</div>
+<div class="泳道行" data-swimlane-node="3" data-node-phase="1" style="display:grid;grid-template-columns:repeat(1,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">③</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">停推/启用投诉单页</span></div><span class="泳道状态徽章 信息色">单页状态：在用 / 停推</span></div>
+</div>
+<div class="泳道行" data-swimlane-node="4" data-node-phase="1" style="display:grid;grid-template-columns:repeat(1,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">④</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">查看数据明细（行内右侧抽屉）</span></div><span class="泳道状态徽章 信息色">按天统计：0:00~23:59</span></div>
+</div>
+</div></div>
+</aside>
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">09-20投诉单页_v2</div><div class="菜单品牌小">B 端业务原型 · v2 母版</div></div>
+<div class="菜单父"><span>需求与流程</span></div>
+<div class="菜单文档 子级 激活" data-menu-page="1" onclick="切换页面('1')"><span class="菜单号">001</span><span>需求背景与目标</span></div>
+<div class="菜单文档 子级" data-menu-page="2" onclick="切换页面('2')"><span class="菜单号">002</span><span>业务流程</span></div>
+<div class="菜单父"><span>第一阶段：投诉单页管理</span></div>
+<div class="菜单叶子" data-menu-page="3.1" onclick="切换页面('3.1')"><span class="菜单号">3.1</span><span class="菜单图标">📋</span><span>投诉单页列表</span></div>
+</nav>
+<main class="内容区" id="内容区">
+<section class="页面面板 激活" id="面_1" data-page="1"><div class="页面卡"><div class="页面头"><h2>需求背景与目标</h2></div><div class="文档正文"><h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>某 SaaS 平台为商家提供"投诉单页"能力。当前商家缺乏统一的投诉单页管理工具，无法快速生成对外承接投诉的链接，也无法快速查看每天的投诉量。需要一套简洁的投诉单页管理功能，让商家在后台创建投诉单页（系统自动生成 3 个对外链接）、按需启停，并按天查看投诉数据。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>改造前
+
+商家通过线下表格或第三方工具管理投诉链接，
+投诉量统计依赖人工汇总，效率低、易出错。
+
+改造后
+
+商家在后台创建投诉单页
+        ↓
+系统自动生成 3 个对外链接 + 缩略图 + 备注
+        ↓
+商家在用/停推管理 → 数据明细按天查看投诉量</code></pre></div>
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>商家创建投诉单页
+        +
+系统按已有规则自动生成 3 个链接（好单裤短链 / 小码短链 / 内部H5链接）
+        +
+按天聚合外部投诉数据
+        ↓
+投诉单页管理 → 数据明细查看 → 投诉量趋势复盘</code></pre></div>
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>快速创建并管理投诉单页：</strong> 商家在后台一键创建投诉单页，系统自动生成 3 个对外链接，并可在用/停推切换。</li>
+<li><strong>按天查看投诉量：</strong> 商家可对任意投诉单页打开数据明细，按天（0:00~23:59）查看每天的投诉数量。</li>
+</ul>
+</div></div></section>
+<section class="页面面板" id="面_2" data-page="2"><div class="页面卡"><div class="页面头"><h2>业务流程</h2></div><div class="文档正文"><h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<ul>
+<li>编号节点只写参与方实际执行的业务动作。</li>
+<li>状态标注写在触发该状态的动作之后，不占用新的流程序号。</li>
+<li>一张泳道图原则上只展示核心状态主线。本功能涉及一个核心业务对象：<strong>投诉单页</strong>（状态：在用 / 停推）。节点 ④ 数据明细为行内查看动作，通过 3.1 行内按钮触发的右侧抽屉实现，不单独占页面。</li>
+</ul>
+
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>后续正文按照业务实际发生顺序线性展开。本功能仅涉及客户端后台一个端，所有动作在同一端连续发生，合并为单一阶段。节点 ④ 数据明细作为 3.1 的行内交互实现，不单独成页：</p>
+<p>1. <strong>第一阶段：投诉单页管理（主要参与方：客户端后台）</strong>：商户运营人员创建、编辑、启停投诉单页，每个单页由系统自动生成 3 个对外链接、缩略图和备注；行内"数据明细"按钮以右侧抽屉形式按天查看每天的投诉量。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：投诉单页管理
+① 新建投诉单页 → ② 编辑投诉单页 → ③ 停推/启用投诉单页 → ④ 查看数据明细（行内抽屉）</code></pre></div>
+<p>每个页面/功能小节的 <code class="行内代码">#### 业务背景</code> 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。</p>
+<h3 class="阅读节标题">2.3 页面类型说明</h3>
+<p>后续各阶段的模块页面分为三种业务页面类型。</p>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>页面类型</th>
+<th>面向对象</th>
+<th>含义</th>
+<th>正文字段表格列</th>
+</tr>
+<tr>
+<td>页面编辑类</td>
+<td>后台操作人员</td>
+<td>操作人员在当前页面编辑所有字段，不存在"列表 / 详情"的视图区分</td>
+<td>配置项、字段类型、配置值、编辑性、适用场景、说明、枚举值控制逻辑</td>
+</tr>
+<tr>
+<td>列表页</td>
+<td>后台操作人员</td>
+<td>操作人员看到的当前页面是一张列表，字段在列表和详情中可能分别展示</td>
+<td>字段名称、字段类型、列表、详情、新增、字段解释</td>
+</tr>
+<tr>
+<td>移动端展示页</td>
+<td>C 端用户</td>
+<td>用户在小程序/H5 中实际看到和操作的页面</td>
+<td>（本功能不涉及 C 端）</td>
+</tr>
+</table></div>
+
+<p><strong>字段类型</strong>列的值域：</p>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>字段类型</th>
+<th>说明</th>
+<th>示例</th>
+</tr>
+<tr>
+<td>string</td>
+<td>字符串</td>
+<td><code class="行内代码">string</code></td>
+</tr>
+<tr>
+<td>number</td>
+<td>数值</td>
+<td><code class="行内代码">number</code></td>
+</tr>
+<tr>
+<td>date</td>
+<td>日期</td>
+<td><code class="行内代码">date</code></td>
+</tr>
+<tr>
+<td>datetime</td>
+<td>日期时间</td>
+<td><code class="行内代码">datetime</code></td>
+</tr>
+<tr>
+<td>enum</td>
+<td>枚举，必须用括号罗列全部枚举值</td>
+<td><code class="行内代码">enum（在用、停推）</code></td>
+</tr>
+<tr>
+<td>file</td>
+<td>文件</td>
+<td><code class="行内代码">file</code></td>
+</tr>
+<tr>
+<td>组合字段</td>
+<td>复合字段</td>
+<td><code class="行内代码">组合字段</code></td>
+</tr>
+</table></div>
+
+<hr></div></div></section>
+<section class="页面面板" id="面_3_1" data-page="3.1"><div class="页面卡"><div class="页面头"><h2>投诉单页列表</h2><button class="主按钮" onclick="打开表单弹窗('3.1','新增')">+ 新建单页</button></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 新建投诉单页 / ② 编辑投诉单页 / ③ 停推/启用投诉单页 / ④ 查看数据明细（行内右侧抽屉）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">客户端后台 &gt; 投诉管理 &gt;</span> <span class="路径末段">投诉单页列表</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">新建/编辑后的投诉单页产生对外链接供 C 端承接投诉；停推后链接对外不可用；行内"数据明细"按钮触发右侧抽屉，按天查看每天的投诉量。</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索链接名称"></div><div class="筛选区"><span class="筛选标签">展示状态：</span><select class="筛选下拉"><option>全部</option><option>在用</option><option>停推</option></select></div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;">当前在用单页 <strong>4</strong> 条；停推单页对外链接失效。<strong>投诉总量每天凌晨 1:00 统计（T+1）</strong>。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">链接名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('链接名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">缩略图<span class="类型标签 file">file</span></span><button class="信息按钮" onclick="显示字段弹窗('缩略图', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">投诉链接<span class="类型标签 组合字段">组合字段</span></span><button class="信息按钮" onclick="显示字段弹窗('投诉链接', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">备注<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('备注', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">更新时间<span class="类型标签 datetime">datetime</span></span><button class="信息按钮" onclick="显示字段弹窗('更新时间', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">展示状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('展示状态', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">投诉总量<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('投诉总量', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">方笑天-电商投诉单页</td><td class="列表单元格"><img src="https://via.placeholder.com/80x50/e2e8f0/94a3b8?text=固定占位图" alt="缩略图" style="width:80px;height:50px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;"></td><td class="列表单元格" style="max-width:240px;"><div style="line-height:1.6;">好单裤短链：A20260920001</div><div style="line-height:1.6;">小码短链：B20260920001</div><div style="line-height:1.6;">内部H5链接：C20260920001</div></td><td class="列表单元格">系统自动生成占位说明</td><td class="列表单元格" style="white-space:nowrap;">2026-09-20 14:30</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">在用</span></td><td class="列表单元格">128</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('3.1','编辑', {链接名称:'方笑天-电商投诉单页',展示状态:'在用',更新时间:'2026-09-20 14:30',投诉总量:128,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260920001',投诉链接_小码:'B20260920001',投诉链接_H5:'C20260920001',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('3.1', {链接名称:'方笑天-电商投诉单页',展示状态:'在用',更新时间:'2026-09-20 14:30',投诉总量:128,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260920001',投诉链接_小码:'B20260920001',投诉链接_H5:'C20260920001',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">删除</button> <button class="详情按钮" onclick="显示提示('已停推（演示环境，不落库）', '成功', 2200)">停推</button> <button class="详情按钮" onclick="显示提示('更多功能（演示环境）', '信息', 2000)">更多</button> <button class="详情按钮" onclick="打开数据明细({链接名称:'方笑天-电商投诉单页',展示状态:'在用',更新时间:'2026-09-20 14:30',投诉总量:128,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260920001',投诉链接_小码:'B20260920001',投诉链接_H5:'C20260920001',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">数据明细</button></td></tr>
+<tr class="数据行"><td class="列表单元格">言成-酒水投诉单页</td><td class="列表单元格"><img src="https://via.placeholder.com/80x50/e2e8f0/94a3b8?text=固定占位图" alt="缩略图" style="width:80px;height:50px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;"></td><td class="列表单元格" style="max-width:240px;"><div style="line-height:1.6;">好单裤短链：A20260919002</div><div style="line-height:1.6;">小码短链：B20260919002</div><div style="line-height:1.6;">内部H5链接：C20260919002</div></td><td class="列表单元格">系统自动生成占位说明</td><td class="列表单元格" style="white-space:nowrap;">2026-09-19 11:25</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">在用</span></td><td class="列表单元格">95</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('3.1','编辑', {链接名称:'言成-酒水投诉单页',展示状态:'在用',更新时间:'2026-09-19 11:25',投诉总量:95,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260919002',投诉链接_小码:'B20260919002',投诉链接_H5:'C20260919002',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('3.1', {链接名称:'言成-酒水投诉单页',展示状态:'在用',更新时间:'2026-09-19 11:25',投诉总量:95,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260919002',投诉链接_小码:'B20260919002',投诉链接_H5:'C20260919002',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">删除</button> <button class="详情按钮" onclick="显示提示('已停推（演示环境，不落库）', '成功', 2200)">停推</button> <button class="详情按钮" onclick="显示提示('更多功能（演示环境）', '信息', 2000)">更多</button> <button class="详情按钮" onclick="打开数据明细({链接名称:'言成-酒水投诉单页',展示状态:'在用',更新时间:'2026-09-19 11:25',投诉总量:95,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260919002',投诉链接_小码:'B20260919002',投诉链接_H5:'C20260919002',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">数据明细</button></td></tr>
+<tr class="数据行"><td class="列表单元格">老王-综合投诉单页</td><td class="列表单元格"><img src="https://via.placeholder.com/80x50/e2e8f0/94a3b8?text=固定占位图" alt="缩略图" style="width:80px;height:50px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;"></td><td class="列表单元格" style="max-width:240px;"><div style="line-height:1.6;">好单裤短链：A20260915003</div><div style="line-height:1.6;">小码短链：B20260915003</div><div style="line-height:1.6;">内部H5链接：C20260915003</div></td><td class="列表单元格">系统自动生成占位说明</td><td class="列表单元格" style="white-space:nowrap;">2026-09-15 09:18</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#f3f4f6;color:#6b7280">停推</span></td><td class="列表单元格">312</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('3.1','编辑', {链接名称:'老王-综合投诉单页',展示状态:'停推',更新时间:'2026-09-15 09:18',投诉总量:312,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260915003',投诉链接_小码:'B20260915003',投诉链接_H5:'C20260915003',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('3.1', {链接名称:'老王-综合投诉单页',展示状态:'停推',更新时间:'2026-09-15 09:18',投诉总量:312,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260915003',投诉链接_小码:'B20260915003',投诉链接_H5:'C20260915003',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">删除</button> <button class="详情按钮" onclick="显示提示('已停推（演示环境，不落库）', '成功', 2200)">停推</button> <button class="详情按钮" onclick="显示提示('更多功能（演示环境）', '信息', 2000)">更多</button> <button class="详情按钮" onclick="打开数据明细({链接名称:'老王-综合投诉单页',展示状态:'停推',更新时间:'2026-09-15 09:18',投诉总量:312,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260915003',投诉链接_小码:'B20260915003',投诉链接_H5:'C20260915003',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">数据明细</button></td></tr>
+<tr class="数据行"><td class="列表单元格">零食专区-投诉单页</td><td class="列表单元格"><img src="https://via.placeholder.com/80x50/e2e8f0/94a3b8?text=固定占位图" alt="缩略图" style="width:80px;height:50px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;"></td><td class="列表单元格" style="max-width:240px;"><div style="line-height:1.6;">好单裤短链：A20260918004</div><div style="line-height:1.6;">小码短链：B20260918004</div><div style="line-height:1.6;">内部H5链接：C20260918004</div></td><td class="列表单元格">系统自动生成占位说明</td><td class="列表单元格" style="white-space:nowrap;">2026-09-18 16:42</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">在用</span></td><td class="列表单元格">67</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('3.1','编辑', {链接名称:'零食专区-投诉单页',展示状态:'在用',更新时间:'2026-09-18 16:42',投诉总量:67,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260918004',投诉链接_小码:'B20260918004',投诉链接_H5:'C20260918004',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('3.1', {链接名称:'零食专区-投诉单页',展示状态:'在用',更新时间:'2026-09-18 16:42',投诉总量:67,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260918004',投诉链接_小码:'B20260918004',投诉链接_H5:'C20260918004',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">删除</button> <button class="详情按钮" onclick="显示提示('已停推（演示环境，不落库）', '成功', 2200)">停推</button> <button class="详情按钮" onclick="显示提示('更多功能（演示环境）', '信息', 2000)">更多</button> <button class="详情按钮" onclick="打开数据明细({链接名称:'零食专区-投诉单页',展示状态:'在用',更新时间:'2026-09-18 16:42',投诉总量:67,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260918004',投诉链接_小码:'B20260918004',投诉链接_H5:'C20260918004',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">数据明细</button></td></tr>
+<tr class="数据行"><td class="列表单元格">大促售后-投诉单页</td><td class="列表单元格"><img src="https://via.placeholder.com/80x50/e2e8f0/94a3b8?text=固定占位图" alt="缩略图" style="width:80px;height:50px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;"></td><td class="列表单元格" style="max-width:240px;"><div style="line-height:1.6;">好单裤短链：A20260917005</div><div style="line-height:1.6;">小码短链：B20260917005</div><div style="line-height:1.6;">内部H5链接：C20260917005</div></td><td class="列表单元格">系统自动生成占位说明</td><td class="列表单元格" style="white-space:nowrap;">2026-09-17 19:05</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">在用</span></td><td class="列表单元格">234</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('3.1','编辑', {链接名称:'大促售后-投诉单页',展示状态:'在用',更新时间:'2026-09-17 19:05',投诉总量:234,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260917005',投诉链接_小码:'B20260917005',投诉链接_H5:'C20260917005',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('3.1', {链接名称:'大促售后-投诉单页',展示状态:'在用',更新时间:'2026-09-17 19:05',投诉总量:234,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260917005',投诉链接_小码:'B20260917005',投诉链接_H5:'C20260917005',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">删除</button> <button class="详情按钮" onclick="显示提示('已停推（演示环境，不落库）', '成功', 2200)">停推</button> <button class="详情按钮" onclick="显示提示('更多功能（演示环境）', '信息', 2000)">更多</button> <button class="详情按钮" onclick="打开数据明细({链接名称:'大促售后-投诉单页',展示状态:'在用',更新时间:'2026-09-17 19:05',投诉总量:234,缩略图:'（固定占位图）',投诉链接_好单裤:'A20260917005',投诉链接_小码:'B20260917005',投诉链接_H5:'C20260917005',备注:'系统自动生成占位说明',_壳节编号:'3.1'})">数据明细</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 5 条记录</div>
+</div></section>
+</main>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭表单弹窗()"></div>
+<aside id="表单弹窗面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="表单弹窗标题">新增</div>
+    <button class="btn-close" onclick="关闭表单弹窗()">×</button>
+  </div>
+  <div id="表单弹窗正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭表单弹窗()">取消</button>
+    <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-泳道映射">
+window._泳道节点映射 = {"3.1": [1, 2, 3, 4]};
+window._阶段泳道映射 = {"3": 1};
+</script>
+<script id="js-页面切换">
+// 唯一导航函数：叶子菜单 onclick="切换页面('4.1')"。父节点不可点，无展开收起逻辑。
+function 切换页面(页码) {
+  document.querySelectorAll('.页面面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(页码).replace('.', '_'));
+  if (panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单文档,.菜单叶子').forEach(function(a) { a.classList.remove('激活'); });
+  var link = document.querySelector('[data-menu-page="' + 页码 + '"]');
+  if (link) link.classList.add('激活');
+  var c = document.getElementById('内容区'); if (c) c.scrollTop = 0;
+  更新泳道高亮(页码);
+}
+// 泳道两级高亮合并：阶段减弱（第一级）+ 本页节点置灰（第二级）；文档页(1/2)自动清空
+function 更新泳道高亮(页码) {
+  var 图 = document.getElementById('全局泳道图'); if (!图) return;
+  图.className = 图.className.replace(/ ?高亮阶段\d+/g, '');
+  var 阶段号 = String(页码).split('.')[0];
+  var k = (window._阶段泳道映射 || {})[阶段号];
+  if (k) 图.classList.add('高亮阶段' + k);
+  var nums = (window._泳道节点映射 || {})[页码];
+  图.querySelectorAll('.泳道行').forEach(function(r) {
+    if (!nums) { r.classList.remove('置灰'); r.classList.remove('当前'); return; }
+    var on = nums.indexOf(parseInt(r.getAttribute('data-swimlane-node'), 10)) >= 0;
+    r.classList.toggle('当前', on);
+    r.classList.toggle('置灰', !on);
+  });
+}
+</script>
+<script id="js-字段联动">
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); }
+}
+// 枚举置灰通用函数：受控分组在「启用值」命中时正常，否则整组变淡且不可点。
+// 用法：置灰切换_模板('grp_退货设置', this.value, ['是'])；多组受控就在适配函数里多调几次。
+function 置灰切换_模板(组id, val, 启用值列表) {
+  var on = 启用值列表.indexOf(val) >= 0;
+  var el = document.getElementById(组id);
+  if (el) { el.style.opacity = on ? '1' : '0.35'; el.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+</script>
+<script id="js-表单弹窗">
+// 数据驱动的新增/编辑弹窗：window._表单字段按节['4.1'] + window._新增字段分组['4.1']
+// 三个可选扩展（枚举置灰场景三件套）：
+//   window._新增控制逻辑['4.1'] = 规则摘要框 HTML（弹窗顶部说明）
+//   字段对象加 联动:'置灰切换_xx(this.value)'（enum 下拉 onchange，串内只用单引号）
+//   分组对象加 id:'grp_xx'；window._弹窗初始化['4.1'] = function(){...}（弹窗打开后执行一次初始置灰）
+function 打开表单弹窗(节编号, 模式, 行数据) {
+  var drawer = document.getElementById('表单弹窗面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('表单弹窗正文'); var titleEl = document.getElementById('表单弹窗标题');
+  if (!drawer || !body) return;
+  模式 = 模式 || '新增';
+  行数据 = 行数据 || null;
+  var 字段列表 = (window._表单字段按节 && window._表单字段按节[节编号]) ? window._表单字段按节[节编号] : [];
+  titleEl.textContent = 模式 + ' · ' + 节编号;
+  var html = '<div class="编辑卡片区">';
+  var 控制逻辑块 = (window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  function 取值(f) { return (行数据 && 行数据[f.名称] !== undefined && 行数据[f.名称] !== '') ? 行数据[f.名称] : (f.示例值 || ''); }
+  function 控件(f) {
+    if (f.编辑性 === '只读') return '<span class="field-readonly">' + (取值(f) || '系统自动生成') + '</span>';
+    if (f.基础类型 === 'enum') {
+      var opts = (f.枚举值 || '').split(/[、,，]/).filter(Boolean);
+      var ev = f.联动 ? ' onchange="' + f.联动 + '"' : '';
+      var cur = String(取值(f));
+      var o = '<select class="field-select"' + ev + '>';
+      for (var i = 0; i < opts.length; i++) o += '<option' + (opts[i] === cur ? ' selected' : '') + '>' + opts[i] + '</option>';
+      return o + '</select>';
+    }
+    if (f.基础类型 === '富文本') return '<textarea class="field-input" rows="3" placeholder="请输入">' + 取值(f) + '</textarea>';
+    return '<input class="field-input" value="' + 取值(f) + '" placeholder="请输入">';
+  }
+  function 渲染字段行(f) {
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">' + 控件(f) + '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      if (模式 === '新增' && 组.组名 === '系统生成信息') continue;
+      html += '<div class="field-card"' + (组.id ? ' id="' + 组.id + '"' : '') + '><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 字段列表.length; k++) {
+          if (字段列表[k].名称 === 组.字段[j]) { html += 渲染字段行(字段列表[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>' + 模式 + '</h4></div><div class="field-card-body">';
+    if (字段列表.length === 0) html += '<div class="空状态">未注册弹窗字段（_表单字段按节 / _新增字段分组）</div>';
+    else for (var i = 0; i < 字段列表.length; i++) html += 渲染字段行(字段列表[i]);
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+  if (window._弹窗初始化 && window._弹窗初始化[节编号]) { try { window._弹窗初始化[节编号](); } catch (e) {} }
+}
+function 关闭表单弹窗() { var d = document.getElementById('表单弹窗面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+// 行内「删除」按钮入口：二次确认后提示（演示环境不落库）。
+function 确认删除(节编号, 行数据) {
+  if (!confirm('确定删除该记录？删除后不可恢复。')) return;
+  显示提示('已删除（演示环境，不落库）', '成功', 2200);
+}
+</script>
+<script id="js-单元格截断">
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script>
+window._表单字段按节=window._表单字段按节||{};
+window._表单字段按节["3.1"]=[
+  {名称:"链接名称",类型原文:"string",基础类型:"string",编辑性:"可编辑",示例值:"方笑天-电商投诉单页",数据来源:"商户运营人员填写",逻辑:"用于识别投诉单页",用途:"列表主标识",节编号:"3.1"},
+  {名称:"展示状态",类型原文:"enum",基础类型:"enum",枚举值:"在用、停推",编辑性:"可编辑",示例值:"在用",数据来源:"商户运营人员选择，默认在用",逻辑:"新建时默认在用；可通过停推操作切换为停推",用途:"控制投诉单页是否对外可用",节编号:"3.1"},
+  {名称:"缩略图",类型原文:"file",基础类型:"file",编辑性:"只读",示例值:"（固定占位图）",数据来源:"系统固定图片，写死一张页面缩略图",逻辑:"列表与详情均展示同一张固定占位图",用途:"列表视觉占位",节编号:"3.1"},
+  {名称:"投诉链接_好单裤",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"A20260920001",数据来源:"系统按已有规则自动生成",逻辑:"好单裤短链占位 Axxxx",用途:"对外承接投诉的链接之一",节编号:"3.1"},
+  {名称:"投诉链接_小码",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"B20260920001",数据来源:"系统按已有规则自动生成",逻辑:"小码短链占位 Bxxxxx",用途:"对外承接投诉的链接之一",节编号:"3.1"},
+  {名称:"投诉链接_H5",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"C20260920001",数据来源:"系统按已有规则自动生成",逻辑:"内部H5链接占位 Cxxxxxx",用途:"对外承接投诉的链接之一",节编号:"3.1"},
+  {名称:"备注",类型原文:"string",基础类型:"string",编辑性:"可编辑",示例值:"运营补充说明",数据来源:"商户运营人员填写",逻辑:"列表与详情均展示；新建与编辑均可改",用途:"补充说明",节编号:"3.1"},
+  {名称:"更新时间",类型原文:"datetime",基础类型:"datetime",编辑性:"只读",示例值:"2026-09-20 14:30",数据来源:"系统自动记录",逻辑:"格式 YYYY-MM-DD HH:mm；新建或编辑保存后刷新",用途:"追溯最近修改时间",节编号:"3.1"},
+  {名称:"投诉总量",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"128",数据来源:"系统统计历史所有投诉量累计值",逻辑:"每天凌晨1:00跑定时任务累加前一日新增投诉（T+1）",用途:"判断单页投诉规模",节编号:"3.1"}
+];
+window._新增字段分组=window._新增字段分组||{};
+window._新增字段分组["3.1"]=[
+  {组名:"基本信息",字段:["链接名称","展示状态","备注"]},
+  {组名:"系统生成信息",字段:["缩略图","投诉链接_好单裤","投诉链接_小码","投诉链接_H5","更新时间","投诉总量"]}
+];
+
+(window._字段总库||[]).push(
+{名称:"链接名称",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"商户运营人员填写",逻辑:"用于识别投诉单页",用途:"列表主标识",节编号:"3.1"},
+{名称:"展示状态",类型原文:"enum",基础类型:"enum",枚举值:"在用、停推",编辑性:"可编辑",数据来源:"商户运营人员选择",逻辑:"默认在用；可改为停推",用途:"控制投诉单页是否对外可用",节编号:"3.1"},
+{名称:"缩略图",类型原文:"file",基础类型:"file",编辑性:"只读",数据来源:"系统固定图片",逻辑:"写死一张页面缩略图",用途:"列表视觉占位",节编号:"3.1"},
+{名称:"投诉链接_好单裤",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"系统自动生成",逻辑:"好单裤短链占位 Axxxx",用途:"对外承接投诉的链接之一",节编号:"3.1"},
+{名称:"投诉链接_小码",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"系统自动生成",逻辑:"小码短链占位 Bxxxxx",用途:"对外承接投诉的链接之一",节编号:"3.1"},
+{名称:"投诉链接_H5",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"系统自动生成",逻辑:"内部H5链接占位 Cxxxxxx",用途:"对外承接投诉的链接之一",节编号:"3.1"},
+{名称:"备注",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"商户运营人员填写",逻辑:"列表与详情均展示；新建与编辑均可改",用途:"补充说明",节编号:"3.1"},
+{名称:"更新时间",类型原文:"datetime",基础类型:"datetime",编辑性:"只读",数据来源:"系统自动记录",逻辑:"格式 YYYY-MM-DD HH:mm",用途:"追溯最近修改时间",节编号:"3.1"},
+{名称:"投诉总量",类型原文:"number",基础类型:"number",编辑性:"只读",数据来源:"系统统计历史所有投诉量累计值",逻辑:"每天凌晨1:00定时任务累加前一日新增投诉（T+1）",用途:"判断单页投诉规模",节编号:"3.1"}
+);
+
+// ── 数据明细右侧抽屉（3.1 行内"数据明细"按钮触发，不单独占页面）──
+window.打开数据明细 = function(row) {
+  window.关闭数据明细();
+  var overlay = document.createElement('div');
+  overlay.id = '数据明细overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.45);z-index:9998;';
+  overlay.onclick = window.关闭数据明细;
+  document.body.appendChild(overlay);
+
+  var drawer = document.createElement('div');
+  drawer.id = '数据明细抽屉';
+  drawer.style.cssText = 'position:fixed;top:0;right:0;width:520px;max-width:100vw;height:100%;background:#fff;z-index:9999;box-shadow:-4px 0 16px rgba(15,23,42,0.12);overflow-y:auto;';
+
+  // 基于行数据生成最近 8 天的假数据（演示用，真实环境由后端返回）
+  var total = Number(row.投诉总量 || 120);
+  var base = Math.max(1, Math.floor(total / 8));
+  var days = [];
+  for (var i = 0; i < 8; i++) {
+    var d = new Date();
+    d.setDate(d.getDate() - i);
+    var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    var cnt = base + ((i * 7) % 21) - 8;
+    days.push({date: ds, count: Math.max(0, cnt)});
+  }
+  var daysHtml = days.map(function(d) {
+    return '<tr class="数据行"><td class="列表单元格" style="white-space:nowrap;">' + d.date + '</td><td class="列表单元格">' + d.count + '</td></tr>';
+  }).join('');
+
+  var links = '<div style="line-height:1.7;">' +
+    '<div>好单裤短链：' + (row.投诉链接_好单裤 || '-') + '</div>' +
+    '<div>小码短链：' + (row.投诉链接_小码 || '-') + '</div>' +
+    '<div>内部H5链接：' + (row.投诉链接_H5 || '-') + '</div>' +
+  '</div>';
+
+  drawer.innerHTML =
+    '<div style="padding:18px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1;">' +
+      '<h3 style="margin:0;font-size:18px;font-weight:700;color:#1e293b;">数据明细</h3>' +
+      '<button onclick="关闭数据明细()" style="border:none;background:none;font-size:28px;color:#64748b;cursor:pointer;line-height:1;padding:0 4px;">×</button>' +
+    '</div>' +
+    '<div style="padding:18px 20px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;">' +
+        '<div><div style="font-size:12px;color:#64748b;margin-bottom:4px;">推广位名称</div><div style="font-weight:600;color:#1e293b;font-size:15px;">' + (row.链接名称 || '-') + '</div></div>' +
+        '<div><div style="font-size:12px;color:#64748b;margin-bottom:4px;">投诉总数</div><div style="font-weight:700;color:#1d4ed8;font-size:18px;">' + (row.投诉总量 || 0) + '</div></div>' +
+        '<div><div style="font-size:12px;color:#64748b;margin-bottom:4px;">更新时间</div><div style="color:#334155;font-size:13px;">' + (row.更新时间 || '-') + '</div></div>' +
+        '<div><div style="font-size:12px;color:#64748b;margin-bottom:4px;">投诉链接</div>' + links + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="padding:18px 20px;">' +
+      '<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#92400e;">&#9888; 每天凌晨 1:00 统计前一日数据（T+1）；按 0:00~23:59 完整一天聚合。</div>' +
+      '<table class="阅读表格" style="width:100%;border-collapse:collapse;">' +
+        '<thead><tr><th class="列表表头">日期</th><th class="列表表头">投诉量</th></tr></thead>' +
+        '<tbody>' + daysHtml + '</tbody>' +
+      '</table>' +
+      '<div class="列表脚注">共 ' + days.length + ' 条记录</div>' +
+    '</div>';
+
+  document.body.appendChild(drawer);
+};
+
+window.关闭数据明细 = function() {
+  var o = document.getElementById('数据明细overlay');
+  var d = document.getElementById('数据明细抽屉');
+  if (o) o.parentNode.removeChild(o);
+  if (d) d.parentNode.removeChild(d);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,1609 @@
+<script type="text/plain" data-ai-only>
+# BXX 测评
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+当前 SaaS 平台缺少面向 C 端用户的内容运营工具。商户需要一种轻量级的图文内容形式，能够通过测评、种草、推荐等场景触达用户，引导用户浏览、互动和分享，从而提升用户停留时长和转化机会。
+
+```text
+改造前
+
+商户无自主可配置的 C 端内容展示工具，依赖固定模板或外部链接。
+
+
+改造后
+
+总后台配置发布人
+        ↓
+总后台创建测评帖子（关联发布人、设置起始互动数据）
+        ↓
+上架后 C 端用户浏览测评列表 → 点击进入详情 → 点赞 / 收藏 / 转发
+```
+
+### 1.2 一句话业务模型
+
+```text
+总后台配置发布人形象
+        +
+总后台创建并上架测评帖子
+        +
+C 端用户主动进入测评页
+        ↓
+浏览列表 → 查看详情 → 互动（点赞、收藏、转发）→ 提升内容传播与用户粘性
+```
+
+### 1.3 最终目标
+
+- **C 端可见可互动：** C 端用户能够在测评列表页浏览已上架帖子，点击进入详情页查看正文，并执行点赞、收藏、转发操作。
+- **总后台可配可控：** 总后台操作人员可配置多个发布人形象，创建并管理测评帖子，控制上下架状态。
+
+### 1.4 页面原型与图片说明
+
+> 本节已移除。功能文档中不再包含"效果展示"预览模块和图片插入逻辑。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ SaaS 总后台                          │ C 端用户                             │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ ① 配置发布人形象（头像+名称）        │                                      │
+│          │                           │                                      │
+│ ② 创建并上架测评帖子                 │                                      │
+│ 【帖子状态：已上架】                  │                                      │
+│          │                           │                                      │
+│          └──────────────────────────→│ ③ 浏览测评列表                      │
+│                                      │          │                           │
+│                                      │ ④ 点击帖子进入详情                  │
+│                                      │          │                           │
+│                                      │ ⑤ 点赞 / 收藏 / 转发                │
+│                                      │ 【互动数据实时更新】                  │
+│                                      │                                      │
+│ ⑥ 可随时下架帖子                     │                                      │
+│ 【帖子状态：已下架，C端不可见】       │                                      │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+```
+
+泳道图说明：
+
+- 编号节点只写参与方实际执行的业务动作。
+- 状态标注写在触发该状态的动作之后，不占用新的流程序号，统一使用 `【帖子状态：xxx】`。
+- 本功能涉及两个参与方：SaaS 总后台、C 端用户。无外部系统和客户端后台参与。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序线性展开：
+
+1. **第一阶段（主要参与方：SaaS 总后台）**：总后台配置发布人形象和测评帖子，是 C 端展示的前置条件。
+2. **第二阶段（主要参与方：C 端用户）**：C 端用户浏览测评列表、查看详情并互动。
+
+```text
+第一阶段：SaaS 总后台配置
+① 配置发布人 → ② 创建并上架帖子
+                            ↓
+第二阶段：C 端用户浏览与互动
+③ 浏览列表 → ④ 查看详情 → ⑤ 点赞 / 收藏 / 转发
+```
+
+### 2.3 页面类型说明
+
+| 页面类型 | 面向对象 | 含义 | 正文字段表格列 |
+| --- | --- | --- | --- |
+| 页面编辑类 | 后台操作人员 | 操作人员在当前页面编辑所有字段，不存在"列表 / 详情"视图区分 | 配置项、字段类型、配置值、编辑性、适用场景、说明、枚举值控制逻辑 |
+| 列表页 | 后台操作人员 | 操作人员看到的列表，字段在列表和详情中可能分别展示 | 字段名称、字段类型、列表、详情、新增、字段解释 |
+| 移动端展示页 | C 端用户 | 用户在小程序/H5 中实际看到和操作的页面 | 页面状态（节点 / 状态名称 / 进入条件 / 完整手机页面内容 / 用户操作 / 结果）；页面字段标注说明（标注 / 页面上看到什么 / 业务数据从哪里来 / 页面如何组合与展示 / 适用状态） |
+
+---
+## C 端页面类型判定
+
+| 类型 | 定义 | 本项目判定 |
+|------|------|-----------|
+| **A（列表页）** | 承接多条数据，每条数据有自己的数据状态 | — |
+| **B（详情页）** | 单个对象的详情/操作页面，状态是页面级的 | 测评列表、测评详情 |
+
+**判定**：测评列表页——同一页面中的所有卡片都处于"已上架"状态，不存在多种数据状态共存 → **B 类**。测评详情页→ **B 类**。
+
+---
+## 3. 页面流程图 — C端页面交互与跳转
+
+### 3.1 总览与阅读规则
+
+页面数量：2（A=测评列表，B=测评详情）
+状态数量：3（A1=列表有数据、A2=列表空状态、B1=详情展示）
+典型路径数量：2（主路径 + 异常）
+节点规则：页面字母代表页面，状态序号代表该页面内状态。
+
+### 3.2 页面与状态节点主数据
+
+| 节点 | 页面 | 状态 | 进入条件 | 用户操作 | 系统结果 / 下一步 |
+| --- | --- | --- | --- | --- | --- |
+| A1 | A 测评列表 | 有数据 | 存在已上架的测评帖子 | 浏览列表、点击帖子卡片 | 跳转至 B1 测评详情 |
+| A2 | A 测评列表 | 空状态 | 无已上架的测评帖子 | 查看空状态提示 | 停留在当前页面 |
+| B1 | B 测评详情 | 详情展示 | 从 A1 点击帖子卡片进入 | 阅读详情、点赞、收藏、转发、返回列表 | 互动数据更新；返回至 A1 |
+
+### 3.3 典型路径
+
+| 路径 ID | 路径名称 | 路径类型 | 节点序列 | 业务动作链 | 路径结果 |
+| --- | --- | --- | --- | --- | --- |
+| P1 | 主路径：浏览列表→查看详情 | 主路径 | A1 → B1 | 进入列表 → 点击帖子 → 查看详情 → 互动 | 用户完成浏览与互动 |
+| P2 | 异常：空状态 | 异常集合 | A2 | 进入列表 → 无可用内容 | 停留在空状态页 |
+
+### 3.4 路径节点实例与连接器
+
+| 路径 ID | 顺序 | 节点引用 | 进入连接器 | 用户动作 | 系统结果 |
+| --- | ---: | --- | --- | --- | --- |
+| P1 | 1 | A1 | — | 进入测评列表，浏览帖子卡片 | 展示全部已上架帖子，按排序值降序排列 |
+| P1 | 2 | B1 | 点击帖子卡片 | 阅读正文、点赞、收藏、转发 | 互动数据实时更新；点击返回回到 A1 |
+| P2 | 1 | A2 | — | 进入测评列表 | 展示空状态提示，停留当前页 |
+
+### 3.5 局部分支
+
+| 所属节点 | 反馈名称 | 触发条件 | 局部结果 | 是否留在当前页面 |
+| --- | --- | --- | --- | --- |
+| B1 | 点赞成功 | 点击点赞按钮 | 点赞数 +1，按钮状态切换为已点赞 | 是 |
+| B1 | 取消点赞 | 再次点击已点赞按钮 | 点赞数 -1，按钮恢复未点赞状态 | 是 |
+| B1 | 收藏成功 | 点击收藏按钮 | 收藏数 +1，按钮状态切换为已收藏 | 是 |
+| B1 | 取消收藏 | 再次点击已收藏按钮 | 收藏数 -1，按钮恢复未收藏状态 | 是 |
+| B1 | 转发 | 点击转发按钮 | 调起分享面板/复制链接 | 是 |
+| B1 | 帖子被下架 | 用户停留在详情时后台下架 | Toast 提示"内容已下架"，自动返回列表 | 否，返回 A1 |
+
+### 3.6 迷你手机内容
+
+页面流程图节点手机复用对应移动端状态的"完整手机页面内容"，按迷你比例渲染。
+
+### 3.7 页面流程图验收
+
+- 顶部总览含页面数(2)、状态数(3)、路径数(2)。
+- 主流程 Tab（P1）展示 A1 → B1。
+- 异常 Tab（P2）展示 A2 空状态。
+- 每个节点显示编号、页面名称、状态名称、迷你手机、用户动作、系统结果。
+- 节点间连接器带业务含义。
+
+### 3.8 两区域一致性约束
+
+- 页面流程图节点（§3.2）和第二阶段状态卡节点编号一一对应。
+- 页面流程图迷你手机与第二阶段完整手机内容来自同一状态。
+- 页面数和状态数以正文实际记录为准。
+
+---
+## 4. 第一阶段：SaaS 总后台配置
+
+> 本阶段由 SaaS 总后台操作人员完成发布人配置和帖子管理，是 C 端展示的前置条件。
+
+### 4.1 发布人设置 — 页面编辑类（新增页面）
+
+#### 业务背景
+
+当前环节：① 配置发布人形象（头像 + 名称）<br>
+页面路径：SaaS 总后台 > 内容运营 > 测评 > 发布人设置<br>
+对下游影响：配置的发布人供帖子创建时选择，发布人头像和名称将展示在 C 端详情页中<br>
+表格类型：页面编辑类<br>
+
+#### 字段说明
+
+##### [页面编辑类]
+路径：SaaS 总后台 > 内容运营 > 测评 > 发布人设置
+
+| 配置项 | 字段类型 | 配置值 | 编辑性 | 适用场景 | 说明 | 枚举值控制逻辑 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 头像 | file | — | 可编辑 | 发布人头像展示 | **数据来源：** 当前操作者上传。<br>**逻辑：** 支持上传图片，建议正方形，展示在 C 端详情页发布人区域。<br>**用途：** C 端展示发布人头像，增强内容可信度。 | |
+| 名称 | string | — | 可编辑 | 发布人名称展示 | **数据来源：** 当前操作者填写。<br>**逻辑：** 自由文本，展示在 C 端详情页发布人区域。<br>**用途：** C 端展示发布人名称。 | |
+
+> 发布人设置页面以列表形式展示已配置的全部发布人，支持新增、编辑、删除。每条发布人记录仅包含头像和名称两个字段。
+
+#### 详情字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 头像、名称 |
+
+#### 新增字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 头像、名称 |
+
+#### 列表交互
+
+**交互：[新增发布人]**  <br>
+**业务用途**：新增一条发布人记录。点击后弹出新增抽屉，填写头像和名称，保存后发布人可被帖子引用。<br>
+
+**交互：[编辑发布人]**  <br>
+**业务用途**：修改已有发布人的头像或名称。修改后所有已关联该发布人的历史帖子在 C 端同步展示最新头像和名称。<br>
+
+**交互：[删除发布人]**  <br>
+**业务用途**：删除发布人记录。删除前需校验是否仍有已上架帖子关联该发布人；如有则提示不可删除，需先更换帖子发布人或下架帖子。<br>
+
+#### 业务逻辑
+
+**新增时字段校验：** 头像和名称均为必填，保存时校验不可为空。
+
+**删除保护：** 发布人被已上架帖子引用时不可删除，提示"该发布人已被 X 篇已上架帖子引用，请先更换发布人或下架帖子后再删除"。被已下架帖子或未引用时可直接删除。
+
+**修改即时生效：** 修改发布人头像或名称后，C 端所有关联该发布人的帖子（含历史和未来）均立即展示最新头像和名称，不保留历史快照。
+
+---
+
+### 4.2 帖子管理 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：② 创建并上架测评帖子<br>
+页面路径：SaaS 总后台 > 内容运营 > 测评 > 帖子管理<br>
+对下游影响：上架后的帖子将出现在 C 端测评列表页，供用户浏览和互动<br>
+表格类型：列表页<br>
+
+#### 字段说明
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | :---: | :---: | :---: | --- |
+| 排序 | number | 是 | 是 | 是（可编辑） | **数据来源：** 当前操作者手动输入。<br>**逻辑：** 数值越大排在越前面。决定 C 端列表展示顺序。<br>**用途：** 控制帖子在 C 端列表中的展示优先级。 |
+| 主图 | file | 是 | 是 | 是（可编辑） | **数据来源：** 当前操作者上传。<br>**逻辑：** 帖子列表卡片封面图，建议统一尺寸。<br>**用途：** C 端列表卡片封面展示。 |
+| 标题 | string | 是 | 是 | 是（可编辑） | **数据来源：** 当前操作者填写。<br>**逻辑：** 帖子标题，展示在列表卡片和详情页顶部。<br>**用途：** 吸引用户点击，概括帖子主题。 |
+| 发布人 | 组合字段 | 是 | 是 | 是（可编辑） | **数据来源：** 当前操作者从已配置的发布人列表中选择。<br>**逻辑：** 保存时如果未选择发布人，系统从全部发布人中随机挑选一个。<br>**用途：** C 端展示发布人头像和名称。 |
+| 起始点赞数 | number | 是 | 是 | 是（可编辑） | **数据来源：** 当前操作者手动输入或系统自动赋值。<br>**逻辑：** 保存时如果未填写，系统自动随机赋值 400~900。用户点赞在此基数上累加。<br>**用途：** 为帖子提供初始互动氛围。 |
+| 起始收藏数 | number | 是 | 是 | 是（可编辑） | **数据来源：** 当前操作者手动输入或系统自动赋值。<br>**逻辑：** 保存时如果未填写，系统自动随机赋值 400~900。用户收藏在此基数上累加。<br>**用途：** 为帖子提供初始互动氛围。 |
+| 详情文本 | 富文本 | 否 | 是 | 是（可编辑） | **数据来源：** 当前操作者填写。<br>**逻辑：** 富文本内容，支持图文混排。仅在详情抽屉和 C 端详情页展示。<br>**用途：** 测评帖子的正文内容。 |
+| 上下架状态 | enum（上架、下架） | 是 | 是 | 是（可编辑） | **数据来源：** 当前操作者选择。<br>**逻辑：** 上架 = C 端可见；下架 = C 端不可见（列表和详情均不可访问）。<br>**用途：** 控制帖子在 C 端的可见性。 |
+
+> "操作"属于页面功能，不作为业务字段保存。
+
+#### 详情字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 标题、主图、发布人、排序 |
+| 互动数据 | 起始点赞数、起始收藏数 |
+| 正文内容 | 详情文本 |
+| 发布控制 | 上下架状态 |
+
+#### 新增字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 标题、主图、发布人、排序 |
+| 互动设置 | 起始点赞数、起始收藏数 |
+| 正文内容 | 详情文本 |
+| 发布控制 | 上下架状态 |
+
+#### 列表交互
+
+**交互：[新增帖子]**  <br>
+**业务用途**：新增一篇测评帖子。点击后打开新增抽屉，填写全部字段。保存时：如未选发布人则随机挑选一个；起始点赞数和起始收藏数如未填则各自随机赋值 400~900。<br>
+
+**交互：[编辑帖子]**  <br>
+**业务用途**：修改已有帖子的任意字段。编辑后 C 端立即展示最新内容。排序、主图、标题、发布人、起始点赞数、起始收藏数、详情文本和上下架状态均可修改。<br>
+
+**交互：[删除帖子]**  <br>
+**业务用途**：删除帖子记录。已上架的帖子需先下架再删除，或二次确认后直接删除（删除后 C 端不可见）。<br>
+
+**交互：[上架 / 下架]**  <br>
+**业务用途**：切换帖子上下架状态。上架后帖子出现在 C 端测评列表；下架后 C 端不可见。用户在详情页浏览时被下架，页面 Toast 提示"内容已下架"并自动返回列表。<br>
+
+**交互：[详情查看]**  <br>
+**业务用途**：点击表格行「详情」按钮打开详情抽屉，展示全部字段的完整值，包括详情文本的富文本渲染。<br>
+
+#### 业务逻辑
+
+**排序规则：** 数值越大越靠前。C 端列表按排序值降序展示。排序值相同的帖子，按创建时间倒序排列。
+
+**发布人随机规则：** 新增或编辑帖子保存时，若发布人字段为空，系统从全部已配置发布人中随机抽取一个。如果当前无任何发布人，保存失败并提示"请先配置发布人"。
+
+**起始互动数随机规则：** 起始点赞数未填 → 随机 400~900（含两端）；起始收藏数未填 → 随机 400~900（含两端）。两个随机值独立计算，不要求相同。
+
+**下架不可见：** 帖子下架后，C 端列表不再展示该帖子，详情页也不可访问（直接访问详情链接时提示"内容已下架"）。
+
+**删除保护：** 已上架帖子点击删除时，应弹出二次确认"该帖子当前为上架状态，删除后 C 端将不可见，确认删除？"。已下架帖子可直接删除。
+
+---
+
+## 5. 第二阶段：C 端测评展示
+
+> 本阶段面向 C 端用户，包含测评列表页和测评详情页。
+
+### 5.1 测评列表 — 移动端展示页（新增页面）
+
+#### 页面身份与摘要
+
+页面字母：A
+页面名称：测评列表
+页面摘要：展示全部已上架测评帖子的列表，用户可浏览和点击进入详情。
+当前环节：③ 浏览测评列表
+页面路径：小程序/H5 > 测评
+页面角色：列表展示页
+状态编号范围：A1～A2
+
+#### 页面全部状态横向全览
+
+| 节点 | 状态名称 | 进入条件 | 完整手机页面内容（按视觉顺序） | 用户操作 | 结果 / 下一步 |
+| --- | --- | --- | --- | --- | --- |
+| A1 | 有数据 | 存在已上架的测评帖子 | ②页面标题=测评；③帖子卡片=主图=标题=发布人头像=发布人名称=点赞数=收藏数（多卡片按排序值降序排列） | 点击帖子卡片 | 跳转至 B1 测评详情 |
+| A2 | 空状态 | 无已上架的测评帖子 | ②页面标题=测评；④空状态=📋=暂无测评内容=敬请期待 | 无有效操作 | 停留在当前页 |
+
+#### 集中字段标注说明
+
+| 标注 | 页面上看到什么 | 业务数据从哪里来 | 页面如何组合与展示 | 适用状态 |
+| --- | --- | --- | --- | --- |
+| ② | 页面标题"测评" | 系统固定文案 | 页面顶部导航栏标题区 | 全部（A1、A2） |
+| ③ | 帖子卡片（主图、标题、发布人头像、发布人名称、点赞数、收藏数） | 总后台帖子管理配置 + 用户互动数据实时累加 | 卡片式布局：左侧主图 + 右侧标题/发布人/互动数据。多卡片按排序值降序纵向排列 | A1 |
+| ④ | 空状态提示 | 系统固定文案 | 居中展示空状态插图和"暂无测评内容"文案 | A2 |
+
+> ① 为导航栏标题，由渲染器自动生成，MD 不写此编号。
+
+#### 状态差异
+
+| 节点 | 该状态独有内容 | 进入依据 | 表达规则 |
+| --- | --- | --- | --- |
+| A1 | 帖子卡片列表，每张卡片展示主图、标题、发布人信息、互动数据 | 存在已上架帖子 | 按排序值降序排列，排序值相同按创建时间倒序 |
+| A2 | 空状态插图和提示文案 | 无已上架帖子 | 仅展示空状态内容，无可点击元素 |
+
+#### 节点跳转
+
+| 当前节点 | 触发操作 | 判断 | 成功结果 | 失败 / 分支 |
+| --- | --- | --- | --- | --- |
+| A1 | 点击帖子卡片 | 帖子仍为上架状态 | 跳转至 B1 测评详情 | 帖子已被下架 → Toast"内容已下架"，留在 A1 |
+| A2 | — | — | — | 无操作入口，停留在 A2 |
+
+#### 产品与技术补充规则
+
+- 列表支持下拉刷新，重新拉取最新帖子列表和互动数据。
+- 列表采用分页加载，每次加载 N 条（N 根据实际接口性能确定）。
+- 点赞数和收藏数展示当前累计值（起始值 + 用户互动增量），格式：超过 9999 显示为"9,999+"。
+
+---
+
+### 5.2 测评详情 — 移动端展示页（新增页面）
+
+#### 页面身份与摘要
+
+页面字母：B
+页面名称：测评详情
+页面摘要：展示单篇测评帖子的完整内容，用户可阅读正文并进行点赞、收藏、转发。
+当前环节：④ 查看详情 → ⑤ 互动
+页面路径：小程序/H5 > 测评 > 帖子详情
+页面角色：详情页
+状态编号范围：B1
+
+#### 页面全部状态横向全览
+
+| 节点 | 状态名称 | 进入条件 | 完整手机页面内容（按视觉顺序） | 用户操作 | 结果 / 下一步 |
+| --- | --- | --- | --- | --- | --- |
+| B1 | 详情展示 | 从 A1 点击帖子卡片进入，帖子为上架状态 | ②页面标题=帖子标题；③主图=帖子主图；④发布人信息=头像=发布人名称；⑤正文区域=详情文本（富文本）；⑥互动栏=点赞按钮=点赞数=收藏按钮=收藏数=转发按钮；⑦底部操作=返回列表 | 点赞、收藏、转发、返回列表 | 互动数据更新；返回至 A1 |
+
+#### 集中字段标注说明
+
+| 标注 | 页面上看到什么 | 业务数据从哪里来 | 页面如何组合与展示 | 适用状态 |
+| --- | --- | --- | --- | --- |
+| ② | 页面标题（帖子标题） | 总后台帖子管理的标题字段 | 导航栏标题区 | B1 |
+| ③ | 主图 | 总后台帖子管理的主图字段 | 页面顶部大图，居中展示 | B1 |
+| ④ | 发布人信息（头像 + 名称） | 总后台发布人设置的当前帖关联发布人 | 头像圆形小图 + 名称文本，位于主图下方 | B1 |
+| ⑤ | 正文区域 | 总后台帖子管理的详情文本（富文本） | 富文本渲染，支持图文混排，位于发布人信息下方 | B1 |
+| ⑥ | 互动栏（点赞数 + 收藏数 + 转发按钮） | 起始值来自总后台配置，增量来自用户互动实时累加 | 底部固定栏：点赞按钮（切换已点赞/未点赞）+ 点赞数、收藏按钮（切换已收藏/未收藏）+ 收藏数、转发按钮 | B1 |
+| ⑦ | 返回按钮 | 系统固定 | 导航栏左侧返回箭头，点击返回测评列表 A1 | B1 |
+
+> ① 为导航栏标题，由渲染器自动生成，MD 不写此编号。
+
+#### 状态差异
+
+| 节点 | 该状态独有内容 | 进入依据 | 表达规则 |
+| --- | --- | --- | --- |
+| B1 | 主图、发布人信息、富文本正文、互动栏 | 从列表点击进入且帖子仍为上架 | 完整展示全部内容，互动按钮可操作 |
+
+#### 节点跳转
+
+| 当前节点 | 触发操作 | 判断 | 成功结果 | 失败 / 分支 |
+| --- | --- | --- | --- | --- |
+| B1 | 点击返回按钮 | — | 返回至 A1 | — |
+| B1 | 点击点赞按钮 | 未点赞状态 | 点赞数 +1，按钮切换为已点赞态 | 网络异常 → Toast"网络异常，请稍后重试" |
+| B1 | 再次点击点赞按钮 | 已点赞状态 | 点赞数 -1，按钮恢复未点赞态 | 网络异常 → Toast"网络异常，请稍后重试" |
+| B1 | 点击收藏按钮 | 未收藏状态 | 收藏数 +1，按钮切换为已收藏态 | 网络异常 → Toast"网络异常，请稍后重试" |
+| B1 | 再次点击收藏按钮 | 已收藏状态 | 收藏数 -1，按钮恢复未收藏态 | 网络异常 → Toast"网络异常，请稍后重试" |
+| B1 | 点击转发按钮 | — | 调起分享面板，支持分享给好友或复制链接 | — |
+| B1 | 帖子被后台下架 | — | Toast"内容已下架"，自动返回 A1 | — |
+
+#### 产品与技术补充规则
+
+- **点赞去重**：同一用户对同一帖子最多点赞一次。取消点赞后可再次点赞。点赞状态按用户维度记录。
+- **收藏去重**：同一用户对同一帖子最多收藏一次。取消收藏后可再次收藏。收藏状态按用户维度记录。
+- **转发**：调起宿主（小程序/H5）原生分享能力。转发不产生计数变更，仅做行为追踪。
+- **互动数据实时性**：点赞数和收藏数在用户操作后立即在前端更新展示，同时异步同步至服务端。不做乐观锁冲突回退。
+- **下架即时生效**：用户在详情页停留期间，如后台操作下架，前端通过轮询或推送感知后 Toast 提示"内容已下架"，自动返回列表页。
+- **未登录处理**：点赞、收藏操作需用户登录。未登录时点击互动按钮，引导用户先登录。
+
+---
+
+## 6. 关键业务规则
+
+- **排序值越大越靠前**：C 端列表按排序值降序排列，排序值相同按创建时间倒序。
+- **发布人随机挑选**：帖子保存时未选发布人，从全部发布人中随机抽取一个。
+- **起始互动数自动填充**：起始点赞数和起始收藏数保存时未填写，各自独立随机 400~900。
+- **无发布人时不可创建帖子**：若系统中无任何发布人，创建帖子时保存失败并提示"请先配置发布人"。
+- **下架即时生效**：帖子下架后 C 端列表和详情均不可见，已在详情页的用户收到提示后自动返回列表。
+- **发布人信息同步更新**：修改发布人头像或名称后，所有关联帖子的 C 端展示同步更新，不保留历史快照。
+- **删除保护**：已上架帖子删除需二次确认；发布人被已上架帖子引用时不可删除。
+
+## 7. 权限说明
+
+| 功能或操作 | SaaS 总后台操作人员 | C 端用户 |
+| --- | :---: | :---: |
+| 配置发布人（新增/编辑/删除） | 是 | — |
+| 管理帖子（新增/编辑/删除/上下架） | 是 | — |
+| 浏览测评列表 | — | 是 |
+| 查看测评详情 | — | 是 |
+| 点赞 / 取消点赞 | — | 是（需登录） |
+| 收藏 / 取消收藏 | — | 是（需登录） |
+| 转发 | — | 是 |
+
+## 8. AI 维护说明
+
+### 8.1 文档设计理念
+
+本文档采用双层结构：第 1~7 章供人类阅读，第 8 章供 AI 维护。
+
+### 8.2 正文组织原则
+
+- 正文按业务实际发生顺序展开：先总后台配置，后 C 端展示。
+- 2.1 泳道图是流程信息的唯一事实源。
+- 后台页面按"业务背景 → 字段说明 → 列表交互 → 业务逻辑"四段结构。
+- 移动端展示页按"页面身份与摘要 → 页面全部状态横向全览 → 集中字段标注说明 → 状态差异 → 节点跳转 → 产品与技术补充规则"结构。
+
+### 8.3 泳道和参与方识别规则
+
+参与方仅涉及 SaaS 总后台和 C 端用户两方。无外部系统、无客户端后台（商户端）参与。
+
+### 8.5 信息可信度与写入位置
+
+用户已确认内容已全部写入正文。以下内容尚未确认，放入 8.10 待确认逻辑。
+
+### 8.8 术语同步
+
+- "测评" = 功能名称，全文统一
+- "帖子" = 单篇测评内容
+- "发布人" = 帖子关联的内容发布者形象
+- "上架 / 下架" = 帖子的可见性控制状态
+
+### 8.10 待确认逻辑
+
+1. 转发功能的具体实现方式（微信分享卡片 / 复制链接 / 生成海报）？
+2. 点赞和收藏是否需要登录？登录方式是什么（微信授权 / 手机号）？
+3. 帖子是否有有效期或定时上下架需求？
+4. C 端列表是否需要分类/标签筛选？
+5. 列表分页每页数量？是否需要无限滚动？
+6. 主图是否有尺寸和比例限制？
+7. 详情文本（富文本）的上传图片是否有数量和大小的限制？
+8. 互动数据（点赞数、收藏数）是否需要防刷机制？
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>测评</title>
+<style id="css-布局">
+*, *::before, *::after { box-sizing: border-box; }
+:root { --侧栏间距: 28px; --左栏宽: max(420px, 22vw); --右栏宽: 300px; --标签栏高: 52px; }
+body { margin: 0; padding: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用容器 { min-height: 100vh; }
+.阶段区域 { display: grid; grid-template-columns: var(--左栏宽) minmax(0, 1fr) var(--右栏宽); gap: var(--侧栏间距); width: min(calc(100vw - 28px), 2400px); margin: 0 auto; align-items: start; }
+.左侧栏 { grid-column: 1; position: sticky; top: calc(var(--标签栏高) + 16px); max-height: calc(100vh - var(--标签栏高) - 32px); overflow-y: auto; overflow-x: visible; background: #fff; border-right: 1px solid #e2e8f0; padding: 16px 0 0 0; }
+.内容摘要 { margin: 0 10px 16px 10px; }
+.内容摘要内 { min-width: 0; border: 1px solid #d9e2ec; border-left: 4px solid #0f6b8f; border-radius: 6px; background: #fff; padding: 7px 12px; box-shadow: 0 4px 14px rgba(15, 35, 52, 0.05); }
+.内容摘要内 h1 { font-size: 18px; line-height: 1.3; margin: 0 0 6px 0; color: #172033; }
+.业务简介 { min-width: 0; margin: 0; }
+.业务简介 blockquote { margin: 0; border: 0; border-radius: 0; background: transparent; padding: 0; color: #344054; font-size: 13px; line-height: 1.6; }
+.业务简介 blockquote p { margin: 4px 0; }
+.阶段导航区 { margin: 0 10px 16px 10px; }
+.全局泳道 { margin: 0 10px 16px 10px; background: #fff; border: 1px solid #d9e2ec; border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 35, 52, 0.08); padding: 10px; }
+.主舞台 { grid-column: 2; padding: 24px 32px 48px; min-width: 0; background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(15, 35, 52, 0.04); }
+.右侧栏 { grid-column: 3; position: sticky; top: calc(var(--标签栏高) + 30px); max-height: calc(100vh - var(--标签栏高) - 32px); overflow-y: auto; background: #fff; border-left: 1px solid #e2e8f0; padding: 24px 16px 16px 16px; min-width: 0; }
+.标签包裹 { position: sticky; top: 0; z-index: 100; background: rgba(246, 248, 251, 0.96); border-bottom: 1px solid #e2e8f0; backdrop-filter: blur(8px); }
+.标签包裹内 { display: flex; gap: 8px; overflow-x: auto; width: min(calc(100vw - 28px), 2400px); margin: 0 auto; padding: 12px 0; padding-left: calc(var(--左栏宽) + var(--侧栏间距)); }
+.标签面板 { display: none; } .标签面板.激活 { display: block; }
+.面板布局 { display: grid; grid-template-columns: 1fr 220px; gap: 32px; align-items: start; }
+.面板布局 .节目录 { position: sticky; top: calc(var(--标签栏高) + 72px); }
+@media (max-width: 1200px) { .阶段区域 { grid-template-columns: 1fr; } .左侧栏, .右侧栏 { display: none; } .标签包裹内 { padding-left: 0; } .面板布局 { grid-template-columns: 1fr; } .面板布局 .节目录 { display: none; } }
+</style>
+<style id="css-组件">
+/* ═══ 大 tab 标签按钮 ═══ */
+.标签按钮 { flex: 0 0 auto; display: flex; align-items: center; border: 1px solid #bcccdc; background: #fff; color: #344054; border-radius: 8px; padding: 9px 12px; font: inherit; font-size: 14px; line-height: 1.25; cursor: pointer; white-space: nowrap; }
+.标签按钮:hover { border-color: #0f6b8f; } .标签按钮.激活 { border-color: #0f6b8f; background: #0f6b8f; color: #fff; }
+.标签编号 { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; margin-right: 7px; border-radius: 999px; background: #edf2f7; color: #475467; font-size: 12px; font-weight: 700; }
+.标签按钮.激活 .标签编号 { background: rgba(255,255,255,0.18); color: #fff; }
+
+/* ═══ 小 tab 阶段导航 ═══ */
+.阶段页面导航 { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-top: 1px solid #e2e8f0; }
+.阶段链接 { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; text-decoration: none; color: #475569; font-size: 13px; transition: all 0.15s; }
+.阶段链接:hover { background: #f1f5f9; color: #1e293b; } .阶段链接.激活 { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.页面编号 { font-size: 11px; color: #94a3b8; font-family: monospace; min-width: 24px; } .页面类型图标 { font-size: 14px; } .阶段链接.激活 .页面编号 { color: #3b82f6; }
+
+/* ═══ 右侧栏注释卡片 ═══ */
+.注释卡片组 { display: flex; flex-direction: column; gap: 14px; }
+.注释卡片 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+.注释卡片头 { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.注释图标 { font-size: 16px; } .注释标题 { font-size: 14px; font-weight: 600; color: #334155; }
+.注释卡片正文 { padding: 12px 16px; font-size: 13px; line-height: 1.7; color: #475569; }
+.注释卡片正文 p { margin: 0 0 8px 0; } .注释卡片正文 p:last-child { margin-bottom: 0; }
+.注释卡片正文 ul { margin: 4px 0; padding-left: 20px; } .注释卡片正文 li { margin: 3px 0; } .注释卡片正文 strong { color: #1e293b; }
+
+/* ═══ 内容页面：阅读文档 ═══ */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 30px 0 12px; font-size: 21px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; scroll-margin-top: 68px; }
+.阅读标题 { scroll-margin-top: 68px; line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 21px; margin: 30px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 17px; margin: 24px 0 8px; } .文档正文 h5 { font-size: 15px; margin: 20px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.文档图片 { max-width: 100%; height: auto; border-radius: 8px; margin: 16px 0; display: block; }
+.行内代码 { font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 0.92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; font-weight: 500; }
+.代码块 pre { margin: 0; padding: 16px; background: #ffffff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; border: 0; }
+.代码块 code { display: block; padding: 0; border: 0; background: transparent; color: inherit; font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ═══ 节目录 ═══ */
+.节目录列表 { list-style: none; padding: 0; margin: 0; } .节目录列表 ul { list-style: none; padding-left: 16px; }
+.目录项 { margin: 2px 0; line-height: 1.6; }
+.目录项 a { display: block; padding: 4px 10px; border-radius: 4px; color: #475569; text-decoration: none; font-size: 13px; border-left: 2px solid transparent; transition: all 0.15s; }
+.目录项 a:hover { background: #f1f5f9; color: #1e293b; border-left-color: #3b82f6; } .目录层级3 a { font-weight: 600; font-size: 14px; } .目录层级4 a { padding-left: 20px; } .目录层级5 a { padding-left: 30px; font-size: 12px; color: #64748b; }
+
+/* ═══ 演示壳 ═══ */
+.演示壳 { display: grid; grid-template-columns: 180px 1fr; gap: 0; min-height: 480px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0; }
+.演示侧标 { background: linear-gradient(160deg, #1e293b 0%, #334155 100%); padding: 28px 20px; display: flex; flex-direction: column; gap: 10px; color: #e2e8f0; user-select: none; }
+.角色标签 { display: inline-block; padding: 4px 12px; background: rgba(59, 130, 246, 0.25); border: 1px solid rgba(96, 165, 250, 0.4); border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; align-self: flex-start; }
+.模块标签 { font-size: 18px; font-weight: 700; margin-top: 8px; line-height: 1.4; }
+.范围标签 { font-size: 11px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-top: auto; }
+.演示主体 { background: #f8fafc; display: flex; flex-direction: column; }
+.演示顶栏 { display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; }
+.浏览器按钮 { display: flex; gap: 6px; flex-shrink: 0; } .浏览器圆点 { width: 10px; height: 10px; border-radius: 50%; }
+.浏览器圆点.红 { background: #ef4444; } .浏览器圆点.黄 { background: #f59e0b; } .浏览器圆点.绿 { background: #10b981; }
+.地址栏 { flex: 1; padding: 5px 12px; background: #f1f5f9; border-radius: 6px; font-size: 12px; }
+.地址文本 { color: #64748b; font-family: "Sarasa Mono SC", "Cascadia Code", "Consolas", monospace; }
+.演示内容区 { flex: 1; padding: 24px; overflow-y: auto; }
+
+/* ═══ 流程信息卡（中间渲染区业务背景横幅） ═══ */
+.流程信息卡 {
+  margin-bottom: 24px;
+  background: #fafcff;
+  border: 1px solid #cbd5e1;
+  border-left: 5px solid #1d4ed8;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 35, 52, 0.06);
+}
+.流程信息卡-头部 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+.流程步骤号 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.流程信息卡-环节名 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #172033;
+  letter-spacing: 0.3px;
+}
+.流程信息卡-正文 {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.流程信息卡-行 {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.流程信息卡-标签 {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+.流程信息卡-值 .影响箭头 { color: #94a3b8; margin: 0 2px; }
+.流程信息卡-值 .影响结果 { color: #1e293b; font-weight: 500; }
+
+/* ═══ 移动端展示页：手机壳 ═══ */
+.移动端演示壳 { min-height: 620px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 18px; background: linear-gradient(#eef2f6 1px, transparent 1px), linear-gradient(90deg, #eef2f6 1px, transparent 1px); background-size: 24px 24px; border: 1px solid #e2e8f0; border-radius: 12px; }
+.手机外壳 { width: 376px; height: 744px; border: 10px solid #111827; border-radius: 34px; background: #f5f7fa; overflow: hidden; box-shadow: 0 18px 48px rgba(15, 23, 42, .22); display: flex; flex-direction: column; }
+.手机状态栏 { height: 28px; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font-size: 12px; color: #111827; background: #fff; flex: 0 0 auto; }
+.小程序导航栏 { height: 48px; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; background: #fff; border-bottom: 1px solid #e5e7eb; text-align: center; font-weight: 700; }
+.移动图标按钮 { border: 0; background: transparent; color: #111827; font-size: 20px; cursor: pointer; }
+.移动页面标题 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 8px; }
+.移动状态切换 { width: min(100%, 620px); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px; background: #fff; border: 1px solid #dbe5ef; border-radius: 8px; }
+.移动状态按钮 { border: 1px solid #d0d5dd; border-radius: 6px; background: #fff; color: #475467; padding: 7px 10px; font-size: 12px; cursor: pointer; }
+.移动状态按钮.active { border-color: #0f6b8f; background: #e8f4f8; color: #0f6b8f; font-weight: 700; }
+.移动页面内容 { flex: 1; overflow: auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.移动状态面板 { display: none; flex-direction: column; gap: 14px; }
+.移动状态面板.active { display: flex; }
+.移动底部区域 { flex: 0 0 auto; padding: 12px 18px 18px; background: #fff; border-top: 1px solid #e5e7eb; display: none; gap: 10px; position: relative; }
+.移动底部区域.active { display: grid; }
+.移动主视觉, .移动卡片 { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; position: relative; }
+.移动主视觉 { padding: 18px; }
+.移动主视觉 h3 { margin: 0 0 8px; font-size: 20px; line-height: 1.35; }
+.移动主视觉 p, .移动卡片 p { margin: 0; color: #667085; font-size: 13px; line-height: 1.7; }
+.移动卡片 h4 { margin: 0 0 10px; font-size: 15px; }
+.移动信息行 { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #eef2f6; font-size: 13px; }
+.移动信息行:last-child { border-bottom: 0; }
+.移动字段说明按钮 { width: 20px; height: 20px; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; line-height: 18px; cursor: pointer; text-align: center; flex: 0 0 auto; }
+.移动字段说明按钮:hover { background: #eff6ff; color: #0f6b8f; border-color: #93c5fd; }
+.移动标签 { display: inline-flex; border-radius: 999px; padding: 2px 8px; font-size: 12px; background: #ecfdf3; color: #027a48; }
+.移动提示 { font-size: 12px; line-height: 1.6; color: #667085; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; }
+.移动主按钮, .移动次按钮 { height: 44px; border-radius: 6px; cursor: pointer; font-weight: 700; }
+.移动主按钮 { border: 0; background: #0f6b8f; color: #fff; }
+.移动主按钮:disabled { background: #cbd5e1; cursor: not-allowed; }
+.移动次按钮 { border: 1px solid #d0d5dd; background: #fff; color: #475467; }
+.移动空状态 { text-align: center; padding: 42px 18px; color: #667085; font-size: 13px; }
+.移动缺省 { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 300px; color: #94a3b8; font-size: 14px; }
+
+/* ═══ 移动端标注布局 ═══ */
+.移动端标注布局 { display: grid; grid-template-columns: 376px 470px; gap: 14px; align-items: start; justify-content: center; }
+.字段标注栏 { display: flex; flex-direction: column; gap: 8px; padding-top: 0; }
+.标注栏标题 { font-size: 13px; font-weight: 700; color: #475569; padding: 4px 0 4px 2px; margin-bottom: 2px; border-bottom: 1px solid #e2e8f0; }
+.字段标注状态组 { display: none; grid-template-columns: 1fr; gap: 8px; }
+.字段标注状态组.active { display: grid; }
+.字段标注编号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #0f6b8f; color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.字段内编号 { position: absolute; top: -8px; right: -6px; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #0f6b8f; color: #fff; font-size: 10px; font-weight: 700; z-index: 2; box-shadow: 0 1px 4px rgba(15,35,52,0.18); }
+.移动主视觉[data-annot-mark], .移动卡片[data-annot-mark], [data-annot-card="true"], .小程序导航栏[data-annot-mark], .移动底部区域[data-annot-mark] { cursor: pointer; }
+.移动主视觉.标注选中, .移动卡片.标注选中, [data-annot-card="true"].标注选中, .小程序导航栏.标注选中, .移动底部区域.标注选中 { outline: 2px solid #0f6b8f; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(15,107,143,0.12); }
+.标注卡片 { background: #fff; border: 1px solid #d9e2ec; border-radius: 8px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(15,35,52,0.04); }
+.标注卡片头 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #eef2f6; font-size: 14px; font-weight: 600; color: #1e293b; }
+.标注卡片头 .字段标注编号 { width: 20px; height: 20px; font-size: 10px; }
+.标注卡片行 { display: flex; gap: 4px; margin: 3px 0; font-size: 12px; line-height: 1.55; }
+.标注卡片标签 { color: #94a3b8; flex-shrink: 0; min-width: 32px; }
+.标注卡片值 { color: #475569; }
+@media (max-width: 1500px) { .移动端标注布局 { grid-template-columns: 376px 360px; } }
+@media (max-width: 1200px) { .移动端标注布局 { grid-template-columns: 1fr; } .字段标注栏 { display: none; } }
+
+/* ═══ 列表页 ═══ */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 130px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 130px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ═══ 页面编辑：控制下拉区 ═══ */
+.控制下拉区 { display: flex; align-items: center; gap: 10px; padding: 0 0 16px 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 16px; }
+.控制下拉标签 { font-size: 13px; font-weight: 600; color: #475569; } .控制说明 { font-size: 12px; color: #94a3b8; }
+
+/* ═══ 页面编辑：字段卡片 ═══ */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 24px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-row.muted { opacity: 0.55; background: #f8fafc; border-radius: 4px; }
+.field-row.muted .field-display { color: #94a3b8; font-style: italic; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; } .field-card-path { font-size: 12px; color: #94a3b8; font-family: monospace; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 140px 1fr 32px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 120px; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+.field-info-btn:hover, .field-info-btn.is-open { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.field-detail-panel { display: none; margin: 4px 0 8px 140px; padding: 10px 14px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
+.field-detail-panel.show { display: block; } .field-detail-panel dl { display: grid; grid-template-columns: 80px 1fr; gap: 4px 10px; margin: 0; font-size: 12px; }
+.field-detail-panel dt { color: #94a3b8; } .field-detail-panel dd { color: #475569; margin: 0; }
+
+/* ═══ 详情抽屉 ═══ */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; height: 100vh; background: #fff; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 64px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; }
+.panel-title { font-size: 18px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.detail-item { min-height: 58px; padding: 10px 14px; border-bottom: 1px solid #d9e2ec; } .detail-item:nth-child(odd) { border-right: 1px solid #d9e2ec; }
+.detail-item:last-child { border-bottom: 0; } .detail-label { color: #8a93a3; font-size: 12px; margin-bottom: 4px; }
+.detail-value { color: #303744; font-size: 13px; font-weight: 550; word-break: break-word; }
+.type-tag { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; vertical-align: middle; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ═══ 字段弹窗 ═══ */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ═══ 泳道图组件 ═══ */
+/* ⚠️ 2026-08-06 简化：新项目泳道行使用 inline style 直出（匹配标准版），不使用 .泳道节点/.总后台节点/.客户端节点 层级。
+   以下 CSS class 保留用于向后兼容旧项目。新项目泳道图 HTML 由 _build_swimlane_html() 生成（见 B端-生成脚本_脚手架.py）。
+   关键简化：表头/节点颜色 inline style 直出；步骤号用中文圆圈数字 ①②③；仅靠 .置灰（opacity:0.25）做模块高亮。 */
+.泳道图 { margin: 0; font-size: 14px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道图-头 { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.泳道图-头格 { padding: 11px 10px; text-align: center; font-weight: 700; font-size: 15px; letter-spacing: .5px; }
+/* 泳道图默认去色 — 表头 */
+.泳道图-头格.总后台,
+.泳道图-头格.客户端,
+.泳道图-头格.C端用户 { background: #f8fafc; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+/* 阶段高亮：表头恢复彩色 */
+.泳道图.高亮阶段1 .泳道图-头格.总后台 { background: linear-gradient(180deg,#eff6ff,#dbeafe); color: #1d4ed8; border-bottom: 2px solid #93c5fd; }
+.泳道图.高亮阶段1 .泳道图-头格.客户端 { background: linear-gradient(180deg,#ecfdf5,#d1fae5); color: #065f46; border-bottom: 2px solid #6ee7b7; }
+.泳道图.高亮阶段2 .泳道图-头格.客户端 { background: linear-gradient(180deg,#ecfdf5,#d1fae5); color: #065f46; border-bottom: 2px solid #6ee7b7; }
+.泳道图.高亮阶段2 .泳道图-头格.C端用户 { background: linear-gradient(180deg,#eff6ff,#dbeafe); color: #1d4ed8; border-bottom: 2px solid #93c5fd; }
+.泳道行 { display: grid; grid-template-columns: 1fr 1fr; }
+.泳道行 + .泳道行 { border-top: 1px solid #f1f5f9; }
+.泳道格 { padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; }
+.泳道格.左 { border-right: 1px solid #e8ecf1; background: #fcfdfe; }
+.泳道格.右 { background: #fff; }
+.泳道节点 { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-weight: 600; font-size: 14px; line-height: 1.4; align-self: flex-start; }
+/* 泳道图默认去色 — 节点 */
+.泳道节点.总后台节点,
+.泳道节点.客户端节点 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+/* 阶段高亮：节点恢复彩色 */
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"] .泳道节点.总后台节点 { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"] .泳道节点.客户端节点 { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.泳道图.高亮阶段2 .泳道行[data-node-phase="2"] .泳道节点.客户端节点 { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.泳道图.高亮阶段2 .泳道行[data-node-phase="2"] .泳道节点.总后台节点 { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.泳道步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+/* 泳道图默认去色 — 步骤号 */
+.总后台节点 .泳道步骤号,
+.客户端节点 .泳道步骤号 { background: #94a3b8; color: #fff; }
+/* 阶段高亮：步骤号恢复彩色 */
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"] .总后台节点 .泳道步骤号 { background: #3b82f6; color: #fff; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"] .客户端节点 .泳道步骤号 { background: #10b981; color: #fff; }
+.泳道图.高亮阶段2 .泳道行[data-node-phase="2"] .客户端节点 .泳道步骤号 { background: #10b981; color: #fff; }
+.泳道图.高亮阶段2 .泳道行[data-node-phase="2"] .总后台节点 .泳道步骤号 { background: #3b82f6; color: #fff; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支行 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 6px; padding: 3px 0; font-size: 13px; line-height: 1.6; }
+.泳道分支行 .分支标 { font-weight: 600; }
+.泳道分支行 .分支标.驳回 { color: #dc2626; }
+.泳道分支行 .分支标.通过 { color: #16a34a; }
+.泳道分支说明 { font-size: 12px; color: #94a3b8; padding: 0 0 2px 14px; line-height: 1.6; }
+/* ═══ 泳道图节点置灰（模块高亮） ═══ */
+.泳道行.置灰 { opacity: 0.25; pointer-events: none; }
+
+/* ═══ 提示消息 ═══ */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+
+/* ═══ 类型标签全局 ═══ */
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+
+/* ═══ 页面流程图：迷你手机壳 ═══ */
+.页面流程图外壳 { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 16px 0 32px 0; overflow: hidden; }
+.迷你手机壳 { width: 180px; border: 5px solid #111827; border-radius: 16px; background: #f5f7fa; overflow: hidden; box-shadow: 0 6px 24px rgba(15,23,42,.16); display: flex; flex-direction: column; flex: 0 0 auto; transition: transform 0.2s, box-shadow 0.2s; }
+.迷你手机壳:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(15,23,42,.22); }
+.迷你手机壳.入口壳 { border-color: #0f6b8f; }
+.迷你手机壳.日历壳 { border-color: #3b82f6; }
+.迷你手机壳.工具壳 { border-color: #f59e0b; }
+.迷你手机壳.详情壳 { border-color: #10b981; }
+.迷你状态栏 { height: 16px; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; font-size: 7px; color: #111827; background: #fff; flex: 0 0 auto; }
+.迷你导航栏 { height: 24px; display: flex; align-items: center; justify-content: center; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 9px; font-weight: 700; color: #111827; flex: 0 0 auto; position: relative; }
+.迷你导航栏 .迷你返回 { position: absolute; left: 8px; font-size: 12px; color: #111827; }
+.迷你页面内容 { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 5px; overflow: hidden; min-height: 100px; }
+.迷你底部Tab { height: 24px; display: flex; align-items: center; justify-content: space-around; background: #fff; border-top: 1px solid #e5e7eb; font-size: 7px; color: #94a3b8; flex: 0 0 auto; padding: 0 3px; }
+.迷你底部Tab span { cursor: default; }
+.迷你底部Tab .活跃 { color: #0f6b8f; font-weight: 700; }
+.迷你页标题 { font-size: 9px; font-weight: 700; color: #1e293b; text-align: center; margin: 0 0 2px 0; }
+.迷你页副文 { font-size: 7px; color: #64748b; text-align: center; line-height: 1.4; margin: 0; }
+.迷你卡片 { background: #fff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 6px; font-size: 7px; color: #334155; display: flex; align-items: center; gap: 5px; }
+.迷你卡片.置灰 { opacity: 0.45; }
+.迷你缩略图 { width: 22px; height: 22px; background: #e2e8f0; border-radius: 3px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+.迷你卡片文 { flex: 1; min-width: 0; line-height: 1.3; }
+.迷你卡片文 .主文 { font-size: 7px; font-weight: 600; color: #1e293b; }
+.迷你卡片文 .副文 { font-size: 6px; color: #94a3b8; }
+.迷你按钮 { display: block; width: 100%; padding: 3px; border: 0; border-radius: 3px; background: #0f6b8f; color: #fff; font-size: 7px; font-weight: 700; text-align: center; }
+.迷你按钮.绿 { background: #16a34a; }
+.迷你标签 { display: inline-block; padding: 1px 4px; border-radius: 2px; font-size: 6px; font-weight: 600; }
+.迷你标签.进行中 { background: #0f6b8f; color: #fff; }
+.迷你标签.即将开始 { background: #dbeafe; color: #1d4ed8; }
+.迷你宫格 { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; }
+.迷你宫格项 { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 3px; padding: 4px 2px; text-align: center; font-size: 6px; color: #475569; }
+.迷你时间块 { font-size: 8px; font-weight: 700; color: #334155; padding: 0 2px; display: flex; align-items: center; gap: 4px; }
+.迷你时间块 .时间 { color: #0f6b8f; }
+
+/* ═══ 页面流程图：节点组与分支标注 ═══ */
+.手机节点组 { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.手机分支标注 { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; max-width: 190px; }
+.手机分支标签 { font-size: 10px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 7px; white-space: nowrap; line-height: 1.4; }
+.手机分支标签.强调 { border-color: #fcd34d; background: #fffbeb; color: #92400e; font-weight: 600; }
+
+/* ═══ 页面流程图：层级与连接器 ═══ */
+.流程层级 { display: flex; justify-content: center; align-items: flex-start; gap: 40px; flex-wrap: wrap; width: 100%; }
+.向下连接器 { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 0; }
+.连接竖线 { width: 2px; height: 28px; background: #cbd5e1; }
+.连接箭头 { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #cbd5e1; }
+.连接标签 { font-size: 12px; color: #64748b; background: #f8fafc; padding: 3px 12px; border-radius: 20px; border: 1px solid #e2e8f0; white-space: nowrap; margin: 4px 0; font-weight: 500; }
+.分支连接器 { display: flex; align-items: stretch; justify-content: center; width: 100%; min-height: 64px; }
+.分支连接列 { display: flex; flex-direction: column; align-items: center; flex: 1; max-width: 230px; }
+.分支连接竖线上 { width: 2px; height: 10px; background: #cbd5e1; }
+.分支连接标签 { font-size: 11px; color: #64748b; background: #f8fafc; padding: 2px 10px; border-radius: 20px; border: 1px solid #e2e8f0; white-space: nowrap; margin: 2px 0; font-weight: 500; }
+.分支连接竖线下 { width: 2px; background: #cbd5e1; flex: 1; min-height: 16px; }
+.分支连接横桥 { display: flex; align-items: center; width: 100%; min-width: 40px; }
+.分支横线 { height: 2px; background: #cbd5e1; flex: 1; }
+.分支箭头下 { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #cbd5e1; }
+.分支顶部竖线 { width: 2px; height: 10px; background: #cbd5e1; align-self: center; }
+.返回连接器 { display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; padding: 6px 0 0 0; }
+.返回虚线 { flex: 1; max-width: 160px; height: 0; border-top: 2px dashed #cbd5e1; }
+.返回标签 { font-size: 11px; color: #6366f1; background: #eef2ff; padding: 2px 10px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+
+/* ═══ 页面流程图：图例 ═══ */
+.图例行 { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; padding: 16px 0 0 0; border-top: 1px solid #e2e8f0; margin-top: 20px; }
+.图例项 { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; }
+.图例壳块 { width: 14px; height: 20px; border-radius: 3px; border: 2px solid; flex-shrink: 0; background: #fff; }
+.图例壳块.入口壳 { border-color: #0f6b8f; } .图例壳块.日历壳 { border-color: #3b82f6; }
+.图例壳块.工具壳 { border-color: #f59e0b; } .图例壳块.详情壳 { border-color: #10b981; }
+
+@media (max-width: 900px) {
+  .流程层级 { flex-direction: column; align-items: center; gap: 12px; }
+  .分支连接器 { flex-direction: column; align-items: center; }
+  .分支连接横桥 { display: none; }
+  .迷你手机壳 { width: 160px; }
+}
+</style>
+<style id="css-状态">
+.标签按钮.激活 { border-color: #0f6b8f; background: #0f6b8f; color: #fff; }
+.标签面板.激活 { display: block; }
+.阶段链接.激活 { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-row.muted { opacity: 0.55; background: #f8fafc; border-radius: 4px; }
+.field-row.muted .field-display { color: #94a3b8; font-style: italic; }
+.字段行.禁用 { opacity: 0.4; pointer-events: none; } .字段行.隐藏 { display: none; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+</style>
+</head>
+<body>
+<div class="应用容器">
+<div id="标签导航" class="标签包裹"><div class="标签包裹内">
+<button class="标签按钮 激活" data-stage="1" onclick="切换标签(1)"><span class="标签编号">1</span> 需求背景与目标</button>
+<button class="标签按钮" data-stage="2" onclick="切换标签(2)"><span class="标签编号">2</span> 业务流程</button>
+<button class="标签按钮" data-stage="pageflow" onclick="切换标签('pageflow')"><span class="标签编号">◆</span> 页面流程图</button>
+<button class="标签按钮" data-stage="4" onclick="切换标签(4)"><span class="标签编号">4</span> 第一阶段：SaaS 总后台配置</button>
+<button class="标签按钮" data-stage="5" onclick="切换标签(5)"><span class="标签编号">5</span> 第二阶段：C 端测评展示</button>
+</div></div>
+<div class="阶段区域">
+<aside class="左侧栏">
+<div class="内容摘要"><div class="内容摘要内">
+<h1>测评</h1>
+<div class="业务简介"><blockquote><p></p></blockquote></div>
+</div></div>
+<div class="阶段导航区" id="阶段导航区">
+<nav id="阶段04导航" class="阶段页面导航" style="display:none;">
+  <a class="阶段链接 激活" href="javascript:切换页面('4.1','列表页')" data-page="4.1" data-page-type="列表页"><span class="页面编号">4.1</span><span class="页面类型图标">📝</span><span class="页面标题">发布人设置</span></a>
+<a class="阶段链接" href="javascript:切换页面('4.2','列表页')" data-page="4.2" data-page-type="列表页"><span class="页面编号">4.2</span><span class="页面类型图标">📋</span><span class="页面标题">帖子管理</span></a>
+</nav>
+
+</div>
+<div class="全局泳道"><h3>多方业务泳道图</h3><div id="全局泳道代码" class="泳道代码"><div class="泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;">
+<div class="泳道图-头" style="display:grid;grid-template-columns:repeat(2, 1fr);border-bottom:2px solid #e2e8f0;"><div class="泳道图-头格" style="background:#eff6ff">SaaS 总后台</div><div class="泳道图-头格" style="background:#ecfdf5">C 端用户</div></div>
+<div class="泳道图-体"><div class="泳道行" data-swimlane-node="1"><div class="泳道格"><div style="padding:4px 8px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#eff6ff;color:#1d4ed8;font-weight:700;font-size:13px;margin-right:6px;">①</span><span>配置发布人形象（头像+名称）</span></div></div><div class="泳道格"><div style="min-height:24px;"></div></div></div>
+<div class="泳道行" data-swimlane-node="2"><div class="泳道格"><div style="padding:4px 8px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#eff6ff;color:#1d4ed8;font-weight:700;font-size:13px;margin-right:6px;">②</span><span>创建并上架测评帖子</span></div></div><div class="泳道格"><div style="min-height:24px;"></div></div></div>
+<div class="泳道行" data-swimlane-node="3"><div class="泳道格"><div style="padding:2px 8px;font-size:12px;color:#64748b;text-align:center;">└→</div></div><div class="泳道格"><div style="padding:4px 8px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#eff6ff;color:#1d4ed8;font-weight:700;font-size:13px;margin-right:6px;">③</span><span>浏览测评列表</span></div></div></div>
+<div class="泳道行" data-swimlane-node="4"><div class="泳道格"><div style="min-height:24px;"></div></div><div class="泳道格"><div style="padding:4px 8px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#eff6ff;color:#1d4ed8;font-weight:700;font-size:13px;margin-right:6px;">④</span><span>点击帖子进入详情</span></div></div></div>
+<div class="泳道行" data-swimlane-node="5"><div class="泳道格"><div style="min-height:24px;"></div></div><div class="泳道格"><div style="padding:4px 8px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#eff6ff;color:#1d4ed8;font-weight:700;font-size:13px;margin-right:6px;">⑤</span><span>点赞 / 收藏 / 转发</span></div></div></div>
+<div class="泳道行" data-swimlane-node="6"><div class="泳道格"><div style="padding:4px 8px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#eff6ff;color:#1d4ed8;font-weight:700;font-size:13px;margin-right:6px;">⑥</span><span>可随时下架帖子</span></div></div><div class="泳道格"><div style="min-height:24px;"></div></div></div>
+</div></div>
+</div></div>
+</aside>
+<main class="主舞台">
+<section class="标签面板 激活" data-stage="1">
+  <div class="面板布局">
+    <div id="节1正文" class="文档正文"><div id="s1_1_1">
+<h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>当前 SaaS 平台缺少面向 C 端用户的内容运营工具。商户需要一种轻量级的图文内容形式，能够通过测评、种草、推荐等场景触达用户，引导用户浏览、互动和分享，从而提升用户停留时长和转化机会。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>改造前
+
+商户无自主可配置的 C 端内容展示工具，依赖固定模板或外部链接。
+
+
+改造后
+
+总后台配置发布人
+        ↓
+总后台创建测评帖子（关联发布人、设置起始互动数据）
+        ↓
+上架后 C 端用户浏览测评列表 → 点击进入详情 → 点赞 / 收藏 / 转发</code></pre></div>
+</div>
+<div id="s1_1_2">
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>总后台配置发布人形象
+        +
+总后台创建并上架测评帖子
+        +
+C 端用户主动进入测评页
+        ↓
+浏览列表 → 查看详情 → 互动（点赞、收藏、转发）→ 提升内容传播与用户粘性</code></pre></div>
+</div>
+<div id="s1_1_3">
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>C 端可见可互动：</strong> C 端用户能够在测评列表页浏览已上架帖子，点击进入详情页查看正文，并执行点赞、收藏、转发操作。</li>
+<li><strong>总后台可配可控：</strong> 总后台操作人员可配置多个发布人形象，创建并管理测评帖子，控制上下架状态。</li>
+</ul>
+
+</div>
+<div id="s1_1_4">
+<h3 class="阅读节标题">1.4 页面原型与图片说明</h3>
+<blockquote><p>本节已移除。功能文档中不再包含"效果展示"预览模块和图片插入逻辑。</p></blockquote>
+</div></div>
+    <nav id="节1目录" class="节目录"><ul class="节目录列表">
+<li class="目录项 目录层级3"><a href="#s1_1_1">1.1 为什么要做</a></li>
+<li class="目录项 目录层级3"><a href="#s1_1_2">1.2 一句话业务模型</a></li>
+<li class="目录项 目录层级3"><a href="#s1_1_3">1.3 最终目标</a></li>
+<li class="目录项 目录层级3"><a href="#s1_1_4">1.4 页面原型与图片说明</a></li>
+</ul></nav>
+  </div>
+</section><section class="标签面板" data-stage="2">
+  <div class="面板布局">
+    <div id="节2正文" class="文档正文"><div id="s2_2_1">
+<h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<p>泳道图说明：</p>
+<ul>
+<li>编号节点只写参与方实际执行的业务动作。</li>
+<li>状态标注写在触发该状态的动作之后，不占用新的流程序号，统一使用 <code class="行内代码">【帖子状态：xxx】</code>。</li>
+<li>本功能涉及两个参与方：SaaS 总后台、C 端用户。无外部系统和客户端后台参与。</li>
+</ul>
+
+</div>
+<div id="s2_2_2">
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>后续正文按照业务实际发生顺序线性展开：</p>
+<p>1. <strong>第一阶段（主要参与方：SaaS 总后台）</strong>：总后台配置发布人形象和测评帖子，是 C 端展示的前置条件。</p>
+<p>2. <strong>第二阶段（主要参与方：C 端用户）</strong>：C 端用户浏览测评列表、查看详情并互动。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：SaaS 总后台配置
+① 配置发布人 → ② 创建并上架帖子
+                            ↓
+第二阶段：C 端用户浏览与互动
+③ 浏览列表 → ④ 查看详情 → ⑤ 点赞 / 收藏 / 转发</code></pre></div>
+</div>
+<div id="s2_2_3">
+<h3 class="阅读节标题">2.3 页面类型说明</h3>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>页面类型</th>
+<th>面向对象</th>
+<th>含义</th>
+<th>正文字段表格列</th>
+</tr>
+<tr>
+<td>页面编辑类</td>
+<td>后台操作人员</td>
+<td>操作人员在当前页面编辑所有字段，不存在"列表 / 详情"视图区分</td>
+<td>配置项、字段类型、配置值、编辑性、适用场景、说明、枚举值控制逻辑</td>
+</tr>
+<tr>
+<td>列表页</td>
+<td>后台操作人员</td>
+<td>操作人员看到的列表，字段在列表和详情中可能分别展示</td>
+<td>字段名称、字段类型、列表、详情、新增、字段解释</td>
+</tr>
+<tr>
+<td>移动端展示页</td>
+<td>C 端用户</td>
+<td>用户在小程序/H5 中实际看到和操作的页面</td>
+<td>页面状态（节点 / 状态名称 / 进入条件 / 完整手机页面内容 / 用户操作 / 结果）；页面字段标注说明（标注 / 页面上看到什么 / 业务数据从哪里来 / 页面如何组合与展示 / 适用状态）</td>
+</tr>
+</table></div>
+
+<hr>
+<h2>C 端页面类型判定</h2>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>类型</th>
+<th>定义</th>
+<th>本项目判定</th>
+</tr>
+<tr>
+<td><strong>A（列表页）</strong></td>
+<td>承接多条数据，每条数据有自己的数据状态</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>B（详情页）</strong></td>
+<td>单个对象的详情/操作页面，状态是页面级的</td>
+<td>测评列表、测评详情</td>
+</tr>
+</table></div>
+
+<p><strong>判定</strong>：测评列表页——同一页面中的所有卡片都处于"已上架"状态，不存在多种数据状态共存 → <strong>B 类</strong>。测评详情页→ <strong>B 类</strong>。</p>
+<hr>
+</div></div>
+    <nav id="节2目录" class="节目录"><ul class="节目录列表">
+<li class="目录项 目录层级3"><a href="#s2_2_1">2.1 多方业务泳道图</a></li>
+<li class="目录项 目录层级3"><a href="#s2_2_2">2.2 阶段划分与阅读说明</a></li>
+<li class="目录项 目录层级3"><a href="#s2_2_3">2.3 页面类型说明</a></li>
+</ul></nav>
+  </div>
+</section><section class="标签面板" data-stage="pageflow"><div class="C端占位区">
+  <div class="C端占位图标">📱</div>
+  <div class="C端占位标题">详见 C 端页面</div>
+  <div class="C端占位说明">本部分内容（页面流程图、C端页面交互与跳转）已在 C 端 H5 文档中独立展示，请查阅 C 端 HTML 产出文件。</div>
+</div></section><section class="标签面板" data-stage="4">
+<div id="阶段04列表区" class="阶段列表区">
+<div class="演示壳" data-page="4.1"><div class="演示侧标"><span class="角色标签">SaaS 总后台</span><span class="模块标签">发布人设置</span><span class="范围标签">SAAS 管理后台</span></div>
+<div class="演示主体"><div class="演示顶栏"><div class="浏览器按钮"><span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span></div><div class="地址栏"><span class="地址文本">SaaS 总后台 &gt; 内容运营 &gt; 测评 &gt; 发布人设置</span></div></div>
+<div class="演示内容区">
+<div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：配置发布人形象（头像 + 名称）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 内容运营 &gt; 测评 &gt;</span> <span class="路径末段">发布人设置</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">配置的发布人供帖子创建时选择 <span class="影响箭头">→</span> <span class="影响结果">发布人头像和名称展示在 C 端详情页中</span></span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索发布人名称"></div><button class="详情按钮" style="background:#0f6b8f;color:#fff;border-color:#0f6b8f;padding:6px 16px;font-size:13px;" onclick="打开新增抽屉('4.1')">＋ 新增</button></div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">头像<span class="类型标签 file">file</span></span><button class="信息按钮" onclick="显示字段弹窗('头像', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('名称', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div></td><td class="列表单元格">官方测评师</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({名称:'官方测评师',头像:'https://via.placeholder.com/80/0f6b8f/fff?text=P1',_壳节编号:'4.1'}, '发布人详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div></td><td class="列表单元格">好物推荐官</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({名称:'好物推荐官',头像:'https://via.placeholder.com/80/10b981/fff?text=P2',_壳节编号:'4.1'}, '发布人详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div></td><td class="列表单元格">生活体验家</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({名称:'生活体验家',头像:'https://via.placeholder.com/80/f59e0b/fff?text=P3',_壳节编号:'4.1'}, '发布人详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div></td><td class="列表单元格">数码达人</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({名称:'数码达人',头像:'https://via.placeholder.com/80/7c3aed/fff?text=P4',_壳节编号:'4.1'}, '发布人详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div></td><td class="列表单元格">美食探店</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({名称:'美食探店',头像:'https://via.placeholder.com/80/dc2626/fff?text=P5',_壳节编号:'4.1'}, '发布人详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div></td><td class="列表单元格">穿搭博主</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({名称:'穿搭博主',头像:'https://via.placeholder.com/80/2563eb/fff?text=P6',_壳节编号:'4.1'}, '发布人详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div></td><td class="列表单元格">护肤顾问</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({名称:'护肤顾问',头像:'https://via.placeholder.com/80/059669/fff?text=P7',_壳节编号:'4.1'}, '发布人详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div></td><td class="列表单元格">运动先锋</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({名称:'运动先锋',头像:'https://via.placeholder.com/80/ea580c/fff?text=P8',_壳节编号:'4.1'}, '发布人详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 8 条记录</div>
+</div></div></div>
+<div class="演示壳" data-page="4.2" style="display:none;"><div class="演示侧标"><span class="角色标签">SaaS 总后台</span><span class="模块标签">帖子管理</span><span class="范围标签">SAAS 管理后台</span></div>
+<div class="演示主体"><div class="演示顶栏"><div class="浏览器按钮"><span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span></div><div class="地址栏"><span class="地址文本">SaaS 总后台 &gt; 内容运营 &gt; 测评 &gt; 帖子管理</span></div></div>
+<div class="演示内容区">
+<div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">②</span><span class="流程信息卡-环节名">当前环节：创建并上架测评帖子</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 内容运营 &gt; 测评 &gt;</span> <span class="路径末段">帖子管理</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">上架后的帖子将出现在 C 端测评列表页 <span class="影响箭头">→</span> <span class="影响结果">供用户浏览和互动</span></span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索帖子标题"></div><div class="筛选区"><span class="筛选标签">状态：</span><select class="筛选下拉"><option>全部</option><option>上架</option><option>下架</option></select></div><button class="详情按钮" style="background:#0f6b8f;color:#fff;border-color:#0f6b8f;padding:6px 16px;font-size:13px;margin-left:auto;" onclick="打开新增抽屉('4.2')">＋ 新增</button></div>
+<div style="overflow-x:auto;"><table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">排序<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('排序', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">标题<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('标题', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">发布人<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('发布人', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">起始点赞数<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('起始点赞数', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">起始收藏数<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('起始收藏数', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">上下架状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('上下架状态', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">1</td><td class="列表单元格">2026夏季防晒测评</td><td class="列表单元格">官方测评师</td><td class="列表单元格">520</td><td class="列表单元格">480</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'1',主图:'https://via.placeholder.com/120x80/3b82f6/fff?text=封面1',标题:'2026夏季防晒测评',发布人:'官方测评师',起始点赞数:'520',起始收藏数:'480',上下架状态:'上架',_壳节编号:'4.2'}, '帖子详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">2</td><td class="列表单元格">10款网红零食实测</td><td class="列表单元格">好物推荐官</td><td class="列表单元格">780</td><td class="列表单元格">650</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'2',主图:'https://via.placeholder.com/120x80/10b981/fff?text=封面2',标题:'10款网红零食实测',发布人:'好物推荐官',起始点赞数:'780',起始收藏数:'650',上下架状态:'上架',_壳节编号:'4.2'}, '帖子详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">3</td><td class="列表单元格">居家好物推荐TOP10</td><td class="列表单元格">生活体验家</td><td class="列表单元格">430</td><td class="列表单元格">520</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'3',主图:'https://via.placeholder.com/120x80/f59e0b/fff?text=封面3',标题:'居家好物推荐TOP10',发布人:'生活体验家',起始点赞数:'430',起始收藏数:'520',上下架状态:'上架',_壳节编号:'4.2'}, '帖子详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">4</td><td class="列表单元格">2026新款手机深度测评</td><td class="列表单元格">数码达人</td><td class="列表单元格">890</td><td class="列表单元格">720</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'4',主图:'https://via.placeholder.com/120x80/7c3aed/fff?text=封面4',标题:'2026新款手机深度测评',发布人:'数码达人',起始点赞数:'890',起始收藏数:'720',上下架状态:'上架',_壳节编号:'4.2'}, '帖子详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">5</td><td class="列表单元格">本地美食地图·第3期</td><td class="列表单元格">美食探店</td><td class="列表单元格">610</td><td class="列表单元格">580</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'5',主图:'https://via.placeholder.com/120x80/dc2626/fff?text=封面5',标题:'本地美食地图·第3期',发布人:'美食探店',起始点赞数:'610',起始收藏数:'580',上下架状态:'上架',_壳节编号:'4.2'}, '帖子详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">6</td><td class="列表单元格">春季穿搭指南</td><td class="列表单元格">穿搭博主</td><td class="列表单元格">550</td><td class="列表单元格">490</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#f3f4f6;color:#6b7280">下架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'6',主图:'https://via.placeholder.com/120x80/2563eb/fff?text=封面6',标题:'春季穿搭指南',发布人:'穿搭博主',起始点赞数:'550',起始收藏数:'490',上下架状态:'下架',_壳节编号:'4.2'}, '帖子详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">7</td><td class="列表单元格">敏感肌护肤全攻略</td><td class="列表单元格">护肤顾问</td><td class="列表单元格">460</td><td class="列表单元格">510</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'7',主图:'https://via.placeholder.com/120x80/059669/fff?text=封面7',标题:'敏感肌护肤全攻略',发布人:'护肤顾问',起始点赞数:'460',起始收藏数:'510',上下架状态:'上架',_壳节编号:'4.2'}, '帖子详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+<tr class="数据行"><td class="列表单元格">8</td><td class="列表单元格">居家健身器材大评测</td><td class="列表单元格">运动先锋</td><td class="列表单元格">700</td><td class="列表单元格">630</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'8',主图:'https://via.placeholder.com/120x80/ea580c/fff?text=封面8',标题:'居家健身器材大评测',发布人:'运动先锋',起始点赞数:'700',起始收藏数:'630',上下架状态:'上架',_壳节编号:'4.2'}, '帖子详情')">详情</button> <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息', 3000)">其他交互</button></td></tr>
+</tbody></table>
+</div>
+<div class="列表脚注">共 8 条记录</div>
+</div></div></div>
+</div>
+</section>
+<section class="标签面板" data-stage="5">
+<div class="C端占位区">
+  <div class="C端占位图标">📱</div>
+  <div class="C端占位标题">详见 C 端页面</div>
+  <div class="C端占位说明">本阶段内容（测评列表、测评详情）已在 C 端 H5 文档中独立展示，请查阅 C 端 HTML 产出文件。</div>
+</div>
+</section>
+
+</main>
+<aside class="右侧栏" id="右侧栏" style="display:none;">
+<div id="阶段04右侧栏" class="阶段右侧栏组" style="display:none;">
+<div class="注释卡片组" data-page="4.1">
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">&#128269;</span><span class="注释标题">业务背景</span></div><div class="注释卡片正文">当前环节：① 配置发布人形象（头像 + 名称）<br><br>页面路径：SaaS 总后台 > 内容运营 > 测评 > 发布人设置<br><br>对下游影响：配置的发布人供帖子创建时选择，发布人头像和名称将展示在 C 端详情页中<br><br>表格类型：页面编辑类<br></div></div>
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">⚙</span><span class="注释标题">列表交互</span></div><div class="注释卡片正文"><strong>交互：[新增发布人]</strong>  <br><br><strong>业务用途</strong>：新增一条发布人记录。点击后弹出新增抽屉，填写头像和名称，保存后发布人可被帖子引用。<br><br><br><strong>交互：[编辑发布人]</strong>  <br><br><strong>业务用途</strong>：修改已有发布人的头像或名称。修改后所有已关联该发布人的历史帖子在 C 端同步展示最新头像和名称。<br><br><br><strong>交互：[删除发布人]</strong>  <br><br><strong>业务用途</strong>：删除发布人记录。删除前需校验是否仍有已上架帖子关联该发布人；如有则提示不可删除，需先更换帖子发布人或下架帖子。<br></div></div>
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">💡</span><span class="注释标题">业务逻辑</span></div><div class="注释卡片正文"><strong>新增时字段校验：</strong> 头像和名称均为必填，保存时校验不可为空。<br><br><strong>删除保护：</strong> 发布人被已上架帖子引用时不可删除，提示"该发布人已被 X 篇已上架帖子引用，请先更换发布人或下架帖子后再删除"。被已下架帖子或未引用时可直接删除。<br><br><strong>修改即时生效：</strong> 修改发布人头像或名称后，C 端所有关联该发布人的帖子（含历史和未来）均立即展示最新头像和名称，不保留历史快照。<br><br>---</div></div>
+</div>
+<div class="注释卡片组" data-page="4.2" style="display:none;">
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">&#128269;</span><span class="注释标题">业务背景</span></div><div class="注释卡片正文">当前环节：② 创建并上架测评帖子<br><br>页面路径：SaaS 总后台 > 内容运营 > 测评 > 帖子管理<br><br>对下游影响：上架后的帖子将出现在 C 端测评列表页，供用户浏览和互动<br><br>表格类型：列表页<br></div></div>
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">⚙</span><span class="注释标题">列表交互</span></div><div class="注释卡片正文"><strong>交互：[新增帖子]</strong>  <br><br><strong>业务用途</strong>：新增一篇测评帖子。点击后打开新增抽屉，填写全部字段。保存时：如未选发布人则随机挑选一个；起始点赞数和起始收藏数如未填则各自随机赋值 400~900。<br><br><br><strong>交互：[编辑帖子]</strong>  <br><br><strong>业务用途</strong>：修改已有帖子的任意字段。编辑后 C 端立即展示最新内容。排序、主图、标题、发布人、起始点赞数、起始收藏数、详情文本和上下架状态均可修改。<br><br><br><strong>交互：[删除帖子]</strong>  <br><br><strong>业务用途</strong>：删除帖子记录。已上架的帖子需先下架再删除，或二次确认后直接删除（删除后 C 端不可见）。<br><br><br><strong>交互：[上架 / 下架]</strong>  <br><br><strong>业务用途</strong>：切换帖子上下架状态。上架后帖子出现在 C 端测评列表；下架后 C 端不可见。用户在详情页浏览时被下架，页面 Toast 提示"内容已下架"并自动返回列表。<br><br><br><strong>交互：[详情查看]</strong>  <br><br><strong>业务用途</strong>：点击表格行「详情」按钮打开详情抽屉，展示全部字段的完整值，包括详情文本的富文本渲染。<br></div></div>
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">💡</span><span class="注释标题">业务逻辑</span></div><div class="注释卡片正文"><strong>排序规则：</strong> 数值越大越靠前。C 端列表按排序值降序展示。排序值相同的帖子，按创建时间倒序排列。<br><br><strong>发布人随机规则：</strong> 新增或编辑帖子保存时，若发布人字段为空，系统从全部已配置发布人中随机抽取一个。如果当前无任何发布人，保存失败并提示"请先配置发布人"。<br><br><strong>起始互动数随机规则：</strong> 起始点赞数未填 → 随机 400~900（含两端）；起始收藏数未填 → 随机 400~900（含两端）。两个随机值独立计算，不要求相同。<br><br><strong>下架不可见：</strong> 帖子下架后，C 端列表不再展示该帖子，详情页也不可访问（直接访问详情链接时提示"内容已下架"）。<br><br><strong>删除保护：</strong> 已上架帖子点击删除时，应弹出二次确认"该帖子当前为上架状态，删除后 C 端将不可见，确认删除？"。已下架帖子可直接删除。<br><br>---</div></div>
+</div>
+</div>
+
+</aside>
+</div>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭抽屉();关闭新增抽屉()"></div>
+<aside id="detailDrawer" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="detailDrawerTitle">详情</div>
+    <button class="btn-close" onclick="关闭抽屉()">×</button>
+  </div>
+  <div id="detailBody" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭抽屉()">关闭</button>
+  </div>
+</aside>
+<aside id="新增抽屉面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="新增抽屉标题">新增</div>
+    <button class="btn-close" onclick="关闭新增抽屉()">×</button>
+  </div>
+  <div id="新增抽屉正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭新增抽屉()">关闭</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-标签切换">
+function 切换标签(n) {
+  document.querySelectorAll('.标签按钮').forEach(function(b) { b.classList.remove('激活'); });
+  var btn = document.querySelector('.标签按钮[data-stage="' + n + '"]'); if (btn) btn.classList.add('激活');
+  document.querySelectorAll('.标签面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.querySelector('.标签面板[data-stage="' + n + '"]'); if (panel) panel.classList.add('激活');
+  var 所有导航 = document.querySelectorAll('.阶段页面导航');
+  for (var i = 0; i < 所有导航.length; i++) { 所有导航[i].style.display = 'none'; }
+  // 非数字型 data-stage（如 'pageflow'）不触发阶段导航和右侧栏
+  var 数字阶段 = (typeof n === 'number' || /^\d+$/.test(String(n))) ? parseInt(n, 10) : null;
+  if (数字阶段 !== null && 数字阶段 >= 3) {
+    var N = String(数字阶段).padStart(2, '0');
+    var 当前导航 = document.getElementById('阶段' + N + '导航');
+    if (当前导航) { 当前导航.style.display = ''; var 首个 = 当前导航.querySelector('.阶段链接'); if (首个) { var 页码 = 首个.getAttribute('data-page'); var 类型 = 首个.getAttribute('data-page-type'); if (页码) 切换页面(页码, 类型); } }
+  }
+  var 右侧栏 = document.getElementById('右侧栏');
+  var 所有右侧栏组 = document.querySelectorAll('.阶段右侧栏组');
+  for (var i = 0; i < 所有右侧栏组.length; i++) { 所有右侧栏组[i].style.display = 'none'; }
+  if (数字阶段 !== null && 数字阶段 >= 3) {
+    if (右侧栏) 右侧栏.style.display = '';
+    var N = String(数字阶段).padStart(2, '0');
+    var 当前右侧栏 = document.getElementById('阶段' + N + '右侧栏');
+    if (当前右侧栏) { 当前右侧栏.style.display = ''; var 首个卡片 = 当前右侧栏.querySelector('.注释卡片组'); if (首个卡片) 首个卡片.style.display = ''; }
+  } else { if (右侧栏) 右侧栏.style.display = 'none'; }
+  // C端模式切换：页面流程图和第三阶段使用全宽布局
+  var body = document.body;
+  body.classList.remove('页面流程图模式', '第三阶段模式');
+  if (n === 'pageflow' || String(n) === 'pageflow') {
+    body.classList.add('页面流程图模式');
+  } else if (数字阶段 === 8) {
+    body.classList.add('第三阶段模式');
+  }
+  // 泳道图阶段高亮联动（默认映射：Tab3→阶段1, Tab4→阶段2；不同项目按需调整判断值）
+  var 泳道图列表 = document.querySelectorAll('.泳道图');
+  for (var s = 0; s < 泳道图列表.length; s++) {
+    泳道图列表[s].classList.remove('高亮阶段1', '高亮阶段2');
+  }
+  if (数字阶段 === 3) {
+    for (var s = 0; s < 泳道图列表.length; s++) { 泳道图列表[s].classList.add('高亮阶段1'); }
+  } else if (数字阶段 === 4) {
+    for (var s = 0; s < 泳道图列表.length; s++) { 泳道图列表[s].classList.add('高亮阶段2'); }
+  }
+}
+(function() { var 右侧栏 = document.getElementById('右侧栏'); if (右侧栏) 右侧栏.style.display = 'none'; })();
+</script>
+<script id="js-阶段切换">
+// ═══ 泳道图模块高亮：页面 → 节点编号映射 ═══
+// AI 从各页面 #### 业务背景「当前环节」字段提取步骤编号生成此映射
+// 示例：当前环节"③ → ④ → ⑤" → 映射为 [3, 4, 5]
+window._泳道节点映射 = { /* 🔴 AI必须每项目覆盖！从各页面"当前环节"提取步骤编号。示例格式: "4.1": [1], "4.2": [2], "4.3": [11,12] */ };
+function 更新泳道高亮(页码) {
+  var 高亮节点 = (页码 && window._泳道节点映射[页码]) ? window._泳道节点映射[页码] : null;
+  var 所有行 = document.querySelectorAll('.泳道行[data-swimlane-node]');
+  for (var i = 0; i < 所有行.length; i++) {
+    var 节点号 = parseInt(所有行[i].getAttribute('data-swimlane-node'), 10);
+    if (高亮节点 === null) { 所有行[i].classList.remove('置灰'); }
+    else if (高亮节点.indexOf(节点号) === -1) { 所有行[i].classList.add('置灰'); }
+    else { 所有行[i].classList.remove('置灰'); }
+  }
+}
+function 切换页面(页码, 页面类型) {
+  var N = 页码.toString().split('.')[0]; var N填充 = N.padStart(2, '0');
+  document.querySelectorAll('.阶段链接').forEach(function(l) { l.classList.remove('激活'); });
+  var link = document.querySelector('.阶段链接[data-page="' + 页码 + '"]'); if (link) link.classList.add('激活');
+  var 编辑区 = document.getElementById('阶段' + N填充 + '编辑区');
+  var 列表区 = document.getElementById('阶段' + N填充 + '列表区');
+  var 移动区 = document.getElementById('阶段' + N填充 + '移动区');
+  if (页面类型 === '移动端展示页') {
+    if (移动区) 移动区.style.display = '';
+    if (列表区) 列表区.style.display = 'none';
+    if (编辑区) 编辑区.style.display = 'none';
+    if (移动区) { var ms = 移动区.querySelectorAll('.移动端演示壳'); for (var i = 0; i < ms.length; i++) { ms[i].style.display = (ms[i].getAttribute('data-page') === 页码) ? '' : 'none'; } }
+    var 当前壳 = 移动区 ? 移动区.querySelector('.移动端演示壳[data-page="' + 页码 + '"]') : null;
+    var 当前状态按钮 = 当前壳 ? 当前壳.querySelector('.移动状态按钮.active') || 当前壳.querySelector('.移动状态按钮') : null;
+    if (当前状态按钮) 切换移动状态(页码, 当前状态按钮.getAttribute('data-state'));
+  } else if (页面类型 === '列表页') {
+    if (列表区) 列表区.style.display = '';
+    if (编辑区) 编辑区.style.display = 'none';
+    if (移动区) 移动区.style.display = 'none';
+    [列表区].forEach(function(c) { if (!c) return; var ss = c.querySelectorAll('.演示壳'); for (var i = 0; i < ss.length; i++) { ss[i].style.display = (ss[i].getAttribute('data-page') === 页码) ? '' : 'none'; } });
+  }
+  else {
+    if (编辑区) 编辑区.style.display = '';
+    if (列表区) 列表区.style.display = 'none';
+    if (移动区) 移动区.style.display = 'none';
+    if (编辑区) { var ss = 编辑区.querySelectorAll('.演示壳'); for (var i = 0; i < ss.length; i++) { ss[i].style.display = (ss[i].getAttribute('data-page') === 页码) ? '' : 'none'; } }
+  }
+  var 右侧栏容器 = document.getElementById('阶段' + N填充 + '右侧栏');
+  if (右侧栏容器) { var 所有卡片组 = 右侧栏容器.querySelectorAll('.注释卡片组'); for (var i = 0; i < 所有卡片组.length; i++) { 所有卡片组[i].style.display = 'none'; } var 目标 = 右侧栏容器.querySelector('.注释卡片组[data-page="' + 页码 + '"]'); if (目标) 目标.style.display = ''; }
+  更新泳道高亮(页码);
+}
+function 切换移动状态(页码, 状态) {
+  var 壳 = document.querySelector('.移动端演示壳[data-page="' + 页码 + '"]');
+  if (壳) {
+    var 按钮 = 壳.querySelectorAll('.移动状态按钮');
+    for (var i = 0; i < 按钮.length; i++) { 按钮[i].classList.toggle('active', 按钮[i].getAttribute('data-state') === 状态); }
+    var 面板 = 壳.querySelectorAll('.移动状态面板');
+    for (var j = 0; j < 面板.length; j++) { 面板[j].classList.toggle('active', 面板[j].getAttribute('data-state') === 状态); }
+    var 底部 = 壳.querySelectorAll('.移动底部区域');
+    for (var b = 0; b < 底部.length; b++) { 底部[b].classList.toggle('active', 底部[b].getAttribute('data-state') === 状态); }
+    var 标注组 = 壳.querySelectorAll('.字段标注状态组');
+    for (var g = 0; g < 标注组.length; g++) { var ds = 标注组[g].getAttribute('data-state'); if (ds) { 标注组[g].classList.toggle('active', ds === 状态); } }
+    同步移动端编号与标注(页码, 状态, 壳);
+  }
+  var N = 页码.toString().split('.')[0]; var N填充 = N.padStart(2, '0');
+  var 右侧栏容器 = document.getElementById('阶段' + N填充 + '右侧栏');
+  if (右侧栏容器) {
+    var 所有卡片组 = 右侧栏容器.querySelectorAll('.注释卡片组');
+    for (var k = 0; k < 所有卡片组.length; k++) { 所有卡片组[k].style.display = 'none'; }
+    var 目标 = 右侧栏容器.querySelector('.注释卡片组[data-page="' + 页码 + '"][data-mobile-state="' + 状态 + '"]') || 右侧栏容器.querySelector('.注释卡片组[data-page="' + 页码 + '"]');
+    if (目标) 目标.style.display = '';
+  }
+}
+function 同步移动端编号与标注(页码, 状态, 壳) {
+  if (!壳) return;
+  function 标题文本(el) {
+    if (el.getAttribute('data-annot-title')) return el.getAttribute('data-annot-title');
+    if (el.classList.contains('小程序导航栏')) return '顶部导航';
+    if (el.classList.contains('移动主视觉')) return '状态图标区';
+    if (el.classList.contains('移动底部区域')) return '底部操作区';
+    var h = el.querySelector('h4,h3');
+    if (!h) return '展示卡片';
+    var clone = h.cloneNode(true);
+    var btns = clone.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].remove();
+    return clone.textContent.replace(/\s+/g, ' ').trim();
+  }
+  function 安全文本(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+  function 取值(el, key, fallback) {
+    return 安全文本(el.getAttribute('data-annot-' + key) || fallback);
+  }
+  var 条目 = [];
+  var 导航 = 壳.querySelector('.小程序导航栏');
+  if (导航) 条目.push({ el: 导航, 标题: 标题文本(导航), 标注: 导航.getAttribute('data-annot-mark') || '' });
+  var 当前面板 = 壳.querySelector('.移动状态面板.active');
+  if (当前面板) {
+    var 卡片 = 当前面板.querySelectorAll('.移动主视觉, .移动卡片, [data-annot-card="true"]');
+    for (var c = 0; c < 卡片.length; c++) 条目.push({ el: 卡片[c], 标题: 标题文本(卡片[c]), 标注: 卡片[c].getAttribute('data-annot-mark') || '' });
+  }
+  var 当前底部 = 壳.querySelector('.移动底部区域.active');
+  if (当前底部) 条目.push({ el: 当前底部, 标题: 标题文本(当前底部), 标注: 当前底部.getAttribute('data-annot-mark') || '' });
+  for (var n = 0; n < 条目.length; n++) {
+    条目[n].标注 = 条目[n].标注 || String(n + 1);
+    var 编号 = 条目[n].el.querySelector('.字段内编号');
+    if (!编号) {
+      编号 = document.createElement('span');
+      编号.className = '字段内编号';
+      条目[n].el.insertBefore(编号, 条目[n].el.firstChild);
+    }
+    编号.textContent = 条目[n].标注;
+  }
+  function 右侧模块说明(item) {
+    var el = item.el;
+    return '<div class="标注卡片"><div class="标注卡片头"><span class="字段标注编号">' + 安全文本(item.标注) + '</span> ' + 安全文本(item.标题) + '</div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">模块名称</span><span class="标注卡片值">' + 安全文本(item.标题) + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">标注编号</span><span class="标注卡片值">' + 安全文本(item.标注) + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">数据来源</span><span class="标注卡片值">' + 取值(el, 'source', '当前页面数据') + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">展示逻辑</span><span class="标注卡片值">' + 取值(el, 'rule', el.getAttribute('data-annot-display') || '随当前状态展示') + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">交互逻辑</span><span class="标注卡片值">' + 取值(el, 'action', '无') + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">显示状态</span><span class="标注卡片值">' + 取值(el, 'state', 状态) + '</span></div>'
+      + '<div class="标注卡片行"><span class="标注卡片标签">异常/空状态</span><span class="标注卡片值">' + 取值(el, 'empty', '无') + '</span></div></div>';
+  }
+  function 写入标注(栏, 渲染函数, 只渲染选中) {
+    if (!栏) return;
+    var 所有组 = 栏.querySelectorAll('.字段标注状态组');
+    for (var i = 0; i < 所有组.length; i++) 所有组[i].classList.remove('active');
+    var 自动组 = 栏.querySelector('.字段标注状态组[data-auto-sync="' + 页码 + '"]') || 栏.querySelector('.字段标注状态组[data-auto-sync]');
+    if (!自动组) {
+      自动组 = document.createElement('div');
+      自动组.className = '字段标注状态组';
+      自动组.setAttribute('data-auto-sync', 页码);
+      栏.appendChild(自动组);
+    }
+    自动组.setAttribute('data-state', 状态);
+    自动组.classList.add('active');
+    var html = '';
+    if (只渲染选中) {
+      var 选中 = null;
+      for (var s = 0; s < 条目.length; s++) {
+        if (条目[s].el.classList.contains('标注选中')) { 选中 = 条目[s]; break; }
+      }
+      if (!选中 && 条目.length) {
+        选中 = 条目[0];
+        选中.el.classList.add('标注选中');
+      }
+      html = 选中 ? 渲染函数(选中, 0) : '<div class="标注卡片">点击手机渲染区中的模块或编号，查看对应模块说明。</div>';
+    } else {
+      for (var j = 0; j < 条目.length; j++) html += 渲染函数(条目[j], j);
+    }
+    自动组.innerHTML = html;
+    return 自动组;
+  }
+  var 右栏组 = 写入标注(壳.querySelector('.字段标注右栏'), 右侧模块说明, true);
+  for (var e = 0; e < 条目.length; e++) {
+    条目[e].el.onclick = function(ev) {
+      for (var x = 0; x < 条目.length; x++) 条目[x].el.classList.remove('标注选中');
+      this.classList.add('标注选中');
+      if (右栏组) {
+        for (var y = 0; y < 条目.length; y++) {
+          if (条目[y].el === this) { 右栏组.innerHTML = 右侧模块说明(条目[y]); break; }
+        }
+      }
+      ev.stopPropagation();
+    };
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var 壳列表 = document.querySelectorAll('.移动端演示壳[data-page]');
+  for (var i = 0; i < 壳列表.length; i++) {
+    var 页码 = 壳列表[i].getAttribute('data-page');
+    var 当前状态按钮 = 壳列表[i].querySelector('.移动状态按钮.active') || 壳列表[i].querySelector('.移动状态按钮');
+    if (页码 && 当前状态按钮) 切换移动状态(页码, 当前状态按钮.getAttribute('data-state'));
+  }
+});
+</script>
+<script id="js-字段联动">
+function 应用字段状态() {}
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); if (按钮) 按钮.classList.toggle('is-open'); }
+}
+// ── 通用：枚举控制字段的置灰切换（页面编辑类）──
+// 用法：控制字段 <select> 写 onchange="置灰切换_{页码}(this.value)"
+//       受控区 div 写 id="grp_{页码}_{匹配值}"，默认不匹配的区初始 style="opacity:0.35;pointer-events:none;transition:opacity 0.25s"
+//       每个存在枚举控制关系的页面编辑类小节生成一个对应的 置灰切换_{页码}() 函数
+function 置灰切换_模板(页码, val, 映射表) {
+  // 映射表 格式：{ '枚举值A': ['idA1','idA2'], '枚举值B': ['idB1'] }
+  Object.keys(映射表).forEach(function(k) {
+    var 匹配 = (k === val);
+    (映射表[k] || []).forEach(function(gid) {
+      var el = document.getElementById(gid);
+      if (el) { el.style.opacity = 匹配 ? '1' : '0.35'; el.style.pointerEvents = 匹配 ? 'auto' : 'none'; }
+    });
+  });
+}
+</script>
+<script id="js-抽屉">
+window._详情字段按节 = window._详情字段按节 || {};
+function 打开抽屉(行数据, 标题) {
+  var drawer = document.getElementById('detailDrawer'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('detailBody'); var titleEl = document.getElementById('detailDrawerTitle');
+  if (!drawer || !body) return; titleEl.textContent = 标题 || '详情';
+  var 当前节 = (行数据 && 行数据._壳节编号) || '';
+  var 详情字段 = (当前节 && window._详情字段按节[当前节]) ? window._详情字段按节[当前节] : [];
+  if (详情字段.length === 0) { var 已见 = {}; var keys = Object.keys(window._详情字段按节); for (var k = 0; k < keys.length; k++) { var fl = window._详情字段按节[keys[k]]; for (var i = 0; i < fl.length; i++) { if (!已见[fl[i].名称]) { 已见[fl[i].名称] = true; 详情字段.push(fl[i]); } } } }
+  var html = '<div class="编辑卡片区">';
+  // 辅助：渲染详情字段行（显示实际值）
+  function 渲染详情字段行(f, 值) {
+    var 编辑性 = (f.详情编辑性 !== undefined) ? f.详情编辑性 : (f.编辑性 || '可编辑');
+    var 编辑性标签 = '<span class="编辑性标签 ' + 编辑性 + '">' + 编辑性 + '</span>';
+    var row = '';
+    row += '<div class="field-row">';
+    row += '<span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">';
+    row += '<span class="field-display">' + 值 + '</span>';
+    row += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += 编辑性标签;
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button>';
+    row += '</span></div>';
+    return row;
+  }
+  // 优先用详情专属分组，其次复用新增分组
+  var 分组配置 = (当前节 && window._详情字段分组 && window._详情字段分组[当前节]) ? window._详情字段分组[当前节]
+              : (当前节 && window._新增字段分组 && window._新增字段分组[当前节]) ? window._新增字段分组[当前节]
+              : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 详情字段.length; k++) {
+          if (详情字段[k].名称 === 组.字段[j]) {
+            var val = (行数据 && 行数据[组.字段[j]] !== undefined) ? String(行数据[组.字段[j]]) : '—';
+            html += 渲染详情字段行(详情字段[k], val);
+            break;
+          }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    // 兼容旧文件的 detail-grid 兜底；新生成的列表页必须注册 _详情字段分组，正常不应走到这里。
+    html += '<div class="detail-grid">';
+    if (详情字段.length > 0) { for (var i = 0; i < 详情字段.length; i++) { var f = 详情字段[i]; var val = (行数据 && 行数据[f.名称] !== undefined) ? String(行数据[f.名称]) : '—'; html += '<div class="detail-item"><div class="detail-label">' + f.名称 + '<span class="type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span><button class="信息按钮" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)" style="margin-left:4px;">ⓘ</button></div><div class="detail-value">' + val + '</div></div>'; } }
+    else if (行数据) { var ks = Object.keys(行数据).filter(function(k) { return k.indexOf('_') !== 0; }); for (var i = 0; i < ks.length; i++) { html += '<div class="detail-item"><div class="detail-label">' + ks[i] + '</div><div class="detail-value">' + String(行数据[ks[i]] || '—') + '</div></div>'; } }
+    else { html += '<div class="detail-item"><div class="detail-value">暂无数据</div></div>'; }
+    html += '</div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭抽屉() { var d = document.getElementById('detailDrawer'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-新增抽屉">
+function 打开新增抽屉(节编号) {
+  var drawer = document.getElementById('新增抽屉面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('新增抽屉正文'); var titleEl = document.getElementById('新增抽屉标题');
+  if (!drawer || !body) return;
+  var 字段列表 = (节编号 && window._详情字段按节[节编号]) ? window._详情字段按节[节编号] : [];
+  // 过滤出 在新增=true 的字段
+  var 新增字段 = []; for (var i = 0; i < 字段列表.length; i++) { if (字段列表[i].在新增) 新增字段.push(字段列表[i]); }
+  titleEl.textContent = (节编号 || '') + ' — 新增';
+  var html = '<div class="编辑卡片区">';
+  // 规则摘要框（如有控制逻辑）
+  var 控制逻辑块 = (节编号 && window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  // 辅助：渲染单个字段行
+  function 渲染字段行(f) {
+    var 编辑性 = (f.新增编辑性 !== undefined) ? f.新增编辑性 : (f.编辑性 || '可编辑');
+    var 编辑性标签 = '<span class="编辑性标签 ' + 编辑性 + '">' + 编辑性 + '</span>';
+    var row = '';
+    row += '<div class="field-row">';
+    row += '<span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">';
+    row += '<span class="field-display">' + (f.示例值 || (f.基础类型 === 'enum' ? '（下拉选择）' : '（填写）')) + '</span>';
+    row += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += 编辑性标签;
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button>';
+    row += '</span></div>';
+    return row;
+  }
+  // 检查是否有字段分组配置
+  var 分组配置 = (节编号 && window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 新增字段.length; k++) {
+          if (新增字段[k].名称 === 组.字段[j]) { html += 渲染字段行(新增字段[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>新增配置</h4></div><div class="field-card-body">';
+    if (新增字段.length === 0) { html += '<div class="空状态">该页面无可新增字段</div>'; }
+    else {
+      for (var i = 0; i < 新增字段.length; i++) { html += 渲染字段行(新增字段[i]); }
+    }
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭新增抽屉() { var d = document.getElementById('新增抽屉面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script id="js-单元格截断">
+/* ── 列表单元格 2 行截断 ── */
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script>
+window._详情字段按节=window._详情字段按节||{};
+// 4.1 发布人设置
+window._详情字段按节["4.1"]=[
+  {名称:"头像",类型原文:"file",基础类型:"file",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"当前操作者上传",逻辑:"支持上传图片，建议正方形",用途:"C端展示发布人头像，增强内容可信度",节编号:"4.1"},
+  {名称:"名称",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"当前操作者填写",逻辑:"自由文本",用途:"C端展示发布人名称",节编号:"4.1"}
+];
+window._详情字段分组=window._详情字段分组||{};
+window._详情字段分组["4.1"]=[{组名:"基本信息",字段:["头像","名称"]}];
+window._新增字段分组=window._新增字段分组||{};
+window._新增字段分组["4.1"]=[{组名:"基本信息",字段:["头像","名称"]}];
+// 4.2 帖子管理
+window._详情字段按节["4.2"]=[
+  {名称:"排序",类型原文:"number",基础类型:"number",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"操作者手动输入",逻辑:"数值越大越靠前",用途:"控制帖子在C端列表的展示优先级",节编号:"4.2"},
+  {名称:"主图",类型原文:"file",基础类型:"file",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"操作者上传",逻辑:"帖子列表卡片封面图",用途:"C端列表卡片封面展示",节编号:"4.2"},
+  {名称:"标题",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"操作者填写",逻辑:"展示在列表卡片和详情页顶部",用途:"吸引用户点击",节编号:"4.2"},
+  {名称:"发布人",类型原文:"组合字段",基础类型:"组合字段",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"从已配置发布人列表选择",逻辑:"未选则随机挑选",用途:"C端展示发布人头像和名称",节编号:"4.2"},
+  {名称:"起始点赞数",类型原文:"number",基础类型:"number",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"操作者输入或系统自动赋值",逻辑:"未填时随机400~900",用途:"为帖子提供初始互动氛围",节编号:"4.2"},
+  {名称:"起始收藏数",类型原文:"number",基础类型:"number",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"操作者输入或系统自动赋值",逻辑:"未填时随机400~900",用途:"为帖子提供初始互动氛围",节编号:"4.2"},
+  {名称:"详情文本",类型原文:"富文本",基础类型:"富文本",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"操作者填写",逻辑:"富文本支持图文混排",用途:"测评帖子的正文内容",节编号:"4.2"},
+  {名称:"上下架状态",类型原文:"enum（上架、下架）",基础类型:"enum",枚举值:"上架、下架",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"操作者选择",逻辑:"上架=C端可见；下架=C端不可见",用途:"控制帖子在C端的可见性",节编号:"4.2"}
+];
+window._详情字段分组["4.2"]=[{组名:"基本信息",字段:["标题","主图","发布人","排序"]},{组名:"互动数据",字段:["起始点赞数","起始收藏数"]},{组名:"正文内容",字段:["详情文本"]},{组名:"发布控制",字段:["上下架状态"]}];
+window._新增字段分组["4.2"]=[{组名:"基本信息",字段:["标题","主图","发布人","排序"]},{组名:"互动设置",字段:["起始点赞数","起始收藏数"]},{组名:"正文内容",字段:["详情文本"]},{组名:"发布控制",字段:["上下架状态"]}];
+// 4.1 页面编辑类字段注册到 _字段总库
+(window._字段总库||[]).push({名称:"头像",类型原文:"file",基础类型:"file",数据来源:"当前操作者上传",逻辑:"支持上传图片，建议正方形，展示在C端详情页发布人区域",用途:"C端展示发布人头像",节编号:"4.1"},{名称:"名称",类型原文:"string",基础类型:"string",数据来源:"当前操作者填写",逻辑:"自由文本，展示在C端详情页发布人区域",用途:"C端展示发布人名称",节编号:"4.1"});
+// 4.2 列表页字段注册到 _字段总库
+(window._字段总库||[]).push({名称:"排序",类型原文:"number",基础类型:"number",数据来源:"操作者手动输入",逻辑:"数值越大排在越前面，决定C端列表展示顺序",用途:"控制帖子在C端列表中的展示优先级",节编号:"4.2"},{名称:"主图",类型原文:"file",基础类型:"file",数据来源:"操作者上传",逻辑:"帖子列表卡片封面图，建议统一尺寸",用途:"C端列表卡片封面展示",节编号:"4.2"},{名称:"标题",类型原文:"string",基础类型:"string",数据来源:"操作者填写",逻辑:"帖子标题，展示在列表卡片和详情页顶部",用途:"吸引用户点击，概括帖子主题",节编号:"4.2"},{名称:"发布人",类型原文:"组合字段",基础类型:"组合字段",数据来源:"从已配置发布人列表选择",逻辑:"未选择时随机挑选",用途:"C端展示发布人头像和名称",节编号:"4.2"},{名称:"起始点赞数",类型原文:"number",基础类型:"number",数据来源:"操作者输入或系统自动赋值",逻辑:"未填时随机400~900，用户点赞在此基数上累加",用途:"为帖子提供初始互动氛围",节编号:"4.2"},{名称:"起始收藏数",类型原文:"number",基础类型:"number",数据来源:"操作者输入或系统自动赋值",逻辑:"未填时随机400~900，用户收藏在此基数上累加",用途:"为帖子提供初始互动氛围",节编号:"4.2"},{名称:"详情文本",类型原文:"富文本",基础类型:"富文本",数据来源:"操作者填写",逻辑:"富文本内容支持图文混排，仅在详情和C端展示",用途:"测评帖子的正文内容",节编号:"4.2"},{名称:"上下架状态",类型原文:"enum（上架、下架）",基础类型:"enum",枚举值:"上架、下架",数据来源:"操作者选择",逻辑:"上架=C端可见；下架=C端不可见",用途:"控制帖子在C端的可见性",节编号:"4.2"});
+</script>
+<script>
+// ═══ 泳道图模块高亮映射 — 测评项目 ═══
+// 从各页面 #### 业务背景「当前环节」提取：
+// 4.1 发布人设置: ① → [1]
+// 4.2 帖子管理:   ② → [2]
+// 5.1 测评列表:   ③ → [3]
+// 5.2 测评详情:   ④ ⑤ → [4,5]
+window._泳道节点映射 = { "4.1": [1], "4.2": [2], "5.1": [3], "5.2": [4, 5] };
+</script>
+</body>
+</html>

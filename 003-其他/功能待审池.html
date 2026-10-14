@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>功能待审池</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;}
+body{margin:0;padding:0;font-family:"PingFang SC","Microsoft YaHei",-apple-system,sans-serif;background:#f1f5f9;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ═══ 顶部栏 ═══ */
+.顶栏{flex:0 0 auto;display:flex;align-items:center;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 16px;min-height:54px;}
+.顶栏 .品牌{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:#172033;flex-shrink:0;}
+.顶栏 .品牌 .图标{font-size:18px;}
+.顶栏 .副标题{font-size:12px;color:#94a3b8;margin-left:12px;padding-left:12px;border-left:1px solid #e2e8f0;}
+
+/* ═══ 主体 ═══ */
+.主体{flex:1;min-height:0;display:flex;overflow:hidden;}
+
+/* ═══ 左侧导航栏 ═══ */
+.侧栏{width:280px;min-width:280px;height:100%;background:#fff;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;overflow:hidden;}
+.侧栏头{padding:14px 16px;border-bottom:1px solid #e2e8f0;flex:0 0 auto;}
+.侧栏头 h2{margin:0;font-size:15px;color:#172033;display:flex;align-items:center;gap:6px;}
+.侧栏头 p{margin:3px 0 0;font-size:11px;color:#94a3b8;}
+.侧栏体{flex:1;overflow-y:auto;padding:6px 0;}
+.侧栏尾{flex:0 0 auto;padding:10px 16px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;}
+
+/* 一级大组 */
+.导航大组{margin:0 0 6px;}
+.导航大组头{display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;user-select:none;font-size:13.5px;font-weight:800;color:#fff;transition:filter .12s;background:linear-gradient(90deg,#0f6b8f,#1a8fb8);}
+.导航大组头:hover{filter:brightness(1.1);}
+.导航大组头 .箭头{font-size:10px;opacity:.85;transition:transform .18s;flex-shrink:0;}
+.导航大组头 .图标{font-size:15px;flex-shrink:0;}
+.导航大组头 .标签{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:1px;}
+.导航大组.折叠 .箭头{transform:rotate(-90deg);}
+.导航大组.折叠 .导航大组体{display:none;}
+.导航大组体{padding:3px 0 5px;}
+
+/* 子项 */
+.导航子项{display:flex;flex-direction:column;}
+.导航子项 a{display:flex;align-items:center;gap:7px;padding:7px 16px 7px 42px;text-decoration:none;color:#64748b;font-size:12px;border-left:3px solid transparent;transition:all .12s;overflow:hidden;cursor:pointer;}
+.导航子项 a:hover{background:#f8fafc;color:#334155;}
+.导航子项 a.活跃{background:#eff6ff;color:#0f6b8f;border-left-color:#0f6b8f;font-weight:650;}
+.导航子项 a .子图标{font-size:12px;flex-shrink:0;}
+.导航子项 a .子标签{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.导航子项 a .子类型{font-size:10px;color:#94a3b8;flex-shrink:0;background:#f1f5f9;padding:1px 5px;border-radius:3px;}
+.导航子项 a.活跃 .子类型{background:#dbeafe;color:#2563eb;}
+
+/* ═══ 右侧内容区 ═══ */
+.内容区{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+.内容顶栏{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid #e2e8f0;min-height:48px;}
+.内容顶栏 .面包屑{font-size:13px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.内容顶栏 .面包屑 b{color:#172033;}
+.内容顶栏 .格式标签{flex-shrink:0;font-size:11px;padding:3px 8px;border-radius:4px;font-weight:650;background:#dbeafe;color:#1d4ed8;}
+
+#内容容器{flex:1;min-height:0;position:relative;overflow-y:auto;background:#f1f5f9;padding:20px 24px;}
+.内容体{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(15,23,42,.06),0 4px 16px rgba(15,23,42,.04);padding:28px 36px 48px;max-width:900px;margin:0 auto;font-size:15px;line-height:1.75;color:#1f2937;}
+
+/* 纯文本内容样式 */
+.内容体 h2{font-size:22px;margin:32px 0 12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0;color:#1e293b;}
+.内容体 h2:first-child{margin-top:0;}
+.内容体 p{margin:10px 0;}
+.内容体 .功能名{font-weight:700;color:#1e293b;font-size:15px;margin:18px 0 2px;}
+.内容体 .功能名:first-child{margin-top:0;}
+.内容体 .好处{color:#64748b;font-size:14px;margin:2px 0 18px;}
+
+/* 响应式 */
+@media(max-width:768px){
+  body{flex-direction:column;}
+  .主体{flex-direction:column;}
+  .侧栏{width:100%;min-width:0;height:auto;max-height:45vh;border-right:0;border-bottom:1px solid #e2e8f0;}
+  .内容区{height:auto;flex:1;}
+  #内容容器{padding:12px;}
+  .内容体{padding:18px 20px 32px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ 顶部栏 ═══ -->
+<div class="顶栏">
+  <div class="品牌"><span class="图标">📥</span>功能待审池</div>
+  <span class="副标题">头脑风暴产出的功能暂存于此，逐条评审后再排期</span>
+</div>
+
+<!-- ═══ 主体 ═══ -->
+<div class="主体">
+
+  <!-- ═══ 左侧导航 ═══ -->
+  <nav class="侧栏" id="侧栏">
+    <div class="侧栏头">
+      <h2>📥 功能待审池</h2>
+      <p>按业务域归档，等待逐条评审</p>
+    </div>
+    <div class="侧栏体" id="导航树">
+
+      <!-- 一级：积分 -->
+      <div class="导航大组" id="组-积分">
+        <div class="导航大组头" onclick="切换大组('组-积分')">
+          <span class="箭头">▼</span>
+          <span class="图标">💰</span>
+          <span class="标签">积分</span>
+        </div>
+        <div class="导航大组体">
+          <div class="导航子项">
+            <a class="活跃" id="项-1012" onclick="切换内容('1012')">
+              <span class="子图标">📝</span>
+              <span class="子标签">1012积分需求清单</span>
+              <span class="子类型">14条</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="侧栏尾">
+      <span>就绪</span>
+      <span>待审池</span>
+    </div>
+  </nav>
+
+  <!-- ═══ 右侧内容区 ═══ -->
+  <div class="内容区">
+    <div class="内容顶栏">
+      <span class="面包屑" id="面包屑">📥 功能待审池 › <b>积分</b> › 1012积分需求清单</span>
+      <span class="格式标签">14条</span>
+    </div>
+    <div id="内容容器">
+      <div class="内容体" id="内容体">
+
+        <h2>一、触达与拉新（让用户进来，让消息发得出去）</h2>
+
+        <p class="功能名">1. 订阅得积分 / 订阅绑提现</p>
+        <p>两种路径可选：订阅即送积分，或者设门槛——不完成订阅就不让提现。</p>
+        <p class="好处">好处：从根源上解决"可触达次数太少"的问题，订阅率上去了，后续所有运营消息才发得出去，是整个触达体系的基础。</p>
+
+        <p class="功能名">2. 积分到期机制</p>
+        <p>给积分加有效期，到期前7天自动发通知提醒用户回来用掉。</p>
+        <p class="好处">好处：低成本召回沉默用户，积分要过期了用户自然会回来下单或兑换，比发普通运营消息打开率高得多。</p>
+
+        <p class="功能名">3. 邀请逻辑重构</p>
+        <p>好友注册送邀请人+100积分，好友首单再送邀请人+500积分，分两笔发放。</p>
+        <p class="好处">好处：解决老带新无奖励的问题，分两笔发防止薅羊毛，新用户也有动力走完整流程。</p>
+
+        <p class="功能名">4. 积分互助帮助力</p>
+        <p>用户可以发起「还差X积分就能兑换」的助力请求，微信分享给好友。好友每助力一次，双方都得少量积分（比如1-5分）。</p>
+        <p class="好处">好处：自带社交传播，帮用户突破兑换门槛的同时拉新。</p>
+
+        <p class="功能名">5. 饭搭子组队</p>
+        <p>2-3人组队，组内任意一人下单，全队都得额外积分。组队需要互相绑定（微信分享入队），一人最多在一组。</p>
+        <p class="好处">好处：鼓励拉朋友一起用，一个老用户能带2-3个新用户进来。</p>
+
+        <p class="功能名">6. 积分补签卡</p>
+        <p>签到断了可以用「补签卡」续上连续天数。补签卡获取方式：邀请好友注册送1张 / 少量积分兑换。</p>
+        <p class="好处">好处：补签卡把签到和拉新绑在一起，同时维持用户连续签到习惯。</p>
+
+        <h2>二、促活与留存（让用户天天来，长期留下来）</h2>
+
+        <p class="功能名">7. 饭点积分雨</p>
+        <p>每天中午12点、下午6点（刚好饭点！）开两场，限时60秒抢积分红包，点多少得多少，直接存账户。</p>
+        <p class="好处">好处：贴合外卖场景，零门槛，简单粗暴促活。</p>
+
+        <p class="功能名">8. 每周三积分翻倍日</p>
+        <p>固定每周三，签到+下单积分全翻倍。在首页、企微群提前一天预告。</p>
+        <p class="好处">好处：让用户形成固定日期的使用习惯，稳定每周饭点流量。</p>
+
+        <p class="功能名">9. 小程序内晒单返积分</p>
+        <p>用户下单后在小程序内晒外卖照片（不需要发朋友圈），审核通过即返额外积分。可以做"今日最香外卖"榜单。</p>
+        <p class="好处">好处：生成UGC内容，同时激励多下单多晒单。</p>
+
+        <p class="功能名">10. 7天挑战计划</p>
+        <p>连续7天下单得额外积分，第二天奖励设为最丰厚。</p>
+        <p class="好处">好处：解决企微回访率远低于公众号的问题，用阶梯奖励拉住用户走过前3天关键期，第二天最厚防止用户第一天拿了就跑。</p>
+
+        <p class="功能名">11. 累计等级+排行榜</p>
+        <p>按「累计下单数」或「累计积分」设等级：饭童 → 饭友 → 饭神 → 饭王。不同等级特权：签到翻倍、专属优惠券、抽奖概率加成等。周榜/月榜排名前10额外发奖励。</p>
+        <p class="好处">好处：利用用户的等级荣誉感和好胜心，低成本留住活跃用户。</p>
+
+        <h2>三、积分消耗（让积分有地方花）</h2>
+
+        <p class="功能名">12. 电商商品兑换</p>
+        <p>除了现金兑换，增加实物或虚拟商品兑换渠道。</p>
+        <p class="好处">好处：解决积分只有换现金一条路的问题，给积分多一个出口，同时提高积分的感知价值。</p>
+
+        <p class="功能名">13. 积分抽奖</p>
+        <p>完整闭环：报名消耗积分 → 邀请他人报名增加自己的抽奖次数 → 每天中午11点开奖（下过单的用户中奖概率更高）。未中奖但下过单的用户，额外补发10积分（≈0.01元）。</p>
+        <p class="好处">好处：给积分提供消耗场景的同时制造每日固定期待，未中奖补10分成本极低但让用户感觉"没白来"，减少负面情绪。</p>
+
+        <p class="功能名">14. 外卖保底卡</p>
+        <p>用极少量积分（比如10分）兑换一张"保底卡"，当天：抢到红包/领了券但没下单 → 保底补X积分；下单但没抢到红包 → 保底补X积分。</p>
+        <p class="好处">好处：给用户"不亏"的心理安全感，积分有地方消耗。</p>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function 切换大组(id){
+  var el=document.getElementById(id);
+  if(el){el.classList.toggle('折叠');}
+}
+function 切换内容(key){
+  // 目前只有一个内容页，点击即高亮
+  var links=document.querySelectorAll('.导航子项 a');
+  for(var i=0;i<links.length;i++){links[i].classList.remove('活跃');}
+  var cur=document.getElementById('项-'+key);
+  if(cur){cur.classList.add('活跃');}
+}
+</script>
+
+</body>
+</html>

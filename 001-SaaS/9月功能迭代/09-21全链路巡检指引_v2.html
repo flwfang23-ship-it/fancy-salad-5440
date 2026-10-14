@@ -1,0 +1,1354 @@
+<script type="text/plain" data-ai-only>
+# 全链路巡检指引
+
+> 产出日期：2026-09-21
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+每月 1 号、15 号有口令自动更新任务，权益页联盟组件按节点拉取跳转链接，企微侧有推送任务持续运行，用户访问侧 H5 和小程序都可能出现封禁或异常，收入归因侧有兜底逻辑报警。这些环节任何一处异常都可能直接影响收入，但目前缺少统一的巡检指引，运营人员排查时容易遗漏环节，错过最佳处理窗口。
+
+本指引把整条链路按 **运营取链 → 企微推送 → 用户访问 → 收入归因** 4 个阶段串成一条主线，明确每个阶段的检查节点、通知规则和处理方式。
+
+```text
+改造前
+
+无统一巡检指引
+        ↓
+口令、组件、企微、H5、小程序、收入各点分散排查
+发现晚、定位慢、容易遗漏环节，错过最佳处理窗口
+
+
+改造后
+
+按 ①②③④ 4 阶段顺序巡检
+        ↓
+每个节点有明确的检查动作和通知规则
+异常第一时间上报飞书"自动化通知测试"群
+```
+
+### 1.2 一句话业务模型
+
+```text
+口令按月更新（1 号、15 号）+ 联盟组件按节点拉取链接
+        +
+企微号 + 推送任务持续运行
+        +
+H5 + 小程序对用户正常开放
+        ↓
+收入归因到正确活动，不进兜底
+```
+
+### 1.3 最终目标
+
+- **链路可视**：4 个阶段的检查节点统一文档化，运营人员按图索骥。
+- **异常即时报**：所有异常通过飞书"自动化通知测试"群触达；正常情况按节点规则决定是否通知。
+- **不进兜底**：通过 3.2 权益页检索前置保障联盟组件链接有效，避免收入跑到兜底收入。
+
+## 2. 业务流程
+
+### 2.1 全链路巡检泳道图
+
+```text
+┌──────────────────┬──────────────────────────────┬──────────────────────────────┐
+│ 运营人员         │ 系统（自动化任务）           │ 飞书"自动化通知测试"群        │
+├──────────────────┼──────────────────────────────┼──────────────────────────────┤
+│                  │ ① 运营取链                   │                              │
+│                  │   3.1 口令自动更新           │                              │
+│                  │   3.2 权益页检索             │                              │
+│                  │ 【口令更新结果 → 通知】      │ → 口令更新结果               │
+│                  │ 【组件链接异常 → 通知】      │ → 组件链接异常               │
+│                  │ ② 企微推送                   │                              │
+│                  │   企微号 + 推送任务           │                              │
+│                  │ 【企微/推送异常 → 通知】     │ → 企微/推送异常              │
+│                  │ ③ 用户访问                   │                              │
+│                  │   H5 + 小程序                │                              │
+│                  │ 【H5被封/小程序异常 → 通知】│ → H5/小程序异常              │
+│                  │ ④ 收入归因                   │                              │
+│                  │   收入逻辑报警               │                              │
+│                  │ 【收入逻辑报警 → 通知】      │ → 收入逻辑报警               │
+└──────────────────┴──────────────────────────────┴──────────────────────────────┘
+```
+
+泳道图需要同时表达状态时，采用以下原则：
+
+- 编号节点只写参与方实际执行的业务动作。
+- 状态标注写在触发该状态的动作之后，不占用新的流程序号。
+- 一张泳道图只展示核心状态主线。本指引核心业务对象为**巡检通知记录**（状态：取链完成 → 推送完成 → 访问正常 → 收入归因完成）。
+- 不得使用动作名称代替中间状态。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前巡检闭环，可划分为：
+
+1. **第一阶段：运营取链（主要参与方：系统自动化任务）**：包含口令自动更新和权益页检索两个节点，保障取链环节产出的所有链接均有效。
+2. **第二阶段：企微推送（主要参与方：系统自动化任务）**：检查企微号和推送任务的异常情况。
+3. **第三阶段：用户访问（主要参与方：系统自动化任务）**：检查 H5 和小程序对用户的可访问性。
+4. **第四阶段：收入归因（主要参与方：系统自动化任务）**：检查收入归因逻辑报警。
+
+```text
+第一阶段：运营取链
+3.1 口令自动更新 → 3.2 权益页检索
+        ↓
+第二阶段：企微推送
+4.x（待补充）
+        ↓
+第三阶段：用户访问
+5.x（待补充）
+        ↓
+第四阶段：收入归因
+6.x（待补充）
+```
+
+每个步骤小节的 `#### 业务背景` 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。
+
+### 2.3 页面类型说明
+
+本指引为巡检操作指引文档，所有阶段小节统一使用「内容页」类型——纯文本指引，无字段表、无页面骨架、无列表交互弹窗。正文承载检查规则、通知规则和注意事项。
+
+---
+
+## 3. 第一阶段：运营取链
+
+> 本阶段由系统自动化任务执行，运营人员接收结果通知。包含口令自动更新和权益页检索两个节点，目标是保障"取链"环节产出的所有链接均有效，作为下游企微推送、用户访问、收入归因的前置基础。
+
+### 3.1 口令自动更新 — 内容页
+
+#### 业务背景
+
+当前环节：① 运营取链 - 口令自动更新<br>
+触发时点：每月 1 号、15 号的某个时间点<br>
+通知去向：飞书"自动化通知测试"群<br>
+对下游影响：口令是下游企微推送、用户访问所依赖的链接凭证，口令一旦过期未更新，会导致下游链接失效、用户无法访问、收入跑偏。<br>
+
+#### 业务背景说明
+
+- **口令有效期 30 天**：每个口令自生成起 30 天过期，需在过期前完成更新。
+- **更新节奏**：每月 1 号、15 号定时触发批量更新任务，覆盖所有有效期即将到期的口令。
+- **更新维度**：以"活动 → 推广位"维度进行更新；同一活动下可能有多个推广位，逐个更新。
+- **通知维度**：以"活动"维度进行通知，将同一活动下所有推广位的更新结果聚合后发送一条通知。
+
+#### 通知规则
+
+| 检查结果 | 通知文案 | 是否通知 |
+|---|---|---|
+| 正常 | 口令批量更新任务已完成，本次无异常 | 是（发送正常通知） |
+| 异常 | xxxxxx、xxxxxx 活动口令更新存在异常，请及时登录查看 | 是（按活动维度列出异常活动名称） |
+
+#### 通知内容字段说明
+
+- **活动名称**：异常通知中按活动维度列出，每条异常活动的所有失败推广位聚合到该活动名下。
+- **结果状态**：正常 / 异常。
+- **通知去向**：飞书"自动化通知测试"群。
+
+#### 注意事项与坑点
+
+- **按活动维度聚合**：通知时不要按推广位维度逐条发送，否则群消息过多；同一活动下多个推广位异常，合并为一条通知。
+- **正常也通知**：本节点正常情况会发送"本次无异常"通知，便于运营人员确认任务执行；与 3.2 权益页检索（正常不通知）规则不同，需区分记忆。
+- **异常通知要带活动名**：异常通知中必须列出异常活动的名称，便于运营人员直接定位。
+- **1 号、15 号节点前关注群消息**：建议运营人员在 1 号、15 号任务执行时点后留意"自动化通知测试"群，发现异常立即登录处理。
+
+#### 业务逻辑
+
+**口令更新是下游链路的前置保障**：本节点是 4 阶段链路的起点。口令更新成功后，下游企微推送、用户访问所依赖的链接才能保持有效；口令更新失败的活动，下游推送和访问都会受影响，需在本节点异常通知后第一时间处理，避免影响扩散。
+
+---
+
+### 3.2 权益页检索 — 内容页
+
+#### 业务背景
+
+当前环节：① 运营取链 - 权益页检索<br>
+触发时点：① 客户创建新推广位；② 后台更换了组件关联的活动<br>
+通知去向：飞书"自动化通知测试"群<br>
+对下游影响：联盟组件通过接口拉取跳转链接，一旦未执行拉取，链接缺失，收入会跑到"兜底收入"，这是业务不想看到的异常结果。本节点的目标是保障所有联盟活动都有链接，避免收入跑偏到兜底。<br>
+
+#### 业务背景说明
+
+- **联盟组件机制**：小程序权益页内的联盟组件通过接口拉取跳转链接，跳转链接是用户进入活动、产生订单、归因收入的凭证。
+- **兜底收入问题**：若链接未拉取成功，用户访问后产生的收入会跑到"兜底收入"，无法归因到正确活动，业务侧无法统计和对账。
+- **检索触发节点**：
+  - 节点 ①：客户创建新推广位——新增推广位后需保障其对应的联盟组件链接被拉取。
+  - 节点 ②：后台更换了组件关联的活动——活动变更后需保障所有组件在新活动下都有链接。
+- **保障目标**：保障所有的组件、联盟活动都有链接。
+
+#### 检索触发节点说明
+
+| 触发节点 | 触发动作 | 检查范围 |
+|---|---|---|
+| ① | 客户创建新推广位 | 新推广位对应的联盟组件是否有链接 |
+| ② | 后台更换了组件关联的活动 | 更换后所有组件、所有联盟活动是否都有链接 |
+
+#### 通知规则
+
+| 检查结果 | 通知文案 | 是否通知 |
+|---|---|---|
+| 正常 | — | 否（不通知） |
+| 异常 | 【ID=01】的【言成科技】客户的权益页组件【美团叠加红包】异常，请及时处理 | 是（发送异常通知） |
+
+#### 通知内容字段说明
+
+- **客户 ID**：异常通知中以 `【ID=XX】` 格式带出客户 ID。
+- **客户名称**：从客户的"备注字段"读取（如"言成科技"）；不读客户主体名称，只读备注。
+- **组件名称**：异常的联盟组件名称（如"美团叠加红包"）。
+- **异常原因**：链接未拉取 / 链接失效。
+- **通知去向**：飞书"自动化通知测试"群。
+
+#### 注意事项与坑点
+
+- **正常不通知**：本节点正常情况不发送通知，避免群消息冗余；只有异常时才通知。这与 3.1 口令更新（正常也通知）规则不同，需区分记忆。
+- **客户名称读备注字段**：通知中的客户名称（如"言成科技"）必须来自客户的备注字段，不读主体名称——主体名称可能与业务侧称呼不一致。
+- **保障所有组件**：节点 ② 更换活动后必须检查所有组件在新活动下是否都有链接，不能只检查被更换的组件。
+- **异常通知要带 ID + 备注名 + 组件名**：异常通知必须按 `【ID=XX】的【备注名】客户的权益页组件【组件名】异常` 格式发送，便于运营人员直接定位客户和组件。
+- **兜底收入是结果不是源头**：兜底收入是链接缺失后的结果表现，本节点要前置保障链接有效，避免走到兜底。
+
+#### 业务逻辑
+
+**权益页检索是收入归因的前置保障**：联盟组件的跳转链接是收入归因到活动的凭证，链接缺失会导致收入跑到"兜底收入"无法归因。本节点通过在"客户创建新推广位"和"后台更换组件关联活动"两个触发点进行检索，前置发现链接缺失，避免下游收入归因异常。本节点正常不通知，与 3.1 口令更新通知规则不同，运营人员需留意区分。
+
+---
+
+## 4. 第二阶段：企微推送
+
+> 本阶段检查企微号和推送任务的执行情况。系统已接入企微推送功能，每天定时向飞书"自动化通知测试"群推送当天群发结果。
+
+### 4.1 企微号异常 — 内容页
+
+#### 业务背景
+
+当前环节：② 企微推送 - 企微号异常<br>
+触发时点：⏳ 待补充<br>
+通知去向：飞书"自动化通知测试"群<br>
+对下游影响：企微号异常会导致群发任务无法执行，下游 4.2 推送结果中"实际群发企微号数"将低于"预计"，进而影响用户访问量。<br>
+
+#### 详细逻辑
+
+> ⏳ 待补充：4.1 详细逻辑（用户后续提供）
+
+---
+
+### 4.2 推送结果通知 — 内容页
+
+#### 业务背景
+
+当前环节：② 企微推送 - 推送结果通知<br>
+触发时点：每天下午 14:00<br>
+通知去向：飞书"自动化通知测试"群<br>
+对下游影响：推送结果反映企微号群发任务的执行情况；实际群发企微号数低于预计数时，意味着部分用户未收到推送，会直接影响下游用户访问量。<br>
+
+#### 业务背景说明
+
+- **系统接入企微推送**：本系统已接入企微推送功能，能获取每天的群发结果数据。
+- **定时推送节点**：每天下午 14:00 自动汇总当天群发结果并推送到飞书"自动化通知测试"群。
+- **通知维度**：按客户维度逐个列出，每个客户一条数据块。
+- **客户名称读取**：来自客户的"备注字段"，不读主体名称（与 3.2 权益页检索规则一致）。
+
+#### 通知规则
+
+| 检查结果 | 通知文案 | 是否通知 |
+|---|---|---|
+| 每日定时 | 按客户维度逐条列出当天群发数据 | 是（每天 14:00 定时通知，无论正常异常都推送） |
+
+#### 通知内容字段说明（按客户维度逐条列出）
+
+每个客户一条数据块，包含以下字段：
+
+- **客户 ID**：以 `【ID=XX】` 格式带出客户 ID。
+- **客户名称**：从客户的"备注字段"读取（如"言成科技"、"无人科技"、"彬哥"）；不读主体名称。
+- **当天群发用户数**：当天预计要群发的用户总数。
+- **预计群发企微号数**：当天计划使用的企微号数量。
+- **实际群发企微号数**：当天实际成功群发的企微号数量。
+- **成功率**：= 实际群发企微号数 / 预计群发企微号数（百分比）。
+- **注（异常提示）**：当实际 < 预计时显示，格式"有 XXX 个号未正常群发，请登录检查"。
+
+#### 通知文案示例
+
+```text
+【ID=01】的【言成科技】当天群发用户 1221321 人
+预计群发企微号：1441
+实际群发企微号：1220
+成功率：85%
+注：有 221 个号未正常群发，请登录检查
+
+【ID=02】的【无人科技】当天群发用户 1221321 人
+预计群发企微号：1441
+实际群发企微号：1220
+成功率：85%
+注：有 221 个号未正常群发，请登录检查
+
+【ID=03】的【彬哥】当天群发用户 1221321 人
+预计群发企微号：1441
+实际群发企微号：1220
+成功率：85%
+注：有 221 个号未正常群发，请登录检查
+```
+
+#### 字段计算说明
+
+- **未正常群发数** = 预计群发企微号数 - 实际群发企微号数（示例：1441 - 1220 = 221）。
+- **成功率** = 实际群发企微号数 / 预计群发企微号数 × 100%（示例：1220 / 1441 ≈ 85%）。
+- **"注"的显示条件**：当未正常群发数 > 0 时显示"有 XXX 个号未正常群发，请登录检查"；当未正常群发数 = 0（实际 = 预计）时不显示注。
+
+#### 注意事项与坑点
+
+- **每天定时通知**：本节点是每日定时通知（每天 14:00），无论正常异常都推送，与 3.1 口令更新（定时 + 正常也通知）规则类似；与 3.2 权益页检索（正常不通知）规则不同。
+- **按客户维度列出**：通知时按客户维度逐条列出，每个客户一条数据块；不要把多个客户的数据混在一起。
+- **客户名称读备注**：客户名称必须来自备注字段，与 3.2 权益页检索规则一致，不读主体名称。
+- **"注"的显示条件**：未正常群发数 > 0 时显示，= 0 时不显示；不要无脑每条都带"注"。
+- **实际 < 预计即异常**：实际群发企微号数低于预计数即视为异常，运营人员收到"注"提示后需登录检查。
+- **下午 14 点后留意群消息**：建议运营人员每天 14:00 后留意"自动化通知测试"群，发现异常立即登录处理。
+
+#### 业务逻辑
+
+**推送结果是用户访问的前置指标**：企微推送是用户访问的引流入口，实际群发企微号数直接决定下游用户访问量。本节点每天 14:00 定时通知按客户维度列出的群发结果，运营人员可基于"实际 < 预计"判断哪些客户有异常，及时登录检查企微号状态，避免下游用户访问量异常下降。本节点是定时通知，与 3.2 权益页检索（事件触发 + 正常不通知）规则不同，但与 3.1 口令自动更新（定时 + 正常也通知）规则类似。
+
+---
+
+## 5. 第三阶段：用户访问
+
+> 本阶段检查 H5 和小程序对用户的可访问性，异常时通过飞书"自动化通知测试"群触达运营人员。
+
+### 5.1 H5 是否被封 — 内容页
+
+#### 业务背景
+
+当前环节：③ 用户访问 - H5 是否被封<br>
+触发时点：每 5 分钟定时巡检<br>
+通知去向：飞书"自动化通知测试"群<br>
+对下游影响：H5 被封后用户无法访问对应链接，下游用户访问量异常下降，影响收入归因。<br>
+
+#### 业务背景说明
+
+- **维护一级域名清单**：系统后台维护一份一级域名清单，清单内的每个域名都纳入访问量监控。
+- **定时记录访问量**：定时任务每 5 分钟执行一次，记录清单内每个一级域名的访问量。
+- **今日 vs 昨日同时段对比**：每次巡检取"今日 0 点至当前时刻的累计访问量"与"昨日 0 点至昨日同一时刻的累计访问量"对比；必须按同时段口径对比，否则凌晨时段今日累计天然远小于昨日全天，会大面积误报。
+- **用访问量暴跌反推 H5 被封**：H5 域名一旦被封或被拦截，最直接的表现就是访问量突然暴跌；本节点通过监控一级域名访问量跌幅，第一时间发现 H5 可访问性异常。
+
+#### 报警规则
+
+| 检查结果 | 通知文案 | 是否通知 |
+|---|---|---|
+| 正常（访问量上涨，或跌幅 ≤ 20%） | — | 否（不通知） |
+| 异常（跌幅 > 20%） | 域名：xxxxxxxxxx<br>时间：2026/9/23 14:48<br>今日-访问量：3232<br>昨日-访问量：4310<br>差值25%大于20%，请及时登录后台排查问题 | 是（发送业务报警，按一级域名维度逐条列出） |
+
+#### 报警内容字段说明
+
+- **域名**：触发报警的一级域名（来自域名清单）。
+- **时间**：本次巡检触发报警的时间，格式 `yyyy/M/d HH:mm`（如 2026/9/23 14:48）。
+- **今日-访问量**：今日 0 点至当前时刻，该一级域名的累计访问量。
+- **昨日-访问量**：昨日 0 点至昨日同一时刻，该一级域名的累计访问量（同时段口径）。
+- **差值**：跌幅百分比 = （今日-访问量 - 昨日-访问量）/ 昨日-访问量 × 100%；报警时按跌幅绝对值展示（如 -25% 展示为"差值25%"）。
+- **通知去向**：飞书"自动化通知测试"群。
+
+#### 报警文案示例
+
+```text
+域名：xxxxxxxxxx
+时间：2026/9/23 14:48
+今日-访问量：3232
+昨日-访问量：4310
+差值25%大于20%，请及时登录后台排查问题
+
+域名：AAAAAAAA
+时间：2026/9/23 14:48
+今日-访问量：3232
+昨日-访问量：4310
+差值25%大于20%，请及时登录后台排查问题
+```
+
+#### 阈值计算说明
+
+- **跌幅公式**：跌幅 = （今日-访问量 - 昨日-访问量）/ 昨日-访问量 × 100%。
+- **触发条件**：跌幅 < -20%（即今日访问量比昨日同时段掉了两成以上）时触发业务报警；跌幅在 20% 以内以及访问量上涨均不报警。
+- **示例计算**：昨日同时段访问量 4310，今日访问量 3232，跌幅 =（3232 - 4310）/ 4310 × 100% ≈ -25%，跌幅绝对值 25% > 20%，触发报警。
+- **同时段对比**：每 5 分钟巡检时，对比的必须是"今日截至当前时刻"与"昨日同一时刻"的累计值，不能直接对比昨日全天数据。
+
+#### 注意事项与坑点
+
+- **只报暴跌**：本节点仅在访问量跌幅超过 20% 时报警，访问量上涨不报警；目的是发现 H5 被封/被拦截等可访问性故障，而非监控日常流量波动。
+- **必须同时段对比**：今日累计访问量要与昨日同一时刻的累计访问量对比，严禁直接对比昨日全天数据，否则每天凌晨都会误报。
+- **按一级域名维度逐条列出**：同一巡检周期内多个域名触发报警时，每个域名一条数据块，不要把多个域名合并成一条。
+- **每 5 分钟巡检一次**：域名访问量每 5 分钟记录并判断一次，报警延迟最多 5 分钟；收到报警后请及时登录后台排查域名状态。
+- **正常不通知**：本节点正常情况不发送通知，与 3.2 权益页检索、5.2 小程序异常规则一致；与 3.1 口令更新、4.2 推送结果（定时通知）规则不同。
+
+#### 业务逻辑
+
+**访问量暴跌是 H5 被封最直接的信号**：H5 链接依赖一级域名对外提供访问，域名一旦被封或被拦截，用户侧立即表现为访问量断崖式下降。本节点每 5 分钟对域名清单内所有一级域名做"今日 vs 昨日同时段"访问量对比，跌幅超过 20% 即按域名维度推送业务报警，帮助运营人员在用户大规模反馈前发现 H5 可访问性问题，避免下游用户访问和收入归因持续受损。本节点正常不通知，与 3.2、5.2 规则一致。
+
+---
+
+### 5.2 小程序异常 — 内容页
+
+#### 业务背景
+
+当前环节：③ 用户访问 - 小程序异常<br>
+触发时点：每天 17:00 定时检索<br>
+通知去向：飞书"自动化通知测试"群<br>
+对下游影响：小程序收到违规通知后可能进入风控流程，若不及时处理可能导致小程序被限制访问或下架，下游用户访问和收入归因均会中断。<br>
+
+#### 业务背景说明
+
+- **入驻小程序数量多**：本系统后台会入驻很多小程序，每个小程序都可能在微信侧收到违规通知。
+- **目前仅通知"违规通知"**：本节点目前仅监听接口拉取到的"违规通知"这一类异常，其他类型的异常暂不通知。
+- **定时检索节点**：每天 17:00 自动检索当天是否有小程序收到违规通知。
+- **客户名称读取**：来自客户的"备注字段"；若无备注则显示为"-"（与 3.2、4.2 客户名称规则一致——都读备注，但本节点多了"无则显示-"的兜底）。
+
+#### 通知规则
+
+| 检查结果 | 通知文案 | 是否通知 |
+|---|---|---|
+| 正常 | — | 否（不通知） |
+| 异常 | 【ID=01】的【言成科技】客户的小程序【外卖干饭小掌柜】【APPID：xxxxxxxxxx】<br>收到了一条违规通知，违规时间：2026-09-21 14:30:00 | 是（发送异常通知，按小程序维度逐条列出） |
+
+#### 通知内容字段说明
+
+- **客户 ID**：以 `【ID=XX】` 格式带出客户 ID。
+- **客户名称**：从客户的"备注字段"读取（如"言成科技"）；**无备注时显示为"-"**（这是本节点独有的兜底规则）。
+- **小程序名称**：违规的小程序名称（如"外卖干饭小掌柜"）。
+- **APPID**：违规的小程序 AppID（如"xxxxxxxxxx"）。
+- **违规通知内容**：来自接口拉取的"违规通知"，按原文带出。
+- **违规时间**：违规通知的时间戳，从接口返回字段读取（如"2026-09-21 14:30:00"），与 APPID 共同组成违规记录的唯一标识。
+- **是否已通知**：以 **APPID + 违规时间** 作为唯一标识判断；若本条违规通知已发送过群消息，则不再重复通知；若未通知过则发送。
+- **通知去向**：飞书"自动化通知测试"群。
+
+#### 通知文案示例
+
+```text
+【ID=01】的【言成科技】客户的小程序【外卖干饭小掌柜】【APPID：xxxxxxxxxx】
+收到了一条违规通知，违规时间：2026-09-21 14:30:00
+
+【ID=02】的【-】客户的小程序【XX优惠券】【APPID：yyyyyyyyyy】
+收到了一条违规通知，违规时间：2026-09-21 15:00:00
+```
+
+> 示例第 2 条展示了客户无备注时显示为"-"的情况。
+
+#### 是否已通知去重机制
+
+- **唯一标识**：以 **APPID + 违规时间** 作为每条违规通知的唯一键。
+- **去重判断**：每天 17:00 检索时，对每条拉取到的违规通知先查"是否已通知过"：
+  - 已通知过 → 跳过，不重复发送。
+  - 未通知过 → 发送群消息，并标记为"已通知"。
+- **存储位置**：是否已通知状态持久化在系统后台（按 APPID + 违规时间维度记录），跨天去重，避免同一条违规通知在多个检索周期内被重复推送。
+- **新违规才通知**：只有当小程序首次收到一条新的违规通知（APPID + 违规时间在已通知记录中不存在）时才发送群消息；同一小程序若已通知过该违规时间点的违规，下一次检索到同一条不再重复通知。
+
+#### 注意事项与坑点
+
+- **仅通知违规通知**：本节点目前仅通知接口拉取到的"违规通知"这一类异常，其他类型的小程序异常暂不通知；后续若需扩展通知范围，再单独补充节点。
+- **正常不通知**：本节点正常情况不发送通知，避免群消息冗余；与 3.2 权益页检索规则一致；与 3.1 口令更新、4.2 推送结果（定时通知）规则不同。
+- **客户名称无备注显示"-"**：客户名称读备注字段，若无备注必须显示为"-"作为兜底，不要显示客户主体名称，也不要显示空白。
+- **按小程序维度逐条列出**：每个违规的小程序一条通知，不要把多个小程序的违规通知合并。
+- **按 APPID + 违规时间去重**：每条违规通知的唯一标识由 APPID + 违规时间组成，已通知过的不重复发送；这是"是否已通知"字段的核心判断逻辑，避免同一条违规通知被多次推送到群里。
+- **17 点后留意群消息**：建议运营人员每天 17:00 后留意"自动化通知测试"群，发现违规通知立即登录小程序后台处理。
+- **违规通知要及时处理**：违规通知若不及时处理，可能导致小程序被限制访问或下架，下游用户访问和收入归因都会中断。
+
+#### 业务逻辑
+
+**小程序异常是用户访问的最后一道关**：小程序是用户访问链路的核心载体，一旦小程序因违规通知被限制访问或下架，下游用户访问和收入归因都会中断。本节点每天 17:00 定时检索违规通知，发现异常及时上报，与 5.1 H5 是否被封共同构成用户访问侧的检查闭环。本节点正常不通知，与 3.2 权益页检索规则一致；与 3.1 口令更新、4.2 推送结果（定时通知）规则不同。
+
+---
+
+## 6. 第四阶段：收入归因
+
+> 本阶段检查收入归因逻辑报警，异常时通过飞书"自动化通知测试"群触达运营人员。
+
+### 6.1 收入逻辑报警 — 内容页
+
+#### 业务背景
+
+当前环节：④ 收入归因 - 收入逻辑报警<br>
+触发时点：⏳ 待补充<br>
+通知去向：飞书"自动化通知测试"群<br>
+对下游影响：收入逻辑报警反映归因链路异常（如收入跑兜底、归因缺失等），不及时处理会导致业务侧无法统计和对账。<br>
+
+#### 详细逻辑
+
+> ⏳ 待补充：6.1 详细逻辑（用户后续提供）
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>全链路巡检指引</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用壳 { display: grid; grid-template-columns: var(--泳道宽) var(--菜单宽) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+
+/* ── 中：后台菜单（白底黑字，全铺开，父节点不可点） ── */
+.菜单区 { background: #fff; color: #334155; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+.菜单品牌 { padding: 18px 18px 14px; border-bottom: 1px solid #eef2f7; }
+.菜单品牌名 { font-size: 16px; font-weight: 700; color: #172033; line-height: 1.4; }
+.菜单品牌小 { font-size: 11px; color: #94a3b8; margin-top: 3px; letter-spacing: .5px; }
+.菜单父 { padding: 16px 18px 4px; font-size: 12px; color: #0f6b8f; font-weight: 700; letter-spacing: .5px; }
+.菜单文档, .菜单叶子 { display: flex; align-items: center; gap: 8px; color: #334155; font-size: 13.5px; cursor: pointer; user-select: none; border-left: 3px solid transparent; }
+.菜单文档 { padding: 9px 18px; }
+.菜单叶子 { padding: 8px 18px 8px 30px; font-size: 13px; }
+.菜单文档.子级 { padding: 9px 18px 9px 30px; font-size: 13px; }
+.菜单文档:hover, .菜单叶子:hover { background: #f1f5f9; color: #0f172a; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.菜单号 { font-family: Consolas, monospace; font-size: 11px; color: #94a3b8; min-width: 26px; }
+.菜单文档.激活 .菜单号, .菜单叶子.激活 .菜单号 { color: #0f6b8f; }
+.菜单图标 { font-size: 13px; }
+
+/* ── 中：内容工作区 ── */
+.内容区 { overflow-y: auto; background: #f1f5f9; }
+.页面面板 { display: none; padding: 22px 26px 48px; }
+.页面面板.激活 { display: block; }
+.页面卡 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(15,35,52,.04); margin-bottom: 18px; }
+.页面头 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.页面头 h2 { margin: 0; font-size: 19px; color: #172033; }
+.主按钮 { padding: 7px 16px; border: 1px solid #0f6b8f; border-radius: 6px; background: #0f6b8f; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.主按钮:hover { background: #0c5673; }
+
+/* ── 左：常驻泳道栏 ── */
+.泳道区 { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 14px 12px 28px; }
+.泳道区 > h3 { margin: 2px 4px 10px; font-size: 14px; color: #334155; }
+.泳道简介 { margin: 0 4px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.75; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分点 { margin: 0 4px 12px; padding: 9px 11px; list-style: none; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分点 li { padding: 4px 0; font-size: 12px; line-height: 1.65; color: #475569; border-bottom: 1px dashed #e2e8f0; }
+.泳道简介-分点 li:last-child { border-bottom: none; }
+.泳道简介-分点 li strong { color: #2b6cb0; margin-right: 4px; }
+.泳道区 .泳道图 { font-size: 13px; }
+</style>
+<style id="css-组件">
+/* ── 文档页排版 ── */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 26px 0 12px; font-size: 20px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.阅读标题 { line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 20px; margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 16px; margin: 22px 0 8px; } .文档正文 h5 { font-size: 14px; margin: 18px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.行内代码 { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; }
+.代码块 pre { margin: 0; padding: 16px; background: #fff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; }
+.代码块 code { display: block; font-family: Consolas, Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ── 流程信息卡 ── */
+.流程信息卡 { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; background: linear-gradient(180deg,#f8fbff,#f1f7ff); margin-bottom: 16px; overflow: hidden; }
+.流程信息卡-头部 { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #dbeafe; }
+.流程步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.流程信息卡-环节名 { font-size: 13.5px; font-weight: 600; color: #1e3a8a; }
+.流程信息卡-正文 { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+.流程信息卡-行 { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.流程信息卡-标签 { flex-shrink: 0; display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+
+/* ── 列表页 ── */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 150px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 150px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; white-space: nowrap; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; margin-right: 6px; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.删除按钮 { padding: 4px 12px; border: 1px solid #ef4444; border-radius: 4px; background: #fff; color: #ef4444; font-size: 12px; cursor: pointer; } .删除按钮:hover { background: #ef4444; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+
+/* ── 字段卡（弹窗表单与详情抽屉共用） ── */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 20px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius:  10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 120px 1fr 28px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 140px; }
+.field-input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; width: 100%; max-width: 360px; font-family: inherit; }
+textarea.field-input { max-width: 100%; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+.field-info-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ── 详情抽屉 / 表单弹窗（右侧滑出） ── */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; max-width: 94vw; height: 100vh; background: #f8fafc; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 60px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: #fff; }
+.panel-title { font-size: 17px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ── 字段弹窗 ── */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ── 泳道图组件（2026 蓝圈号标准版） ── */
+.泳道图 { margin: 0; font-size: 13px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道圆圈 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支说明 { font-size: 12px; color: #b45309; padding: 2px 0 0 26px; line-height: 1.6; }
+.泳道行 { transition: opacity .25s ease; }
+.泳道图[class*="高亮阶段"] .泳道行[data-node-phase] { opacity: .35; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"], .泳道图.高亮阶段2 .泳道行[data-node-phase="2"],
+.泳道图.高亮阶段3 .泳道行[data-node-phase="3"], .泳道图.高亮阶段4 .泳道行[data-node-phase="4"],
+.泳道图.高亮阶段5 .泳道行[data-node-phase="5"], .泳道图.高亮阶段6 .泳道行[data-node-phase="6"],
+.泳道图.高亮阶段7 .泳道行[data-node-phase="7"], .泳道图.高亮阶段8 .泳道行[data-node-phase="8"],
+.泳道图.高亮阶段9 .泳道行[data-node-phase="9"], .泳道图.高亮阶段10 .泳道行[data-node-phase="10"] { opacity: 1; }
+.泳道行.置灰 { opacity: .25 !important; pointer-events: none; }
+.泳道行.正常 { opacity: 1 !important; }
+
+/* ── 提示消息 / 灯箱 / 杂项 ── */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+</style>
+<style id="css-状态">
+.页面面板.激活 { display: block; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.图片灯箱.可见 { display: flex; }
+</style>
+</head>
+<body>
+<div class="应用壳">
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<p class="泳道简介">每月 1 号、15 号有口令自动更新任务，权益页联盟组件按节点拉取跳转链接，企微侧有推送任务持续运行，用户访问侧 H5 和小程序都可能出现封禁或异常，收入归因侧有兜底逻辑报警。这些环节任何一处异常都可能直接影响收入，但目前缺少统一的巡检指引，运营人员排查时容易遗漏环节，错过最佳处理窗口。</p>
+<div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;">
+<div class="泳道图-头" style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid #e2e8f0;">
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">运营人员</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#f8fafc;color:#475569;">系统（自动化任务）</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">飞书"自动化通知测试"群</div>
+</div><div class="泳道图-体">
+<div class="泳道行" data-swimlane-node="1" data-node-phase="1" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">①</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">运营取链</span></div><span class="泳道状态徽章 信息色">口令更新结果 → 通知</span><span class="泳道状态徽章 驳回色">组件链接异常 → 通知</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="2" data-node-phase="2" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">②</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">企微推送</span></div><span class="泳道状态徽章 驳回色">企微/推送异常 → 通知</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="3" data-node-phase="3" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">③</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">用户访问</span></div><span class="泳道状态徽章 驳回色">H5被封/小程序异常 → 通知</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="4" data-node-phase="4" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">④</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">收入归因</span></div><span class="泳道状态徽章 信息色">收入逻辑报警 → 通知</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+</div></div>
+</aside>
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">全链路巡检指引</div><div class="菜单品牌小">B 端业务原型 · 2026-09-21</div></div>
+<div class="菜单父"><span>需求与流程</span></div>
+<div class="菜单文档 子级 激活" data-menu-page="1" onclick="切换页面('1')"><span class="菜单号">001</span><span>需求背景与目标</span></div>
+<div class="菜单文档 子级" data-menu-page="2" onclick="切换页面('2')"><span class="菜单号">002</span><span>业务流程</span></div>
+<div class="菜单父"><span>第一阶段：运营取链</span></div>
+<div class="菜单叶子" data-menu-page="3.1" onclick="切换页面('3.1')"><span class="菜单号">3.1</span><span class="菜单图标">📋</span><span>口令自动更新</span></div>
+<div class="菜单叶子" data-menu-page="3.2" onclick="切换页面('3.2')"><span class="菜单号">3.2</span><span class="菜单图标">📋</span><span>权益页检索</span></div>
+<div class="菜单父"><span>第二阶段：企微推送</span></div>
+<div class="菜单叶子" data-menu-page="4.1" onclick="切换页面('4.1')"><span class="菜单号">4.1</span><span class="菜单图标">📋</span><span>企微号异常</span></div>
+<div class="菜单叶子" data-menu-page="4.2" onclick="切换页面('4.2')"><span class="菜单号">4.2</span><span class="菜单图标">📋</span><span>推送结果通知</span></div>
+<div class="菜单父"><span>第三阶段：用户访问</span></div>
+<div class="菜单叶子" data-menu-page="5.1" onclick="切换页面('5.1')"><span class="菜单号">5.1</span><span class="菜单图标">📋</span><span>H5 是否被封</span></div>
+<div class="菜单叶子" data-menu-page="5.2" onclick="切换页面('5.2')"><span class="菜单号">5.2</span><span class="菜单图标">📋</span><span>小程序异常</span></div>
+<div class="菜单父"><span>第四阶段：收入归因</span></div>
+<div class="菜单叶子" data-menu-page="6.1" onclick="切换页面('6.1')"><span class="菜单号">6.1</span><span class="菜单图标">📋</span><span>收入逻辑报警</span></div>
+</nav>
+<main class="内容区" id="内容区">
+<section class="页面面板 激活" id="面_1" data-page="1"><div class="页面卡"><div class="页面头"><h2>需求背景与目标</h2></div><div class="文档正文"><h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>每月 1 号、15 号有口令自动更新任务，权益页联盟组件按节点拉取跳转链接，企微侧有推送任务持续运行，用户访问侧 H5 和小程序都可能出现封禁或异常，收入归因侧有兜底逻辑报警。这些环节任何一处异常都可能直接影响收入，但目前缺少统一的巡检指引，运营人员排查时容易遗漏环节，错过最佳处理窗口。</p>
+<p>本指引把整条链路按 <strong>运营取链 → 企微推送 → 用户访问 → 收入归因</strong> 4 个阶段串成一条主线，明确每个阶段的检查节点、通知规则和处理方式。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>改造前
+
+无统一巡检指引
+        ↓
+口令、组件、企微、H5、小程序、收入各点分散排查
+发现晚、定位慢、容易遗漏环节，错过最佳处理窗口
+
+
+改造后
+
+按 ①②③④ 4 阶段顺序巡检
+        ↓
+每个节点有明确的检查动作和通知规则
+异常第一时间上报飞书"自动化通知测试"群</code></pre></div>
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>口令按月更新（1 号、15 号）+ 联盟组件按节点拉取链接
+        +
+企微号 + 推送任务持续运行
+        +
+H5 + 小程序对用户正常开放
+        ↓
+收入归因到正确活动，不进兜底</code></pre></div>
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>链路可视</strong>：4 个阶段的检查节点统一文档化，运营人员按图索骥。</li>
+<li><strong>异常即时报</strong>：所有异常通过飞书"自动化通知测试"群触达；正常情况按节点规则决定是否通知。</li>
+<li><strong>不进兜底</strong>：通过 3.2 权益页检索前置保障联盟组件链接有效，避免收入跑到兜底收入。</li>
+</ul>
+</div></div></section>
+<section class="页面面板" id="面_2" data-page="2"><div class="页面卡"><div class="页面头"><h2>业务流程</h2></div><div class="文档正文"><h3 class="阅读节标题">2.1 全链路巡检泳道图</h3>
+<p>泳道图需要同时表达状态时，采用以下原则：</p>
+<ul>
+<li>编号节点只写参与方实际执行的业务动作。</li>
+<li>状态标注写在触发该状态的动作之后，不占用新的流程序号。</li>
+<li>一张泳道图只展示核心状态主线。本指引核心业务对象为<strong>巡检通知记录</strong>（状态：取链完成 → 推送完成 → 访问正常 → 收入归因完成）。</li>
+<li>不得使用动作名称代替中间状态。</li>
+</ul>
+
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>后续正文按照业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前巡检闭环，可划分为：</p>
+<p>1. <strong>第一阶段：运营取链（主要参与方：系统自动化任务）</strong>：包含口令自动更新和权益页检索两个节点，保障取链环节产出的所有链接均有效。</p>
+<p>2. <strong>第二阶段：企微推送（主要参与方：系统自动化任务）</strong>：检查企微号和推送任务的异常情况。</p>
+<p>3. <strong>第三阶段：用户访问（主要参与方：系统自动化任务）</strong>：检查 H5 和小程序对用户的可访问性。</p>
+<p>4. <strong>第四阶段：收入归因（主要参与方：系统自动化任务）</strong>：检查收入归因逻辑报警。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：运营取链
+3.1 口令自动更新 → 3.2 权益页检索
+        ↓
+第二阶段：企微推送
+4.x（待补充）
+        ↓
+第三阶段：用户访问
+5.x（待补充）
+        ↓
+第四阶段：收入归因
+6.x（待补充）</code></pre></div>
+<p>每个步骤小节的 <code class="行内代码">#### 业务背景</code> 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。</p>
+<h3 class="阅读节标题">2.3 页面类型说明</h3>
+<p>本指引为巡检操作指引文档，所有阶段小节统一使用「内容页」类型——纯文本指引，无字段表、无页面骨架、无列表交互弹窗。正文承载检查规则、通知规则和注意事项。</p>
+<hr></div></div></section>
+<section class="页面面板" id="面_3_1" data-page="3.1"><div class="页面卡"><div class="页面头"><h2>口令自动更新</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 运营取链 - 口令自动更新</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">口令是下游企微推送、用户访问所依赖的链接凭证，口令一旦过期未更新，会导致下游链接失效、用户无法访问、收入跑偏。</span></div></div></div>
+<h4 class="阅读标题">业务背景说明</h4>
+<ul>
+<li><strong>口令有效期 30 天</strong>：每个口令自生成起 30 天过期，需在过期前完成更新。</li>
+<li><strong>更新节奏</strong>：每月 1 号、15 号定时触发批量更新任务，覆盖所有有效期即将到期的口令。</li>
+<li><strong>更新维度</strong>：以"活动 → 推广位"维度进行更新；同一活动下可能有多个推广位，逐个更新。</li>
+<li><strong>通知维度</strong>：以"活动"维度进行通知，将同一活动下所有推广位的更新结果聚合后发送一条通知。</li>
+</ul>
+
+<h4 class="阅读标题">通知规则</h4>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>检查结果</th>
+<th>通知文案</th>
+<th>是否通知</th>
+</tr>
+<tr>
+<td>正常</td>
+<td>口令批量更新任务已完成，本次无异常</td>
+<td>是（发送正常通知）</td>
+</tr>
+<tr>
+<td>异常</td>
+<td>xxxxxx、xxxxxx 活动口令更新存在异常，请及时登录查看</td>
+<td>是（按活动维度列出异常活动名称）</td>
+</tr>
+</table></div>
+
+<h4 class="阅读标题">通知内容字段说明</h4>
+<ul>
+<li><strong>活动名称</strong>：异常通知中按活动维度列出，每条异常活动的所有失败推广位聚合到该活动名下。</li>
+<li><strong>结果状态</strong>：正常 / 异常。</li>
+<li><strong>通知去向</strong>：飞书"自动化通知测试"群。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>按活动维度聚合</strong>：通知时不要按推广位维度逐条发送，否则群消息过多；同一活动下多个推广位异常，合并为一条通知。</li>
+<li><strong>正常也通知</strong>：本节点正常情况会发送"本次无异常"通知，便于运营人员确认任务执行；与 3.2 权益页检索（正常不通知）规则不同，需区分记忆。</li>
+<li><strong>异常通知要带活动名</strong>：异常通知中必须列出异常活动的名称，便于运营人员直接定位。</li>
+<li><strong>1 号、15 号节点前关注群消息</strong>：建议运营人员在 1 号、15 号任务执行时点后留意"自动化通知测试"群，发现异常立即登录处理。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>口令更新是下游链路的前置保障</strong>：本节点是 4 阶段链路的起点。口令更新成功后，下游企微推送、用户访问所依赖的链接才能保持有效；口令更新失败的活动，下游推送和访问都会受影响，需在本节点异常通知后第一时间处理，避免影响扩散。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'3.1'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_3_2" data-page="3.2"><div class="页面卡"><div class="页面头"><h2>权益页检索</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 运营取链 - 权益页检索</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">联盟组件通过接口拉取跳转链接，一旦未执行拉取，链接缺失，收入会跑到"兜底收入"，这是业务不想看到的异常结果。本节点的目标是保障所有联盟活动都有链接，避免收入跑偏到兜底。</span></div></div></div>
+<h4 class="阅读标题">业务背景说明</h4>
+<ul>
+<li><strong>联盟组件机制</strong>：小程序权益页内的联盟组件通过接口拉取跳转链接，跳转链接是用户进入活动、产生订单、归因收入的凭证。</li>
+<li><strong>兜底收入问题</strong>：若链接未拉取成功，用户访问后产生的收入会跑到"兜底收入"，无法归因到正确活动，业务侧无法统计和对账。</li>
+<li><strong>检索触发节点</strong>：</li>
+<li>节点 ①：客户创建新推广位——新增推广位后需保障其对应的联盟组件链接被拉取。</li>
+<li>节点 ②：后台更换了组件关联的活动——活动变更后需保障所有组件在新活动下都有链接。</li>
+<li><strong>保障目标</strong>：保障所有的组件、联盟活动都有链接。</li>
+</ul>
+
+<h4 class="阅读标题">检索触发节点说明</h4>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>触发节点</th>
+<th>触发动作</th>
+<th>检查范围</th>
+</tr>
+<tr>
+<td>①</td>
+<td>客户创建新推广位</td>
+<td>新推广位对应的联盟组件是否有链接</td>
+</tr>
+<tr>
+<td>②</td>
+<td>后台更换了组件关联的活动</td>
+<td>更换后所有组件、所有联盟活动是否都有链接</td>
+</tr>
+</table></div>
+
+<h4 class="阅读标题">通知规则</h4>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>检查结果</th>
+<th>通知文案</th>
+<th>是否通知</th>
+</tr>
+<tr>
+<td>正常</td>
+<td>—</td>
+<td>否（不通知）</td>
+</tr>
+<tr>
+<td>异常</td>
+<td>【ID=01】的【言成科技】客户的权益页组件【美团叠加红包】异常，请及时处理</td>
+<td>是（发送异常通知）</td>
+</tr>
+</table></div>
+
+<h4 class="阅读标题">通知内容字段说明</h4>
+<ul>
+<li><strong>客户 ID</strong>：异常通知中以 <code class="行内代码">【ID=XX】</code> 格式带出客户 ID。</li>
+<li><strong>客户名称</strong>：从客户的"备注字段"读取（如"言成科技"）；不读客户主体名称，只读备注。</li>
+<li><strong>组件名称</strong>：异常的联盟组件名称（如"美团叠加红包"）。</li>
+<li><strong>异常原因</strong>：链接未拉取 / 链接失效。</li>
+<li><strong>通知去向</strong>：飞书"自动化通知测试"群。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>正常不通知</strong>：本节点正常情况不发送通知，避免群消息冗余；只有异常时才通知。这与 3.1 口令更新（正常也通知）规则不同，需区分记忆。</li>
+<li><strong>客户名称读备注字段</strong>：通知中的客户名称（如"言成科技"）必须来自客户的备注字段，不读主体名称——主体名称可能与业务侧称呼不一致。</li>
+<li><strong>保障所有组件</strong>：节点 ② 更换活动后必须检查所有组件在新活动下是否都有链接，不能只检查被更换的组件。</li>
+<li><strong>异常通知要带 ID + 备注名 + 组件名</strong>：异常通知必须按 <code class="行内代码">【ID=XX】的【备注名】客户的权益页组件【组件名】异常</code> 格式发送，便于运营人员直接定位客户和组件。</li>
+<li><strong>兜底收入是结果不是源头</strong>：兜底收入是链接缺失后的结果表现，本节点要前置保障链接有效，避免走到兜底。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>权益页检索是收入归因的前置保障</strong>：联盟组件的跳转链接是收入归因到活动的凭证，链接缺失会导致收入跑到"兜底收入"无法归因。本节点通过在"客户创建新推广位"和"后台更换组件关联活动"两个触发点进行检索，前置发现链接缺失，避免下游收入归因异常。本节点正常不通知，与 3.1 口令更新通知规则不同，运营人员需留意区分。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'3.2'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_4_1" data-page="4.1"><div class="页面卡"><div class="页面头"><h2>企微号异常</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">②</span><span class="流程信息卡-环节名">当前环节：② 企微推送 - 企微号异常</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">企微号异常会导致群发任务无法执行，下游 4.2 推送结果中"实际群发企微号数"将低于"预计"，进而影响用户访问量。</span></div></div></div>
+<h4 class="阅读标题">详细逻辑</h4>
+<blockquote><p>⏳ 待补充：4.1 详细逻辑（用户后续提供）</p></blockquote>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'4.1'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_4_2" data-page="4.2"><div class="页面卡"><div class="页面头"><h2>推送结果通知</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">②</span><span class="流程信息卡-环节名">当前环节：② 企微推送 - 推送结果通知</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">推送结果反映企微号群发任务的执行情况；实际群发企微号数低于预计数时，意味着部分用户未收到推送，会直接影响下游用户访问量。</span></div></div></div>
+<h4 class="阅读标题">业务背景说明</h4>
+<ul>
+<li><strong>系统接入企微推送</strong>：本系统已接入企微推送功能，能获取每天的群发结果数据。</li>
+<li><strong>定时推送节点</strong>：每天下午 14:00 自动汇总当天群发结果并推送到飞书"自动化通知测试"群。</li>
+<li><strong>通知维度</strong>：按客户维度逐个列出，每个客户一条数据块。</li>
+<li><strong>客户名称读取</strong>：来自客户的"备注字段"，不读主体名称（与 3.2 权益页检索规则一致）。</li>
+</ul>
+
+<h4 class="阅读标题">通知规则</h4>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>检查结果</th>
+<th>通知文案</th>
+<th>是否通知</th>
+</tr>
+<tr>
+<td>每日定时</td>
+<td>按客户维度逐条列出当天群发数据</td>
+<td>是（每天 14:00 定时通知，无论正常异常都推送）</td>
+</tr>
+</table></div>
+
+<h4 class="阅读标题">通知内容字段说明（按客户维度逐条列出）</h4>
+<p>每个客户一条数据块，包含以下字段：</p>
+<ul>
+<li><strong>客户 ID</strong>：以 <code class="行内代码">【ID=XX】</code> 格式带出客户 ID。</li>
+<li><strong>客户名称</strong>：从客户的"备注字段"读取（如"言成科技"、"无人科技"、"彬哥"）；不读主体名称。</li>
+<li><strong>当天群发用户数</strong>：当天预计要群发的用户总数。</li>
+<li><strong>预计群发企微号数</strong>：当天计划使用的企微号数量。</li>
+<li><strong>实际群发企微号数</strong>：当天实际成功群发的企微号数量。</li>
+<li><strong>成功率</strong>：= 实际群发企微号数 / 预计群发企微号数（百分比）。</li>
+<li><strong>注（异常提示）</strong>：当实际 < 预计时显示，格式"有 XXX 个号未正常群发，请登录检查"。</li>
+</ul>
+
+<h4 class="阅读标题">通知文案示例</h4>
+<div class="代码块"><div class="代码头">text</div><pre><code>【ID=01】的【言成科技】当天群发用户 1221321 人
+预计群发企微号：1441
+实际群发企微号：1220
+成功率：85%
+注：有 221 个号未正常群发，请登录检查
+
+【ID=02】的【无人科技】当天群发用户 1221321 人
+预计群发企微号：1441
+实际群发企微号：1220
+成功率：85%
+注：有 221 个号未正常群发，请登录检查
+
+【ID=03】的【彬哥】当天群发用户 1221321 人
+预计群发企微号：1441
+实际群发企微号：1220
+成功率：85%
+注：有 221 个号未正常群发，请登录检查</code></pre></div>
+<h4 class="阅读标题">字段计算说明</h4>
+<ul>
+<li><strong>未正常群发数</strong> = 预计群发企微号数 - 实际群发企微号数（示例：1441 - 1220 = 221）。</li>
+<li><strong>成功率</strong> = 实际群发企微号数 / 预计群发企微号数 × 100%（示例：1220 / 1441 ≈ 85%）。</li>
+<li><strong>"注"的显示条件</strong>：当未正常群发数 > 0 时显示"有 XXX 个号未正常群发，请登录检查"；当未正常群发数 = 0（实际 = 预计）时不显示注。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>每天定时通知</strong>：本节点是每日定时通知（每天 14:00），无论正常异常都推送，与 3.1 口令更新（定时 + 正常也通知）规则类似；与 3.2 权益页检索（正常不通知）规则不同。</li>
+<li><strong>按客户维度列出</strong>：通知时按客户维度逐条列出，每个客户一条数据块；不要把多个客户的数据混在一起。</li>
+<li><strong>客户名称读备注</strong>：客户名称必须来自备注字段，与 3.2 权益页检索规则一致，不读主体名称。</li>
+<li><strong>"注"的显示条件</strong>：未正常群发数 > 0 时显示，= 0 时不显示；不要无脑每条都带"注"。</li>
+<li><strong>实际 < 预计即异常</strong>：实际群发企微号数低于预计数即视为异常，运营人员收到"注"提示后需登录检查。</li>
+<li><strong>下午 14 点后留意群消息</strong>：建议运营人员每天 14:00 后留意"自动化通知测试"群，发现异常立即登录处理。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>推送结果是用户访问的前置指标</strong>：企微推送是用户访问的引流入口，实际群发企微号数直接决定下游用户访问量。本节点每天 14:00 定时通知按客户维度列出的群发结果，运营人员可基于"实际 < 预计"判断哪些客户有异常，及时登录检查企微号状态，避免下游用户访问量异常下降。本节点是定时通知，与 3.2 权益页检索（事件触发 + 正常不通知）规则不同，但与 3.1 口令自动更新（定时 + 正常也通知）规则类似。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'4.2'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_5_1" data-page="5.1"><div class="页面卡"><div class="页面头"><h2>H5 是否被封</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">③</span><span class="流程信息卡-环节名">当前环节：③ 用户访问 - H5 是否被封</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">H5 被封后用户无法访问对应链接，下游用户访问量异常下降，影响收入归因。</span></div></div></div>
+<h4 class="阅读标题">业务背景说明</h4>
+<ul>
+<li><strong>维护一级域名清单</strong>：系统后台维护一份一级域名清单，清单内的每个域名都纳入访问量监控。</li>
+<li><strong>定时记录访问量</strong>：定时任务每 5 分钟执行一次，记录清单内每个一级域名的访问量。</li>
+<li><strong>今日 vs 昨日同时段对比</strong>：每次巡检取"今日 0 点至当前时刻的累计访问量"与"昨日 0 点至昨日同一时刻的累计访问量"对比；必须按同时段口径对比，否则凌晨时段今日累计天然远小于昨日全天，会大面积误报。</li>
+<li><strong>用访问量暴跌反推 H5 被封</strong>：H5 域名一旦被封或被拦截，最直接的表现就是访问量突然暴跌；本节点通过监控一级域名访问量跌幅，第一时间发现 H5 可访问性异常。</li>
+</ul>
+
+<h4 class="阅读标题">报警规则</h4>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>检查结果</th>
+<th>通知文案</th>
+<th>是否通知</th>
+</tr>
+<tr>
+<td>正常（访问量上涨，或跌幅 ≤ 20%）</td>
+<td>—</td>
+<td>否（不通知）</td>
+</tr>
+<tr>
+<td>异常（跌幅 > 20%）</td>
+<td>域名：xxxxxxxxxx<br>时间：2026/9/23 14:48<br>今日-访问量：3232<br>昨日-访问量：4310<br>差值25%大于20%，请及时登录后台排查问题</td>
+<td>是（发送业务报警，按一级域名维度逐条列出）</td>
+</tr>
+</table></div>
+
+<h4 class="阅读标题">报警内容字段说明</h4>
+<ul>
+<li><strong>域名</strong>：触发报警的一级域名（来自域名清单）。</li>
+<li><strong>时间</strong>：本次巡检触发报警的时间，格式 <code class="行内代码">yyyy/M/d HH:mm</code>（如 2026/9/23 14:48）。</li>
+<li><strong>今日-访问量</strong>：今日 0 点至当前时刻，该一级域名的累计访问量。</li>
+<li><strong>昨日-访问量</strong>：昨日 0 点至昨日同一时刻，该一级域名的累计访问量（同时段口径）。</li>
+<li><strong>差值</strong>：跌幅百分比 = （今日-访问量 - 昨日-访问量）/ 昨日-访问量 × 100%；报警时按跌幅绝对值展示（如 -25% 展示为"差值25%"）。</li>
+<li><strong>通知去向</strong>：飞书"自动化通知测试"群。</li>
+</ul>
+
+<h4 class="阅读标题">报警文案示例</h4>
+<div class="代码块"><div class="代码头">text</div><pre><code>域名：xxxxxxxxxx
+时间：2026/9/23 14:48
+今日-访问量：3232
+昨日-访问量：4310
+差值25%大于20%，请及时登录后台排查问题
+
+域名：AAAAAAAA
+时间：2026/9/23 14:48
+今日-访问量：3232
+昨日-访问量：4310
+差值25%大于20%，请及时登录后台排查问题</code></pre></div>
+<h4 class="阅读标题">阈值计算说明</h4>
+<ul>
+<li><strong>跌幅公式</strong>：跌幅 = （今日-访问量 - 昨日-访问量）/ 昨日-访问量 × 100%。</li>
+<li><strong>触发条件</strong>：跌幅 < -20%（即今日访问量比昨日同时段掉了两成以上）时触发业务报警；跌幅在 20% 以内以及访问量上涨均不报警。</li>
+<li><strong>示例计算</strong>：昨日同时段访问量 4310，今日访问量 3232，跌幅 =（3232 - 4310）/ 4310 × 100% ≈ -25%，跌幅绝对值 25% > 20%，触发报警。</li>
+<li><strong>同时段对比</strong>：每 5 分钟巡检时，对比的必须是"今日截至当前时刻"与"昨日同一时刻"的累计值，不能直接对比昨日全天数据。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>只报暴跌</strong>：本节点仅在访问量跌幅超过 20% 时报警，访问量上涨不报警；目的是发现 H5 被封/被拦截等可访问性故障，而非监控日常流量波动。</li>
+<li><strong>必须同时段对比</strong>：今日累计访问量要与昨日同一时刻的累计访问量对比，严禁直接对比昨日全天数据，否则每天凌晨都会误报。</li>
+<li><strong>按一级域名维度逐条列出</strong>：同一巡检周期内多个域名触发报警时，每个域名一条数据块，不要把多个域名合并成一条。</li>
+<li><strong>每 5 分钟巡检一次</strong>：域名访问量每 5 分钟记录并判断一次，报警延迟最多 5 分钟；收到报警后请及时登录后台排查域名状态。</li>
+<li><strong>正常不通知</strong>：本节点正常情况不发送通知，与 3.2 权益页检索、5.2 小程序异常规则一致；与 3.1 口令更新、4.2 推送结果（定时通知）规则不同。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>访问量暴跌是 H5 被封最直接的信号</strong>：H5 链接依赖一级域名对外提供访问，域名一旦被封或被拦截，用户侧立即表现为访问量断崖式下降。本节点每 5 分钟对域名清单内所有一级域名做"今日 vs 昨日同时段"访问量对比，跌幅超过 20% 即按域名维度推送业务报警，帮助运营人员在用户大规模反馈前发现 H5 可访问性问题，避免下游用户访问和收入归因持续受损。本节点正常不通知，与 3.2、5.2 规则一致。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'5.1'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_5_2" data-page="5.2"><div class="页面卡"><div class="页面头"><h2>小程序异常</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">③</span><span class="流程信息卡-环节名">当前环节：③ 用户访问 - 小程序异常</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">小程序收到违规通知后可能进入风控流程，若不及时处理可能导致小程序被限制访问或下架，下游用户访问和收入归因均会中断。</span></div></div></div>
+<h4 class="阅读标题">业务背景说明</h4>
+<ul>
+<li><strong>入驻小程序数量多</strong>：本系统后台会入驻很多小程序，每个小程序都可能在微信侧收到违规通知。</li>
+<li><strong>目前仅通知"违规通知"</strong>：本节点目前仅监听接口拉取到的"违规通知"这一类异常，其他类型的异常暂不通知。</li>
+<li><strong>定时检索节点</strong>：每天 17:00 自动检索当天是否有小程序收到违规通知。</li>
+<li><strong>客户名称读取</strong>：来自客户的"备注字段"；若无备注则显示为"-"（与 3.2、4.2 客户名称规则一致——都读备注，但本节点多了"无则显示-"的兜底）。</li>
+</ul>
+
+<h4 class="阅读标题">通知规则</h4>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>检查结果</th>
+<th>通知文案</th>
+<th>是否通知</th>
+</tr>
+<tr>
+<td>正常</td>
+<td>—</td>
+<td>否（不通知）</td>
+</tr>
+<tr>
+<td>异常</td>
+<td>【ID=01】的【言成科技】客户的小程序【外卖干饭小掌柜】【APPID：xxxxxxxxxx】<br>收到了一条违规通知，违规时间：2026-09-21 14:30:00</td>
+<td>是（发送异常通知，按小程序维度逐条列出）</td>
+</tr>
+</table></div>
+
+<h4 class="阅读标题">通知内容字段说明</h4>
+<ul>
+<li><strong>客户 ID</strong>：以 <code class="行内代码">【ID=XX】</code> 格式带出客户 ID。</li>
+<li><strong>客户名称</strong>：从客户的"备注字段"读取（如"言成科技"）；<strong>无备注时显示为"-"</strong>（这是本节点独有的兜底规则）。</li>
+<li><strong>小程序名称</strong>：违规的小程序名称（如"外卖干饭小掌柜"）。</li>
+<li><strong>APPID</strong>：违规的小程序 AppID（如"xxxxxxxxxx"）。</li>
+<li><strong>违规通知内容</strong>：来自接口拉取的"违规通知"，按原文带出。</li>
+<li><strong>违规时间</strong>：违规通知的时间戳，从接口返回字段读取（如"2026-09-21 14:30:00"），与 APPID 共同组成违规记录的唯一标识。</li>
+<li><strong>是否已通知</strong>：以 <strong>APPID + 违规时间</strong> 作为唯一标识判断；若本条违规通知已发送过群消息，则不再重复通知；若未通知过则发送。</li>
+<li><strong>通知去向</strong>：飞书"自动化通知测试"群。</li>
+</ul>
+
+<h4 class="阅读标题">通知文案示例</h4>
+<div class="代码块"><div class="代码头">text</div><pre><code>【ID=01】的【言成科技】客户的小程序【外卖干饭小掌柜】【APPID：xxxxxxxxxx】
+收到了一条违规通知，违规时间：2026-09-21 14:30:00
+
+【ID=02】的【-】客户的小程序【XX优惠券】【APPID：yyyyyyyyyy】
+收到了一条违规通知，违规时间：2026-09-21 15:00:00</code></pre></div>
+<blockquote><p>示例第 2 条展示了客户无备注时显示为"-"的情况。</p></blockquote>
+<h4 class="阅读标题">是否已通知去重机制</h4>
+<ul>
+<li><strong>唯一标识</strong>：以 <strong>APPID + 违规时间</strong> 作为每条违规通知的唯一键。</li>
+<li><strong>去重判断</strong>：每天 17:00 检索时，对每条拉取到的违规通知先查"是否已通知过"：</li>
+<li>已通知过 → 跳过，不重复发送。</li>
+<li>未通知过 → 发送群消息，并标记为"已通知"。</li>
+<li><strong>存储位置</strong>：是否已通知状态持久化在系统后台（按 APPID + 违规时间维度记录），跨天去重，避免同一条违规通知在多个检索周期内被重复推送。</li>
+<li><strong>新违规才通知</strong>：只有当小程序首次收到一条新的违规通知（APPID + 违规时间在已通知记录中不存在）时才发送群消息；同一小程序若已通知过该违规时间点的违规，下一次检索到同一条不再重复通知。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>仅通知违规通知</strong>：本节点目前仅通知接口拉取到的"违规通知"这一类异常，其他类型的小程序异常暂不通知；后续若需扩展通知范围，再单独补充节点。</li>
+<li><strong>正常不通知</strong>：本节点正常情况不发送通知，避免群消息冗余；与 3.2 权益页检索规则一致；与 3.1 口令更新、4.2 推送结果（定时通知）规则不同。</li>
+<li><strong>客户名称无备注显示"-"</strong>：客户名称读备注字段，若无备注必须显示为"-"作为兜底，不要显示客户主体名称，也不要显示空白。</li>
+<li><strong>按小程序维度逐条列出</strong>：每个违规的小程序一条通知，不要把多个小程序的违规通知合并。</li>
+<li><strong>按 APPID + 违规时间去重</strong>：每条违规通知的唯一标识由 APPID + 违规时间组成，已通知过的不重复发送；这是"是否已通知"字段的核心判断逻辑，避免同一条违规通知被多次推送到群里。</li>
+<li><strong>17 点后留意群消息</strong>：建议运营人员每天 17:00 后留意"自动化通知测试"群，发现违规通知立即登录小程序后台处理。</li>
+<li><strong>违规通知要及时处理</strong>：违规通知若不及时处理，可能导致小程序被限制访问或下架，下游用户访问和收入归因都会中断。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>小程序异常是用户访问的最后一道关</strong>：小程序是用户访问链路的核心载体，一旦小程序因违规通知被限制访问或下架，下游用户访问和收入归因都会中断。本节点每天 17:00 定时检索违规通知，发现异常及时上报，与 5.1 H5 是否被封共同构成用户访问侧的检查闭环。本节点正常不通知，与 3.2 权益页检索规则一致；与 3.1 口令更新、4.2 推送结果（定时通知）规则不同。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'5.2'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_6_1" data-page="6.1"><div class="页面卡"><div class="页面头"><h2>收入逻辑报警</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">④</span><span class="流程信息卡-环节名">当前环节：④ 收入归因 - 收入逻辑报警</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">收入逻辑报警反映归因链路异常（如收入跑兜底、归因缺失等），不及时处理会导致业务侧无法统计和对账。</span></div></div></div>
+<h4 class="阅读标题">详细逻辑</h4>
+<blockquote><p>⏳ 待补充：6.1 详细逻辑（用户后续提供）</p></blockquote>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'6.1'}, '指引详情')">详情</button></div>
+</div></section>
+</main>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭表单弹窗()"></div>
+<aside id="表单弹窗面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="表单弹窗标题">新增</div>
+    <button class="btn-close" onclick="关闭表单弹窗()">×</button>
+  </div>
+  <div id="表单弹窗正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭表单弹窗()">取消</button>
+    <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-泳道映射">
+window._泳道节点映射 = {"3.1": [1], "3.2": [1], "4.1": [2], "4.2": [2], "5.1": [3], "5.2": [3], "6.1": [4]};
+window._阶段泳道映射 = {"3": 1, "4": 2, "5": 3, "6": 4};
+</script>
+<script id="js-页面切换">
+// 唯一导航函数：叶子菜单 onclick="切换页面('4.1')"。父节点不可点，无展开收起逻辑。
+function 切换页面(页码) {
+  document.querySelectorAll('.页面面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(页码).replace('.', '_'));
+  if (panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单文档,.菜单叶子').forEach(function(a) { a.classList.remove('激活'); });
+  var link = document.querySelector('[data-menu-page="' + 页码 + '"]');
+  if (link) link.classList.add('激活');
+  var c = document.getElementById('内容区'); if (c) c.scrollTop = 0;
+  更新泳道高亮(页码);
+}
+// 泳道两级高亮合并：已过+当前正常显示（opacity 1），未来节点置灰（opacity .25）；文档页(1/2)自动清空
+function 更新泳道高亮(页码) {
+  var 图 = document.getElementById('全局泳道图'); if (!图) return;
+  图.className = 图.className.replace(/ ?高亮阶段\d+/g, '');
+  var 阶段号 = String(页码).split('.')[0];
+  var k = (window._阶段泳道映射 || {})[阶段号];
+  if (k) 图.classList.add('高亮阶段' + k);
+  var nums = (window._泳道节点映射 || {})[页码];
+  图.querySelectorAll('.泳道行').forEach(function(r) {
+    if (!nums) { r.classList.remove('置灰'); r.classList.remove('正常'); return; }
+    var nodeNum = parseInt(r.getAttribute('data-swimlane-node'), 10);
+    var max = Math.max.apply(null, nums);
+    r.classList.toggle('正常', nodeNum <= max);
+    r.classList.toggle('置灰', nodeNum > max);
+  });
+}
+</script>
+<script id="js-字段联动">
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); }
+}
+// 枚举置灰通用函数：受控分组在「启用值」命中时正常，否则整组变淡且不可点。
+// 用法：置灰切换_模板('grp_退货设置', this.value, ['是'])；多组受控就在适配函数里多调几次。
+function 置灰切换_模板(组id, val, 启用值列表) {
+  var on = 启用值列表.indexOf(val) >= 0;
+  var el = document.getElementById(组id);
+  if (el) { el.style.opacity = on ? '1' : '0.35'; el.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+</script>
+<script id="js-抽屉">
+window._详情字段按节 = window._详情字段按节 || {};
+function 打开抽屉(行数据, 标题) {
+  var drawer = document.getElementById('detailDrawer'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('detailBody'); var titleEl = document.getElementById('detailDrawerTitle');
+  if (!drawer || !body) return; titleEl.textContent = 标题 || '详情';
+  var 当前节 = (行数据 && 行数据._壳节编号) || '';
+  var 详情字段 = (当前节 && window._详情字段按节[当前节]) ? window._详情字段按节[当前节] : [];
+  var html = '<div class="编辑卡片区">';
+  function 渲染详情字段行(f, 值) {
+    var row = '';
+    row += '<div class="field-row" style="grid-template-columns:120px 1fr 28px;">';
+    row += '<span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control"><span class="field-display">' + 值 + '</span>';
+    row += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (当前节 && window._详情字段分组 && window._详情字段分组[当前节]) ? window._详情字段分组[当前节] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 详情字段.length; k++) {
+          if (详情字段[k].名称 === 组.字段[j]) {
+            var val = (行数据 && 行数据[组.字段[j]] !== undefined) ? String(行数据[组.字段[j]]) : '—';
+            html += 渲染详情字段行(详情字段[k], val);
+            break;
+          }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="空状态">该列表未注册详情字段分组（_详情字段分组）</div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭抽屉() { var d = document.getElementById('detailDrawer'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o && !document.getElementById('表单弹窗面板').classList.contains('show')) o.classList.remove('show'); }
+</script>
+<script id="js-表单弹窗">
+// 数据驱动的新增/编辑弹窗：window._表单字段按节['4.1'] + window._新增字段分组['4.1']
+// 三个可选扩展（枚举置灰场景三件套）：
+//   window._新增控制逻辑['4.1'] = 规则摘要框 HTML（弹窗顶部说明）
+//   字段对象加 联动:'置灰切换_xx(this.value)'（enum 下拉 onchange，串内只用单引号）
+//   分组对象加 id:'grp_xx'；window._弹窗初始化['4.1'] = function(){...}（弹窗打开后执行一次初始置灰）
+function 打开表单弹窗(节编号, 模式, 行数据) {
+  var drawer = document.getElementById('表单弹窗面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('表单弹窗正文'); var titleEl = document.getElementById('表单弹窗标题');
+  if (!drawer || !body) return;
+  模式 = 模式 || '新增';
+  行数据 = 行数据 || null;
+  var 字段列表 = (window._表单字段按节 && window._表单字段按节[节编号]) ? window._表单字段按节[节编号] : [];
+  titleEl.textContent = 模式 + ' · ' + 节编号;
+  var html = '<div class="编辑卡片区">';
+  var 控制逻辑块 = (window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  function 取值(f) { return (行数据 && 行数据[f.名称] !== undefined && 行数据[f.名称] !== '') ? 行数据[f.名称] : (f.示例值 || ''); }
+  function 控件(f) {
+    if (f.编辑性 === '只读') return '<span class="field-readonly">' + (取值(f) || '系统自动生成') + '</span>';
+    if (f.基础类型 === 'enum') {
+      var opts = (f.枚举值 || '').split(/[、,，]/).filter(Boolean);
+      var ev = f.联动 ? ' onchange="' + f.联动 + '"' : '';
+      var cur = String(取值(f));
+      var o = '<select class="field-select"' + ev + '>';
+      for (var i = 0; i < opts.length; i++) o += '<option' + (opts[i] === cur ? ' selected' : '') + '>' + opts[i] + '</option>';
+      return o + '</select>';
+    }
+    if (f.基础类型 === '富文本') return '<textarea class="field-input" rows="3" placeholder="请输入">' + 取值(f) + '</textarea>';
+    return '<input class="field-input" value="' + 取值(f) + '" placeholder="请输入">';
+  }
+  function 渲染字段行(f) {
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">' + 控件(f) + '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      if (模式 === '新增' && 组.组名 === '系统生成信息') continue;
+      html += '<div class="field-card"' + (组.id ? ' id="' + 组.id + '"' : '') + '><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 字段列表.length; k++) {
+          if (字段列表[k].名称 === 组.字段[j]) { html += 渲染字段行(字段列表[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>' + 模式 + '</h4></div><div class="field-card-body">';
+    if (字段列表.length === 0) html += '<div class="空状态">未注册弹窗字段（_表单字段按节 / _新增字段分组）</div>';
+    else for (var i = 0; i < 字段列表.length; i++) html += 渲染字段行(字段列表[i]);
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+  if (window._弹窗初始化 && window._弹窗初始化[节编号]) { try { window._弹窗初始化[节编号](); } catch (e) {} }
+}
+function 关闭表单弹窗() { var d = document.getElementById('表单弹窗面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+// 行内「删除」按钮入口：二次确认后提示（演示环境不落库）。
+function 确认删除(节编号, 行数据) {
+  if (!confirm('确定删除该记录？删除后不可恢复。')) return;
+  显示提示('已删除（演示环境，不落库）', '成功', 2200);
+}
+</script>
+<script id="js-单元格截断">
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script>
+window._详情字段按节=window._详情字段按节||{};
+window._详情字段分组=window._详情字段分组||{};
+window._详情字段按节["3.1"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"3.1"}];
+window._详情字段分组["3.1"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["3.2"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"3.2"}];
+window._详情字段分组["3.2"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["4.1"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"4.1"}];
+window._详情字段分组["4.1"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["4.2"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"4.2"}];
+window._详情字段分组["4.2"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["5.1"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"5.1"}];
+window._详情字段分组["5.1"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["5.2"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"5.2"}];
+window._详情字段分组["5.2"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["6.1"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"6.1"}];
+window._详情字段分组["6.1"]=[{组名:"指引说明",字段:["指引说明"]}];
+</script>
+</body>
+</html>

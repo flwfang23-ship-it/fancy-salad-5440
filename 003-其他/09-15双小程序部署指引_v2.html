@@ -1,0 +1,1483 @@
+<script type="text/plain" data-ai-only>
+# 双小程序部署指引
+
+> 产出日期：2026-09-15
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+我们承接两类业务，都需要依托商家作为小程序主体和商户号主体，由言成完成部署和后续运营配置：
+
+- **支付代收小程序（A）**：用户在小程序下单付款，资金直接进入商家商户号收款；商品上架和发货由言成完成。
+- **返现小程序（B）**：用户在我们这里领券下单后，获得返现金额，返现通过商家商户号转账到用户的微信零钱。
+
+两个小程序的业务模型不同，但部署流程相同：商家负责前三步主体准备（注册小程序、准备商户号、授权及入驻），后两步由我们执行（部署小程序、配置物料和商品库）。本指引把整条流程合并写一遍，覆盖双方需要执行的全部动作。
+
+```text
+改造前
+
+言成缺少标准化部署指引
+        ↓
+每次承接新商家时，注册类目、商户号能力、入驻关系、资料交接等步骤
+反复沟通确认，容易遗漏字段、选错类目、商户号能力开不全
+
+
+改造后
+
+商家按 ①②③ 完成主体准备
+        ↓
+言成按 ④⑤ 完成部署与配置
+        ↓
+A/B 两个小程序可正式承接业务
+```
+
+### 1.2 一句话业务模型
+
+```text
+商家提供小程序主体（工具-比价类目）
+        +
+商家开通一个商户号，同时具备 JSAPI 支付（A 用）+ 商家转账到零钱（B 用）
+        +
+商家完成小程序授权及入驻
+        +
+言成部署小程序并配置物料/商品库
+        ↓
+A：用户付款 → 商家收款 → 言成发货
+B：用户领券下单 → 商家商户号转账给用户返现
+```
+
+### 1.3 最终目标
+
+- **主体资质就位**：商家完成两个小程序注册（工具-比价类目）+ 一个商户号开通双能力 + 授权及入驻，形成可被部署的基础环境。
+- **小程序部署上线**：言成完成两个小程序的部署绑定与物料/商品库配置，业务可正常承接营业。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌────────────────────┬──────────────────────────────┬──────────────────────────────┐
+│ 商家               │ 言成-运营                    │ 代码系统                     │
+├────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ ① 注册小程序       │                              │                              │
+│    类目：工具-比价 │                              │                              │
+│ 【小程序主体：已认证】                            │                              │
+│          │         │                              │                              │
+│ ② 准备商户号       │                              │                              │
+│    JSAPI 支付     │                              │                              │
+│    + 商家转账到零钱 │                            │                              │
+│ 【商户号：已开通双能力】                          │                              │
+│          │         │                              │                              │
+│ ③ 授权及入驻       │                              │                              │
+│          └─────────┼─────────────────────────────→│                              │
+│                    │                              │ 【入驻状态：已绑定】          │
+│                    │ ④ 部署小程序                 │                              │
+│                    │    绑定 AppID/Secret         │                              │
+│                    │          └──────────────────→│                              │
+│                    │                              │ 【部署状态：已上线】          │
+│                    │ ⑤ 配置物料和商品库           │                              │
+│                    │    上架商品/物料             │                              │
+│                    │                              │ 【运营状态：可营业】          │
+└────────────────────┴──────────────────────────────┴──────────────────────────────┘
+```
+
+泳道图需要同时表达状态时，采用以下原则：
+
+- 编号节点只写参与方实际执行的业务动作。
+- 状态标注写在触发该状态的动作之后，不占用新的流程序号。
+- 一张泳道图只展示核心状态主线。本指引核心业务对象为**小程序部署记录**（状态：已认证 → 已开通双能力 → 已绑定 → 已上线 → 可营业）。
+- 不得使用动作名称代替中间状态。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前部署闭环，可划分为：
+
+1. **第一阶段：商家主体准备（主要参与方：商家）**：商家完成两个小程序注册（工具-比价类目）、一个商户号开通双能力（JSAPI 支付 + 商家转账到零钱）、两个小程序授权及入驻三步，形成可被部署的基础环境。
+2. **第二阶段：言成部署与配置（主要参与方：言成）**：言成承接商家的主体资质，完成两个小程序的部署绑定（AppID/AppSecret + 商户号相关字段），再统一配置物料和商品库，使业务可正常承接营业。
+
+```text
+第一阶段：商家主体准备
+① 注册小程序 → ② 准备商户号 → ③ 授权及入驻
+                    ↓
+第二阶段：言成部署与配置
+④ 部署小程序 → ⑤ 配置物料和商品库
+```
+
+每个步骤小节的 `#### 业务背景` 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。
+
+### 2.3 页面类型说明
+
+本指引为部署操作指引文档，所有阶段小节统一使用「内容页」类型——纯文本指引，无字段表、无页面骨架、无列表交互弹窗。正文承载操作步骤、注意事项、资料清单和坑点提醒。
+
+---
+
+## 3. 第一阶段：商家主体准备
+
+> 本阶段由商家独立完成，包括小程序注册、商户号开通、小程序授权及入驻三步。本阶段产出的主体资质将作为第二阶段言成部署的前置条件。
+
+### 3.1 注册小程序 — 内容页
+
+#### 业务背景
+
+当前环节：① 注册小程序<br>
+页面路径：微信公众平台 > 注册 > 小程序<br>
+对下游影响：注册后获得的 AppID、原始 ID（gh_ 开头）、小程序密钥（AppSecret）将作为第二阶段部署绑定的核心字段；选择的"工具-比价"服务类目决定后续该小程序可承接的业务范围。<br>
+
+#### 主体类型选择
+
+- **企业/个体工商户**：推荐使用企业主体注册；个体工商户也可，但部分支付能力受限。
+- **所需材料**：营业执照、法人身份证、对公账户（个体户可用法人个人银行卡）、300 元认证费（或法人微信扫码认证免费）。
+- **主体名称**：使用商家营业执照上的全称，不要缩写。
+- **两个小程序各注册一个账号**：A（支付代收）和 B（返现）需要分别注册独立的小程序账号，不能共用。
+
+#### 注册入口与操作步骤
+
+1. 访问 `https://mp.weixin.qq.com/`，点击「立即注册」→ 选择「小程序」。
+2. 填写邮箱（未绑定过微信公众号/小程序的邮箱）、密码，完成邮箱激活。
+3. 主体类型选择：企业 / 个体工商户。
+4. 填写主体信息：上传营业执照、填写法人信息、对公账户信息。
+5. 法人微信扫码完成主体验证（推荐）或打款验证（300 元，到账后自动退回）。
+6. 完成注册，进入小程序后台。A 和 B 两个账号分别完成一次。
+
+#### 服务类目选择（重要）
+
+- **类目路径**：小程序后台 > 设置 > 基本设置 > 服务类目 > 添加类目。
+- **一级类目**：工具。
+- **二级类目**：比价。
+- **类目资质**：工具-比价类目一般无需额外资质，可直接选择通过；如系统提示需补充资质，按提示上传。
+- **不可选错**：选错类目可能导致后续支付能力无法开通或被风控。A 和 B 两个小程序均使用同一类目。
+- **不要选"电商平台"类目**：电商平台类目需要 ICP 证、第三方平台资质等，门槛高且不适合本业务模型。
+
+#### 关键字段获取
+
+- **AppID**：小程序后台 > 开发 > 开发管理 > 开发设置；用途：第二阶段绑定部署的核心标识，每个小程序各有一个。
+- **AppSecret**：小程序后台 > 开发 > 开发管理 > 开发设置 > 重置后复制；用途：与 AppID 配对用于接口调用；重置后旧密钥立即失效，需同步给言成。
+- **原始 ID（gh_ 开头）**：小程序后台 > 设置 > 基本设置；用途：部分跳转场景使用。
+
+#### 注意事项与坑点
+
+- **邮箱不可复用**：注册用的邮箱不可绑定过其他微信公众号/小程序；推荐申请新邮箱。
+- **类目不要选"电商平台"**：电商平台类目需要 ICP 证、第三方平台资质等，门槛高且不适合本业务模型。本指引统一选"工具-比价"。
+- **AppSecret 重置同步**：重置 AppSecret 后旧密钥立即失效；重置后必须第一时间同步给言成，否则线上小程序立即报错。
+- **类目修改次数有限**：每月类目修改次数有限，确认后再添加。
+- **小程序名称**：建议命名为"XX 比价""XX 优惠"等与工具-比价类目相符的名称，避免名称被驳回。
+- **服务器域名白名单**：本阶段暂不配置，由言成在第二阶段完成。
+- **两个小程序分别注册**：A 和 B 是两个独立小程序账号，不要试图用一个 AppID 承载两种业务。
+
+#### 业务逻辑
+
+**两个小程序均使用相同注册流程**：A（支付代收）和 B（返现）的注册步骤、类目、主体资质完全一致，差异在第二阶段的部署配置和商户号能力使用方式。建议商家一次性注册两个小程序账号，避免后续来回切换主体。
+
+---
+
+### 3.2 准备商户号 — 内容页
+
+#### 业务背景
+
+当前环节：② 准备商户号<br>
+页面路径：微信支付商户平台 > 入驻<br>
+对下游影响：商户号是支付能力和转账能力的载体，A 小程序需要使用该商户号完成 JSAPI 支付收款，B 小程序需要使用该商户号完成"商家转账到零钱"向用户返现。<br>
+
+#### 一个商户号开通两种能力
+
+商家只需开通一个微信支付商户号，在该商户号下同时开通：
+
+- **JSAPI 支付（小程序支付）**：A 小程序用户下单付款，资金直接进入商家商户号收款。
+- **商家转账到零钱**：B 小程序用户领券下单后，由该商户号发起向用户微信零钱的转账，完成返现。
+
+#### 开通操作步骤
+
+1. 进入微信支付商户平台 `https://pay.weixin.qq.com/`，点击「商家入驻」或「立即接入」。
+2. 使用与小程序同主体的营业执照入驻，确保商户号主体与小程序主体一致。
+3. 提交营业执照、法人身份证、对公账户、超级管理员信息等。
+4. 等待审核（通常 1-3 个工作日），审核通过后获得商户号（MCHID）。
+5. 在商户号下关联两个小程序：进入商户平台 > 产品中心 > AppID 账号管理，分别关联 A 小程序和 B 小程序的 AppID。
+6. 开通两种产品能力：
+   - 进入商户平台 > 产品中心，开通「JSAPI 支付」（默认开通）。
+   - 进入商户平台 > 产品中心，申请开通「商家转账到零钱」（需满足条件，审核后开通）。
+
+#### 商家转账到零钱的开通条件
+
+- 商户号状态正常，无重大违规记录。
+- 商户号需在 90 天内有真实交易流水（建议先开通 JSAPI 支付并产生少量测试交易）。
+- 部分商户号主体类型受限，建议提前在商户平台查询资格。
+- 若无法立即开通，先完成 A 小程序的部署和测试交易，待满足条件后再补开 B 的转账到零钱能力。
+
+#### 关键字段获取
+
+- **商户号 MCHID**：商户平台 > 账户中心 > 商户信息；用途：部署支付能力时的核心字段。
+- **商户 API 密钥**：商户平台 > 账户中心 > API 安全 > 设置 API 密钥；用途：用于签名，与 MCHID 配对；设置后无法在商户平台直接查看，必须保存好。
+- **商户证书**：商户平台 > 账户中心 > API 安全 > 申请 API 证书；用途：用于转账到零钱等敏感接口调用，下载得到 `apiclient_cert.p12` 文件。
+- **证书序列号**：商户平台 > 账户中心 > API 安全 > 查看证书；用途：与证书文件配对使用。
+- **AppID 关联关系**：商户平台 > 产品中心 > AppID 账号管理；用途：确认 A、B 两个小程序均已关联到本商户号。
+
+#### 注意事项与坑点
+
+- **主体必须一致**：商户号主体必须与小程序主体一致，否则无法关联 AppID。
+- **API 密钥保管**：API 密钥设置后无法在商户平台直接查看，请保存好；丢失只能重置，重置后线上立即报错。
+- **转账到零钱需先有流水**：新开商户号不能立即开通转账到零钱，需 90 天内有交易。若 B 小程序部署期紧，可与商家提前规划流水产生节奏。
+- **商户证书下载**：证书文件 `apiclient_cert.p12` 必须妥善保存，言成在第二阶段需要使用；丢失只能重新申请。
+- **商户号建议单独开通**：建议为本指引的两个小程序单独开通商户号，避免资金混用和对账复杂。
+- **若商家已有商户号**：可复用现有商户号，但需在 AppID 账号管理中关联本指引的两个新小程序 AppID，并确认两种能力均已开通。
+
+#### 业务逻辑
+
+**商户号能力差异**：A 小程序使用 JSAPI 支付（收款方向：用户→商家商户号），B 小程序使用商家转账到零钱（付款方向：商家商户号→用户）。一个商户号同时承载这两种能力，商家只需维护一个商户号即可覆盖两个小程序的资金流。两种能力的开通时机不必同步——A 可立即开通并产生流水，B 待条件满足后再开通。
+
+---
+
+### 3.3 授权及入驻 — 内容页
+
+#### 业务背景
+
+当前环节：③ 授权及入驻<br>
+页面路径：系统后台 > 商户入驻<br>
+对下游影响：入驻后，商家的两个小程序 AppID 将与代码系统建立绑定关系，作为第二阶段言成部署和配置物料/商品库的承载平台。<br>
+
+#### 入驻操作步骤
+
+1. 言成向商家提供系统入驻入口（链接或二维码）。
+2. 商家使用小程序主体绑定的微信扫码进入入驻流程。
+3. 系统自动读取商家小程序的主体信息（企业名称、营业执照号、法人等）。
+4. 商家确认入驻协议，提交两个小程序的 AppID（A 小程序 AppID、B 小程序 AppID）。
+5. 系统校验 AppID 与主体一致性，校验通过后完成入驻。
+6. 入驻成功后，商家在系统后台拥有一个商户主账号。
+
+#### 关键字段
+
+- **商户主体名称**：来源为系统自动读取；用途：入驻后商户账号的显示名称。
+- **A 小程序 AppID**：来源为商家填写；用途：第二阶段绑定 A 小程序的标识。
+- **B 小程序 AppID**：来源为商家填写；用途：第二阶段绑定 B 小程序的标识。
+- **商户管理员微信**：来源为商家填写；用途：后续言成与商家在系统内的协作账号。
+
+#### 注意事项与坑点
+
+- **两个 AppID 都要填**：入驻时务必同时填写 A、B 两个小程序的 AppID，遗漏任一将导致言成在第二阶段无法绑定该小程序。
+- **AppID 主体必须与入驻主体一致**：如商家填入其他主体的 AppID，校验会失败。
+- **入驻后不要切换主体**：入驻后若小程序主体变更，会导致入驻关系失效，需要重新入驻。
+- **小程序主体注销则入驻失效**：若商家后续注销小程序，代码系统中的入驻关系也会自动失效。
+- **入驻前先完成 ①②**：建议商家完成 ① 注册、② 商户号开通后再入驻，避免入驻后还要回头补主体资质。
+
+#### 业务逻辑
+
+**入驻是双方交接点**：本步骤是商家主体准备的最后一步，也是言成接手部署的起点。入驻完成后，商家的前期准备工作结束，后续部署和配置均由言成在系统后台完成，商家只需配合提供必要字段（如 AppSecret、商户 API 密钥、商户证书等敏感信息）。
+
+---
+
+## 4. 第二阶段：言成部署与配置
+
+> 本阶段由言成独立完成，承接商家在第一阶段产出的主体资质，完成两个小程序的部署绑定，并统一配置物料和商品库，使业务可正常承接营业。
+
+### 4.1 部署小程序 — 内容页
+
+#### 业务背景
+
+当前环节：④ 部署小程序<br>
+页面路径：系统后台 > 商户管理 > 小程序部署<br>
+对下游影响：部署完成后，A 小程序可承接用户付款（资金进入商家商户号），B 小程序可承接用户领券下单并触发返现流程。<br>
+
+#### 部署前必须收到的商家资料清单
+
+- A 小程序 AppID + AppSecret
+- B 小程序 AppID + AppSecret
+- 商户号 MCHID
+- 商户 API 密钥
+- 商户证书文件 `apiclient_cert.p12`
+- 商户 API 证书序列号
+
+任一缺失即无法完成部署，先与商家确认补齐。所有敏感字段通过加密渠道传递，不要走明文聊天工具。
+
+#### 部署操作步骤
+
+1. 登录系统后台，进入对应商户账号。
+2. 进入「小程序部署」页面，分别选择 A 小程序和 B 小程序。
+3. 填写以下字段并保存：
+   - AppID（自动带出商家入驻时填写的 AppID，可校对）
+   - AppSecret（向商家获取，填入后保存）
+   - 服务器域名白名单（request 域名、uploadFile 域名、downloadFile 域名等，按系统文档配置）
+4. 进入「支付配置」页面，填写商户号相关字段：
+   - 商户号 MCHID
+   - 商户 API 密钥
+   - 上传商户证书文件 `apiclient_cert.p12`
+   - 填写证书序列号
+5. 分别配置两个小程序的支付能力：
+   - A 小程序：启用 JSAPI 支付，资金收款到商家商户号。
+   - B 小程序：启用商家转账到零钱，配置返现触发规则。
+6. 提交部署，系统自动校验 AppID + AppSecret + 商户号关联关系。
+7. 校验通过后，部署完成，小程序可正常访问。
+
+#### 关键字段配置说明
+
+- **AppSecret**：配置位置为小程序部署页；必须与商家小程序后台设置的 AppSecret 一致；若商家后续重置 AppSecret，本字段需同步更新，否则线上立即报错。
+- **服务器域名白名单**：配置位置为小程序部署页；必须包含系统业务域名，否则小程序内业务接口调用失败；每月修改次数有限，建议一次性配置完整。
+- **商户 API 密钥**：配置位置为支付配置页；必须与商户平台设置的 API 密钥一致。
+- **商户证书**：配置位置为支付配置页；用于 B 小程序的转账到零钱接口调用；证书默认 1 年有效，到期前需在商户平台续期并重新上传。
+
+#### 部署后的自检
+
+- 用真机扫码进入 A 小程序，尝试下单支付一笔小额测试订单（如 1 分钱或 1 元），确认资金进入商家商户号。
+- 用真机扫码进入 B 小程序，触发一次返现流程，确认商家商户号成功向测试用户微信零钱转账。
+- 检查系统后台日志，确认接口调用无异常。
+- 自检全部通过后，通知商家部署完成，进入 4.2 配置物料和商品库。
+
+#### 注意事项与坑点
+
+- **AppSecret 同步**：商家若在小程序后台重置 AppSecret，必须第一时间告知言成，否则线上立即报错。
+- **服务器域名每月修改次数有限**：建议一次性配置完整，避免反复修改。
+- **商户证书有效期**：商户证书默认 1 年有效，到期前需在商户平台续期并重新上传；建议建立证书到期台账。
+- **两个小程序的支付配置独立**：A 和 B 在系统内是两条独立的部署记录，不要混淆字段，AppID/AppSecret/商户号不要张冠李戴。
+- **测试金额要小**：自检时使用 1 分钱或 1 元订单，避免大额资金误转。
+- **敏感字段加密传递**：AppSecret、商户 API 密钥、证书文件不要走明文聊天工具传递，建议使用加密渠道。
+
+#### 业务逻辑
+
+**部署完成即可营业（技术层面）**：本步骤完成后，两个小程序从技术层面已具备承接业务的能力，但物料和商品库尚未配置，用户进入小程序仍看不到可购买/可领取的内容，需要继续完成 4.2 的物料和商品库配置。A 和 B 的部署记录相互独立，但共用一个商户号——商户号字段只配置一次，但要在 A、B 两个部署记录中分别引用。
+
+---
+
+### 4.2 配置物料和商品库 — 内容页
+
+#### 业务背景
+
+当前环节：⑤ 配置物料和商品库<br>
+页面路径：系统后台 > 商品/物料管理<br>
+对下游影响：配置完成后，A 小程序展示可下单商品，B 小程序展示可领取的优惠券和返现规则，两个小程序进入可营业状态。<br>
+
+#### 配置内容范围
+
+本步骤统一为两个小程序配置业务内容：
+
+- **A 小程序（支付代收）**：商品库——上架商品、配置价格、库存、发货模板。
+- **B 小程序（返现）**：物料库——配置优惠券（领券规则、面额、有效期），配置返现规则（返现金额、触发条件、上限）。
+
+#### 配置操作步骤
+
+1. 登录系统后台，进入对应商户账号。
+2. 进入「商品库管理」（A 小程序用），新建商品：
+   - 填写商品名称、商品图片、商品详情、价格、库存。
+   - 关联发货模板（言成这边发货，使用言成的发货主体）。
+   - 设置商品上架状态为「上架」。
+3. 进入「物料/优惠券管理」（B 小程序用），新建优惠券和返现规则：
+   - 优惠券：填写券名称、面额、领取条件（如满 X 元可用）、有效期、发放总量。
+   - 返现规则：配置返现金额、触发条件（如领券后下单成功）、返现上限、返现到账方式（即时 / 延迟）。
+4. 配置完成后，在 A、B 小程序内分别验证：
+   - A 小程序：商品列表是否展示，下单支付流程是否走通，资金是否进入商家商户号，发货是否由言成完成。
+   - B 小程序：优惠券是否可领取，用户领券下单后是否触发返现，返现是否到账用户零钱。
+5. 确认无误后，正式上线运营。
+
+#### 关键配置字段说明
+
+- **商品名称/图片/价格/库存**：所属为 A 商品库；用途为决定 A 小程序商品列表展示和下单流程。
+- **发货模板**：所属为 A 商品库；用途为关联言成这边的发货主体，下单后由言成这边发货；务必关联言成发货主体，不要使用商家的发货模板。
+- **优惠券面额/有效期/总量**：所属为 B 物料库；用途为决定 B 小程序可领取的券。
+- **返现金额/触发条件/上限**：所属为 B 物料库；用途为决定用户领券下单后获得的返现。
+
+#### 注意事项与坑点
+
+- **发货主体是言成这边**：A 小程序的商品虽然由商家收款，但发货由言成这边完成，发货模板必须关联言成的发货主体，不要使用商家的发货模板。
+- **返现金额要事先核算**：返现金额来自商家商户号转账到用户零钱，转账金额和手续费需提前与商家对账确认，避免商家商户号资金不足导致返现失败。
+- **优惠券发放总量有限制**：超发会导致用户领取后无法使用，建议设上限并监控。
+- **商品上架后不可频繁改价**：频繁改价可能触发微信侧的风控，建议改价前下架再重新上架。
+- **B 小程序的返现触发条件与领券绑定**：返现必须基于"领券下单"才触发，避免无券直接下单也返现造成资金损失。
+- **测试时使用小额订单**：A 测试用 1 分钱或 1 元订单；B 测试用小额返现，避免返现金额超过测试预算。
+- **正式上线前与商家对账**：返现资金来自商家商户号，上线前需与商家确认商户号余额充足，避免上线后返现失败影响用户体验。
+
+#### 业务逻辑
+
+**配置完成进入营业**：本步骤是整个部署流程的最后一步。配置完成后，两个小程序均具备承接业务的能力——A 小程序有可下单付款的商品（资金进入商家商户号，由言成这边发货），B 小程序有可领取的优惠券和返现规则（用户领券下单后由商家商户号转账返现到用户零钱）。两个小程序正式进入可营业状态，本指引流程闭环完成。
+
+---
+
+## 5. 方笑天双业务接入方案
+
+> 本章承接第二阶段的部署成果，在两个小程序部署完成后，针对方笑天的新小程序接入电商与餐餐补 2 套业务，由言成运营独立执行上架、配置、发货、售后全流程。
+
+### 5.1 业务概览 — 内容页
+
+#### 业务背景
+
+当前环节：方笑天双业务接入<br>
+页面路径：系统后台 > 方笑天小程序<br>
+对下游影响：方笑天的新小程序可承接电商下单与餐餐补配置两套业务，进入可营业状态。
+
+#### 业务范围
+
+方笑天的新小程序承接 2 套业务：
+
+- **电商**：上架、配置、发货、售后 — 全流程由言成运营执行，只作用于方笑天的新小程序。
+- **餐餐补**：配置链接路径，数据页只显示方笑天的数据 — 由言成运营执行。
+
+#### 实操人员
+
+- **统一由言成运营执行**：上架、配置、发货、售后均由言成运营在系统后台完成，方笑天仅作为小程序主体提供方。
+
+#### 技术方案路线
+
+两套业务采用不同的隔离策略：
+
+- **电商 → 字段隔离**：在订单表、商品分类表、发货售后表上加字段做归属过滤，同一张数据表支持多方可见。
+- **餐餐补 → 物理复制菜单**：复制一套菜单，加后缀 `_方笑天`，新菜单只配置方笑天的，旧菜单保留言成的。
+
+#### 业务逻辑
+
+**两套业务双轨并行**：电商用字段隔离策略保留共用数据 + 多方可见能力，餐餐补用物理复制菜单策略实现数据强隔离。两套业务边界清晰，互不干扰。策略选择依据业务本身的数据载体——电商以商品/订单为载体，字段过滤即可隔离；餐餐补以菜单为载体，菜单本身就是天然的隔离边界，物理复制更直接、风险更低。
+
+---
+
+### 5.2 电商方案 — 字段隔离 — 内容页
+
+#### 业务背景
+
+当前环节：电商接入<br>
+页面路径：系统后台 > 商品/订单管理<br>
+对下游影响：通过字段过滤让方笑天的新小程序能承接上架、配置、发货、售后，同一商品库可被多方运营人员按归属方过滤查看。
+
+#### 字段改动清单
+
+共改动 3 处表结构：
+
+- **订单表加字段：订单来源**
+  - 字段类型：前端返
+  - 取值：标识订单来自哪个小程序（如方笑天小程序、言成小程序）
+  - 用途：按订单来源过滤、统计各小程序订单
+- **商品分类表加字段：归属方**
+  - 字段类型：单选枚举
+  - 取值：全部 / 言成 / 方笑天
+  - 默认值：全部
+  - 用途：决定分类下商品对各运营方的可见性
+- **发货 · 售后表加字段：来源小程序**
+  - 字段类型：标识字段
+  - 取值：标识发货/售后归属哪个小程序
+  - 用途：按小程序维度做发货和售后归属过滤
+
+#### 商品与分类的挂载关系（多选）
+
+- 一个商品可同时挂载到多个分类下，挂载关系为**多选**。
+- 当商品挂多个分类时，其可见归属方 = 所挂载分类归属方的**并集**。
+
+#### 跨分类并集示例
+
+```text
+A 分类（零食）归属：方笑天
+B 分类（酒水）归属：言成
+        ↓
+商品"可乐"同时挂 A + B 两个分类
+        ↓
+可乐的可见归属方 = A 归属 ∪ B 归属 = {方笑天, 言成}
+        ↓
+结果：方笑天和言成的运营人员均能看到可乐
+```
+
+#### 关键字段配置说明
+
+- **订单来源**：由前端在用户下单时返回，标识订单来自哪个小程序；后端按此字段做订单过滤和统计。
+- **归属方**：配置位置为商品分类管理页；决定该分类下商品对各运营方的可见范围；默认"全部"以兼容存量数据。
+- **来源小程序**：配置位置为发货/售后表；与订单来源对应，标识发货/售后归属哪个小程序。
+
+#### 注意事项与坑点
+
+- **归属方默认全部**：新增分类默认归属"全部"，避免存量商品突然不可见；新建言成或方笑天专属分类时需手动改为对应归属方。
+- **可乐类跨分类商品**：跨分类商品按并集归属方处理，不要试图用单一归属方覆盖，否则会导致一方运营人员看不到本应可见的商品。
+- **订单来源必须前端返**：前端下单时必须把订单来源字段传给后端，遗漏会导致订单无法按小程序过滤，统计和发货归属都会出错。
+- **发货/售后归属与订单来源对应**：发货/售后的"来源小程序"必须与订单来源保持一致，避免出现方笑天订单被言成发货的串单问题。
+- **挂载关系为多选**：商品挂载分类时允许多选，但要确认归属方并集后的可见范围符合预期，避免误挂导致商品对不该可见的一方暴露。
+
+#### 业务逻辑
+
+**字段隔离保留共用商品库**：电商方案不在表层面复制数据，而是通过字段过滤实现"同一商品库、多方可见"。订单来源决定订单归属，归属方决定商品可见范围，来源小程序决定发货/售后归属。三方字段协同形成完整的电商业务隔离闭环，避免数据冗余和对账复杂。
+
+---
+
+### 5.3 餐餐补方案 — 物理复制菜单 — 内容页
+
+#### 业务背景
+
+当前环节：餐餐补接入<br>
+页面路径：系统后台 > 餐餐补菜单<br>
+对下游影响：通过复制菜单物理隔离方笑天与言成的餐餐补配置和数据，新菜单只配置方笑天的，旧菜单保留言成的。
+
+#### 字段改动清单
+
+**无字段改动** — 通过菜单复制 + 后缀命名实现隔离。
+
+#### 菜单复制规则
+
+- **旧菜单（无后缀）**：原菜单路径保留，归属言成；数据页只显示言成的数据。
+- **新菜单（加后缀 `_方笑天`）**：复制旧菜单得到，归属方笑天；数据页只显示方笑天的数据。
+
+#### 配置操作步骤
+
+1. 复制旧餐餐补菜单，新菜单路径 = 旧菜单路径 + `_方笑天`。
+2. 在新菜单中配置方笑天的餐餐补链接路径。
+3. 旧菜单保持言成的配置不变。
+4. 验证新菜单数据页只显示方笑天的数据，旧菜单数据页只显示言成的数据。
+
+#### 关键字段配置说明
+
+- **菜单后缀**：统一使用 `_方笑天`；新菜单路径 = 旧菜单路径 + `_方笑天`。
+- **数据隔离**：新菜单的数据页只展示方笑天的数据，旧菜单的数据页只展示言成的数据；两套菜单物理隔离，互不影响。
+
+#### 注意事项与坑点
+
+- **后缀统一用 `_方笑天`**：所有方笑天的菜单统一使用 `_方笑天` 后缀，避免出现 `_fxt`、`_方笑天2026` 等不一致命名导致菜单混乱。
+- **新菜单是复制不是新建**：复制旧菜单得到新菜单，确保菜单结构与字段一致；不要手动新建菜单导致结构差异，否则后续维护成本高。
+- **数据页不要混数据**：新菜单数据页必须只显示方笑天的数据；如出现言成数据，需排查菜单复制时是否带过来旧数据，并清理。
+- **旧菜单配置不要动**：复制后旧菜单保留言成配置不变，避免影响言成现有业务；如确需调整言成配置，在旧菜单独立操作。
+
+#### 业务逻辑
+
+**物理复制实现强隔离**：餐餐补方案不用字段过滤，而是通过复制菜单 + 后缀命名做物理隔离。两套菜单独立配置、独立数据页，不存在数据交叉风险。策略选择原因：餐餐补的链接路径配置和数据展示以菜单为载体，菜单本身就是天然的隔离边界，比加字段更直接、风险更低、维护成本更可控。
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>双小程序部署指引</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用壳 { display: grid; grid-template-columns: var(--菜单宽) minmax(0, 1fr) var(--泳道宽); height: 100vh; overflow: hidden; }
+
+/* ── 左：后台菜单（白底黑字，全铺开，父节点不可点） ── */
+.菜单区 { background: #fff; color: #334155; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+.菜单品牌 { padding: 18px 18px 14px; border-bottom: 1px solid #eef2f7; }
+.菜单品牌名 { font-size: 16px; font-weight: 700; color: #172033; line-height: 1.4; }
+.菜单品牌小 { font-size: 11px; color: #94a3b8; margin-top: 3px; letter-spacing: .5px; }
+.菜单父 { padding: 16px 18px 4px; font-size: 12px; color: #0f6b8f; font-weight: 700; letter-spacing: .5px; }
+.菜单文档, .菜单叶子 { display: flex; align-items: center; gap: 8px; color: #334155; font-size: 13.5px; cursor: pointer; user-select: none; border-left: 3px solid transparent; }
+.菜单文档 { padding: 9px 18px; }
+.菜单叶子 { padding: 8px 18px 8px 30px; font-size: 13px; }
+.菜单文档.子级 { padding: 9px 18px 9px 30px; font-size: 13px; }
+.菜单文档:hover, .菜单叶子:hover { background: #f1f5f9; color: #0f172a; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.菜单号 { font-family: Consolas, monospace; font-size: 11px; color: #94a3b8; min-width: 26px; }
+.菜单文档.激活 .菜单号, .菜单叶子.激活 .菜单号 { color: #0f6b8f; }
+.菜单图标 { font-size: 13px; }
+
+/* ── 中：内容工作区 ── */
+.内容区 { overflow-y: auto; background: #f1f5f9; }
+.页面面板 { display: none; padding: 22px 26px 48px; }
+.页面面板.激活 { display: block; }
+.页面卡 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(15,35,52,.04); margin-bottom: 18px; }
+.页面头 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.页面头 h2 { margin: 0; font-size: 19px; color: #172033; }
+.主按钮 { padding: 7px 16px; border: 1px solid #0f6b8f; border-radius: 6px; background: #0f6b8f; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.主按钮:hover { background: #0c5673; }
+
+/* ── 右：常驻泳道栏 ── */
+.泳道区 { background: #f8fafc; border-left: 1px solid #e2e8f0; overflow-y: auto; padding: 14px 12px 28px; }
+.泳道区 > h3 { margin: 2px 4px 10px; font-size: 14px; color: #334155; }
+.泳道简介 { margin: 0 4px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.75; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道区 .泳道图 { font-size: 13px; }
+</style>
+<style id="css-组件">
+/* ── 文档页排版 ── */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 26px 0 12px; font-size: 20px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.阅读标题 { line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 20px; margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 16px; margin: 22px 0 8px; } .文档正文 h5 { font-size: 14px; margin: 18px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.行内代码 { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; }
+.代码块 pre { margin: 0; padding: 16px; background: #fff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; }
+.代码块 code { display: block; font-family: Consolas, Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ── 流程信息卡 ── */
+.流程信息卡 { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; background: linear-gradient(180deg,#f8fbff,#f1f7ff); margin-bottom: 16px; overflow: hidden; }
+.流程信息卡-头部 { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #dbeafe; }
+.流程步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.流程信息卡-环节名 { font-size: 13.5px; font-weight: 600; color: #1e3a8a; }
+.流程信息卡-正文 { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+.流程信息卡-行 { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.流程信息卡-标签 { flex-shrink: 0; display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+
+/* ── 列表页 ── */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 150px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 150px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; white-space: nowrap; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; margin-right: 6px; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+
+/* ── 字段卡（弹窗表单与详情抽屉共用） ── */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 20px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius:  10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 120px 1fr 28px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 140px; }
+.field-input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; width: 100%; max-width: 360px; font-family: inherit; }
+textarea.field-input { max-width: 100%; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+.field-info-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ── 详情抽屉 / 表单弹窗（右侧滑出） ── */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; max-width: 94vw; height: 100vh; background: #f8fafc; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 60px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: #fff; }
+.panel-title { font-size: 17px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ── 字段弹窗 ── */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ── 泳道图组件（2026 蓝圈号标准版） ── */
+.泳道图 { margin: 0; font-size: 13px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道圆圈 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支说明 { font-size: 12px; color: #b45309; padding: 2px 0 0 26px; line-height: 1.6; }
+.泳道行 { transition: opacity .25s ease; }
+.泳道图[class*="高亮阶段"] .泳道行[data-node-phase] { opacity: .35; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"], .泳道图.高亮阶段2 .泳道行[data-node-phase="2"],
+.泳道图.高亮阶段3 .泳道行[data-node-phase="3"], .泳道图.高亮阶段4 .泳道行[data-node-phase="4"],
+.泳道图.高亮阶段5 .泳道行[data-node-phase="5"], .泳道图.高亮阶段6 .泳道行[data-node-phase="6"],
+.泳道图.高亮阶段7 .泳道行[data-node-phase="7"], .泳道图.高亮阶段8 .泳道行[data-node-phase="8"],
+.泳道图.高亮阶段9 .泳道行[data-node-phase="9"], .泳道图.高亮阶段10 .泳道行[data-node-phase="10"] { opacity: 1; }
+.泳道行.置灰 { opacity: .25 !important; pointer-events: none; }
+.泳道行.当前 { opacity: 1 !important; }
+
+/* ── 提示消息 / 灯箱 / 杂项 ── */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+</style>
+<style id="css-状态">
+.页面面板.激活 { display: block; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.图片灯箱.可见 { display: flex; }
+</style>
+</head>
+<body>
+<div class="应用壳">
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">双小程序部署指引</div><div class="菜单品牌小">B 端业务原型 · 2026-09-15</div></div>
+<div class="菜单父"><span>需求与流程</span></div>
+<div class="菜单文档 子级 激活" data-menu-page="1" onclick="切换页面('1')"><span class="菜单号">001</span><span>需求背景与目标</span></div>
+<div class="菜单文档 子级" data-menu-page="2" onclick="切换页面('2')"><span class="菜单号">002</span><span>业务流程</span></div>
+<div class="菜单父"><span>第一阶段：商家主体准备</span></div>
+<div class="菜单叶子" data-menu-page="3.1" onclick="切换页面('3.1')"><span class="菜单号">3.1</span><span class="菜单图标">📋</span><span>注册小程序</span></div>
+<div class="菜单叶子" data-menu-page="3.2" onclick="切换页面('3.2')"><span class="菜单号">3.2</span><span class="菜单图标">📋</span><span>准备商户号</span></div>
+<div class="菜单叶子" data-menu-page="3.3" onclick="切换页面('3.3')"><span class="菜单号">3.3</span><span class="菜单图标">📋</span><span>授权及入驻</span></div>
+<div class="菜单父"><span>第二阶段：言成部署与配置</span></div>
+<div class="菜单叶子" data-menu-page="4.1" onclick="切换页面('4.1')"><span class="菜单号">4.1</span><span class="菜单图标">📋</span><span>部署小程序</span></div>
+<div class="菜单叶子" data-menu-page="4.2" onclick="切换页面('4.2')"><span class="菜单号">4.2</span><span class="菜单图标">📋</span><span>配置物料和商品库</span></div>
+<div class="菜单父"><span>方笑天双业务接入方案</span></div>
+<div class="菜单叶子" data-menu-page="5.1" onclick="切换页面('5.1')"><span class="菜单号">5.1</span><span class="菜单图标">📋</span><span>业务概览</span></div>
+<div class="菜单叶子" data-menu-page="5.2" onclick="切换页面('5.2')"><span class="菜单号">5.2</span><span class="菜单图标">📋</span><span>电商方案：字段隔离</span></div>
+<div class="菜单叶子" data-menu-page="5.3" onclick="切换页面('5.3')"><span class="菜单号">5.3</span><span class="菜单图标">📋</span><span>餐餐补方案：复制菜单</span></div>
+</nav>
+<main class="内容区" id="内容区">
+<section class="页面面板 激活" id="面_1" data-page="1"><div class="页面卡"><div class="页面头"><h2>需求背景与目标</h2></div><div class="文档正文"><h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>我们承接两类业务，都需要依托商家作为小程序主体和商户号主体，由言成完成部署和后续运营配置：</p>
+<ul>
+<li><strong>支付代收小程序（A）</strong>：用户在小程序下单付款，资金直接进入商家商户号收款；商品上架和发货由言成完成。</li>
+<li><strong>返现小程序（B）</strong>：用户在我们这里领券下单后，获得返现金额，返现通过商家商户号转账到用户的微信零钱。</li>
+</ul>
+
+<p>两个小程序的业务模型不同，但部署流程相同：商家负责前三步主体准备（注册小程序、准备商户号、授权及入驻），后两步由我们执行（部署小程序、配置物料和商品库）。本指引把整条流程合并写一遍，覆盖双方需要执行的全部动作。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>改造前
+
+言成缺少标准化部署指引
+        ↓
+每次承接新商家时，注册类目、商户号能力、入驻关系、资料交接等步骤
+反复沟通确认，容易遗漏字段、选错类目、商户号能力开不全
+
+
+改造后
+
+商家按 ①②③ 完成主体准备
+        ↓
+言成按 ④⑤ 完成部署与配置
+        ↓
+A/B 两个小程序可正式承接业务</code></pre></div>
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>商家提供小程序主体（工具-比价类目）
+        +
+商家开通一个商户号，同时具备 JSAPI 支付（A 用）+ 商家转账到零钱（B 用）
+        +
+商家完成小程序授权及入驻
+        +
+言成部署小程序并配置物料/商品库
+        ↓
+A：用户付款 → 商家收款 → 言成发货
+B：用户领券下单 → 商家商户号转账给用户返现</code></pre></div>
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>主体资质就位</strong>：商家完成两个小程序注册（工具-比价类目）+ 一个商户号开通双能力 + 授权及入驻，形成可被部署的基础环境。</li>
+<li><strong>小程序部署上线</strong>：言成完成两个小程序的部署绑定与物料/商品库配置，业务可正常承接营业。</li>
+</ul>
+</div></div></section>
+<section class="页面面板" id="面_2" data-page="2"><div class="页面卡"><div class="页面头"><h2>业务流程</h2></div><div class="文档正文"><h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<p>泳道图需要同时表达状态时，采用以下原则：</p>
+<ul>
+<li>编号节点只写参与方实际执行的业务动作。</li>
+<li>状态标注写在触发该状态的动作之后，不占用新的流程序号。</li>
+<li>一张泳道图只展示核心状态主线。本指引核心业务对象为<strong>小程序部署记录</strong>（状态：已认证 → 已开通双能力 → 已绑定 → 已上线 → 可营业）。</li>
+<li>不得使用动作名称代替中间状态。</li>
+</ul>
+
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>后续正文按照业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前部署闭环，可划分为：</p>
+<p>1. <strong>第一阶段：商家主体准备（主要参与方：商家）</strong>：商家完成两个小程序注册（工具-比价类目）、一个商户号开通双能力（JSAPI 支付 + 商家转账到零钱）、两个小程序授权及入驻三步，形成可被部署的基础环境。</p>
+<p>2. <strong>第二阶段：言成部署与配置（主要参与方：言成）</strong>：言成承接商家的主体资质，完成两个小程序的部署绑定（AppID/AppSecret + 商户号相关字段），再统一配置物料和商品库，使业务可正常承接营业。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：商家主体准备
+① 注册小程序 → ② 准备商户号 → ③ 授权及入驻
+                    ↓
+第二阶段：言成部署与配置
+④ 部署小程序 → ⑤ 配置物料和商品库</code></pre></div>
+<p>每个步骤小节的 <code class="行内代码">#### 业务背景</code> 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。</p>
+<h3 class="阅读节标题">2.3 页面类型说明</h3>
+<p>本指引为部署操作指引文档，所有阶段小节统一使用「内容页」类型——纯文本指引，无字段表、无页面骨架、无列表交互弹窗。正文承载操作步骤、注意事项、资料清单和坑点提醒。</p>
+<hr></div></div></section>
+<section class="页面面板" id="面_3_1" data-page="3.1"><div class="页面卡"><div class="页面头"><h2>注册小程序</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 注册小程序</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">微信公众平台 &gt; 注册 &gt;</span> <span class="路径末段">小程序</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">注册后获得的 AppID、原始 ID（gh_ 开头）、小程序密钥（AppSecret）将作为第二阶段部署绑定的核心字段；选择的"工具-比价"服务类目决定后续该小程序可承接的业务范围。</span></div></div></div>
+<h4 class="阅读标题">主体类型选择</h4>
+<ul>
+<li><strong>企业/个体工商户</strong>：推荐使用企业主体注册；个体工商户也可，但部分支付能力受限。</li>
+<li><strong>所需材料</strong>：营业执照、法人身份证、对公账户（个体户可用法人个人银行卡）、300 元认证费（或法人微信扫码认证免费）。</li>
+<li><strong>主体名称</strong>：使用商家营业执照上的全称，不要缩写。</li>
+<li><strong>两个小程序各注册一个账号</strong>：A（支付代收）和 B（返现）需要分别注册独立的小程序账号，不能共用。</li>
+</ul>
+
+<h4 class="阅读标题">注册入口与操作步骤</h4>
+<p>1. 访问 <code class="行内代码">https://mp.weixin.qq.com/</code>，点击「立即注册」→ 选择「小程序」。</p>
+<p>2. 填写邮箱（未绑定过微信公众号/小程序的邮箱）、密码，完成邮箱激活。</p>
+<p>3. 主体类型选择：企业 / 个体工商户。</p>
+<p>4. 填写主体信息：上传营业执照、填写法人信息、对公账户信息。</p>
+<p>5. 法人微信扫码完成主体验证（推荐）或打款验证（300 元，到账后自动退回）。</p>
+<p>6. 完成注册，进入小程序后台。A 和 B 两个账号分别完成一次。</p>
+<h4 class="阅读标题">服务类目选择（重要）</h4>
+<ul>
+<li><strong>类目路径</strong>：小程序后台 > 设置 > 基本设置 > 服务类目 > 添加类目。</li>
+<li><strong>一级类目</strong>：工具。</li>
+<li><strong>二级类目</strong>：比价。</li>
+<li><strong>类目资质</strong>：工具-比价类目一般无需额外资质，可直接选择通过；如系统提示需补充资质，按提示上传。</li>
+<li><strong>不可选错</strong>：选错类目可能导致后续支付能力无法开通或被风控。A 和 B 两个小程序均使用同一类目。</li>
+<li><strong>不要选"电商平台"类目</strong>：电商平台类目需要 ICP 证、第三方平台资质等，门槛高且不适合本业务模型。</li>
+</ul>
+
+<h4 class="阅读标题">关键字段获取</h4>
+<ul>
+<li><strong>AppID</strong>：小程序后台 > 开发 > 开发管理 > 开发设置；用途：第二阶段绑定部署的核心标识，每个小程序各有一个。</li>
+<li><strong>AppSecret</strong>：小程序后台 > 开发 > 开发管理 > 开发设置 > 重置后复制；用途：与 AppID 配对用于接口调用；重置后旧密钥立即失效，需同步给言成。</li>
+<li><strong>原始 ID（gh_ 开头）</strong>：小程序后台 > 设置 > 基本设置；用途：部分跳转场景使用。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>邮箱不可复用</strong>：注册用的邮箱不可绑定过其他微信公众号/小程序；推荐申请新邮箱。</li>
+<li><strong>类目不要选"电商平台"</strong>：电商平台类目需要 ICP 证、第三方平台资质等，门槛高且不适合本业务模型。本指引统一选"工具-比价"。</li>
+<li><strong>AppSecret 重置同步</strong>：重置 AppSecret 后旧密钥立即失效；重置后必须第一时间同步给言成，否则线上小程序立即报错。</li>
+<li><strong>类目修改次数有限</strong>：每月类目修改次数有限，确认后再添加。</li>
+<li><strong>小程序名称</strong>：建议命名为"XX 比价""XX 优惠"等与工具-比价类目相符的名称，避免名称被驳回。</li>
+<li><strong>服务器域名白名单</strong>：本阶段暂不配置，由言成在第二阶段完成。</li>
+<li><strong>两个小程序分别注册</strong>：A 和 B 是两个独立小程序账号，不要试图用一个 AppID 承载两种业务。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>两个小程序均使用相同注册流程</strong>：A（支付代收）和 B（返现）的注册步骤、类目、主体资质完全一致，差异在第二阶段的部署配置和商户号能力使用方式。建议商家一次性注册两个小程序账号，避免后续来回切换主体。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'3.1'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_3_2" data-page="3.2"><div class="页面卡"><div class="页面头"><h2>准备商户号</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">②</span><span class="流程信息卡-环节名">当前环节：② 准备商户号</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">微信支付商户平台 &gt;</span> <span class="路径末段">入驻</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">商户号是支付能力和转账能力的载体，A 小程序需要使用该商户号完成 JSAPI 支付收款，B 小程序需要使用该商户号完成"商家转账到零钱"向用户返现。</span></div></div></div>
+<h4 class="阅读标题">一个商户号开通两种能力</h4>
+<p>商家只需开通一个微信支付商户号，在该商户号下同时开通：</p>
+<ul>
+<li><strong>JSAPI 支付（小程序支付）</strong>：A 小程序用户下单付款，资金直接进入商家商户号收款。</li>
+<li><strong>商家转账到零钱</strong>：B 小程序用户领券下单后，由该商户号发起向用户微信零钱的转账，完成返现。</li>
+</ul>
+
+<h4 class="阅读标题">开通操作步骤</h4>
+<p>1. 进入微信支付商户平台 <code class="行内代码">https://pay.weixin.qq.com/</code>，点击「商家入驻」或「立即接入」。</p>
+<p>2. 使用与小程序同主体的营业执照入驻，确保商户号主体与小程序主体一致。</p>
+<p>3. 提交营业执照、法人身份证、对公账户、超级管理员信息等。</p>
+<p>4. 等待审核（通常 1-3 个工作日），审核通过后获得商户号（MCHID）。</p>
+<p>5. 在商户号下关联两个小程序：进入商户平台 > 产品中心 > AppID 账号管理，分别关联 A 小程序和 B 小程序的 AppID。</p>
+<p>6. 开通两种产品能力：</p>
+<ul>
+<li>进入商户平台 > 产品中心，开通「JSAPI 支付」（默认开通）。</li>
+<li>进入商户平台 > 产品中心，申请开通「商家转账到零钱」（需满足条件，审核后开通）。</li>
+</ul>
+
+<h4 class="阅读标题">商家转账到零钱的开通条件</h4>
+<ul>
+<li>商户号状态正常，无重大违规记录。</li>
+<li>商户号需在 90 天内有真实交易流水（建议先开通 JSAPI 支付并产生少量测试交易）。</li>
+<li>部分商户号主体类型受限，建议提前在商户平台查询资格。</li>
+<li>若无法立即开通，先完成 A 小程序的部署和测试交易，待满足条件后再补开 B 的转账到零钱能力。</li>
+</ul>
+
+<h4 class="阅读标题">关键字段获取</h4>
+<ul>
+<li><strong>商户号 MCHID</strong>：商户平台 > 账户中心 > 商户信息；用途：部署支付能力时的核心字段。</li>
+<li><strong>商户 API 密钥</strong>：商户平台 > 账户中心 > API 安全 > 设置 API 密钥；用途：用于签名，与 MCHID 配对；设置后无法在商户平台直接查看，必须保存好。</li>
+<li><strong>商户证书</strong>：商户平台 > 账户中心 > API 安全 > 申请 API 证书；用途：用于转账到零钱等敏感接口调用，下载得到 <code class="行内代码">apiclient_cert.p12</code> 文件。</li>
+<li><strong>证书序列号</strong>：商户平台 > 账户中心 > API 安全 > 查看证书；用途：与证书文件配对使用。</li>
+<li><strong>AppID 关联关系</strong>：商户平台 > 产品中心 > AppID 账号管理；用途：确认 A、B 两个小程序均已关联到本商户号。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>主体必须一致</strong>：商户号主体必须与小程序主体一致，否则无法关联 AppID。</li>
+<li><strong>API 密钥保管</strong>：API 密钥设置后无法在商户平台直接查看，请保存好；丢失只能重置，重置后线上立即报错。</li>
+<li><strong>转账到零钱需先有流水</strong>：新开商户号不能立即开通转账到零钱，需 90 天内有交易。若 B 小程序部署期紧，可与商家提前规划流水产生节奏。</li>
+<li><strong>商户证书下载</strong>：证书文件 <code class="行内代码">apiclient_cert.p12</code> 必须妥善保存，言成在第二阶段需要使用；丢失只能重新申请。</li>
+<li><strong>商户号建议单独开通</strong>：建议为本指引的两个小程序单独开通商户号，避免资金混用和对账复杂。</li>
+<li><strong>若商家已有商户号</strong>：可复用现有商户号，但需在 AppID 账号管理中关联本指引的两个新小程序 AppID，并确认两种能力均已开通。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>商户号能力差异</strong>：A 小程序使用 JSAPI 支付（收款方向：用户→商家商户号），B 小程序使用商家转账到零钱（付款方向：商家商户号→用户）。一个商户号同时承载这两种能力，商家只需维护一个商户号即可覆盖两个小程序的资金流。两种能力的开通时机不必同步——A 可立即开通并产生流水，B 待条件满足后再开通。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'3.2'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_3_3" data-page="3.3"><div class="页面卡"><div class="页面头"><h2>授权及入驻</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">③</span><span class="流程信息卡-环节名">当前环节：③ 授权及入驻</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">系统后台 &gt;</span> <span class="路径末段">商户入驻</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">入驻后，商家的两个小程序 AppID 将与代码系统建立绑定关系，作为第二阶段言成部署和配置物料/商品库的承载平台。</span></div></div></div>
+<h4 class="阅读标题">入驻操作步骤</h4>
+<p>1. 言成向商家提供系统入驻入口（链接或二维码）。</p>
+<p>2. 商家使用小程序主体绑定的微信扫码进入入驻流程。</p>
+<p>3. 系统自动读取商家小程序的主体信息（企业名称、营业执照号、法人等）。</p>
+<p>4. 商家确认入驻协议，提交两个小程序的 AppID（A 小程序 AppID、B 小程序 AppID）。</p>
+<p>5. 系统校验 AppID 与主体一致性，校验通过后完成入驻。</p>
+<p>6. 入驻成功后，商家在系统后台拥有一个商户主账号。</p>
+<h4 class="阅读标题">关键字段</h4>
+<ul>
+<li><strong>商户主体名称</strong>：来源为系统自动读取；用途：入驻后商户账号的显示名称。</li>
+<li><strong>A 小程序 AppID</strong>：来源为商家填写；用途：第二阶段绑定 A 小程序的标识。</li>
+<li><strong>B 小程序 AppID</strong>：来源为商家填写；用途：第二阶段绑定 B 小程序的标识。</li>
+<li><strong>商户管理员微信</strong>：来源为商家填写；用途：后续言成与商家在系统内的协作账号。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>两个 AppID 都要填</strong>：入驻时务必同时填写 A、B 两个小程序的 AppID，遗漏任一将导致言成在第二阶段无法绑定该小程序。</li>
+<li><strong>AppID 主体必须与入驻主体一致</strong>：如商家填入其他主体的 AppID，校验会失败。</li>
+<li><strong>入驻后不要切换主体</strong>：入驻后若小程序主体变更，会导致入驻关系失效，需要重新入驻。</li>
+<li><strong>小程序主体注销则入驻失效</strong>：若商家后续注销小程序，代码系统中的入驻关系也会自动失效。</li>
+<li><strong>入驻前先完成 ①②</strong>：建议商家完成 ① 注册、② 商户号开通后再入驻，避免入驻后还要回头补主体资质。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>入驻是双方交接点</strong>：本步骤是商家主体准备的最后一步，也是言成接手部署的起点。入驻完成后，商家的前期准备工作结束，后续部署和配置均由言成在系统后台完成，商家只需配合提供必要字段（如 AppSecret、商户 API 密钥、商户证书等敏感信息）。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'3.3'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_4_1" data-page="4.1"><div class="页面卡"><div class="页面头"><h2>部署小程序</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">④</span><span class="流程信息卡-环节名">当前环节：④ 部署小程序</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">系统后台 &gt; 商户管理 &gt;</span> <span class="路径末段">小程序部署</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">部署完成后，A 小程序可承接用户付款（资金进入商家商户号），B 小程序可承接用户领券下单并触发返现流程。</span></div></div></div>
+<h4 class="阅读标题">部署前必须收到的商家资料清单</h4>
+<ul>
+<li>A 小程序 AppID + AppSecret</li>
+<li>B 小程序 AppID + AppSecret</li>
+<li>商户号 MCHID</li>
+<li>商户 API 密钥</li>
+<li>商户证书文件 <code class="行内代码">apiclient_cert.p12</code></li>
+<li>商户 API 证书序列号</li>
+</ul>
+
+<p>任一缺失即无法完成部署，先与商家确认补齐。所有敏感字段通过加密渠道传递，不要走明文聊天工具。</p>
+<h4 class="阅读标题">部署操作步骤</h4>
+<p>1. 登录系统后台，进入对应商户账号。</p>
+<p>2. 进入「小程序部署」页面，分别选择 A 小程序和 B 小程序。</p>
+<p>3. 填写以下字段并保存：</p>
+<ul>
+<li>AppID（自动带出商家入驻时填写的 AppID，可校对）</li>
+<li>AppSecret（向商家获取，填入后保存）</li>
+<li>服务器域名白名单（request 域名、uploadFile 域名、downloadFile 域名等，按系统文档配置）</li>
+</ul>
+
+<p>4. 进入「支付配置」页面，填写商户号相关字段：</p>
+<ul>
+<li>商户号 MCHID</li>
+<li>商户 API 密钥</li>
+<li>上传商户证书文件 <code class="行内代码">apiclient_cert.p12</code></li>
+<li>填写证书序列号</li>
+</ul>
+
+<p>5. 分别配置两个小程序的支付能力：</p>
+<ul>
+<li>A 小程序：启用 JSAPI 支付，资金收款到商家商户号。</li>
+<li>B 小程序：启用商家转账到零钱，配置返现触发规则。</li>
+</ul>
+
+<p>6. 提交部署，系统自动校验 AppID + AppSecret + 商户号关联关系。</p>
+<p>7. 校验通过后，部署完成，小程序可正常访问。</p>
+<h4 class="阅读标题">关键字段配置说明</h4>
+<ul>
+<li><strong>AppSecret</strong>：配置位置为小程序部署页；必须与商家小程序后台设置的 AppSecret 一致；若商家后续重置 AppSecret，本字段需同步更新，否则线上立即报错。</li>
+<li><strong>服务器域名白名单</strong>：配置位置为小程序部署页；必须包含系统业务域名，否则小程序内业务接口调用失败；每月修改次数有限，建议一次性配置完整。</li>
+<li><strong>商户 API 密钥</strong>：配置位置为支付配置页；必须与商户平台设置的 API 密钥一致。</li>
+<li><strong>商户证书</strong>：配置位置为支付配置页；用于 B 小程序的转账到零钱接口调用；证书默认 1 年有效，到期前需在商户平台续期并重新上传。</li>
+</ul>
+
+<h4 class="阅读标题">部署后的自检</h4>
+<ul>
+<li>用真机扫码进入 A 小程序，尝试下单支付一笔小额测试订单（如 1 分钱或 1 元），确认资金进入商家商户号。</li>
+<li>用真机扫码进入 B 小程序，触发一次返现流程，确认商家商户号成功向测试用户微信零钱转账。</li>
+<li>检查系统后台日志，确认接口调用无异常。</li>
+<li>自检全部通过后，通知商家部署完成，进入 4.2 配置物料和商品库。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>AppSecret 同步</strong>：商家若在小程序后台重置 AppSecret，必须第一时间告知言成，否则线上立即报错。</li>
+<li><strong>服务器域名每月修改次数有限</strong>：建议一次性配置完整，避免反复修改。</li>
+<li><strong>商户证书有效期</strong>：商户证书默认 1 年有效，到期前需在商户平台续期并重新上传；建议建立证书到期台账。</li>
+<li><strong>两个小程序的支付配置独立</strong>：A 和 B 在系统内是两条独立的部署记录，不要混淆字段，AppID/AppSecret/商户号不要张冠李戴。</li>
+<li><strong>测试金额要小</strong>：自检时使用 1 分钱或 1 元订单，避免大额资金误转。</li>
+<li><strong>敏感字段加密传递</strong>：AppSecret、商户 API 密钥、证书文件不要走明文聊天工具传递，建议使用加密渠道。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>部署完成即可营业（技术层面）</strong>：本步骤完成后，两个小程序从技术层面已具备承接业务的能力，但物料和商品库尚未配置，用户进入小程序仍看不到可购买/可领取的内容，需要继续完成 4.2 的物料和商品库配置。A 和 B 的部署记录相互独立，但共用一个商户号——商户号字段只配置一次，但要在 A、B 两个部署记录中分别引用。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'4.1'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_4_2" data-page="4.2"><div class="页面卡"><div class="页面头"><h2>配置物料和商品库</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑤</span><span class="流程信息卡-环节名">当前环节：⑤ 配置物料和商品库</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">系统后台 &gt;</span> <span class="路径末段">商品/物料管理</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">配置完成后，A 小程序展示可下单商品，B 小程序展示可领取的优惠券和返现规则，两个小程序进入可营业状态。</span></div></div></div>
+<h4 class="阅读标题">配置内容范围</h4>
+<p>本步骤统一为两个小程序配置业务内容：</p>
+<ul>
+<li><strong>A 小程序（支付代收）</strong>：商品库——上架商品、配置价格、库存、发货模板。</li>
+<li><strong>B 小程序（返现）</strong>：物料库——配置优惠券（领券规则、面额、有效期），配置返现规则（返现金额、触发条件、上限）。</li>
+</ul>
+
+<h4 class="阅读标题">配置操作步骤</h4>
+<p>1. 登录系统后台，进入对应商户账号。</p>
+<p>2. 进入「商品库管理」（A 小程序用），新建商品：</p>
+<ul>
+<li>填写商品名称、商品图片、商品详情、价格、库存。</li>
+<li>关联发货模板（言成这边发货，使用言成的发货主体）。</li>
+<li>设置商品上架状态为「上架」。</li>
+</ul>
+
+<p>3. 进入「物料/优惠券管理」（B 小程序用），新建优惠券和返现规则：</p>
+<ul>
+<li>优惠券：填写券名称、面额、领取条件（如满 X 元可用）、有效期、发放总量。</li>
+<li>返现规则：配置返现金额、触发条件（如领券后下单成功）、返现上限、返现到账方式（即时 / 延迟）。</li>
+</ul>
+
+<p>4. 配置完成后，在 A、B 小程序内分别验证：</p>
+<ul>
+<li>A 小程序：商品列表是否展示，下单支付流程是否走通，资金是否进入商家商户号，发货是否由言成完成。</li>
+<li>B 小程序：优惠券是否可领取，用户领券下单后是否触发返现，返现是否到账用户零钱。</li>
+</ul>
+
+<p>5. 确认无误后，正式上线运营。</p>
+<h4 class="阅读标题">关键配置字段说明</h4>
+<ul>
+<li><strong>商品名称/图片/价格/库存</strong>：所属为 A 商品库；用途为决定 A 小程序商品列表展示和下单流程。</li>
+<li><strong>发货模板</strong>：所属为 A 商品库；用途为关联言成这边的发货主体，下单后由言成这边发货；务必关联言成发货主体，不要使用商家的发货模板。</li>
+<li><strong>优惠券面额/有效期/总量</strong>：所属为 B 物料库；用途为决定 B 小程序可领取的券。</li>
+<li><strong>返现金额/触发条件/上限</strong>：所属为 B 物料库；用途为决定用户领券下单后获得的返现。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>发货主体是言成这边</strong>：A 小程序的商品虽然由商家收款，但发货由言成这边完成，发货模板必须关联言成的发货主体，不要使用商家的发货模板。</li>
+<li><strong>返现金额要事先核算</strong>：返现金额来自商家商户号转账到用户零钱，转账金额和手续费需提前与商家对账确认，避免商家商户号资金不足导致返现失败。</li>
+<li><strong>优惠券发放总量有限制</strong>：超发会导致用户领取后无法使用，建议设上限并监控。</li>
+<li><strong>商品上架后不可频繁改价</strong>：频繁改价可能触发微信侧的风控，建议改价前下架再重新上架。</li>
+<li><strong>B 小程序的返现触发条件与领券绑定</strong>：返现必须基于"领券下单"才触发，避免无券直接下单也返现造成资金损失。</li>
+<li><strong>测试时使用小额订单</strong>：A 测试用 1 分钱或 1 元订单；B 测试用小额返现，避免返现金额超过测试预算。</li>
+<li><strong>正式上线前与商家对账</strong>：返现资金来自商家商户号，上线前需与商家确认商户号余额充足，避免上线后返现失败影响用户体验。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>配置完成进入营业</strong>：本步骤是整个部署流程的最后一步。配置完成后，两个小程序均具备承接业务的能力——A 小程序有可下单付款的商品（资金进入商家商户号，由言成这边发货），B 小程序有可领取的优惠券和返现规则（用户领券下单后由商家商户号转账返现到用户零钱）。两个小程序正式进入可营业状态，本指引流程闭环完成。</p>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'4.2'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_5_1" data-page="5.1"><div class="页面卡"><div class="页面头"><h2>业务概览</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">★</span><span class="流程信息卡-环节名">当前环节：方笑天双业务接入</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">系统后台 &gt;</span> <span class="路径末段">方笑天小程序</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">方笑天的新小程序可承接电商下单与餐餐补配置两套业务，进入可营业状态。</span></div></div></div>
+<h4 class="阅读标题">业务范围</h4>
+<p>方笑天的新小程序承接 2 套业务：</p>
+<ul>
+<li><strong>电商</strong>：上架、配置、发货、售后 — 全流程由言成运营执行，只作用于方笑天的新小程序。</li>
+<li><strong>餐餐补</strong>：配置链接路径，数据页只显示方笑天的数据 — 由言成运营执行。</li>
+</ul>
+
+<h4 class="阅读标题">实操人员</h4>
+<ul>
+<li><strong>统一由言成运营执行</strong>：上架、配置、发货、售后均由言成运营在系统后台完成，方笑天仅作为小程序主体提供方。</li>
+</ul>
+
+<h4 class="阅读标题">技术方案路线</h4>
+<p>两套业务采用不同的隔离策略：</p>
+<ul>
+<li><strong>电商 → 字段隔离</strong>：在订单表、商品分类表、发货售后表上加字段做归属过滤，同一张数据表支持多方可见。</li>
+<li><strong>餐餐补 → 物理复制菜单</strong>：复制一套菜单，加后缀 <code class="行内代码">_方笑天</code>，新菜单只配置方笑天的，旧菜单保留言成的。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>两套业务双轨并行</strong>：电商用字段隔离策略保留共用数据 + 多方可见能力，餐餐补用物理复制菜单策略实现数据强隔离。两套业务边界清晰，互不干扰。策略选择依据业务本身的数据载体——电商以商品/订单为载体，字段过滤即可隔离；餐餐补以菜单为载体，菜单本身就是天然的隔离边界，物理复制更直接、风险更低。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'5.1'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_5_2" data-page="5.2"><div class="页面卡"><div class="页面头"><h2>电商方案：字段隔离</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">★</span><span class="流程信息卡-环节名">当前环节：电商接入</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">系统后台 &gt;</span> <span class="路径末段">商品/订单管理</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">通过字段过滤让方笑天的新小程序能承接上架、配置、发货、售后，同一商品库可被多方运营人员按归属方过滤查看。</span></div></div></div>
+<h4 class="阅读标题">字段改动清单</h4>
+<p>共改动 3 处表结构：</p>
+<ul>
+<li><strong>订单表加字段：订单来源</strong>
+<ul>
+<li>字段类型：前端返</li>
+<li>取值：标识订单来自哪个小程序（如方笑天小程序、言成小程序）</li>
+<li>用途：按订单来源过滤、统计各小程序订单</li>
+</ul>
+</li>
+<li><strong>商品分类表加字段：归属方</strong>
+<ul>
+<li>字段类型：单选枚举</li>
+<li>取值：全部 / 言成 / 方笑天</li>
+<li>默认值：全部</li>
+<li>用途：决定分类下商品对各运营方的可见性</li>
+</ul>
+</li>
+<li><strong>发货 · 售后表加字段：来源小程序</strong>
+<ul>
+<li>字段类型：标识字段</li>
+<li>取值：标识发货/售后归属哪个小程序</li>
+<li>用途：按小程序维度做发货和售后归属过滤</li>
+</ul>
+</li>
+</ul>
+
+<h4 class="阅读标题">商品与分类的挂载关系（多选）</h4>
+<ul>
+<li>一个商品可同时挂载到多个分类下，挂载关系为<strong>多选</strong>。</li>
+<li>当商品挂多个分类时，其可见归属方 = 所挂载分类归属方的<strong>并集</strong>。</li>
+</ul>
+
+<h4 class="阅读标题">跨分类并集示例</h4>
+<div class="代码块"><div class="代码头">text</div><pre><code>A 分类（零食）归属：方笑天
+B 分类（酒水）归属：言成
+        ↓
+商品"可乐"同时挂 A + B 两个分类
+        ↓
+可乐的可见归属方 = A 归属 ∪ B 归属 = {方笑天, 言成}
+        ↓
+结果：方笑天和言成的运营人员均能看到可乐</code></pre></div>
+<h4 class="阅读标题">关键字段配置说明</h4>
+<ul>
+<li><strong>订单来源</strong>：由前端在用户下单时返回，标识订单来自哪个小程序；后端按此字段做订单过滤和统计。</li>
+<li><strong>归属方</strong>：配置位置为商品分类管理页；决定该分类下商品对各运营方的可见范围；默认"全部"以兼容存量数据。</li>
+<li><strong>来源小程序</strong>：配置位置为发货/售后表；与订单来源对应，标识发货/售后归属哪个小程序。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>归属方默认全部</strong>：新增分类默认归属"全部"，避免存量商品突然不可见；新建言成或方笑天专属分类时需手动改为对应归属方。</li>
+<li><strong>可乐类跨分类商品</strong>：跨分类商品按并集归属方处理，不要试图用单一归属方覆盖，否则会导致一方运营人员看不到本应可见的商品。</li>
+<li><strong>订单来源必须前端返</strong>：前端下单时必须把订单来源字段传给后端，遗漏会导致订单无法按小程序过滤，统计和发货归属都会出错。</li>
+<li><strong>发货/售后归属与订单来源对应</strong>：发货/售后的"来源小程序"必须与订单来源保持一致，避免出现方笑天订单被言成发货的串单问题。</li>
+<li><strong>挂载关系为多选</strong>：商品挂载分类时允许多选，但要确认归属方并集后的可见范围符合预期，避免误挂导致商品对不该可见的一方暴露。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>字段隔离保留共用商品库</strong>：电商方案不在表层面复制数据，而是通过字段过滤实现"同一商品库、多方可见"。订单来源决定订单归属，归属方决定商品可见范围，来源小程序决定发货/售后归属。三方字段协同形成完整的电商业务隔离闭环，避免数据冗余和对账复杂。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'5.2'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_5_3" data-page="5.3"><div class="页面卡"><div class="页面头"><h2>餐餐补方案：复制菜单</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">★</span><span class="流程信息卡-环节名">当前环节：餐餐补接入</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">系统后台 &gt;</span> <span class="路径末段">餐餐补菜单</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">通过复制菜单物理隔离方笑天与言成的餐餐补配置和数据，新菜单只配置方笑天的，旧菜单保留言成的。</span></div></div></div>
+<h4 class="阅读标题">字段改动清单</h4>
+<p><strong>无字段改动</strong> — 通过菜单复制 + 后缀命名实现隔离。</p>
+<h4 class="阅读标题">菜单复制规则</h4>
+<ul>
+<li><strong>旧菜单（无后缀）</strong>：原菜单路径保留，归属言成；数据页只显示言成的数据。</li>
+<li><strong>新菜单（加后缀 <code class="行内代码">_方笑天</code>）</strong>：复制旧菜单得到，归属方笑天；数据页只显示方笑天的数据。</li>
+</ul>
+
+<h4 class="阅读标题">配置操作步骤</h4>
+<p>1. 复制旧餐餐补菜单，新菜单路径 = 旧菜单路径 + <code class="行内代码">_方笑天</code>。</p>
+<p>2. 在新菜单中配置方笑天的餐餐补链接路径。</p>
+<p>3. 旧菜单保持言成的配置不变。</p>
+<p>4. 验证新菜单数据页只显示方笑天的数据，旧菜单数据页只显示言成的数据。</p>
+<h4 class="阅读标题">关键字段配置说明</h4>
+<ul>
+<li><strong>菜单后缀</strong>：统一使用 <code class="行内代码">_方笑天</code>；新菜单路径 = 旧菜单路径 + <code class="行内代码">_方笑天</code>。</li>
+<li><strong>数据隔离</strong>：新菜单的数据页只展示方笑天的数据，旧菜单的数据页只展示言成的数据；两套菜单物理隔离，互不影响。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>后缀统一用 <code class="行内代码">_方笑天</code></strong>：所有方笑天的菜单统一使用 <code class="行内代码">_方笑天</code> 后缀，避免出现 <code class="行内代码">_fxt</code>、<code class="行内代码">_方笑天2026</code> 等不一致命名导致菜单混乱。</li>
+<li><strong>新菜单是复制不是新建</strong>：复制旧菜单得到新菜单，确保菜单结构与字段一致；不要手动新建菜单导致结构差异，否则后续维护成本高。</li>
+<li><strong>数据页不要混数据</strong>：新菜单数据页必须只显示方笑天的数据；如出现言成数据，需排查菜单复制时是否带过来旧数据，并清理。</li>
+<li><strong>旧菜单配置不要动</strong>：复制后旧菜单保留言成配置不变，避免影响言成现有业务；如确需调整言成配置，在旧菜单独立操作。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>物理复制实现强隔离</strong>：餐餐补方案不用字段过滤，而是通过复制菜单 + 后缀命名做物理隔离。两套菜单独立配置、独立数据页，不存在数据交叉风险。策略选择原因：餐餐补的链接路径配置和数据展示以菜单为载体，菜单本身就是天然的隔离边界，比加字段更直接、风险更低、维护成本更可控。</p>
+
+<h4 class="阅读标题">餐餐补推广位</h4>
+
+<h5>① 测试</h5>
+
+<p><strong>美团</strong></p>
+<div class="表格容器"><table class="阅读表格">
+<thead><tr><th>项目</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>账号</td><td>无人科技</td></tr>
+<tr><td>appkey</td><td><code class="行内代码">71e249e79e30430bb27eeb270eb2a8bd</code></td></tr>
+<tr><td>媒体位名称</td><td>餐餐补-测试</td></tr>
+<tr><td>媒体位ID</td><td><code class="行内代码">1000460008</code></td></tr>
+<tr><td>appsecret</td><td><code class="行内代码">21dff2a2278246288165028d2e37c589</code></td></tr>
+</tbody>
+</table></div>
+
+<p><strong>饿了么</strong></p>
+<div class="表格容器"><table class="阅读表格">
+<thead><tr><th>项目</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>账号</td><td>言成科技（新）</td></tr>
+<tr><td>密钥</td><td><code class="行内代码">b513a701d8e232767783562c7233e023</code></td></tr>
+<tr><td>媒体位</td><td><code class="行内代码">442005</code></td></tr>
+<tr><td>pid</td><td><code class="行内代码">alsc_14723075_442005_46661033</code></td></tr>
+<tr><td>官方推广位名称</td><td>newyc78channelid859</td></tr>
+<tr><td>后台推广位名称</td><td>餐餐补测试</td></tr>
+</tbody>
+</table></div>
+
+<h5>② 部署</h5>
+
+<p><strong>美团</strong></p>
+<div class="表格容器"><table class="阅读表格">
+<thead><tr><th>项目</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>账号</td><td>无人科技</td></tr>
+<tr><td>appkey</td><td><code class="行内代码">771b311a73654d73bba758c8c4a65ea3</code></td></tr>
+<tr><td>媒体位名称</td><td>ccb-fxt</td></tr>
+<tr><td>媒体位ID</td><td><code class="行内代码">1000488696</code></td></tr>
+<tr><td>appsecret</td><td><code class="行内代码">ccecb4104d774b6394827b169569019e</code></td></tr>
+</tbody>
+</table></div>
+
+<p><strong>饿了么</strong></p>
+<p>待定</p>
+
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'5.3'}, '指引详情')">详情</button></div>
+</div></section>
+</main>
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<p class="泳道简介">我们承接两类业务，都需要依托商家作为小程序主体和商户号主体，由言成完成部署和后续运营配置：</p>
+<div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;">
+<div class="泳道图-头" style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid #e2e8f0;">
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">商家</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">言成-运营</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#f8fafc;color:#475569;">代码系统</div>
+</div><div class="泳道图-体">
+<div class="泳道行" data-swimlane-node="1" data-node-phase="1" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">①</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">注册小程序</span></div><span class="泳道状态徽章 信息色">小程序主体：已认证</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="2" data-node-phase="1" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">②</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">准备商户号</span></div><span class="泳道状态徽章 信息色">商户号：已开通双能力</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="3" data-node-phase="1" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">③</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">授权及入驻</span></div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="4" data-node-phase="2" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">④</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">部署小程序</span></div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="5" data-node-phase="2" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑤</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">配置物料和商品库</span></div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+</div></div>
+</aside>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭抽屉();关闭表单弹窗()"></div>
+<aside id="detailDrawer" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="detailDrawerTitle">详情</div>
+    <button class="btn-close" onclick="关闭抽屉()">×</button>
+  </div>
+  <div id="detailBody" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭抽屉()">关闭</button>
+  </div>
+</aside>
+<aside id="表单弹窗面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="表单弹窗标题">新增</div>
+    <button class="btn-close" onclick="关闭表单弹窗()">×</button>
+  </div>
+  <div id="表单弹窗正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭表单弹窗()">取消</button>
+    <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-泳道映射">
+window._泳道节点映射 = {"3.1": [1], "3.2": [2], "3.3": [3], "4.1": [4], "4.2": [5]};
+window._阶段泳道映射 = {"3": 1, "4": 2};
+</script>
+<script id="js-页面切换">
+// 唯一导航函数：叶子菜单 onclick="切换页面('4.1')"。父节点不可点，无展开收起逻辑。
+function 切换页面(页码) {
+  document.querySelectorAll('.页面面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(页码).replace('.', '_'));
+  if (panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单文档,.菜单叶子').forEach(function(a) { a.classList.remove('激活'); });
+  var link = document.querySelector('[data-menu-page="' + 页码 + '"]');
+  if (link) link.classList.add('激活');
+  var c = document.getElementById('内容区'); if (c) c.scrollTop = 0;
+  更新泳道高亮(页码);
+}
+// 泳道两级高亮合并：阶段减弱（第一级）+ 本页节点置灰（第二级）；文档页(1/2)自动清空
+function 更新泳道高亮(页码) {
+  var 图 = document.getElementById('全局泳道图'); if (!图) return;
+  图.className = 图.className.replace(/ ?高亮阶段\d+/g, '');
+  var 阶段号 = String(页码).split('.')[0];
+  var k = (window._阶段泳道映射 || {})[阶段号];
+  if (k) 图.classList.add('高亮阶段' + k);
+  var nums = (window._泳道节点映射 || {})[页码];
+  图.querySelectorAll('.泳道行').forEach(function(r) {
+    if (!nums) { r.classList.remove('置灰'); r.classList.remove('当前'); return; }
+    var on = nums.indexOf(parseInt(r.getAttribute('data-swimlane-node'), 10)) >= 0;
+    r.classList.toggle('当前', on);
+    r.classList.toggle('置灰', !on);
+  });
+}
+</script>
+<script id="js-字段联动">
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); }
+}
+// 枚举置灰通用函数：受控分组在「启用值」命中时正常，否则整组变淡且不可点。
+// 用法：置灰切换_模板('grp_退货设置', this.value, ['是'])；多组受控就在适配函数里多调几次。
+function 置灰切换_模板(组id, val, 启用值列表) {
+  var on = 启用值列表.indexOf(val) >= 0;
+  var el = document.getElementById(组id);
+  if (el) { el.style.opacity = on ? '1' : '0.35'; el.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+</script>
+<script id="js-抽屉">
+window._详情字段按节 = window._详情字段按节 || {};
+function 打开抽屉(行数据, 标题) {
+  var drawer = document.getElementById('detailDrawer'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('detailBody'); var titleEl = document.getElementById('detailDrawerTitle');
+  if (!drawer || !body) return; titleEl.textContent = 标题 || '详情';
+  var 当前节 = (行数据 && 行数据._壳节编号) || '';
+  var 详情字段 = (当前节 && window._详情字段按节[当前节]) ? window._详情字段按节[当前节] : [];
+  var html = '<div class="编辑卡片区">';
+  function 渲染详情字段行(f, 值) {
+    var row = '';
+    row += '<div class="field-row" style="grid-template-columns:120px 1fr 28px;">';
+    row += '<span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control"><span class="field-display">' + 值 + '</span>';
+    row += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (当前节 && window._详情字段分组 && window._详情字段分组[当前节]) ? window._详情字段分组[当前节] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 详情字段.length; k++) {
+          if (详情字段[k].名称 === 组.字段[j]) {
+            var val = (行数据 && 行数据[组.字段[j]] !== undefined) ? String(行数据[组.字段[j]]) : '—';
+            html += 渲染详情字段行(详情字段[k], val);
+            break;
+          }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="空状态">该列表未注册详情字段分组（_详情字段分组）</div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭抽屉() { var d = document.getElementById('detailDrawer'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o && !document.getElementById('表单弹窗面板').classList.contains('show')) o.classList.remove('show'); }
+</script>
+<script id="js-表单弹窗">
+// 数据驱动的新增/编辑弹窗：window._表单字段按节['4.1'] + window._新增字段分组['4.1']
+// 三个可选扩展（枚举置灰场景三件套）：
+//   window._新增控制逻辑['4.1'] = 规则摘要框 HTML（弹窗顶部说明）
+//   字段对象加 联动:'置灰切换_xx(this.value)'（enum 下拉 onchange，串内只用单引号）
+//   分组对象加 id:'grp_xx'；window._弹窗初始化['4.1'] = function(){...}（弹窗打开后执行一次初始置灰）
+function 打开表单弹窗(节编号, 模式) {
+  var drawer = document.getElementById('表单弹窗面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('表单弹窗正文'); var titleEl = document.getElementById('表单弹窗标题');
+  if (!drawer || !body) return;
+  模式 = 模式 || '新增';
+  var 字段列表 = (window._表单字段按节 && window._表单字段按节[节编号]) ? window._表单字段按节[节编号] : [];
+  titleEl.textContent = 模式 + ' · ' + 节编号;
+  var html = '<div class="编辑卡片区">';
+  var 控制逻辑块 = (window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  function 控件(f) {
+    if (f.编辑性 === '只读') return '<span class="field-readonly">' + (f.示例值 || '系统自动生成') + '</span>';
+    if (f.基础类型 === 'enum') {
+      var opts = (f.枚举值 || '').split(/[、,，]/).filter(Boolean);
+      var ev = f.联动 ? ' onchange="' + f.联动 + '"' : '';
+      var o = '<select class="field-select"' + ev + '>';
+      for (var i = 0; i < opts.length; i++) o += '<option>' + opts[i] + '</option>';
+      return o + '</select>';
+    }
+    if (f.基础类型 === '富文本') return '<textarea class="field-input" rows="3" placeholder="请输入">' + (f.示例值 || '') + '</textarea>';
+    return '<input class="field-input" value="' + (f.示例值 || '') + '" placeholder="请输入">';
+  }
+  function 渲染字段行(f) {
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">' + 控件(f) + '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"' + (组.id ? ' id="' + 组.id + '"' : '') + '><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 字段列表.length; k++) {
+          if (字段列表[k].名称 === 组.字段[j]) { html += 渲染字段行(字段列表[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>' + 模式 + '</h4></div><div class="field-card-body">';
+    if (字段列表.length === 0) html += '<div class="空状态">未注册弹窗字段（_表单字段按节 / _新增字段分组）</div>';
+    else for (var i = 0; i < 字段列表.length; i++) html += 渲染字段行(字段列表[i]);
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+  if (window._弹窗初始化 && window._弹窗初始化[节编号]) { try { window._弹窗初始化[节编号](); } catch (e) {} }
+}
+function 关闭表单弹窗() { var d = document.getElementById('表单弹窗面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o && !document.getElementById('detailDrawer').classList.contains('show')) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+</script>
+<script id="js-单元格截断">
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script>
+window._详情字段按节=window._详情字段按节||{};
+window._详情字段分组=window._详情字段分组||{};
+window._详情字段按节["3.1"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"3.1"}];
+window._详情字段分组["3.1"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["3.2"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"3.2"}];
+window._详情字段分组["3.2"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["3.3"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"3.3"}];
+window._详情字段分组["3.3"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["4.1"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"4.1"}];
+window._详情字段分组["4.1"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["4.2"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"4.2"}];
+window._详情字段分组["4.2"]=[{组名:"指引说明",字段:["指引说明"]}];
+</script>
+</body>
+</html>

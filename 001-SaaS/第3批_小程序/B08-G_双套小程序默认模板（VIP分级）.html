@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B08-G_双套小程序默认模板（VIP分级）</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;}
+body{margin:0;padding:24px 32px 48px;font-family:"PingFang SC","Microsoft YaHei",-apple-system,sans-serif;background:#fff;color:#1f2937;font-size:15px;line-height:1.75;max-width:900px;margin-left:auto;margin-right:auto;}
+h1{font-size:28px;margin:0 0 8px;padding-bottom:12px;border-bottom:2px solid #e2e8f0;color:#172033;}
+h2{font-size:22px;margin:32px 0 12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0;color:#1e293b;}
+h3{font-size:18px;margin:24px 0 8px;color:#334155;}
+h4{font-size:16px;margin:20px 0 6px;color:#475569;}
+p{margin:10px 0;}
+ul,ol{margin:10px 0 12px 22px;padding:0;}
+li{margin:5px 0;}
+strong{font-weight:750;color:#1e293b;}
+blockquote{margin:16px 0;border-left:4px solid #0f6b8f;background:#e8f4f8;border-radius:6px;padding:10px 14px;color:#223548;}
+blockquote p{margin:4px 0;}
+code{font-family:Consolas,"SFMono-Regular",Menlo,monospace;font-size:.9em;background:#eef2f6;border-radius:4px;padding:1px 5px;color:#111827;}
+pre{margin:16px 0;border:1px solid #d9e2ec;border-radius:8px;overflow-x:auto;background:#f8fafc;padding:16px;}
+pre code{background:transparent;padding:0;display:block;font-size:13px;line-height:1.55;white-space:pre;}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;}
+th{background:#f8fafc;padding:10px 14px;text-align:left;font-weight:700;color:#475569;border:1px solid #d9e2ec;}
+td{padding:8px 14px;border:1px solid #e2e8f0;color:#334155;}
+hr{margin:28px 0;border:0;border-top:1px solid #e2e8f0;}
+a{color:#2563eb;}
+img{max-width:100%;border-radius:8px;margin:16px 0;}
+</style>
+</head>
+<body>
+<h1>B08-G 双套小程序默认模板（VIP分级）</h1>
+<blockquote>
+<p><strong>状态</strong>：方案设计 | <strong>日期</strong>：2026-07-07 | <strong>类型</strong>：功能新增
+<strong>依赖</strong>：B01（商户注册）、B08-D（代码审核发布）</p>
+</blockquote>
+<hr>
+<h2>一、需求背景</h2>
+<p>系统目前只有 <strong>1 套</strong> 小程序默认模板（代码模板库 + 默认权益页布局），所有商户注册后看到的模板是一样的。</p>
+<p>现在需要支持 <strong>2 套</strong> 默认模板：</p>
+<table>
+<thead>
+<tr>
+<th>商户类型</th>
+<th>模板套系</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>普通商户</td>
+<td><strong>标准版模板</strong>（Standard）</td>
+<td>自主注册 / 普通邀请注册</td>
+</tr>
+<tr>
+<td>VIP 商户</td>
+<td><strong>VIP 专享模板</strong>（VIP）</td>
+<td>通过 VIP 链接注册的商户</td>
+</tr>
+</tbody></table>
+<p><strong>核心原则：做轻</strong>——代码写死 2 套模板，总后台和客户端都不增加配置项，纯逻辑判断。</p>
+<hr>
+<h2>二、VIP 商户识别机制</h2>
+<h3>2.0 VIP 链接标识（链路入口）</h3>
+<p>VIP 商户的识别必须从<strong>注册入口</strong>开始就有据可查。VIP 邀请链接携带一个可追溯的标识参数，注册时捕获并写入商户数据。</p>
+<h4>2.0.1 VIP 链接格式</h4>
+<pre><code>https://{domain}/register?channel=vip&amp;inviteCode=VIP20260707001
+                         └──────┬──────┘ └─────────┬─────────┘
+                          渠道标识=vip            邀请码（唯一，可追溯）
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>channel</code></td>
+<td>是</td>
+<td>固定值 <code>vip</code>，区分普通邀请链接</td>
+</tr>
+<tr>
+<td><code>inviteCode</code></td>
+<td>是</td>
+<td>VIP 邀请码，唯一编号，用于追溯&quot;这个商户是通过哪条 VIP 链接进来的&quot;</td>
+</tr>
+</tbody></table>
+<h4>2.0.2 注册流程捕获</h4>
+<pre><code>用户点击 VIP 链接
+      │
+      ▼
+注册页 URL 携带 ?channel=vip&amp;inviteCode=VIP20260707001
+      │
+      ▼
+前端解析 URL 参数：
+  const urlParams = new URLSearchParams(window.location.search);
+  const channel = urlParams.get(&#39;channel&#39;);       // &#39;vip&#39;
+  const inviteCode = urlParams.get(&#39;inviteCode&#39;); // &#39;VIP20260707001&#39;
+      │
+      ▼
+提交注册时，将标识写入商户数据：
+  merchant.source     = &#39;VIP邀请注册&#39;
+  merchant.inviteCode = &#39;VIP20260707001&#39;   ← 新增字段，可追溯
+  merchant.channel    = &#39;vip&#39;              ← 新增字段
+      │
+      ▼
+后端 / Mock 数据持久化，source 字段锁定
+</code></pre>
+<h4>2.0.3 代码如何查到</h4>
+<pre><code class="language-javascript">// 方式一：注册页入口 —— 从 URL 读取 VIP 标识
+function getVipParamsFromUrl() {
+  var params = new URLSearchParams(window.location.search);
+  return {
+    channel:    params.get(&#39;channel&#39;)    || &#39;&#39;,
+    inviteCode: params.get(&#39;inviteCode&#39;) || &#39;&#39;
+  };
+}
+
+// 方式二：全局 —— 判断当前商户是否 VIP
+function isVipMerchant(merchant) {
+  return merchant &amp;&amp; (
+    merchant.source === &#39;VIP邀请注册&#39; ||
+    merchant.channel === &#39;vip&#39;
+  );
+}
+
+// 方式三：模板选择 —— 根据 VIP 标识返回对应套系
+function getTemplateSetForMerchant(merchant) {
+  return isVipMerchant(merchant)
+    ? VIP_DEFAULT_TEMPLATES
+    : STANDARD_DEFAULT_TEMPLATES;
+}
+</code></pre>
+<h4>2.0.4 可追溯性</h4>
+<p>商户数据中新增两个字段，确保 VIP 来源全程可查：</p>
+<pre><code class="language-javascript">// 商户对象扩展
+{
+  id: &#39;M021&#39;,
+  companyName: &#39;深圳VIP精选科技有限公司&#39;,
+  source: &#39;VIP邀请注册&#39;,          // 原有字段，新增枚举值
+  inviteCode: &#39;VIP20260707001&#39;,  // ← 新增：VIP邀请码，关联到具体VIP链接
+  channel: &#39;vip&#39;,                // ← 新增：渠道标识
+  ...
+}
+</code></pre>
+<p>总后台商户列表可以看到 <code>source</code> 和 <code>inviteCode</code>，运营可以追溯&quot;这个 VIP 商户是通过哪条邀请链接进来的&quot;。</p>
+<hr>
+<h3>2.1 判定依据</h3>
+<p>商户数据中已有 <code>source</code> 字段（当前值：<code>&quot;自主注册&quot;</code> / <code>&quot;邀请注册&quot;</code>）。<strong>新增一种来源 + 两个辅助字段</strong>：</p>
+<pre><code class="language-javascript">// 商户 source 字段扩展
+source: &#39;自主注册&#39;       // 普通商户 → 标准版模板
+source: &#39;邀请注册&#39;       // 普通商户 → 标准版模板（channel 为空或非 vip）
+source: &#39;VIP邀请注册&#39;    // VIP商户  → VIP专享模板  ← 新增（channel=vip 时自动写入）
+</code></pre>
+<h3>2.2 判定逻辑（伪代码）</h3>
+<pre><code class="language-javascript">// 双条件判定：source 优先，channel 兜底
+function isVipMerchant(merchant) {
+  return merchant &amp;&amp; (
+    merchant.source === &#39;VIP邀请注册&#39; ||
+    merchant.channel === &#39;vip&#39;
+  );
+}
+
+function getTemplateSetForMerchant(merchant) {
+  return isVipMerchant(merchant) 
+    ? VIP_DEFAULT_TEMPLATES    // VIP 专享模板套系
+    : STANDARD_DEFAULT_TEMPLATES; // 标准版模板套系
+}
+</code></pre>
+<h3>2.3 影响范围</h3>
+<ul>
+<li><strong>VIP 链接生成时</strong>：运营在总后台生成 VIP 邀请链接，系统自动分配 <code>inviteCode</code>（格式 <code>VIP</code> + 日期 + 序号）</li>
+<li><strong>新商户注册时</strong>：前端解析 URL 参数 → 写入 <code>source</code> / <code>channel</code> / <code>inviteCode</code> → 根据 <code>source</code> 决定初始化哪套模板</li>
+<li><strong>已有商户</strong>：不受影响，维持现状</li>
+<li><strong>商户来源不可变更</strong>：注册后 <code>source</code> / <code>channel</code> 字段锁定，不会出现中途切换模板套系的问题</li>
+<li><strong>追溯查询</strong>：总后台商户列表可按 <code>source=&#39;VIP邀请注册&#39;</code> 筛选，按 <code>inviteCode</code> 追溯到具体 VIP 链接</li>
+</ul>
+<hr>
+<h2>三、两套模板定义</h2>
+<h3>3.1 标准版模板（STANDARD）—— 现有模板保持不变</h3>
+<h4>代码模板库（standardMiniappTemplates）</h4>
+<pre><code class="language-javascript">// 共 10 个模板（全部 enabled），就是当前 miniappTemplates 的子集
+standardMiniappTemplates: [
+  { id: &#39;MT001&#39;, name: &#39;电商通用模板&#39;,     version: &#39;v3.1.0&#39;, desc: &#39;适用于综合电商场景&#39;,       status: &#39;enabled&#39; },
+  { id: &#39;MT002&#39;, name: &#39;品牌展示模板&#39;,     version: &#39;v2.0.0&#39;, desc: &#39;适用于品牌展示和内容营销&#39;, status: &#39;enabled&#39; },
+  { id: &#39;MT003&#39;, name: &#39;会员管理模板&#39;,     version: &#39;v1.5.0&#39;, desc: &#39;适用于会员体系和积分管理&#39;, status: &#39;enabled&#39; },
+  { id: &#39;MT004&#39;, name: &#39;社区团购模板&#39;,     version: &#39;v2.0.0&#39;, desc: &#39;适用于社区团购和邻里拼团&#39;, status: &#39;enabled&#39; },
+  { id: &#39;MT005&#39;, name: &#39;本地生活模板&#39;,     version: &#39;v1.8.0&#39;, desc: &#39;适用于本地餐饮娱乐到店&#39;,   status: &#39;enabled&#39; },
+  { id: &#39;MT006&#39;, name: &#39;知识付费模板&#39;,     version: &#39;v1.2.0&#39;, desc: &#39;适用于课程/专栏/直播&#39;,     status: &#39;enabled&#39; },
+  { id: &#39;MT008&#39;, name: &#39;跨境海淘模板&#39;,     version: &#39;v1.0.0&#39;, desc: &#39;适用于跨境商品和海淘&#39;,     status: &#39;enabled&#39; },
+  { id: &#39;MT009&#39;, name: &#39;社交电商模板&#39;,     version: &#39;v1.3.0&#39;, desc: &#39;适用于社交分享和裂变&#39;,     status: &#39;enabled&#39; },
+  { id: &#39;MT010&#39;, name: &#39;O2O新零售模板&#39;,    version: &#39;v2.1.0&#39;, desc: &#39;适用于线上线下融合新零售&#39;, status: &#39;enabled&#39; },
+  { id: &#39;MT012&#39;, name: &#39;分销裂变模板&#39;,     version: &#39;v1.5.0&#39;, desc: &#39;适用于多级分销和裂变拉新&#39;, status: &#39;enabled&#39; }
+]
+</code></pre>
+<h4>默认权益页布局（standardDefaultStyleConfig）</h4>
+<pre><code class="language-javascript">standardDefaultStyleConfig: {
+  styleId: &#39;default_benefit_style&#39;,
+  components: [
+    { source: &#39;component&#39;, refId: &#39;CMP003&#39;, sortOrder: 0 },  // 标题栏C（饿了么）
+    { source: &#39;component&#39;, refId: &#39;CMP002&#39;, sortOrder: 1 },  // 链接按钮B（美团+H5）
+    { source: &#39;component&#39;, refId: &#39;CMP005&#39;, sortOrder: 2 },  // 图文展示E（多平台）
+    { source: &#39;component&#39;, refId: &#39;CMP007&#39;, sortOrder: 3 }   // 链接按钮G（饿了么+H5）
+  ]
+}
+</code></pre>
+<hr>
+<h3>3.2 VIP 专享模板（VIP）—— 精选增强版</h3>
+<h4>代码模板库（vipMiniappTemplates）</h4>
+<p>VIP 商户看到的模板，在标准版基础上 <strong>增加 3 个高阶模板</strong>（MT007 多商户入驻、MT011 拍卖竞价、MT013 虚拟商品）：</p>
+<pre><code class="language-javascript">vipMiniappTemplates: [
+  // --- 以下 10 个与标准版相同 ---
+  { id: &#39;MT001&#39;, name: &#39;电商通用模板&#39;,     version: &#39;v3.1.0&#39;, desc: &#39;适用于综合电商场景&#39;,       status: &#39;enabled&#39; },
+  { id: &#39;MT002&#39;, name: &#39;品牌展示模板&#39;,     version: &#39;v2.0.0&#39;, desc: &#39;适用于品牌展示和内容营销&#39;, status: &#39;enabled&#39; },
+  { id: &#39;MT003&#39;, name: &#39;会员管理模板&#39;,     version: &#39;v1.5.0&#39;, desc: &#39;适用于会员体系和积分管理&#39;, status: &#39;enabled&#39; },
+  { id: &#39;MT004&#39;, name: &#39;社区团购模板&#39;,     version: &#39;v2.0.0&#39;, desc: &#39;适用于社区团购和邻里拼团&#39;, status: &#39;enabled&#39; },
+  { id: &#39;MT005&#39;, name: &#39;本地生活模板&#39;,     version: &#39;v1.8.0&#39;, desc: &#39;适用于本地餐饮娱乐到店&#39;,   status: &#39;enabled&#39; },
+  { id: &#39;MT006&#39;, name: &#39;知识付费模板&#39;,     version: &#39;v1.2.0&#39;, desc: &#39;适用于课程/专栏/直播&#39;,     status: &#39;enabled&#39; },
+  { id: &#39;MT008&#39;, name: &#39;跨境海淘模板&#39;,     version: &#39;v1.0.0&#39;, desc: &#39;适用于跨境商品和海淘&#39;,     status: &#39;enabled&#39; },
+  { id: &#39;MT009&#39;, name: &#39;社交电商模板&#39;,     version: &#39;v1.3.0&#39;, desc: &#39;适用于社交分享和裂变&#39;,     status: &#39;enabled&#39; },
+  { id: &#39;MT010&#39;, name: &#39;O2O新零售模板&#39;,    version: &#39;v2.1.0&#39;, desc: &#39;适用于线上线下融合新零售&#39;, status: &#39;enabled&#39; },
+  { id: &#39;MT012&#39;, name: &#39;分销裂变模板&#39;,     version: &#39;v1.5.0&#39;, desc: &#39;适用于多级分销和裂变拉新&#39;, status: &#39;enabled&#39; },
+  // --- 以下 3 个为 VIP 专享（标准版没有） ---
+  { id: &#39;MT007&#39;, name: &#39;多商户入驻模板&#39;,   version: &#39;v1.2.0&#39;, desc: &#39;适用于多商户入驻平台型 ⭐VIP专享&#39;, status: &#39;enabled&#39; },
+  { id: &#39;MT011&#39;, name: &#39;拍卖竞价模板&#39;,     version: &#39;v1.0.0&#39;, desc: &#39;适用于拍卖竞价限时抢购 ⭐VIP专享&#39;, status: &#39;enabled&#39; },
+  { id: &#39;MT013&#39;, name: &#39;虚拟商品模板&#39;,     version: &#39;v1.3.0&#39;, desc: &#39;适用于课程/会员卡/电子券 ⭐VIP专享&#39;, status: &#39;enabled&#39; }
+]
+</code></pre>
+<h4>默认权益页布局（vipDefaultStyleConfig）</h4>
+<p>VIP 商户初始布局更丰富（6 个组件 vs 标准版 4 个）：</p>
+<pre><code class="language-javascript">vipDefaultStyleConfig: {
+  styleId: &#39;vip_benefit_style&#39;,
+  components: [
+    { source: &#39;component&#39;, refId: &#39;CMP003&#39;, sortOrder: 0 },  // 标题栏C
+    { source: &#39;component&#39;, refId: &#39;CMP001&#39;, sortOrder: 1 },  // 标题栏A（多平台）    ← VIP多一个标题
+    { source: &#39;component&#39;, refId: &#39;CMP002&#39;, sortOrder: 2 },  // 链接按钮B
+    { source: &#39;component&#39;, refId: &#39;CMP005&#39;, sortOrder: 3 },  // 图文展示E
+    { source: &#39;component&#39;, refId: &#39;CMP007&#39;, sortOrder: 4 },  // 链接按钮G
+    { source: &#39;component&#39;, refId: &#39;CMP010&#39;, sortOrder: 5 }   // 图文展示J（全覆盖）  ← VIP多一个图文
+  ]
+}
+</code></pre>
+<hr>
+<h2>四、两套模板差异对照</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>标准版（Standard）</th>
+<th>VIP 专享版（VIP）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>代码模板数量</strong></td>
+<td>10 个</td>
+<td>13 个（多 3 个高阶模板）</td>
+</tr>
+<tr>
+<td><strong>VIP 专享模板</strong></td>
+<td>无</td>
+<td>MT007 多商户入驻、MT011 拍卖竞价、MT013 虚拟商品</td>
+</tr>
+<tr>
+<td><strong>默认权益页组件</strong></td>
+<td>4 个</td>
+<td>6 个（多 1 标题 + 1 图文）</td>
+</tr>
+<tr>
+<td><strong>默认布局 ID</strong></td>
+<td><code>default_benefit_style</code></td>
+<td><code>vip_benefit_style</code></td>
+</tr>
+<tr>
+<td><strong>适用商户来源</strong></td>
+<td><code>自主注册</code> / <code>邀请注册</code></td>
+<td><code>VIP邀请注册</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>五、代码改动清单</h2>
+<h3>5.1 总后台 Demo（<code>003总后台演示稿/admin-demo/</code>）</h3>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>改动</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>js/admin-mock-data.js</code></td>
+<td>① 新增 <code>vipDefaultStyleConfig</code> 和 <code>standardDefaultStyleConfig</code><br>② 新增 <code>vipMiniappTemplates[]</code> 和 <code>standardMiniappTemplates[]</code><br>③ 原 <code>defaultStyleConfig</code> / <code>miniappTemplates</code> 改为向后兼容的别名<br>④ <code>merchants[]</code> 中增加 2-3 条 <code>source: &#39;VIP邀请注册&#39;</code> 的商户</td>
+</tr>
+<tr>
+<td><code>js/miniapp-admin.js</code></td>
+<td>① 模板库渲染时调用 <code>getTemplateSetForMerchant()</code> 选择对应模板集<br>② 发版任务下拉框按商户过滤模板</td>
+</tr>
+<tr>
+<td><code>js/page-admin.js</code></td>
+<td>① 默认模板弹窗，右上角显示「当前套系：标准版/VIP版」<br>② 两套默认模板可分别预览（只读展示，不可在总后台切换归属）</td>
+</tr>
+</tbody></table>
+<h3>5.2 客户端 Demo（<code>002功能演示稿/h5-demo/</code>）</h3>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>改动</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>js/mock-data.js</code></td>
+<td>① <code>currentMerchant</code> 增加 <code>source</code> 字段<br>② 模拟 <code>currentMerchant.source = &#39;VIP邀请注册&#39;</code> 的情况<br>③ 新增 <code>vipMiniappTemplates</code> / <code>standardMiniappTemplates</code></td>
+</tr>
+<tr>
+<td><code>pages/miniprogram-list.html</code></td>
+<td>① 小程序创建时，根据商户 source 展示不同模板集</td>
+</tr>
+<tr>
+<td><code>js/benefit-config.js</code></td>
+<td>① <code>renderInitialLayout()</code> 根据商户 source 选择对应默认布局</td>
+</tr>
+</tbody></table>
+<h3>5.3 业务文档</h3>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>改动</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>B08-G_双套小程序默认模板（VIP分级）.md</code></td>
+<td>本文档</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>六、不做什么</h2>
+<ul>
+<li>❌ <strong>总后台不做</strong>：不增加&quot;模板归属配置&quot;功能，不增加&quot;VIP模板管理&quot;页面</li>
+<li>❌ <strong>客户端不做</strong>：商户不能自己选择用哪套模板</li>
+<li>❌ <strong>不动态化</strong>：模板列表不通过接口获取，代码里硬编码</li>
+<li>❌ <strong>不存数据库</strong>：不建 <code>vip_template_config</code> 表，纯前端逻辑</li>
+<li>❌ <strong>不改变现有商户</strong>：只对新注册的 VIP 商户生效</li>
+</ul>
+<hr>
+<h2>七、数据流示意</h2>
+<pre><code>用户点击 VIP 邀请链接
+    │  URL: ?channel=vip&amp;inviteCode=VIP20260707001
+    ▼
+注册页解析 URL 参数
+    │  getVipParamsFromUrl() → { channel:&#39;vip&#39;, inviteCode:&#39;VIP20260707001&#39; }
+    ▼
+提交注册，写入商户数据
+    │  source=&#39;VIP邀请注册&#39;  channel=&#39;vip&#39;  inviteCode=&#39;VIP20260707001&#39;
+    ▼
+商户创建完成，source 锁定
+    │
+    ├─ source = &#39;自主注册&#39; / &#39;邀请注册&#39;
+    │     └─→ isVipMerchant() → false
+    │         ├─→ 加载 standardMiniappTemplates (10个)
+    │         └─→ 加载 standardDefaultStyleConfig (4组件)
+    │
+    └─ source = &#39;VIP邀请注册&#39;
+          └─→ isVipMerchant() → true
+              ├─→ 🏷️ 打上「VIP」标签（商户 + 名下小程序均标记）
+              ├─→ 加载 vipMiniappTemplates (13个)
+              └─→ 加载 vipDefaultStyleConfig (6组件)
+</code></pre>
+<hr>
+<h2>八、关键函数签名</h2>
+<pre><code class="language-javascript">/**
+ * 判断商户是否为VIP
+ * @param {Object} merchant - 商户对象
+ * @returns {boolean}
+ */
+function isVipMerchant(merchant) {
+  return merchant &amp;&amp; merchant.source === &#39;VIP邀请注册&#39;;
+}
+
+/**
+ * 根据商户类型获取对应的代码模板列表
+ * @param {Object} merchant - 商户对象（可选，不传返回标准版）
+ * @returns {Array} 模板列表
+ */
+function getMiniappTemplatesForMerchant(merchant) {
+  var D = window.AdminMockData;
+  if (!D) return [];
+  return isVipMerchant(merchant) 
+    ? D.vipMiniappTemplates 
+    : D.standardMiniappTemplates;
+}
+
+/**
+ * 根据商户类型获取对应的默认权益页布局
+ * @param {Object} merchant - 商户对象（可选，不传返回标准版）
+ * @returns {Object} 默认布局配置
+ */
+function getDefaultStyleConfigForMerchant(merchant) {
+  var D = window.AdminMockData;
+  if (!D) return null;
+  return isVipMerchant(merchant) 
+    ? D.vipDefaultStyleConfig 
+    : D.standardDefaultStyleConfig;
+}
+</code></pre>
+
+</body>
+</html>

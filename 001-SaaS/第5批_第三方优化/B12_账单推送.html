@@ -1,0 +1,1673 @@
+﻿<script type="text/plain" data-ai-only>
+# B12 账单推送
+
+> 业务主线：账单系统归集生成账单，或 SaaS 总后台通过 Excel 批量新建账单。两类账单确定客户归属后，进入同一套财务审核与客户送达流程。
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+常规账单、激励账单和合并账单可由账单系统归集生成。无法自动归集的账单由总后台通过 Excel 批量新建。
+
+无论账单从哪里形成，都必须先明确所属客户，再由财务审核。只有审核通过的账单才会送达客户，供客户查看并进入后续提现流程。
+
+```text
+改造前
+
+账单仅由账单系统归集生成 → 财务审核 → 送达客户
+
+
+改造后
+
+账单系统生成并确定客户
+或总后台通过 Excel 新建并选择客户
+        ↓
+进入财务待审核列表
+        ↓
+财务审核
+├─ 修改：保存后继续待审核
+├─ 删除：终止，不送达客户
+└─ 审核通过：送达客户
+                ↓
+           客户查看账单
+```
+
+### 1.2 一句话业务模型
+
+```text
+两类账单来源
+        +
+明确的客户归属
+        ↓
+财务审核 → 送达客户 → 承接后续提现
+```
+
+### 1.3 最终目标
+
+- **准确送达：** 让审核无误的账单准确送达对应客户。
+- **承接提现：** 让账单顺利进入后续提现流程。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌────────────────────────────┬────────────────────────────┬────────────────────────────┐
+│ 账单系统                   │ SaaS 总后台                │ 客户端后台                 │
+├────────────────────────────┼────────────────────────────┼────────────────────────────┤
+│ ① 归集生成账单             │                            │                            │
+│        │                   │                            │                            │
+│ ② 确认账单并推送 SaaS      │                            │                            │
+│        │                   │                            │                            │
+│ ③ 处理客户归属             │                            │                            │
+│        │                   │                            │                            │
+│        └──────────────────→│ ④ 进入账单列表             │                            │
+│                            │        │                   │                            │
+│                            │ ⑤ Excel 导入并选择客户     │                            │
+│                            │        │                   │                            │
+│                            │ ⑥ 形成待审核账单           │                            │
+│                            │ 【审核状态：待审核】        │                            │
+│                            │        │                   │                            │
+│                            │ ⑦ 财务审核                │                            │
+│                            │    ├─ 修改：保存后继续待审核 │                            │
+│                            │    ├─ 删除：终止，不送达客户 │                            │
+│                            │    │  【审核状态：已删除】  │                            │
+│                            │    └─ 审核通过             │                            │
+│                            │       【审核状态：审核通过】│                            │
+│                            │        │                   │                            │
+│                            │ ⑧ 送达客户 ───────────────┼──────────────────────────→│
+│                            │ 【送达状态：已送达】        │ ⑨ 查看账单               │
+│                            │                            │        │                   │
+│                            │                            │ ⑩ 进入提现流程           │
+└────────────────────────────┴────────────────────────────┴────────────────────────────┘
+```
+
+后续各章节的"业务背景"中的"当前环节"引用以上 ①～⑩ 主流程编号，只标记本章节覆盖的位置，不得省略、重排或改写节点。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前业务闭环，可划分为三个业务阶段：
+
+1. **上游账单形成（主要参与方：账单系统）**：账单系统归集生成账单，确认并推送至 SaaS，处理客户归属。归属成功的账单进入 SaaS 总后台待审核列表。
+2. **SaaS 总后台审核与送达（主要参与方：SaaS 总后台）**：两类账单汇合后进入同一账单列表，由财务审核；审核前可修改指定金额字段或删除账单，审核通过后送达客户。
+3. **客户端查看并承接提现（主要参与方：客户端后台）**：客户在客户端后台查看已经送达的账单，并从账单进入后续提现流程。
+
+```text
+第一阶段：上游账单形成
+① 归集生成 → ② 确认并推送 → ③ 处理客户归属
+                                ↓
+第二阶段：SaaS 总后台审核与送达
+④ 进入账单列表 → ⑤ Excel 导入 → ⑥ 待审核账单 → ⑦ 财务审核 → ⑧ 送达客户
+                                                                      ↓
+第三阶段：客户端查看并承接提现
+⑨ 查看账单 → ⑩ 进入提现流程
+```
+
+以上三个阶段分别由账单系统、SaaS 总后台财务人员和客户端客户主导，各参与方职责已经明确，不再单独设置参与方职责表。
+
+### 2.3 业务路径与真实汇合点
+
+```text
+路径一：账单系统生成账单
+① 归集生成 → ② 确认并推送 SaaS → ③ 处理客户归属 → 归属成功
+                                                        │
+                                                        ├→ ⑥ 待审核账单列表
+                                                        │
+路径二：SaaS 总后台 Excel 新建账单                       │
+④ 进入账单列表 → ⑤ 导入 Excel 并选择客户 ───────────────┘
+```
+
+两条路径在"形成具有明确客户归属的待审核账单"后汇合。汇合前，各自完成账单形成和客户归属；汇合后，统一执行财务审核和客户送达。
+
+
+## 3. 第一阶段：上游账单形成
+
+### 3.1 账单系统归集生成并推送账单（外部系统）
+
+#### 业务背景
+
+当前环节：①②③ 归集生成、确认推送、处理客户归属<br>
+页面路径：账单系统 / 账单列表<br>
+对下游影响：归属成功的账单进入 SaaS 总后台待审核列表（⑥），成为后续财务审核与客户送达的数据来源；归属失败（SaaS ID 为 0）的账单不进入审核流程。<br>
+表格类型：列表页<br>
+
+本阶段由外部账单系统完成，其页面和操作不在 SaaS 建设范围内。
+
+#### 字段说明
+
+账单系统的账单列表与"推送 SaaS"入口：
+
+```text
+确认账单
+↓
+点击"推送 SaaS"
+↓
+处理合作方与 SaaS 客户归属
+├─ 归属成功：形成待审核账单，进入 SaaS 总后台
+└─ SaaS ID 为 0：不进入审核流程
+```
+
+账单系统侧的账单字段由账单系统自行管理，不在 SaaS 页面建设范围内。以下为推送 SaaS 时的核心业务信息：
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 来源账单标识 | string | 否 | 否 | 否 | **数据来源：** 账单系统原始账单。<br>**用途：** 用于追溯账单来源，随推送带入 SaaS。 |
+| 合作方 ID | string | 否 | 否 | 否 | **数据来源：** 账单系统。<br>**用途：** 账单所属合作方标识，用于处理客户归属。 |
+| 客户名称 | string | 否 | 否 | 否 | **数据来源：** 账单系统推送给 SaaS 的客户名称。<br>**用途：** 指定账单关联的 SaaS 客户名称。 |
+| 客户 ID | string | 否 | 否 | 否 | **数据来源：** 账单系统。<br>**用途：** 指定的账单关联客户 ID，与客户名称一并确定账单归属。 |
+| 账单时间 | date | 否 | 否 | 否 | **数据来源：** 统计后台导入或推送时带入。<br>**用途：** 账单所属时间，随推送进入 SaaS。 |
+| 账单类型 | enum | 否 | 否 | 否 | **数据来源：** SaaS 侧固定写入。<br>**逻辑：** 固定为"第三方"，属于老功能遗留字段。<br>**用途：** 兼容历史账单字段和页面展示口径。 |
+| 业务类型 | string | 否 | 否 | 否 | **数据来源：** 统计后台的"账单名称"字段。<br>**用途：** 区分账单所属业务类型。 |
+| 订单数 | number | 否 | 否 | 否 | **数据来源：** 统计后台带入。<br>**用途：** 账单覆盖的订单数量。 |
+| 佣金金额 | number | 否 | 否 | 否 | **数据来源：** 统计后台带入。<br>**用途：** 账单佣金金额，进入 SaaS 后可由财务修改。 |
+| 调账金额 | number | 否 | 否 | 否 | **数据来源：** 统计后台带入。<br>**用途：** 账单调账金额，进入 SaaS 后可由财务修改。 |
+| 预发月结金额 | number | 否 | 否 | 否 | **数据来源：** 统计后台带入。<br>**用途：** 账单预发月结金额，进入 SaaS 后可由财务修改。 |
+
+#### 列表交互
+
+无交互。
+
+#### 业务逻辑
+
+**SaaS ID 为 0 不入审核：** 系统处理客户归属时，SaaS ID 为 0 的账单不进入 SaaS 总后台待审核列表，后续审核与送达流程对该账单不生效。
+
+**归属成功进入下游：** 归属成功的账单进入 SaaS 总后台待审核列表（⑥），与 Excel 新建账单汇合后统一处理。
+
+
+## 4. 第二阶段：SaaS 总后台审核与送达
+
+### 4.1 SaaS 总后台账单管理（新增页面）
+
+#### 业务背景
+
+当前环节：④⑤⑥⑦⑧ 进入账单列表、Excel 导入并选择客户、形成待审核账单、财务审核、送达客户<br>
+页面路径：SaaS 总后台 > 财务管理 > 账单核对<br>
+对下游影响：审核通过的账单送达对应客户后，客户在客户端后台可见并可进入后续提现流程。<br>
+表格类型：列表页<br>
+
+SaaS 总后台账单管理页面是两类账单汇合后的统一处理入口。财务人员在此查看所有待审核账单，通过 Excel 新建无法自动归集的账单，并在账单送达客户前完成修改、删除或审核通过。
+
+#### 字段说明
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 账单时间 | date | 是 | 是 | 是 | **数据来源：** 统计后台（账单系统侧）导入或推送时带入。<br>**逻辑：** 按账单所属月份或日期记录。<br>**用途：** 用于识别本期账单所属时间，并支持列表筛选。 |
+| 账单单号 | string | 是 | 是 | 否 | **数据来源：** 系统按账单时间、客户 ID 和账号账单生成序号自动生成。<br>**逻辑：** 沿用 B13 账单单号规则，格式示例：`202603-8-TPA-025`。其中 `202603` 为账单时间，`8` 为客户 ID，`TPA` 为写死字段，`025` 为整个账号生成的第几个账单。<br>**用途：** 用于唯一识别和追溯账单。 |
+| 客户名称 | string | 是 | 是 | 是 | **数据来源：** 统计后台推送给 SaaS 的客户名称，或导入时指定的客户名称。<br>**逻辑：** 展示该账单关联客户的名称。<br>**用途：** 用于财务审核账单归属和列表查询。 |
+| 客户 ID | string | 是 | 是 | 是 | **数据来源：** 指定的账单关联客户 ID。<br>**逻辑：** 与客户名称一并确定账单归属。<br>**用途：** 用于唯一标识账单关联的 SaaS 客户。 |
+| 账单类型 | enum | 是 | 是 | 否 | **数据来源：** 系统固定写入。<br>**逻辑：** 当前写死为"第三方"，属于老功能遗留字段，继续保留。<br>**用途：** 用于兼容历史账单字段和页面展示口径。 |
+| 账单状态 | enum | 是 | 是 | 否 | **数据来源：** 账单送达后由后续提现流程更新。<br>**逻辑：** 沿用 B13 账单状态规则，枚举值为"未提现、待审核、审核通过，待打款、审核驳回、已提现"；该状态用于提现流程，不代表本节财务审核动作。B12 账单送达前的财务审核没有驳回或不通过逻辑。<br>**用途：** 用于判断账单能否申请提现及当前提现进度。 |
+| 业务类型 | string | 是 | 是（可编辑） | 是 | **数据来源：** 统计后台的"账单名称"字段。<br>**逻辑：** 统计后台推送或导入时带入，SaaS 侧直接沿用。<br>**用途：** 用于区分账单所属业务类型。 |
+| 订单数 | number | 是 | 是 | 是 | **数据来源：** 统计后台推送或导入时带入。<br>**逻辑：** 展示本期账单对应的订单数量，财务审核环节不可修改。<br>**用途：** 用于财务审核账单规模。 |
+| 佣金金额 | number | 是 | 是（可编辑） | 是 | **数据来源：** 统计后台推送或导入时带入。<br>**逻辑：** 展示本期账单的佣金金额，账单送达前财务可修改。<br>**用途：** 用于账单金额构成审核。 |
+| 调账金额 | number | 是 | 是（可编辑） | 是 | **数据来源：** 统计后台推送或导入时带入。<br>**逻辑：** 展示本期账单的调账金额，账单送达前财务可修改。<br>**用途：** 用于账单金额构成审核。 |
+| 预发月结金额 | number | 是 | 是（可编辑） | 是 | **数据来源：** 统计后台推送或导入时带入。<br>**逻辑：** 展示本期账单的预发月结金额，账单送达前财务可修改。<br>**用途：** 用于账单金额构成审核，并作为客户后续提现金额口径的一部分。 |
+
+除以上账单业务字段外，SaaS 总后台在本流程内维护审核状态、审核时间、送达状态、送达时间和生成时间，用于控制审核、送达和追溯。
+
+#### 列表交互
+
+**交互：Excel 导入新建**  <br>
+**业务用途**：批量新建无法自动归集的账单并直接选择客户。导入成功后形成具有明确客户归属的待审核账单，进入同一待审核列表。<br>
+
+**交互：查看详情**  <br>
+**业务用途**：展示当前账单的完整信息，包括账单单号、客户归属、账单时间、业务类型、订单数、金额构成、审核与送达状态及账单文件。仅用于审核和追溯。<br>
+
+**交互：修改**  <br>
+**业务用途**：在账单送达客户前，编辑业务类型、佣金金额、调账金额和预发月结金额。保存后仍为待审核账单，可继续审核通过或删除。<br>
+
+**交互：删除**  <br>
+**业务用途**：删除当前账单，终止该账单。删除后不送达客户，不进入客户端账单列表。<br>
+
+**交互：审核通过**  <br>
+**业务用途**：确认账单内容无误后审核通过，账单进入送达流程。<br>
+
+**交互：送达**  <br>
+**业务用途**：将审核通过的账单送达对应客户，客户在客户端后台可见该账单。<br>
+
+#### 业务逻辑
+
+**系统生成账单必须先完成客户归属：** 来自账单系统的账单，只有归属成功的才能进入待审核列表。SaaS ID 为 0 的不进入。
+
+**Excel 导入即确定归属：** Excel 新建账单在导入时必须选择 SaaS 客户，导入成功即形成待审核账单，不需要事后补归属。导入的 Excel 表字段与列表页需要一致。
+
+**两类账单审核与送达规则完全相同：** 系统生成账单和 Excel 新建账单进入同一待审核列表后，审核和送达规则不再区分来源。
+
+**修改仅限指定字段：** 除业务类型、佣金金额、调账金额和预发月结金额外，财务审核环节不修改其他账单业务字段。
+
+**审核通过是送达前置条件：** 所有账单只有审核通过后才能送达客户。删除的账单不送达客户。
+
+**详情不重新计算：** 账单详情只展示当前账单的完整信息，不重新计算金额，也不重新处理客户归属。详情与列表引用同一张账单记录。
+
+
+## 5. 第三阶段：客户端查看并承接提现
+
+### 5.1 客户端后台账单列表（新增页面）
+
+#### 业务背景
+
+当前环节：⑨⑩ 查看账单、进入提现流程<br>
+页面路径：客户端后台 > 财务结算 > 账单<br>
+对下游影响：客户从此进入 B13 提现流程，沿用已送达账单的结算金额，不在提现环节重新形成账单。<br>
+表格类型：列表页<br>
+
+客户端后台账单列表向客户展示已经送达的账单，帮助客户识别结算期间、核对结算金额，并提供进入后续提现流程的入口。客户不需要区分账单来自系统归集还是 Excel 新建。
+
+账单送达和提现是前后衔接的两段业务：B12 负责形成账单、完成财务审核并送达客户；B13 负责收款配置、可提现范围、提现申请、审核和打款。
+
+#### 字段说明
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 账单时间 | date | 是 | 是 | 否 | **数据来源：** SaaS 总后台送达的账单数据。<br>**逻辑：** 账单所属月份或日期。<br>**用途：** 用于客户识别结算期间。 |
+| 账单单号 | string | 是 | 是 | 否 | **数据来源：** 系统生成。<br>**逻辑：** 与 SaaS 总后台一致的账单唯一识别编号。<br>**用途：** 用于客户识别和追溯账单。 |
+| 账单类型 | enum | 是 | 是 | 否 | **数据来源：** 系统固定写入。<br>**逻辑：** 当前写死为"第三方"，属于老功能遗留字段。<br>**用途：** 兼容历史账单展示口径。 |
+| 订单数 | number | 是 | 是 | 否 | **数据来源：** 已送达账单数据。<br>**用途：** 账单覆盖的订单数量，供客户核对。 |
+| 佣金金额 | number | 是 | 是 | 否 | **数据来源：** 已送达账单数据。<br>**用途：** 本期账单的佣金金额，供客户核对。 |
+| 调账金额 | number | 是 | 是 | 否 | **数据来源：** 已送达账单数据。<br>**用途：** 本期账单的调账金额，供客户核对。 |
+| 预发月结金额 | number | 是 | 是 | 否 | **数据来源：** 已送达账单数据。<br>**用途：** 本期账单的预发月结金额，作为客户后续提现金额口径的一部分。 |
+| 账单状态 | enum | 是 | 是 | 否 | **数据来源：** 账单送达后由 B13 提现流程更新。<br>**逻辑：** 沿用 B13 账单状态规则，枚举值为"未提现、待审核、审核通过，待打款、审核驳回、已提现"；该状态用于提现流程，不代表 B12 账单送达前的财务审核动作。<br>**用途：** 用于判断账单能否申请提现及当前提现进度。 |
+| 送达时间 | datetime | 是 | 是 | 否 | **数据来源：** SaaS 总后台执行送达时记录。<br>**用途：** 客户查看账单到账节点。 |
+| 业务类型 | string | 是 | 是 | 否 | **数据来源：** 已送达账单数据。<br>**逻辑：** 统计后台的"账单名称"字段。<br>**用途：** 区分账单所属业务类型。 |
+| 客户名称 | string | 否 | 是 | 否 | **数据来源：** 账单归属的 SaaS 客户名称。<br>**用途：** 仅在详情展示，帮助确认账单归属。 |
+| 客户 ID | string | 否 | 是 | 否 | **数据来源：** 账单关联的 SaaS 客户 ID。<br>**用途：** 仅在详情展示，帮助确认账单归属。 |
+
+#### 列表交互
+
+**交互：查看详情**  <br>
+**业务用途**：展示当前账单的完整信息，包括客户名称、客户 ID、业务类型、金额构成和账单文件。用于核对账单时间、金额构成和业务类型。<br>
+
+**交互：进入提现**  <br>
+**业务用途**：基于当前账单发起提现申请，进入 B13 提现流程。<br>
+
+#### 业务逻辑
+
+**客户只能看到本人已送达账单：** 客户登录后仅展示归属于当前客户且 SaaS 总后台已送达的账单。未送达或已删除的账单不可见。
+
+**详情与列表同源：** 详情和列表引用同一张已送达账单记录，详情不重新计算金额。
+
+**客户无需区分账单来源：** 系统生成账单和 Excel 新建账单送达后，在客户端展示完全一致，客户不需要也不展示区分。
+
+
+## 6. 关键业务规则
+
+> 本章只汇总跨页面、跨阶段或特别容易误解的已确认规则。已在单一业务小节中讲清且不会产生歧义的内容，不在此重复。
+
+### 6.1 客户归属
+
+- 系统生成账单必须完成客户归属后，才能进入财务审核。
+- 系统生成账单的 SaaS ID 为 0 时，不进入审核流程。
+- Excel 新建账单在导入时直接选择 SaaS 客户，导入成功即形成待审核账单。
+
+### 6.2 审核与送达
+
+- 系统生成账单和 Excel 新建账单统一进入财务审核。
+- 财务审核只有"审核通过、删除、修改"三个操作，没有驳回或不通过逻辑。
+- 修改仅允许调整业务类型、佣金金额、调账金额和预发月结金额。
+- 所有账单只有审核通过后才能送达客户。
+- 删除的账单不送达客户。
+- 客户只能查看归属于当前客户且已经送达的账单。
+
+### 6.3 状态流转
+
+```text
+系统生成账单：生成 → 处理客户归属 → 待审核
+Excel 新建账单：导入并选择客户 ─────→ 待审核
+
+待审核
+├─ 修改       → 保存后继续待审核
+├─ 删除       → 终止，不送达客户
+└─ 审核通过   → 送达客户       → 客户可查看
+```
+
+## 7. 权限说明
+
+| 功能或操作 | 账单系统 | SaaS 总后台（财务） | 客户端后台（客户） |
+| --- | :---: | :---: | :---: |
+| 归集生成账单 | 是 | — | — |
+| 确认并推送账单至 SaaS | 是 | — | — |
+| 处理客户归属 | 是 | — | — |
+| 查看全部待审核账单 | — | 是 | — |
+| Excel 导入新建账单 | — | 是 | — |
+| 查看账单详情（全部客户） | — | 是 | — |
+| 修改可编辑金额字段 | — | 是 | — |
+| 删除账单 | — | 是 | — |
+| 审核通过并送达账单 | — | 是 | — |
+| 查看本人已送达账单 | — | — | 是（仅本人数据） |
+| 进入提现流程 | — | — | 是（仅本人数据） |
+
+
+---
+
+## 8. AI 维护说明
+
+> 本章属于 AI 阅读和维护模块，不承担向人类读者重复解释业务正文的职责。AI 修改本文档时，应先保护业务真实性和阅读连续性，再考虑结构完整性。
+
+### 8.1 正文组织原则
+
+- 正文按业务实际发生顺序展开：上游账单形成 → SaaS 总后台审核与送达 → 客户端查看并承接提现。
+- 系统生成账单和 Excel 新建账单在形成阶段分别说明，到待审核列表后再统一描述。
+- 列表、详情和客户端展示引用同一张账单，不分别制造业务数据来源。
+- "推送 SaaS"表示发起账单处理；"送达客户"表示审核通过后的客户可见结果，两者不得混用。
+- Excel 是录入方式，不是账单类型。
+- 账单送达不等于提现完成。本功能只把账单交给后续提现流程。
+- 本文不定义接口、数据库表、代码实现或页面布局规格。
+
+### 8.2 模块边界
+
+- B12 负责形成账单、完成客户归属、财务审核和客户送达。
+- B13 负责收款配置、可提现范围、提现申请、审核和打款。
+- 客户进入提现时沿用已送达账单的结算金额，不在提现环节重新形成账单。
+- 账单系统的账单归集、确认和推送属于上游外部系统能力，SaaS 接收结果但不负责实现。
+- B12 的客户端账单列表与 B13 的提现页面在"财务结算"下衔接，但各自维护独立的页面和字段。
+- 不得将收入结算的账单生成规则、活动推广归属逻辑等上游内容写入本文档。
+- 不得将接口、数据库表、代码实现或页面布局规格写入本文档。
+
+### 8.3 泳道和参与方
+
+- 参与方统一使用"账单系统""SaaS 总后台""客户端后台"。
+- 账单来源统一使用"系统生成""Excel 导入"。
+- 审核状态使用"待审核、审核通过、已删除"。
+- 送达状态使用"未送达、已送达"。
+- "推送 SaaS"专指账单系统发起账单处理；"送达客户"专指审核通过后让客户可见。
+- 泳道图是全文"当前环节"的唯一来源。每个编号只对应一个参与方和一个业务动作。
+- 修改泳道图后必须同步检查所有"当前环节"中的节点编号和动作文字。
+
+### 8.4 上下游检查
+
+| 修改内容 | 检查范围 |
+| --- | --- |
+| 泳道图节点或顺序 | 全部章节的"业务背景"中的当前环节，确保编号、参与方和业务动作与泳道图一致 |
+| 参与方或业务称谓 | 泳道图、标题、正文、业务背景、字段、规则、权限 |
+| 账单来源路径 | 两条路径的业务说明、汇合点、审核入口 |
+| 审核或送达规则 | 账单列表、操作说明、状态、下游影响 |
+| 列表、详情或新增字段 | SaaS 总后台字段表、客户端字段表 |
+| 客户归属方式 | 系统账单归属说明、Excel 导入选择方式、下游可见范围 |
+
+### 8.5 术语、字段和状态同步
+
+- 术语和字段优先参考已确认的原型口径。
+- 同一业务概念全篇使用同一称谓，不因页面不同随意换名。
+- 修改术语时应全文检查标题、正文、当前环节、表格、权限和 AI 说明。
+- 字段说明应达到可审核、可开发的业务颗粒度：按实际需要写清类型、填写人或来源、固定值或枚举值、核心逻辑和业务结果，但不写代码或接口。
+- 字段解释优先使用"数据来源 / 逻辑 / 用途"分层表达；能明确数据来源时必须写"数据来源"。
+- "列表、详情、新增"三列只允许使用 `是`、`否`、`是（可编辑）`。
+- 列表页字段表统一使用 6 列结构（字段名称 / 字段类型 / 列表 / 详情 / 新增 / 字段解释）。
+- enum 字段必须在字段类型中用括号罗列全部枚举值。
+- 流程动作与状态必须分开：动作表示参与方做了什么，状态表示动作完成后业务对象处于什么阶段。
+- 账单送达不等于提现完成。不得把下游处理规则提前塞入当前模块正文。
+
+### 8.6 不得混淆
+
+- 业务参与方不等于技术系统或内部服务。
+- 业务阶段不等于技术处理步骤。
+- 业务来源不同不等于后续所有流程都不同。
+- 多条路径最终统一处理不等于它们此前的处理逻辑相同。
+- Excel 导入成功不等于财务审核通过。
+- 客户归属明确不等于审核、核对或结算已经通过。
+- 删除不等于驳回或不通过。
+- "推送 SaaS"不等于"送达客户"。
+- 账单送达不等于提现完成。
+- AI 认为合理不等于用户已经确认。
+
+### 8.7 待确认逻辑
+
+1. Excel 模板最终包含哪些字段，哪些字段必填；金额精度、数据格式和单次导入数量是否有限制？
+2. Excel 导入失败时，是整批失败还是逐行处理？失败数据如何提示和重新处理？
+3. 系统生成账单和 Excel 新建账单如何识别重复数据？并发提交时如何避免重复账单？
+4. SaaS ID 为空或未找到客户映射时，是否与 SaaS ID 为 0 使用相同处理方式？
+5. 客户映射补齐后，系统账单由人工重新发起还是自动继续处理？
+6. 删除账单是否需要二次确认、删除原因和操作留痕？
+7. 财务修改业务类型、佣金金额、调账金额和预发月结金额时，是否需要保留修改前后差异、操作人和操作时间？
+8. 财务审核、修改和删除分别由哪些角色执行？数据权限范围如何划分？
+9. 账单送达失败后的状态、重试方式、重试次数和终止规则是什么？
+10. 是否需要保存推送批次、失败原因、操作日志和完整历史记录？
+11. 如何避免重复审核或重复送达？是否需要锁定或冲突处理机制？
+12. 账单送达后是否发送站内消息、短信或其他通知？
+13. 两类账单是否统一使用系统生成的账单单号？来源账单标识如何保留？
+14. 系统生成账单的订单数、佣金金额、调账金额和预发月结金额由哪些业务数据形成？Excel 账单在财务审核时是否允许调整这些金额字段？
+15. 列表、详情和客户端页面中的客户、账单时间、订单数、佣金金额、调账金额、预发月结金额、账单类型及文件，是实时引用还是保留账单形成、审核通过或送达时的历史快照？
+16. 上游账单或客户资料变化后，待审核、审核通过但未送达、已送达账单是否更新？是否需要重新审核？
+17. 审核时间展示首次、最近一次还是完整历史记录？
+18. 是否记录客户查看状态和查看时间？如记录，查看时间取首次还是最近一次？
+19. Excel 新建账单是否形成独立账单文件？客户看到的文件是否固定为送达时版本？
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>B12 账单推送</title>
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- CSS 分区 1：布局层                                      -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <style id="css-布局">
+*, *::before, *::after { box-sizing: border-box; }
+:root { --侧栏间距: 28px; --左栏宽: max(420px, 22vw); --右栏宽: 300px; --标签栏高: 52px; }
+body { margin: 0; padding: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用容器 { min-height: 100vh; }
+.阶段区域 { display: grid; grid-template-columns: var(--左栏宽) minmax(0, 1fr) var(--右栏宽); gap: var(--侧栏间距); width: min(calc(100vw - 28px), 2400px); margin: 0 auto; align-items: start; }
+.左侧栏 { grid-column: 1; position: sticky; top: calc(var(--标签栏高) + 16px); max-height: calc(100vh - var(--标签栏高) - 32px); overflow-y: auto; overflow-x: visible; background: #fff; border-right: 1px solid #e2e8f0; padding: 16px 0 0 0; }
+.内容摘要 { margin: 0 10px 16px 10px; }
+.内容摘要内 { min-width: 0; border: 1px solid #d9e2ec; border-left: 4px solid #0f6b8f; border-radius: 6px; background: #fff; padding: 7px 12px; box-shadow: 0 4px 14px rgba(15, 35, 52, 0.05); }
+.内容摘要内 h1 { font-size: 18px; line-height: 1.3; margin: 0 0 6px 0; color: #172033; }
+.业务简介 { min-width: 0; margin: 0; }
+.业务简介 blockquote { margin: 0; border: 0; border-radius: 0; background: transparent; padding: 0; color: #344054; font-size: 13px; line-height: 1.6; }
+.业务简介 blockquote p { margin: 4px 0; }
+.阶段导航区 { margin: 0 10px 16px 10px; }
+.全局泳道 { margin: 0 10px 16px 10px; background: #fff; border: 1px solid #d9e2ec; border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 35, 52, 0.08); padding: 10px; }
+.主舞台 { grid-column: 2; padding: 24px 32px 48px; min-width: 0; background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(15, 35, 52, 0.04); }
+.右侧栏 { grid-column: 3; position: sticky; top: calc(var(--标签栏高) + 30px); max-height: calc(100vh - var(--标签栏高) - 32px); overflow-y: auto; background: #fff; border-left: 1px solid #e2e8f0; padding: 24px 16px 16px 16px; min-width: 0; }
+.标签包裹 { position: sticky; top: 0; z-index: 100; background: rgba(246, 248, 251, 0.96); border-bottom: 1px solid #e2e8f0; backdrop-filter: blur(8px); }
+.标签包裹内 { display: flex; gap: 8px; overflow-x: auto; width: min(calc(100vw - 28px), 2400px); margin: 0 auto; padding: 12px 0; padding-left: calc(var(--左栏宽) + var(--侧栏间距)); }
+.标签面板 { display: none; } .标签面板.激活 { display: block; }
+.面板布局 { display: grid; grid-template-columns: 1fr 220px; gap: 32px; align-items: start; }
+.面板布局 .节目录 { position: sticky; top: calc(var(--标签栏高) + 72px); }
+@media (max-width: 1200px) { .阶段区域 { grid-template-columns: 1fr; } .左侧栏, .右侧栏 { display: none; } .标签包裹内 { padding-left: 0; } .面板布局 { grid-template-columns: 1fr; } .面板布局 .节目录 { display: none; } }
+  </style>
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- CSS 分区 2：组件层                                      -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <style id="css-组件">
+/* ═══ 大 tab 标签按钮 ═══ */
+.标签按钮 { flex: 0 0 auto; display: flex; align-items: center; border: 1px solid #bcccdc; background: #fff; color: #344054; border-radius: 8px; padding: 9px 12px; font: inherit; font-size: 14px; line-height: 1.25; cursor: pointer; white-space: nowrap; }
+.标签按钮:hover { border-color: #0f6b8f; } .标签按钮.激活 { border-color: #0f6b8f; background: #0f6b8f; color: #fff; }
+.标签编号 { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; margin-right: 7px; border-radius: 999px; background: #edf2f7; color: #475467; font-size: 12px; font-weight: 700; }
+.标签按钮.激活 .标签编号 { background: rgba(255,255,255,0.18); color: #fff; }
+
+/* ═══ 小 tab 阶段导航 ═══ */
+.阶段页面导航 { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-top: 1px solid #e2e8f0; }
+.阶段链接 { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; text-decoration: none; color: #475569; font-size: 13px; transition: all 0.15s; }
+.阶段链接:hover { background: #f1f5f9; color: #1e293b; } .阶段链接.激活 { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.页面编号 { font-size: 11px; color: #94a3b8; font-family: monospace; min-width: 24px; } .页面类型图标 { font-size: 14px; } .阶段链接.激活 .页面编号 { color: #3b82f6; }
+
+/* ═══ 右侧栏注释卡片 ═══ */
+.注释卡片组 { display: flex; flex-direction: column; gap: 14px; }
+.注释卡片 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+.注释卡片头 { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.注释图标 { font-size: 16px; } .注释标题 { font-size: 14px; font-weight: 600; color: #334155; }
+.注释卡片正文 { padding: 12px 16px; font-size: 13px; line-height: 1.7; color: #475569; }
+.注释卡片正文 p { margin: 0 0 8px 0; } .注释卡片正文 p:last-child { margin-bottom: 0; }
+.注释卡片正文 ul { margin: 4px 0; padding-left: 20px; } .注释卡片正文 li { margin: 3px 0; } .注释卡片正文 strong { color: #1e293b; }
+
+/* ═══ 内容页面：阅读文档 ═══ */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 30px 0 12px; font-size: 21px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; scroll-margin-top: 68px; }
+.阅读标题 { scroll-margin-top: 68px; line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 21px; margin: 30px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 17px; margin: 24px 0 8px; } .文档正文 h5 { font-size: 15px; margin: 20px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.文档图片 { max-width: 100%; height: auto; border-radius: 8px; margin: 16px 0; display: block; }
+.行内代码 { font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 0.92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; font-weight: 500; }
+.代码块 pre { margin: 0; padding: 16px; background: #ffffff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; border: 0; }
+.代码块 code { display: block; padding: 0; border: 0; background: transparent; color: inherit; font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ═══ 节目录 ═══ */
+.节目录列表 { list-style: none; padding: 0; margin: 0; } .节目录列表 ul { list-style: none; padding-left: 16px; }
+.目录项 { margin: 2px 0; line-height: 1.6; }
+.目录项 a { display: block; padding: 4px 10px; border-radius: 4px; color: #475569; text-decoration: none; font-size: 13px; border-left: 2px solid transparent; transition: all 0.15s; }
+.目录项 a:hover { background: #f1f5f9; color: #1e293b; border-left-color: #3b82f6; } .目录层级3 a { font-weight: 600; font-size: 14px; } .目录层级4 a { padding-left: 20px; } .目录层级5 a { padding-left: 30px; font-size: 12px; color: #64748b; }
+
+/* ═══ 演示壳 ═══ */
+.演示壳 { display: grid; grid-template-columns: 180px 1fr; gap: 0; min-height: 480px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0; }
+.演示侧标 { background: linear-gradient(160deg, #1e293b 0%, #334155 100%); padding: 28px 20px; display: flex; flex-direction: column; gap: 10px; color: #e2e8f0; user-select: none; }
+.角色标签 { display: inline-block; padding: 4px 12px; background: rgba(59, 130, 246, 0.25); border: 1px solid rgba(96, 165, 250, 0.4); border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; align-self: flex-start; }
+.模块标签 { font-size: 18px; font-weight: 700; margin-top: 8px; line-height: 1.4; }
+.范围标签 { font-size: 11px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-top: auto; }
+.演示主体 { background: #f8fafc; display: flex; flex-direction: column; min-width: 0; }
+.演示顶栏 { display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; }
+.浏览器按钮 { display: flex; gap: 6px; flex-shrink: 0; } .浏览器圆点 { width: 10px; height: 10px; border-radius: 50%; }
+.浏览器圆点.红 { background: #ef4444; } .浏览器圆点.黄 { background: #f59e0b; } .浏览器圆点.绿 { background: #10b981; }
+.地址栏 { flex: 1; padding: 5px 12px; background: #f1f5f9; border-radius: 6px; font-size: 12px; }
+.地址文本 { color: #64748b; font-family: "Sarasa Mono SC", "Cascadia Code", "Consolas", monospace; }
+.演示内容区 { flex: 1; padding: 24px; overflow: auto; min-width: 0; }
+
+/* ═══ 列表页 ═══ */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 130px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 130px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ═══ 页面编辑：控制下拉区 ═══ */
+.控制下拉区 { display: flex; align-items: center; gap: 10px; padding: 0 0 16px 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 16px; }
+.控制下拉标签 { font-size: 13px; font-weight: 600; color: #475569; } .控制说明 { font-size: 12px; color: #94a3b8; }
+
+/* ═══ 页面编辑：字段卡片 ═══ */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 24px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-row.muted { opacity: 0.55; background: #f8fafc; border-radius: 4px; } .field-row.muted .field-display { color: #94a3b8; font-style: italic; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; } .field-card-path { font-size: 12px; color: #94a3b8; font-family: monospace; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 140px 1fr 32px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 120px; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+.field-info-btn:hover, .field-info-btn.is-open { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.field-detail-panel { display: none; margin: 4px 0 8px 140px; padding: 10px 14px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
+.field-detail-panel.show { display: block; } .field-detail-panel dl { display: grid; grid-template-columns: 80px 1fr; gap: 4px 10px; margin: 0; font-size: 12px; }
+.field-detail-panel dt { color: #94a3b8; } .field-detail-panel dd { color: #475569; margin: 0; }
+
+/* ═══ 详情抽屉 ═══ */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; height: 100vh; background: #fff; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 64px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; }
+.panel-title { font-size: 18px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.detail-item { min-height: 58px; padding: 10px 14px; border-bottom: 1px solid #d9e2ec; } .detail-item:nth-child(odd) { border-right: 1px solid #d9e2ec; }
+.detail-item:last-child { border-bottom: 0; } .detail-label { color: #8a93a3; font-size: 12px; margin-bottom: 4px; }
+.detail-value { color: #303744; font-size: 13px; font-weight: 550; word-break: break-word; }
+.type-tag { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; vertical-align: middle; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ═══ 字段弹窗 ═══ */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ═══ 泳道图 ═══ */
+.泳道原始 { margin: 0; padding: 10px 6px; font-family: "Sarasa Mono SC", "Cascadia Code", "Consolas", "Courier New", monospace; font-size: 13px; line-height: 1.55; color: #1e293b; white-space: pre; overflow-x: visible; background: transparent; }
+
+/* ═══ 提示消息 ═══ */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+
+/* ═══ 类型标签全局 ═══ */
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+
+/* ═══ 图片灯箱 ═══ */
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+  </style>
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- CSS 分区 3：状态层                                      -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <style id="css-状态">
+.标签按钮.激活 { border-color: #0f6b8f; background: #0f6b8f; color: #fff; }
+.标签面板.激活 { display: block; }
+.阶段链接.激活 { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-row.muted { opacity: 0.55; background: #f8fafc; border-radius: 4px; } .field-row.muted .field-display { color: #94a3b8; font-style: italic; }
+.字段行.禁用 { opacity: 0.4; pointer-events: none; } .字段行.隐藏 { display: none; }
+.图片灯箱.可见 { display: flex; }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+  </style>
+</head>
+<body>
+<div class="应用容器">
+
+  <!-- 大 tab -->
+  <div id="标签导航" class="标签包裹">
+    <div class="标签包裹内">
+      <button class="标签按钮 激活" data-stage="1" onclick="切换标签(1)"><span class="标签编号">1</span>需求背景与目标</button>
+      <button class="标签按钮" data-stage="2" onclick="切换标签(2)"><span class="标签编号">2</span>业务流程</button>
+      <button class="标签按钮" data-stage="3" onclick="切换标签(3)"><span class="标签编号">3</span>上游账单形成</button>
+      <button class="标签按钮" data-stage="4" onclick="切换标签(4)"><span class="标签编号">4</span>SaaS总后台审核与送达</button>
+      <button class="标签按钮" data-stage="5" onclick="切换标签(5)"><span class="标签编号">5</span>客户端查看并承接提现</button>
+      <button class="标签按钮" data-stage="6" onclick="切换标签(6)"><span class="标签编号">6</span>关键业务规则</button>
+      <button class="标签按钮" data-stage="7" onclick="切换标签(7)"><span class="标签编号">7</span>权限说明</button>
+      <button class="标签按钮" data-stage="8" onclick="切换标签(8)"><span class="标签编号">8</span>AI维护说明</button>
+    </div>
+  </div>
+
+  <div class="阶段区域">
+
+    <!-- 左侧栏 -->
+    <aside class="左侧栏">
+      <div class="内容摘要">
+        <div class="内容摘要内">
+          <h1>B12 账单推送</h1>
+          <div class="业务简介"><blockquote><p>账单系统归集生成账单，或 SaaS 总后台通过 Excel 批量新建账单。两类账单确定客户归属后，进入同一套财务审核与客户送达流程。</p></blockquote></div>
+        </div>
+      </div>
+
+      <div class="阶段导航区" id="阶段导航区">
+        <nav id="阶段03导航" class="阶段页面导航" style="display:none;">
+          <a class="阶段链接 激活" href="javascript:切换页面('3.1','内容页')" data-page="3.1" data-page-type="内容页">
+            <span class="页面编号">3.1</span><span class="页面类型图标">📋</span><span class="页面标题">账单系统归集生成并推送账单</span>
+          </a>
+        </nav>
+        <nav id="阶段04导航" class="阶段页面导航" style="display:none;">
+          <a class="阶段链接 激活" href="javascript:切换页面('4.1','列表页')" data-page="4.1" data-page-type="列表页">
+            <span class="页面编号">4.1</span><span class="页面类型图标">📋</span><span class="页面标题">SaaS总后台账单管理</span>
+          </a>
+        </nav>
+        <nav id="阶段05导航" class="阶段页面导航" style="display:none;">
+          <a class="阶段链接 激活" href="javascript:切换页面('5.1','列表页')" data-page="5.1" data-page-type="列表页">
+            <span class="页面编号">5.1</span><span class="页面类型图标">📋</span><span class="页面标题">客户端后台账单列表</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="全局泳道">
+        <h3>多方业务泳道图</h3>
+        <div id="全局泳道代码" class="泳道代码">
+          <pre class="泳道原始">┌────────────────────────────┬────────────────────────────┬────────────────────────────┐
+│ 账单系统                   │ SaaS 总后台                │ 客户端后台                 │
+├────────────────────────────┼────────────────────────────┼────────────────────────────┤
+│ ① 归集生成账单             │                            │                            │
+│        │                   │                            │                            │
+│ ② 确认账单并推送 SaaS      │                            │                            │
+│        │                   │                            │                            │
+│ ③ 处理客户归属             │                            │                            │
+│        │                   │                            │                            │
+│        └──────────────────→│ ④ 进入账单列表             │                            │
+│                            │        │                   │                            │
+│                            │ ⑤ Excel 导入并选择客户     │                            │
+│                            │        │                   │                            │
+│                            │ ⑥ 形成待审核账单           │                            │
+│                            │ 【审核状态：待审核】        │                            │
+│                            │        │                   │                            │
+│                            │ ⑦ 财务审核                │                            │
+│                            │    ├─ 修改：保存后继续待审核 │                            │
+│                            │    ├─ 删除：终止，不送达客户 │                            │
+│                            │    │  【审核状态：已删除】  │                            │
+│                            │    └─ 审核通过             │                            │
+│                            │       【审核状态：审核通过】│                            │
+│                            │        │                   │                            │
+│                            │ ⑧ 送达客户 ───────────────┼──────────────────────────→│
+│                            │ 【送达状态：已送达】        │ ⑨ 查看账单               │
+│                            │                            │        │                   │
+│                            │                            │ ⑩ 进入提现流程           │
+└────────────────────────────┴────────────────────────────┴────────────────────────────┘</pre>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主舞台 -->
+    <main class="主舞台">
+
+      <!-- ═══ Stage 1: 需求背景与目标 ═══ -->
+      <section class="标签面板 激活" data-stage="1">
+        <div class="面板布局">
+          <div id="节1正文" class="文档正文">
+            <h3 id="1.1">1.1 为什么要做</h3>
+            <p>常规账单、激励账单和合并账单可由账单系统归集生成。无法自动归集的账单由总后台通过 Excel 批量新建。</p>
+            <p>无论账单从哪里形成，都必须先明确所属客户，再由财务审核。只有审核通过的账单才会送达客户，供客户查看并进入后续提现流程。</p>
+
+            <div class="代码块">
+              <div class="代码头">改造前后对比</div>
+              <pre><code>改造前
+
+账单仅由账单系统归集生成 → 财务审核 → 送达客户
+
+
+改造后
+
+账单系统生成并确定客户
+或总后台通过 Excel 新建并选择客户
+        ↓
+进入财务待审核列表
+        ↓
+财务审核
+├─ 修改：保存后继续待审核
+├─ 删除：终止，不送达客户
+└─ 审核通过：送达客户
+                ↓
+           客户查看账单</code></pre>
+            </div>
+
+            <h3 id="1.2">1.2 一句话业务模型</h3>
+            <div class="代码块">
+              <div class="代码头">业务模型</div>
+              <pre><code>两类账单来源
+        +
+明确的客户归属
+        ↓
+财务审核 → 送达客户 → 承接后续提现</code></pre>
+            </div>
+
+            <h3 id="1.3">1.3 最终目标</h3>
+            <ul>
+              <li><strong>准确送达：</strong> 让审核无误的账单准确送达对应客户。</li>
+              <li><strong>承接提现：</strong> 让账单顺利进入后续提现流程。</li>
+            </ul>
+          </div>
+          <nav id="节1目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#1.1">1.1 为什么要做</a></li>
+              <li class="目录项 目录层级3"><a href="#1.2">1.2 一句话业务模型</a></li>
+              <li class="目录项 目录层级3"><a href="#1.3">1.3 最终目标</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+      <!-- ═══ Stage 2: 业务流程 ═══ -->
+      <section class="标签面板" data-stage="2">
+        <div class="面板布局">
+          <div id="节2正文" class="文档正文">
+            <h3 id="2.1">2.1 多方业务泳道图</h3>
+            <p>后续各章节的"业务背景"中的"当前环节"引用以下 ①～⑩ 主流程编号，只标记本章节覆盖的位置，不得省略、重排或改写节点。</p>
+            <p><em>（泳道图见左侧栏"多方业务泳道图"卡片）</em></p>
+
+            <h3 id="2.2">2.2 阶段划分与阅读说明</h3>
+            <p>后续正文按业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前业务闭环，可划分为三个业务阶段：</p>
+            <ol>
+              <li><strong>上游账单形成（主要参与方：账单系统）</strong>：账单系统归集生成账单，确认并推送至 SaaS，处理客户归属。归属成功的账单进入 SaaS 总后台待审核列表。</li>
+              <li><strong>SaaS 总后台审核与送达（主要参与方：SaaS 总后台）</strong>：两类账单汇合后进入同一账单列表，由财务审核；审核前可修改指定金额字段或删除账单，审核通过后送达客户。</li>
+              <li><strong>客户端查看并承接提现（主要参与方：客户端后台）</strong>：客户在客户端后台查看已经送达的账单，并从账单进入后续提现流程。</li>
+            </ol>
+
+            <div class="代码块">
+              <div class="代码头">阶段流转</div>
+              <pre><code>第一阶段：上游账单形成
+① 归集生成 → ② 确认并推送 → ③ 处理客户归属
+                                ↓
+第二阶段：SaaS 总后台审核与送达
+④ 进入账单列表 → ⑤ Excel 导入 → ⑥ 待审核账单 → ⑦ 财务审核 → ⑧ 送达客户
+                                                                      ↓
+第三阶段：客户端查看并承接提现
+⑨ 查看账单 → ⑩ 进入提现流程</code></pre>
+            </div>
+            <p>以上三个阶段分别由账单系统、SaaS 总后台财务人员和客户端客户主导，各参与方职责已经明确，不再单独设置参与方职责表。</p>
+
+            <h3 id="2.3">2.3 业务路径与真实汇合点</h3>
+            <div class="代码块">
+              <div class="代码头">两条路径汇合</div>
+              <pre><code>路径一：账单系统生成账单
+① 归集生成 → ② 确认并推送 SaaS → ③ 处理客户归属 → 归属成功
+                                                        │
+                                                        ├→ ⑥ 待审核账单列表
+                                                        │
+路径二：SaaS 总后台 Excel 新建账单                       │
+④ 进入账单列表 → ⑤ 导入 Excel 并选择客户 ───────────────┘</code></pre>
+            </div>
+            <p>两条路径在"形成具有明确客户归属的待审核账单"后汇合。汇合前，各自完成账单形成和客户归属；汇合后，统一执行财务审核和客户送达。</p>
+          </div>
+          <nav id="节2目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#2.1">2.1 多方业务泳道图</a></li>
+              <li class="目录项 目录层级3"><a href="#2.2">2.2 阶段划分与阅读说明</a></li>
+              <li class="目录项 目录层级3"><a href="#2.3">2.3 业务路径与真实汇合点</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+      <!-- ═══ Stage 3: 上游账单形成 ═══ -->
+      <section class="标签面板" data-stage="3">
+        <div class="面板布局">
+          <div id="节3正文" class="文档正文">
+            <h3 id="3.1">3.1 账单系统归集生成并推送账单（外部系统）</h3>
+
+            <h4>业务背景</h4>
+            <p>当前环节：①②③ 归集生成、确认推送、处理客户归属<br>
+            页面路径：账单系统 / 账单列表<br>
+            对下游影响：归属成功的账单进入 SaaS 总后台待审核列表（⑥），成为后续财务审核与客户送达的数据来源；归属失败（SaaS ID 为 0）的账单不进入审核流程。</p>
+
+            <blockquote><p><strong>⚠ 本阶段由外部账单系统完成，其页面和操作不在 SaaS 建设范围内。</strong></p></blockquote>
+
+            <h4>字段说明</h4>
+            <p>账单系统的账单列表与"推送 SaaS"入口：</p>
+
+            <div class="代码块">
+              <div class="代码头">推送 SaaS 流程</div>
+              <pre><code>确认账单
+↓
+点击"推送 SaaS"
+↓
+处理合作方与 SaaS 客户归属
+├─ 归属成功：形成待审核账单，进入 SaaS 总后台
+└─ SaaS ID 为 0：不进入审核流程</code></pre>
+            </div>
+
+            <p>账单系统侧的账单字段由账单系统自行管理，不在 SaaS 页面建设范围内。以下为推送 SaaS 时的核心业务信息：</p>
+
+            <div class="表格容器">
+            <table class="阅读表格">
+              <thead><tr><th>字段名称</th><th>字段类型</th><th>列表</th><th>详情</th><th>新增</th><th>字段解释</th></tr></thead>
+              <tbody>
+                <tr><td>来源账单标识</td><td>string</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>账单系统原始账单。<br><strong>用途：</strong>用于追溯账单来源，随推送带入 SaaS。</td></tr>
+                <tr><td>合作方 ID</td><td>string</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>账单系统。<br><strong>用途：</strong>账单所属合作方标识，用于处理客户归属。</td></tr>
+                <tr><td>客户名称</td><td>string</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>账单系统推送给 SaaS 的客户名称。<br><strong>用途：</strong>指定账单关联的 SaaS 客户名称。</td></tr>
+                <tr><td>客户 ID</td><td>string</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>账单系统。<br><strong>用途：</strong>指定的账单关联客户 ID，与客户名称一并确定账单归属。</td></tr>
+                <tr><td>账单时间</td><td>date</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>统计后台导入或推送时带入。<br><strong>用途：</strong>账单所属时间，随推送进入 SaaS。</td></tr>
+                <tr><td>账单类型</td><td>enum</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>SaaS 侧固定写入。<br><strong>逻辑：</strong>固定为"第三方"，属于老功能遗留字段。<br><strong>用途：</strong>兼容历史账单字段和页面展示口径。</td></tr>
+                <tr><td>业务类型</td><td>string</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>统计后台的"账单名称"字段。<br><strong>用途：</strong>区分账单所属业务类型。</td></tr>
+                <tr><td>订单数</td><td>number</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>统计后台带入。<br><strong>用途：</strong>账单覆盖的订单数量。</td></tr>
+                <tr><td>佣金金额</td><td>number</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>统计后台带入。<br><strong>用途：</strong>账单佣金金额，进入 SaaS 后可由财务修改。</td></tr>
+                <tr><td>调账金额</td><td>number</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>统计后台带入。<br><strong>用途：</strong>账单调账金额，进入 SaaS 后可由财务修改。</td></tr>
+                <tr><td>预发月结金额</td><td>number</td><td>否</td><td>否</td><td>否</td><td><strong>数据来源：</strong>统计后台带入。<br><strong>用途：</strong>账单预发月结金额，进入 SaaS 后可由财务修改。</td></tr>
+              </tbody>
+            </table>
+            </div>
+
+            <h4>列表交互</h4>
+            <p>无交互。</p>
+
+            <h4>业务逻辑</h4>
+            <p><strong>SaaS ID 为 0 不入审核：</strong> 系统处理客户归属时，SaaS ID 为 0 的账单不进入 SaaS 总后台待审核列表，后续审核与送达流程对该账单不生效。</p>
+            <p><strong>归属成功进入下游：</strong> 归属成功的账单进入 SaaS 总后台待审核列表（⑥），与 Excel 新建账单汇合后统一处理。</p>
+          </div>
+          <nav id="节3目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#3.1">3.1 账单系统归集生成并推送账单</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+      <!-- ═══ Stage 4: SaaS总后台审核与送达 ═══ -->
+      <section class="标签面板" data-stage="4">
+        <div id="阶段04编辑区" class="编辑区" style="display:none;"></div>
+        <div id="阶段04列表区" class="列表区">
+          <div class="演示壳" data-page="4.1">
+            <div class="演示侧标">
+              <span class="角色标签">财务</span>
+              <div class="模块标签">SaaS 总后台<br>账单管理</div>
+              <span class="范围标签">管理后台</span>
+            </div>
+            <div class="演示主体">
+              <div class="演示顶栏">
+                <div class="浏览器按钮"><span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span></div>
+                <div class="地址栏"><span class="地址文本">SaaS 总后台 > 财务管理 > 账单核对</span></div>
+              </div>
+              <div class="演示内容区">
+                <div class="工具栏">
+                  <div class="搜索框"><span class="搜索图标">🔍</span><input class="搜索输入" placeholder="搜索账单单号、客户名称..."></div>
+                  <div class="筛选区">
+                    <span class="筛选标签">账单状态</span>
+                    <select class="筛选下拉"><option value="">全部</option><option>待审核</option><option>审核通过</option><option>已删除</option></select>
+                  </div>
+                  <div class="筛选区">
+                    <span class="筛选标签">账单时间</span>
+                    <select class="筛选下拉"><option value="">全部</option><option>2026-03</option><option>2026-04</option><option>2026-05</option></select>
+                  </div>
+                </div>
+
+                <div class="表格容器">
+                <table class="数据表格">
+                  <thead><tr>
+                    <th class="列表表头"><span class="表头字段名">账单时间</span><span class="类型标签 date">date</span><button class="信息按钮" onclick="显示字段弹窗('账单时间', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">账单单号</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('账单单号', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">客户名称</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('客户名称', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">客户ID</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('客户 ID', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">账单类型</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('账单类型', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">账单状态</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('账单状态', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">业务类型</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('业务类型', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">订单数</span><span class="类型标签 number">number</span><button class="信息按钮" onclick="显示字段弹窗('订单数', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">佣金金额</span><span class="类型标签 number">number</span><button class="信息按钮" onclick="显示字段弹窗('佣金金额', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">调账金额</span><span class="类型标签 number">number</span><button class="信息按钮" onclick="显示字段弹窗('调账金额', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">预发月结金额</span><span class="类型标签 number">number</span><button class="信息按钮" onclick="显示字段弹窗('预发月结金额', event)">ⓘ</button></th>
+                    <th class="列表表头 操作列">操作</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr class="数据行">
+                      <td class="列表单元格">2026-03</td>
+                      <td class="列表单元格">202603-8-TPA-025</td>
+                      <td class="列表单元格">星辰科技</td>
+                      <td class="列表单元格">8</td>
+                      <td class="列表单元格">第三方</td>
+                      <td class="列表单元格">待审核</td>
+                      <td class="列表单元格">TPA</td>
+                      <td class="列表单元格">1,250</td>
+                      <td class="列表单元格">¥125,000.00</td>
+                      <td class="列表单元格">¥5,000.00</td>
+                      <td class="列表单元格">¥30,000.00</td>
+                      <td class="列表单元格 操作列">
+                        <button class="详情按钮" onclick="打开抽屉({账单时间:'2026-03',账单单号:'202603-8-TPA-025',客户名称:'星辰科技',客户ID:'8',账单类型:'第三方',账单状态:'待审核',业务类型:'TPA',订单数:'1,250',佣金金额:'¥125,000.00',调账金额:'¥5,000.00',预发月结金额:'¥30,000.00',_壳节编号:'4.1'}, '账单详情 - 星辰科技')">详情</button>
+                        <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button>
+                      </td>
+                    </tr>
+                    <tr class="数据行">
+                      <td class="列表单元格">2026-03</td>
+                      <td class="列表单元格">202603-12-TPA-026</td>
+                      <td class="列表单元格">云帆集团</td>
+                      <td class="列表单元格">12</td>
+                      <td class="列表单元格">第三方</td>
+                      <td class="列表单元格">审核通过</td>
+                      <td class="列表单元格">TPA</td>
+                      <td class="列表单元格">3,420</td>
+                      <td class="列表单元格">¥342,000.00</td>
+                      <td class="列表单元格">¥0.00</td>
+                      <td class="列表单元格">¥80,000.00</td>
+                      <td class="列表单元格 操作列">
+                        <button class="详情按钮" onclick="打开抽屉({账单时间:'2026-03',账单单号:'202603-12-TPA-026',客户名称:'云帆集团',客户ID:'12',账单类型:'第三方',账单状态:'审核通过',业务类型:'TPA',订单数:'3,420',佣金金额:'¥342,000.00',调账金额:'¥0.00',预发月结金额:'¥80,000.00',_壳节编号:'4.1'}, '账单详情 - 云帆集团')">详情</button>
+                        <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button>
+                      </td>
+                    </tr>
+                    <tr class="数据行">
+                      <td class="列表单元格">2026-04</td>
+                      <td class="列表单元格">202604-8-TPA-027</td>
+                      <td class="列表单元格">星辰科技</td>
+                      <td class="列表单元格">8</td>
+                      <td class="列表单元格">第三方</td>
+                      <td class="列表单元格">待审核</td>
+                      <td class="列表单元格">CPA</td>
+                      <td class="列表单元格">890</td>
+                      <td class="列表单元格">¥89,000.00</td>
+                      <td class="列表单元格">¥2,500.00</td>
+                      <td class="列表单元格">¥15,000.00</td>
+                      <td class="列表单元格 操作列">
+                        <button class="详情按钮" onclick="打开抽屉({账单时间:'2026-04',账单单号:'202604-8-TPA-027',客户名称:'星辰科技',客户ID:'8',账单类型:'第三方',账单状态:'待审核',业务类型:'CPA',订单数:'890',佣金金额:'¥89,000.00',调账金额:'¥2,500.00',预发月结金额:'¥15,000.00',_壳节编号:'4.1'}, '账单详情 - 星辰科技')">详情</button>
+                        <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                </div>
+                <div class="列表脚注">共 3 条记录（演示数据）</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Stage 5: 客户端查看并承接提现 ═══ -->
+      <section class="标签面板" data-stage="5">
+        <div id="阶段05编辑区" class="编辑区" style="display:none;"></div>
+        <div id="阶段05列表区" class="列表区">
+          <div class="演示壳" data-page="5.1">
+            <div class="演示侧标">
+              <span class="角色标签">客户</span>
+              <div class="模块标签">客户端后台<br>账单列表</div>
+              <span class="范围标签">客户端</span>
+            </div>
+            <div class="演示主体">
+              <div class="演示顶栏">
+                <div class="浏览器按钮"><span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span></div>
+                <div class="地址栏"><span class="地址文本">客户端后台 > 财务结算 > 账单</span></div>
+              </div>
+              <div class="演示内容区">
+                <div class="工具栏">
+                  <div class="搜索框"><span class="搜索图标">🔍</span><input class="搜索输入" placeholder="搜索账单单号..."></div>
+                  <div class="筛选区">
+                    <span class="筛选标签">账单状态</span>
+                    <select class="筛选下拉"><option value="">全部</option><option>未提现</option><option>待审核</option><option>审核通过，待打款</option><option>审核驳回</option><option>已提现</option></select>
+                  </div>
+                </div>
+
+                <div class="表格容器">
+                <table class="数据表格">
+                  <thead><tr>
+                    <th class="列表表头"><span class="表头字段名">账单时间</span><span class="类型标签 date">date</span><button class="信息按钮" onclick="显示字段弹窗('账单时间', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">账单单号</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('账单单号', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">账单类型</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('账单类型', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">订单数</span><span class="类型标签 number">number</span><button class="信息按钮" onclick="显示字段弹窗('订单数', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">佣金金额</span><span class="类型标签 number">number</span><button class="信息按钮" onclick="显示字段弹窗('佣金金额', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">调账金额</span><span class="类型标签 number">number</span><button class="信息按钮" onclick="显示字段弹窗('调账金额', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">预发月结金额</span><span class="类型标签 number">number</span><button class="信息按钮" onclick="显示字段弹窗('预发月结金额', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">账单状态</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('账单状态', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">送达时间</span><span class="类型标签 date">datetime</span><button class="信息按钮" onclick="显示字段弹窗('送达时间', event)">ⓘ</button></th>
+                    <th class="列表表头"><span class="表头字段名">业务类型</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('业务类型', event)">ⓘ</button></th>
+                    <th class="列表表头 操作列">操作</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr class="数据行">
+                      <td class="列表单元格">2026-03</td>
+                      <td class="列表单元格">202603-8-TPA-025</td>
+                      <td class="列表单元格">第三方</td>
+                      <td class="列表单元格">1,250</td>
+                      <td class="列表单元格">¥125,000.00</td>
+                      <td class="列表单元格">¥5,000.00</td>
+                      <td class="列表单元格">¥30,000.00</td>
+                      <td class="列表单元格">未提现</td>
+                      <td class="列表单元格">2026-04-15 14:30</td>
+                      <td class="列表单元格">TPA</td>
+                      <td class="列表单元格 操作列">
+                        <button class="详情按钮" onclick="打开抽屉({账单时间:'2026-03',账单单号:'202603-8-TPA-025',账单类型:'第三方',订单数:'1,250',佣金金额:'¥125,000.00',调账金额:'¥5,000.00',预发月结金额:'¥30,000.00',账单状态:'未提现',送达时间:'2026-04-15 14:30',业务类型:'TPA',客户名称:'星辰科技',客户ID:'8',_壳节编号:'5.1'}, '账单详情 - 202603-8-TPA-025')">详情</button>
+                        <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button>
+                      </td>
+                    </tr>
+                    <tr class="数据行">
+                      <td class="列表单元格">2026-03</td>
+                      <td class="列表单元格">202603-8-TPA-026</td>
+                      <td class="列表单元格">第三方</td>
+                      <td class="列表单元格">3,420</td>
+                      <td class="列表单元格">¥342,000.00</td>
+                      <td class="列表单元格">¥0.00</td>
+                      <td class="列表单元格">¥80,000.00</td>
+                      <td class="列表单元格">待审核</td>
+                      <td class="列表单元格">2026-04-16 09:15</td>
+                      <td class="列表单元格">TPA</td>
+                      <td class="列表单元格 操作列">
+                        <button class="详情按钮" onclick="打开抽屉({账单时间:'2026-03',账单单号:'202603-8-TPA-026',账单类型:'第三方',订单数:'3,420',佣金金额:'¥342,000.00',调账金额:'¥0.00',预发月结金额:'¥80,000.00',账单状态:'待审核',送达时间:'2026-04-16 09:15',业务类型:'TPA',客户名称:'星辰科技',客户ID:'8',_壳节编号:'5.1'}, '账单详情 - 202603-8-TPA-026')">详情</button>
+                        <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button>
+                      </td>
+                    </tr>
+                    <tr class="数据行">
+                      <td class="列表单元格">2026-04</td>
+                      <td class="列表单元格">202604-8-TPA-027</td>
+                      <td class="列表单元格">第三方</td>
+                      <td class="列表单元格">890</td>
+                      <td class="列表单元格">¥89,000.00</td>
+                      <td class="列表单元格">¥2,500.00</td>
+                      <td class="列表单元格">¥15,000.00</td>
+                      <td class="列表单元格">已提现</td>
+                      <td class="列表单元格">2026-05-10 11:00</td>
+                      <td class="列表单元格">CPA</td>
+                      <td class="列表单元格 操作列">
+                        <button class="详情按钮" onclick="打开抽屉({账单时间:'2026-04',账单单号:'202604-8-TPA-027',账单类型:'第三方',订单数:'890',佣金金额:'¥89,000.00',调账金额:'¥2,500.00',预发月结金额:'¥15,000.00',账单状态:'已提现',送达时间:'2026-05-10 11:00',业务类型:'CPA',客户名称:'星辰科技',客户ID:'8',_壳节编号:'5.1'}, '账单详情 - 202604-8-TPA-027')">详情</button>
+                        <button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                </div>
+                <div class="列表脚注">共 3 条记录（演示数据）</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Stage 6: 关键业务规则 ═══ -->
+      <section class="标签面板" data-stage="6">
+        <div class="面板布局">
+          <div id="节6正文" class="文档正文">
+            <blockquote><p>本章只汇总跨页面、跨阶段或特别容易误解的已确认规则。已在单一业务小节中讲清且不会产生歧义的内容，不在此重复。</p></blockquote>
+
+            <h3 id="6.1">6.1 客户归属</h3>
+            <ul>
+              <li>系统生成账单必须完成客户归属后，才能进入财务审核。</li>
+              <li>系统生成账单的 SaaS ID 为 0 时，不进入审核流程。</li>
+              <li>Excel 新建账单在导入时直接选择 SaaS 客户，导入成功即形成待审核账单。</li>
+            </ul>
+
+            <h3 id="6.2">6.2 审核与送达</h3>
+            <ul>
+              <li>系统生成账单和 Excel 新建账单统一进入财务审核。</li>
+              <li>财务审核只有"审核通过、删除、修改"三个操作，没有驳回或不通过逻辑。</li>
+              <li>修改仅允许调整业务类型、佣金金额、调账金额和预发月结金额。</li>
+              <li>所有账单只有审核通过后才能送达客户。</li>
+              <li>删除的账单不送达客户。</li>
+              <li>客户只能查看归属于当前客户且已经送达的账单。</li>
+            </ul>
+
+            <h3 id="6.3">6.3 状态流转</h3>
+            <div class="代码块">
+              <div class="代码头">状态流转图</div>
+              <pre><code>系统生成账单：生成 → 处理客户归属 → 待审核
+Excel 新建账单：导入并选择客户 ─────→ 待审核
+
+待审核
+├─ 修改       → 保存后继续待审核
+├─ 删除       → 终止，不送达客户
+└─ 审核通过   → 送达客户       → 客户可查看</code></pre>
+            </div>
+          </div>
+          <nav id="节6目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#6.1">6.1 客户归属</a></li>
+              <li class="目录项 目录层级3"><a href="#6.2">6.2 审核与送达</a></li>
+              <li class="目录项 目录层级3"><a href="#6.3">6.3 状态流转</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+      <!-- ═══ Stage 7: 权限说明 ═══ -->
+      <section class="标签面板" data-stage="7">
+        <div class="面板布局">
+          <div id="节7正文" class="文档正文">
+            <h3 id="7">权限说明</h3>
+            <div class="表格容器">
+            <table class="阅读表格">
+              <thead><tr><th>功能或操作</th><th>账单系统</th><th>SaaS 总后台（财务）</th><th>客户端后台（客户）</th></tr></thead>
+              <tbody>
+                <tr><td>归集生成账单</td><td>是</td><td>—</td><td>—</td></tr>
+                <tr><td>确认并推送账单至 SaaS</td><td>是</td><td>—</td><td>—</td></tr>
+                <tr><td>处理客户归属</td><td>是</td><td>—</td><td>—</td></tr>
+                <tr><td>查看全部待审核账单</td><td>—</td><td>是</td><td>—</td></tr>
+                <tr><td>Excel 导入新建账单</td><td>—</td><td>是</td><td>—</td></tr>
+                <tr><td>查看账单详情（全部客户）</td><td>—</td><td>是</td><td>—</td></tr>
+                <tr><td>修改可编辑金额字段</td><td>—</td><td>是</td><td>—</td></tr>
+                <tr><td>删除账单</td><td>—</td><td>是</td><td>—</td></tr>
+                <tr><td>审核通过并送达账单</td><td>—</td><td>是</td><td>—</td></tr>
+                <tr><td>查看本人已送达账单</td><td>—</td><td>—</td><td>是（仅本人数据）</td></tr>
+                <tr><td>进入提现流程</td><td>—</td><td>—</td><td>是（仅本人数据）</td></tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+          <nav id="节7目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#7">权限说明</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+      <!-- ═══ Stage 8: AI维护说明 ═══ -->
+      <section class="标签面板" data-stage="8">
+        <div class="面板布局">
+          <div id="节8正文" class="文档正文">
+            <blockquote><p>本章属于 AI 阅读和维护模块，不承担向人类读者重复解释业务正文的职责。AI 修改本文档时，应先保护业务真实性和阅读连续性，再考虑结构完整性。</p></blockquote>
+
+            <h3 id="8.1">8.1 正文组织原则</h3>
+            <ul>
+              <li>正文按业务实际发生顺序展开：上游账单形成 → SaaS 总后台审核与送达 → 客户端查看并承接提现。</li>
+              <li>系统生成账单和 Excel 新建账单在形成阶段分别说明，到待审核列表后再统一描述。</li>
+              <li>列表、详情和客户端展示引用同一张账单，不分别制造业务数据来源。</li>
+              <li>"推送 SaaS"表示发起账单处理；"送达客户"表示审核通过后的客户可见结果，两者不得混用。</li>
+              <li>Excel 是录入方式，不是账单类型。</li>
+              <li>账单送达不等于提现完成。本功能只把账单交给后续提现流程。</li>
+              <li>本文不定义接口、数据库表、代码实现或页面布局规格。</li>
+            </ul>
+
+            <h3 id="8.2">8.2 模块边界</h3>
+            <ul>
+              <li>B12 负责形成账单、完成客户归属、财务审核和客户送达。</li>
+              <li>B13 负责收款配置、可提现范围、提现申请、审核和打款。</li>
+              <li>客户进入提现时沿用已送达账单的结算金额，不在提现环节重新形成账单。</li>
+              <li>账单系统的账单归集、确认和推送属于上游外部系统能力，SaaS 接收结果但不负责实现。</li>
+              <li>B12 的客户端账单列表与 B13 的提现页面在"财务结算"下衔接，但各自维护独立的页面和字段。</li>
+              <li>不得将收入结算的账单生成规则、活动推广归属逻辑等上游内容写入本文档。</li>
+              <li>不得将接口、数据库表、代码实现或页面布局规格写入本文档。</li>
+            </ul>
+
+            <h3 id="8.3">8.3 泳道和参与方</h3>
+            <ul>
+              <li>参与方统一使用"账单系统""SaaS 总后台""客户端后台"。</li>
+              <li>账单来源统一使用"系统生成""Excel 导入"。</li>
+              <li>审核状态使用"待审核、审核通过、已删除"。</li>
+              <li>送达状态使用"未送达、已送达"。</li>
+              <li>"推送 SaaS"专指账单系统发起账单处理；"送达客户"专指审核通过后让客户可见。</li>
+              <li>泳道图是全文"当前环节"的唯一来源。每个编号只对应一个参与方和一个业务动作。</li>
+              <li>修改泳道图后必须同步检查所有"当前环节"中的节点编号和动作文字。</li>
+            </ul>
+
+            <h3 id="8.4">8.4 上下游检查</h3>
+            <div class="表格容器">
+            <table class="阅读表格">
+              <thead><tr><th>修改内容</th><th>检查范围</th></tr></thead>
+              <tbody>
+                <tr><td>泳道图节点或顺序</td><td>全部章节的"业务背景"中的当前环节，确保编号、参与方和业务动作与泳道图一致</td></tr>
+                <tr><td>参与方或业务称谓</td><td>泳道图、标题、正文、业务背景、字段、规则、权限</td></tr>
+                <tr><td>账单来源路径</td><td>两条路径的业务说明、汇合点、审核入口</td></tr>
+                <tr><td>审核或送达规则</td><td>账单列表、操作说明、状态、下游影响</td></tr>
+                <tr><td>列表、详情或新增字段</td><td>SaaS 总后台字段表、客户端字段表</td></tr>
+                <tr><td>客户归属方式</td><td>系统账单归属说明、Excel 导入选择方式、下游可见范围</td></tr>
+              </tbody>
+            </table>
+            </div>
+
+            <h3 id="8.5">8.5 术语、字段和状态同步</h3>
+            <ul>
+              <li>术语和字段优先参考已确认的原型口径。</li>
+              <li>同一业务概念全篇使用同一称谓，不因页面不同随意换名。</li>
+              <li>修改术语时应全文检查标题、正文、当前环节、表格、权限和 AI 说明。</li>
+              <li>字段说明应达到可审核、可开发的业务颗粒度：按实际需要写清类型、填写人或来源、固定值或枚举值、核心逻辑和业务结果，但不写代码或接口。</li>
+              <li>字段解释优先使用"数据来源 / 逻辑 / 用途"分层表达；能明确数据来源时必须写"数据来源"。</li>
+              <li>"列表、详情、新增"三列只允许使用 是、否、是（可编辑）。</li>
+              <li>列表页字段表统一使用 6 列结构（字段名称 / 字段类型 / 列表 / 详情 / 新增 / 字段解释）。</li>
+              <li>enum 字段必须在字段类型中用括号罗列全部枚举值。</li>
+              <li>流程动作与状态必须分开：动作表示参与方做了什么，状态表示动作完成后业务对象处于什么阶段。</li>
+              <li>账单送达不等于提现完成。不得把下游处理规则提前塞入当前模块正文。</li>
+            </ul>
+
+            <h3 id="8.6">8.6 不得混淆</h3>
+            <ul>
+              <li>业务参与方不等于技术系统或内部服务。</li>
+              <li>业务阶段不等于技术处理步骤。</li>
+              <li>业务来源不同不等于后续所有流程都不同。</li>
+              <li>多条路径最终统一处理不等于它们此前的处理逻辑相同。</li>
+              <li>Excel 导入成功不等于财务审核通过。</li>
+              <li>客户归属明确不等于审核、核对或结算已经通过。</li>
+              <li>删除不等于驳回或不通过。</li>
+              <li>"推送 SaaS"不等于"送达客户"。</li>
+              <li>账单送达不等于提现完成。</li>
+              <li>AI 认为合理不等于用户已经确认。</li>
+            </ul>
+
+            <h3 id="8.7">8.7 待确认逻辑</h3>
+            <ol>
+              <li>Excel 模板最终包含哪些字段，哪些字段必填；金额精度、数据格式和单次导入数量是否有限制？</li>
+              <li>Excel 导入失败时，是整批失败还是逐行处理？失败数据如何提示和重新处理？</li>
+              <li>系统生成账单和 Excel 新建账单如何识别重复数据？并发提交时如何避免重复账单？</li>
+              <li>SaaS ID 为空或未找到客户映射时，是否与 SaaS ID 为 0 使用相同处理方式？</li>
+              <li>客户映射补齐后，系统账单由人工重新发起还是自动继续处理？</li>
+              <li>删除账单是否需要二次确认、删除原因和操作留痕？</li>
+              <li>财务修改业务类型、佣金金额、调账金额和预发月结金额时，是否需要保留修改前后差异、操作人和操作时间？</li>
+              <li>财务审核、修改和删除分别由哪些角色执行？数据权限范围如何划分？</li>
+              <li>账单送达失败后的状态、重试方式、重试次数和终止规则是什么？</li>
+              <li>是否需要保存推送批次、失败原因、操作日志和完整历史记录？</li>
+              <li>如何避免重复审核或重复送达？是否需要锁定或冲突处理机制？</li>
+              <li>账单送达后是否发送站内消息、短信或其他通知？</li>
+              <li>两类账单是否统一使用系统生成的账单单号？来源账单标识如何保留？</li>
+              <li>系统生成账单的订单数、佣金金额、调账金额和预发月结金额由哪些业务数据形成？Excel 账单在财务审核时是否允许调整这些金额字段？</li>
+              <li>列表、详情和客户端页面中的客户、账单时间、订单数、佣金金额、调账金额、预发月结金额、账单类型及文件，是实时引用还是保留账单形成、审核通过或送达时的历史快照？</li>
+              <li>上游账单或客户资料变化后，待审核、审核通过但未送达、已送达账单是否更新？是否需要重新审核？</li>
+              <li>审核时间展示首次、最近一次还是完整历史记录？</li>
+              <li>是否记录客户查看状态和查看时间？如记录，查看时间取首次还是最近一次？</li>
+              <li>Excel 新建账单是否形成独立账单文件？客户看到的文件是否固定为送达时版本？</li>
+            </ol>
+          </div>
+          <nav id="节8目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#8.1">8.1 正文组织原则</a></li>
+              <li class="目录项 目录层级3"><a href="#8.2">8.2 模块边界</a></li>
+              <li class="目录项 目录层级3"><a href="#8.3">8.3 泳道和参与方</a></li>
+              <li class="目录项 目录层级3"><a href="#8.4">8.4 上下游检查</a></li>
+              <li class="目录项 目录层级3"><a href="#8.5">8.5 术语、字段和状态同步</a></li>
+              <li class="目录项 目录层级3"><a href="#8.6">8.6 不得混淆</a></li>
+              <li class="目录项 目录层级3"><a href="#8.7">8.7 待确认逻辑</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+    </main>
+
+    <!-- 右侧栏 -->
+    <aside class="右侧栏" id="右侧栏" style="display:none;">
+      <div id="阶段04右侧栏" class="阶段右侧栏组" style="display:none;">
+        <div class="注释卡片组" data-page="4.1">
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">📋</span><span class="注释标题">业务背景</span></div>
+            <div class="注释卡片正文">
+              <p><strong>当前环节：</strong>④⑤⑥⑦⑧ 进入账单列表、Excel 导入并选择客户、形成待审核账单、财务审核、送达客户</p>
+              <p><strong>页面路径：</strong>SaaS 总后台 > 财务管理 > 账单核对</p>
+              <p><strong>对下游影响：</strong>审核通过的账单送达对应客户后，客户在客户端后台可见并可进入后续提现流程。</p>
+              <p>SaaS 总后台账单管理页面是两类账单汇合后的统一处理入口。财务人员在此查看所有待审核账单，通过 Excel 新建无法自动归集的账单，并在账单送达客户前完成修改、删除或审核通过。</p>
+            </div>
+          </div>
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">⚡</span><span class="注释标题">列表交互</span></div>
+            <div class="注释卡片正文">
+              <p><strong>Excel 导入新建：</strong>批量新建无法自动归集的账单并直接选择客户。导入成功后形成具有明确客户归属的待审核账单，进入同一待审核列表。</p>
+              <p><strong>查看详情：</strong>展示当前账单的完整信息，包括账单单号、客户归属、账单时间、业务类型、订单数、金额构成、审核与送达状态及账单文件。仅用于审核和追溯。</p>
+              <p><strong>修改：</strong>在账单送达客户前，编辑业务类型、佣金金额、调账金额和预发月结金额。保存后仍为待审核账单，可继续审核通过或删除。</p>
+              <p><strong>删除：</strong>删除当前账单，终止该账单。删除后不送达客户，不进入客户端账单列表。</p>
+              <p><strong>审核通过：</strong>确认账单内容无误后审核通过，账单进入送达流程。</p>
+              <p><strong>送达：</strong>将审核通过的账单送达对应客户，客户在客户端后台可见该账单。</p>
+            </div>
+          </div>
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">🧠</span><span class="注释标题">业务逻辑</span></div>
+            <div class="注释卡片正文">
+              <p><strong>系统生成账单必须先完成客户归属：</strong>来自账单系统的账单，只有归属成功的才能进入待审核列表。SaaS ID 为 0 的不进入。</p>
+              <p><strong>Excel 导入即确定归属：</strong>Excel 新建账单在导入时必须选择 SaaS 客户，导入成功即形成待审核账单。</p>
+              <p><strong>两类账单审核与送达规则完全相同：</strong>系统生成和 Excel 新建进入同一待审核列表后，审核和送达规则不再区分来源。</p>
+              <p><strong>修改仅限指定字段：</strong>除业务类型、佣金金额、调账金额和预发月结金额外，财务审核环节不修改其他账单业务字段。</p>
+              <p><strong>审核通过是送达前置条件：</strong>所有账单只有审核通过后才能送达客户。删除的账单不送达客户。</p>
+              <p><strong>详情不重新计算：</strong>账单详情只展示当前账单的完整信息，不重新计算金额，也不重新处理客户归属。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="阶段05右侧栏" class="阶段右侧栏组" style="display:none;">
+        <div class="注释卡片组" data-page="5.1">
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">📋</span><span class="注释标题">业务背景</span></div>
+            <div class="注释卡片正文">
+              <p><strong>当前环节：</strong>⑨⑩ 查看账单、进入提现流程</p>
+              <p><strong>页面路径：</strong>客户端后台 > 财务结算 > 账单</p>
+              <p><strong>对下游影响：</strong>客户从此进入 B13 提现流程，沿用已送达账单的结算金额，不在提现环节重新形成账单。</p>
+              <p>客户端后台账单列表向客户展示已经送达的账单，帮助客户识别结算期间、核对结算金额，并提供进入后续提现流程的入口。客户不需要区分账单来自系统归集还是 Excel 新建。</p>
+              <p>账单送达和提现是前后衔接的两段业务：B12 负责形成账单、完成财务审核并送达客户；B13 负责收款配置、可提现范围、提现申请、审核和打款。</p>
+            </div>
+          </div>
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">⚡</span><span class="注释标题">列表交互</span></div>
+            <div class="注释卡片正文">
+              <p><strong>查看详情：</strong>展示当前账单的完整信息，包括客户名称、客户 ID、业务类型、金额构成和账单文件。用于核对账单时间、金额构成和业务类型。</p>
+              <p><strong>进入提现：</strong>基于当前账单发起提现申请，进入 B13 提现流程。</p>
+            </div>
+          </div>
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">🧠</span><span class="注释标题">业务逻辑</span></div>
+            <div class="注释卡片正文">
+              <p><strong>客户只能看到本人已送达账单：</strong>客户登录后仅展示归属于当前客户且 SaaS 总后台已送达的账单。未送达或已删除的账单不可见。</p>
+              <p><strong>详情与列表同源：</strong>详情和列表引用同一张已送达账单记录，详情不重新计算金额。</p>
+              <p><strong>客户无需区分账单来源：</strong>系统生成账单和 Excel 新建账单送达后，在客户端展示完全一致，客户不需要也不展示区分。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div><!-- .阶段区域 -->
+</div><!-- .应用容器 -->
+
+<!-- 浮层 -->
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭抽屉();关闭新增抽屉()"></div>
+<aside id="detailDrawer" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="detailDrawerTitle">详情</div>
+    <button class="btn-close" onclick="关闭抽屉()">×</button>
+  </div>
+  <div id="detailBody" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭抽屉()">关闭</button>
+  </div>
+</aside>
+<aside id="新增抽屉面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="新增抽屉标题">新增</div>
+    <button class="btn-close" onclick="关闭新增抽屉()">×</button>
+  </div>
+  <div id="新增抽屉正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭新增抽屉()">关闭</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+
+<script id="js-标签切换">
+function 切换标签(n) {
+  document.querySelectorAll('.标签按钮').forEach(function(b) { b.classList.remove('激活'); });
+  var btn = document.querySelector('.标签按钮[data-stage="' + n + '"]'); if (btn) btn.classList.add('激活');
+  document.querySelectorAll('.标签面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.querySelector('.标签面板[data-stage="' + n + '"]'); if (panel) panel.classList.add('激活');
+  var 所有导航 = document.querySelectorAll('.阶段页面导航');
+  for (var i = 0; i < 所有导航.length; i++) { 所有导航[i].style.display = 'none'; }
+  if (n >= 3) {
+    var N = n.toString().padStart(2, '0');
+    var 当前导航 = document.getElementById('阶段' + N + '导航');
+    if (当前导航) { 当前导航.style.display = ''; var 首个 = 当前导航.querySelector('.阶段链接'); if (首个) { var 页码 = 首个.getAttribute('data-page'); var 类型 = 首个.getAttribute('data-page-type'); if (页码) 切换页面(页码, 类型); } }
+  }
+  var 右侧栏 = document.getElementById('右侧栏');
+  var 所有右侧栏组 = document.querySelectorAll('.阶段右侧栏组');
+  for (var i = 0; i < 所有右侧栏组.length; i++) { 所有右侧栏组[i].style.display = 'none'; }
+  if (n >= 3) {
+    if (右侧栏) 右侧栏.style.display = '';
+    var N = n.toString().padStart(2, '0');
+    var 当前右侧栏 = document.getElementById('阶段' + N + '右侧栏');
+    if (当前右侧栏) { 当前右侧栏.style.display = ''; var 首个卡片 = 当前右侧栏.querySelector('.注释卡片组'); if (首个卡片) 首个卡片.style.display = ''; }
+  } else { if (右侧栏) 右侧栏.style.display = 'none'; }
+}
+(function() { var 右侧栏 = document.getElementById('右侧栏'); if (右侧栏) 右侧栏.style.display = 'none'; })();
+</script>
+
+<script id="js-阶段切换">
+function 切换页面(页码, 页面类型) {
+  var N = 页码.toString().split('.')[0]; var N填充 = N.padStart(2, '0');
+  document.querySelectorAll('.阶段链接').forEach(function(l) { l.classList.remove('激活'); });
+  var link = document.querySelector('.阶段链接[data-page="' + 页码 + '"]'); if (link) link.classList.add('激活');
+  var 编辑区 = document.getElementById('阶段' + N填充 + '编辑区');
+  var 列表区 = document.getElementById('阶段' + N填充 + '列表区');
+  if (页面类型 === '列表页') { if (列表区) 列表区.style.display = ''; if (编辑区) 编辑区.style.display = 'none'; [列表区].forEach(function(c) { if (!c) return; var ss = c.querySelectorAll('.演示壳'); for (var i = 0; i < ss.length; i++) { ss[i].style.display = (ss[i].getAttribute('data-page') === 页码) ? '' : 'none'; } }); }
+  else { if (编辑区) 编辑区.style.display = ''; if (列表区) 列表区.style.display = 'none'; if (编辑区) { var ss = 编辑区.querySelectorAll('.演示壳'); for (var i = 0; i < ss.length; i++) { ss[i].style.display = (ss[i].getAttribute('data-page') === 页码) ? '' : 'none'; } } }
+  var 右侧栏容器 = document.getElementById('阶段' + N填充 + '右侧栏');
+  if (右侧栏容器) { var 所有卡片组 = 右侧栏容器.querySelectorAll('.注释卡片组'); for (var i = 0; i < 所有卡片组.length; i++) { 所有卡片组[i].style.display = 'none'; } var 目标 = 右侧栏容器.querySelector('.注释卡片组[data-page="' + 页码 + '"]'); if (目标) 目标.style.display = ''; }
+}
+</script>
+
+<script id="js-字段联动">
+function 应用字段状态() {}
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); if (按钮) 按钮.classList.toggle('is-open'); }
+}
+</script>
+
+<script id="js-抽屉">
+window._详情字段按节 = window._详情字段按节 || {};
+
+function 打开抽屉(行数据, 标题) {
+  var drawer = document.getElementById('detailDrawer');
+  var overlay = document.getElementById('overlay');
+  var body = document.getElementById('detailBody');
+  var titleEl = document.getElementById('detailDrawerTitle');
+  if (!drawer || !body) return;
+  titleEl.textContent = 标题 || '详情';
+
+  var 节编号 = (行数据 && 行数据._壳节编号) ? 行数据._壳节编号 : null;
+  var 字段列表 = (节编号 && window._详情字段按节 && window._详情字段按节[节编号]) ? window._详情字段按节[节编号] : [];
+  var 分组 = (节编号 && window._详情字段分组 && window._详情字段分组[节编号]) ? window._详情字段分组[节编号] : null;
+  if (!分组 && 节编号 && window._新增字段分组 && window._新增字段分组[节编号]) { 分组 = window._新增字段分组[节编号]; }
+
+  var html = '';
+  if (分组 && 字段列表.length > 0) {
+    html += '<div class="编辑卡片区">';
+    for (var g = 0; g < 分组.length; g++) {
+      var 组 = 分组[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        var f = null;
+        for (var k = 0; k < 字段列表.length; k++) { if (字段列表[k].名称 === 组.字段[j]) { f = 字段列表[k]; break; } }
+        if (f) { var 值 = (行数据 && 行数据[f.名称] !== undefined) ? String(行数据[f.名称]) : '—'; html += 渲染详情字段行(f, 值); }
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
+  } else if (字段列表.length > 0) {
+    html += '<div class="编辑卡片区"><div class="field-card"><div class="field-card-header"><h4>详情</h4></div><div class="field-card-body">';
+    for (var i = 0; i < 字段列表.length; i++) {
+      var f = 字段列表[i];
+      var 值 = (行数据 && 行数据[f.名称] !== undefined) ? String(行数据[f.名称]) : '—';
+      html += 渲染详情字段行(f, 值);
+    }
+    html += '</div></div></div>';
+  } else {
+    html += '<div class="detail-grid">';
+    if (行数据) {
+      var keys = Object.keys(行数据).filter(function(k) { return k.indexOf('_') !== 0; });
+      for (var i = 0; i < keys.length; i++) {
+        var k = keys[i];
+        var v = 行数据[k] !== undefined ? String(行数据[k]) : '—';
+        html += '<div class="detail-item"><div class="detail-label">' + k + '</div><div class="detail-value">' + v + '</div></div>';
+      }
+    }
+    html += '</div>';
+  }
+  body.innerHTML = html;
+
+  overlay.classList.add('show');
+  drawer.classList.add('show');
+}
+
+function 渲染详情字段行(f, 值) {
+  var 编辑性 = f.详情编辑性 || f.编辑性;
+  if (!编辑性) {
+    var 可编辑 = (f.详情可编辑 !== undefined) ? f.详情可编辑 : f.可编辑;
+    编辑性 = 可编辑 ? '可编辑' : '只读';
+  }
+  var html = '<div class="field-row">';
+  html += '<span class="field-label">' + f.名称 + '</span>';
+  html += '<span class="field-control">';
+  html += '<span class="field-display">' + 值 + '</span>';
+  html += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+  html += '<span class="编辑性标签 ' + 编辑性 + '">' + 编辑性 + '</span>';
+  html += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button>';
+  html += '</span></div>';
+  return html;
+}
+
+function 关闭抽屉() {
+  var drawer = document.getElementById('detailDrawer');
+  var overlay = document.getElementById('overlay');
+  if (drawer) drawer.classList.remove('show');
+  if (overlay) overlay.classList.remove('show');
+}
+</script>
+
+<script id="js-新增抽屉">
+function 打开新增抽屉(节编号) {
+  var drawer = document.getElementById('新增抽屉面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('新增抽屉正文'); var titleEl = document.getElementById('新增抽屉标题');
+  if (!drawer || !body) return;
+  var 字段列表 = (节编号 && window._详情字段按节[节编号]) ? window._详情字段按节[节编号] : [];
+  var 新增字段 = []; for (var i = 0; i < 字段列表.length; i++) { if (字段列表[i].在新增) 新增字段.push(字段列表[i]); }
+  titleEl.textContent = (节编号 || '') + ' — 新增';
+  var html = '<div class="编辑卡片区"><div class="field-card"><div class="field-card-header"><h4>新增配置</h4></div><div class="field-card-body">';
+  if (新增字段.length === 0) { html += '<div class="空状态">该页面无可新增字段</div>'; }
+  else {
+    for (var i = 0; i < 新增字段.length; i++) {
+      var f = 新增字段[i];
+      var 新增可编辑 = (f.新增可编辑 !== undefined) ? f.新增可编辑 : f.可编辑;
+      var 编辑性 = 新增可编辑 ? '可编辑' : '只读';
+      html += '<div class="field-row">';
+      html += '<span class="field-label">' + f.名称 + '</span>';
+      html += '<span class="field-control">';
+      html += '<span class="field-display">' + (f.示例值 || (f.基础类型 === 'enum' ? '（下拉选择）' : '（填写）') + '</span>');
+      html += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+      html += '<span class="编辑性标签 ' + 编辑性 + '">' + 编辑性 + '</span>';
+      html += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button>';
+      html += '</span></div>';
+    }
+  }
+  html += '</div></div></div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭新增抽屉() { var d = document.getElementById('新增抽屉面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>类型</dt><dd>' + (信息.基础类型 || '—') + '</dd><dt>说明</dt><dd>' + (信息.说明 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+</script>
+
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+
+<script id="js-单元格截断">
+(function() {
+  document.querySelectorAll('.数据表格 tbody td').forEach(function(td) {
+    if (td.classList.contains('操作列')) return;
+    var txt = td.textContent.trim();
+    if (!txt) return;
+    td.innerHTML = '<span class="cell-clamp" title="' + txt.replace(/"/g, '&quot;') + '">' + txt + '</span>';
+  });
+})();
+</script>
+
+<script id="js-数据注册">
+/* ═══ 4.1 SaaS总后台账单管理 — 详情字段 ═══ */
+window._详情字段按节 = window._详情字段按节 || {};
+window._详情字段按节['4.1'] = [
+  {名称:'账单时间', 类型原文:'date', 基础类型:'date', 在详情:true, 在新增:true, 可编辑:true, 详情可编辑:false, 示例值:'2026-03'},
+  {名称:'账单单号', 类型原文:'string', 基础类型:'string', 在详情:true, 在新增:false, 可编辑:false, 示例值:'202603-8-TPA-025'},
+  {名称:'客户名称', 类型原文:'string', 基础类型:'string', 在详情:true, 在新增:true, 可编辑:true, 详情可编辑:false, 示例值:'星辰科技'},
+  {名称:'客户ID', 类型原文:'string', 基础类型:'string', 在详情:true, 在新增:true, 可编辑:true, 详情可编辑:false, 示例值:'8'},
+  {名称:'账单类型', 类型原文:'enum（第三方）', 基础类型:'enum', 在详情:true, 在新增:false, 可编辑:false, 枚举值:'第三方'},
+  {名称:'账单状态', 类型原文:'enum（未提现/待审核/审核通过，待打款/审核驳回/已提现）', 基础类型:'enum', 在详情:true, 在新增:false, 可编辑:false, 枚举值:'未提现,待审核,审核通过，待打款,审核驳回,已提现'},
+  {名称:'审核状态', 类型原文:'enum（待审核/审核通过/已删除）', 基础类型:'enum', 在详情:true, 在新增:false, 可编辑:false, 枚举值:'待审核,审核通过,已删除'},
+  {名称:'审核时间', 类型原文:'datetime', 基础类型:'date', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'送达状态', 类型原文:'enum（未送达/已送达）', 基础类型:'enum', 在详情:true, 在新增:false, 可编辑:false, 枚举值:'未送达,已送达'},
+  {名称:'送达时间', 类型原文:'datetime', 基础类型:'date', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'生成时间', 类型原文:'datetime', 基础类型:'date', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'业务类型', 类型原文:'string', 基础类型:'string', 在详情:true, 在新增:true, 可编辑:true, 示例值:'TPA'},
+  {名称:'订单数', 类型原文:'number', 基础类型:'number', 在详情:true, 在新增:true, 可编辑:true, 详情可编辑:false, 示例值:'1,250'},
+  {名称:'佣金金额', 类型原文:'number', 基础类型:'number', 在详情:true, 在新增:true, 可编辑:true, 示例值:'¥125,000.00'},
+  {名称:'调账金额', 类型原文:'number', 基础类型:'number', 在详情:true, 在新增:true, 可编辑:true, 示例值:'¥5,000.00'},
+  {名称:'预发月结金额', 类型原文:'number', 基础类型:'number', 在详情:true, 在新增:true, 可编辑:true, 示例值:'¥30,000.00'}
+];
+
+/* ═══ 4.1 详情字段分组 ═══ */
+window._详情字段分组 = window._详情字段分组 || {};
+window._详情字段分组['4.1'] = [
+  {组名:'基本信息', 字段:['账单时间', '账单单号', '账单类型', '业务类型', '生成时间']},
+  {组名:'客户归属', 字段:['客户名称', '客户ID']},
+  {组名:'金额构成', 字段:['订单数', '佣金金额', '调账金额', '预发月结金额']},
+  {组名:'审核与送达', 字段:['审核状态', '审核时间', '送达状态', '送达时间', '账单状态']}
+];
+
+/* ═══ 5.1 客户端后台账单列表 — 详情字段 ═══ */
+window._详情字段按节['5.1'] = [
+  {名称:'账单时间', 类型原文:'date', 基础类型:'date', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'账单单号', 类型原文:'string', 基础类型:'string', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'客户名称', 类型原文:'string', 基础类型:'string', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'客户ID', 类型原文:'string', 基础类型:'string', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'账单类型', 类型原文:'enum（第三方）', 基础类型:'enum', 在详情:true, 在新增:false, 可编辑:false, 枚举值:'第三方'},
+  {名称:'订单数', 类型原文:'number', 基础类型:'number', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'佣金金额', 类型原文:'number', 基础类型:'number', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'调账金额', 类型原文:'number', 基础类型:'number', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'预发月结金额', 类型原文:'number', 基础类型:'number', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'账单状态', 类型原文:'enum（未提现/待审核/审核通过，待打款/审核驳回/已提现）', 基础类型:'enum', 在详情:true, 在新增:false, 可编辑:false, 枚举值:'未提现,待审核,审核通过，待打款,审核驳回,已提现'},
+  {名称:'送达时间', 类型原文:'datetime', 基础类型:'date', 在详情:true, 在新增:false, 可编辑:false},
+  {名称:'业务类型', 类型原文:'string', 基础类型:'string', 在详情:true, 在新增:false, 可编辑:false}
+];
+
+/* ═══ 字段总库（弹窗 ⓘ 数据来源） ═══ */
+window._字段总库 = window._字段总库 || [];
+/* --- 4.1 字段 --- */
+window._字段总库.push({名称:'账单时间', 类型原文:'date', 基础类型:'date', 说明:'数据来源：统计后台（账单系统侧）导入或推送时带入。逻辑：按账单所属月份或日期记录。用途：用于识别本期账单所属时间，并支持列表筛选。', 节编号:'4.1'});
+window._字段总库.push({名称:'账单单号', 类型原文:'string', 基础类型:'string', 说明:'数据来源：系统按账单时间、客户 ID 和账号账单生成序号自动生成。逻辑：沿用 B13 账单单号规则，格式示例：202603-8-TPA-025。其中 202603 为账单时间，8 为客户 ID，TPA 为写死字段，025 为整个账号生成的第几个账单。用途：用于唯一识别和追溯账单。', 节编号:'4.1'});
+window._字段总库.push({名称:'客户名称', 类型原文:'string', 基础类型:'string', 说明:'数据来源：统计后台推送给 SaaS 的客户名称，或导入时指定的客户名称。逻辑：展示该账单关联客户的名称。用途：用于财务审核账单归属和列表查询。', 节编号:'4.1'});
+window._字段总库.push({名称:'客户 ID', 类型原文:'string', 基础类型:'string', 说明:'数据来源：指定的账单关联客户 ID。逻辑：与客户名称一并确定账单归属。用途：用于唯一标识账单关联的 SaaS 客户。', 节编号:'4.1'});
+window._字段总库.push({名称:'账单类型', 类型原文:'enum（第三方）', 基础类型:'enum', 说明:'数据来源：系统固定写入。逻辑：当前写死为"第三方"，属于老功能遗留字段，继续保留。用途：用于兼容历史账单字段和页面展示口径。', 节编号:'4.1'});
+window._字段总库.push({名称:'账单状态', 类型原文:'enum（未提现/待审核/审核通过，待打款/审核驳回/已提现）', 基础类型:'enum', 说明:'数据来源：账单送达后由后续提现流程更新。逻辑：沿用 B13 账单状态规则；B12 账单送达前的财务审核没有驳回或不通过逻辑。用途：用于判断账单能否申请提现及当前提现进度。', 节编号:'4.1'});
+window._字段总库.push({名称:'审核状态', 类型原文:'enum（待审核/审核通过/已删除）', 基础类型:'enum', 说明:'数据来源：SaaS 总后台财务审核操作写入。逻辑：待审核→审核通过或删除；修改后保持待审核。用途：控制账单的审核流转和送达资格。', 节编号:'4.1'});
+window._字段总库.push({名称:'审核时间', 类型原文:'datetime', 基础类型:'date', 说明:'数据来源：系统记录财务审核操作时间。逻辑：审核通过或删除时记录。用途：用于追溯审核时间节点。', 节编号:'4.1'});
+window._字段总库.push({名称:'送达状态', 类型原文:'enum（未送达/已送达）', 基础类型:'enum', 说明:'数据来源：SaaS 总后台执行送达时写入。逻辑：审核通过后可送达，送达后状态变为已送达。用途：控制客户端账单可见性。', 节编号:'4.1'});
+window._字段总库.push({名称:'送达时间', 类型原文:'datetime', 基础类型:'date', 说明:'数据来源：SaaS 总后台执行送达时记录。逻辑：送达操作完成时记录时间。用途：客户查看账单到账节点。', 节编号:'4.1'});
+window._字段总库.push({名称:'生成时间', 类型原文:'datetime', 基础类型:'date', 说明:'数据来源：系统记录账单进入待审核列表的时间。逻辑：账单形成待审核记录时生成。用途：用于追溯账单生成时间。', 节编号:'4.1'});
+window._字段总库.push({名称:'业务类型', 类型原文:'string', 基础类型:'string', 说明:'数据来源：统计后台的"账单名称"字段。逻辑：统计后台推送或导入时带入，SaaS 侧直接沿用。用途：用于区分账单所属业务类型。', 节编号:'4.1'});
+window._字段总库.push({名称:'订单数', 类型原文:'number', 基础类型:'number', 说明:'数据来源：统计后台推送或导入时带入。逻辑：展示本期账单对应的订单数量，财务审核环节不可修改。用途：用于财务审核账单规模。', 节编号:'4.1'});
+window._字段总库.push({名称:'佣金金额', 类型原文:'number', 基础类型:'number', 说明:'数据来源：统计后台推送或导入时带入。逻辑：展示本期账单的佣金金额，账单送达前财务可修改。用途：用于账单金额构成审核。', 节编号:'4.1'});
+window._字段总库.push({名称:'调账金额', 类型原文:'number', 基础类型:'number', 说明:'数据来源：统计后台推送或导入时带入。逻辑：展示本期账单的调账金额，账单送达前财务可修改。用途：用于账单金额构成审核。', 节编号:'4.1'});
+window._字段总库.push({名称:'预发月结金额', 类型原文:'number', 基础类型:'number', 说明:'数据来源：统计后台推送或导入时带入。逻辑：展示本期账单的预发月结金额，账单送达前财务可修改。用途：用于账单金额构成审核，并作为客户后续提现金额口径的一部分。', 节编号:'4.1'});
+
+/* --- 5.1 字段 --- */
+window._字段总库.push({名称:'送达时间', 类型原文:'datetime', 基础类型:'date', 说明:'数据来源：SaaS 总后台执行送达时记录。用途：客户查看账单到账节点。', 节编号:'5.1'});
+/* 5.1 中与 4.1 同名的字段不再重复注册（账单时间/账单单号/账单类型/订单数/佣金金额/调账金额/预发月结金额/账单状态/业务类型/客户名称/客户ID 已由 4.1 注册） */
+</script>
+
+</body>
+</html>

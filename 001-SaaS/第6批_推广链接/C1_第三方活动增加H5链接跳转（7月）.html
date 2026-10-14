@@ -1,0 +1,1564 @@
+<script type="text/plain" data-ai-only>
+# B04-S2 第三方活动增加H5链接跳转
+
+> 本变更是 B04-S1 的增量变更。在已有「小程序」和「口令（H5网页）」两种跳转方式基础上，新增第三种跳转方式「H5链接」。
+> 总后台运营选择「H5链接」后无需额外配置（不填 AppID、不选模板），商户在客户端直接填写 H5 链接 URL。
+> 存量活动不受影响，B04-S1 中所有规则和说明继续保留生效。
+
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+B04-S1 已为第三方活动新增了「口令（H5网页）」跳转方式，运营选择后关联 H5 模板，商户在客户端配置口令。但实际运营中还存在另一类场景：部分第三方合作方直接提供一个 H5 活动链接 URL，不需要模板包装，也不需要口令跳转，商户只需将此链接配置到推广位即可。
+
+这类「纯 H5 链接」场景的特点是：
+- 链接由第三方提供（如 `https://act.example.com/618/discount?sid=xxx`）
+- 不需要总后台维护模板——每个活动的链接各不相同，没有复用的模板
+- 商户可能需要按推广位配置不同的链接参数（如不同渠道的 tracking 参数）
+- 比「口令」模式更直接，比「小程序」模式更轻量
+
+```text
+B04-S1 已有跳转方式
+
+小程序：运营填AppID → 商户配小程序路径
+口令（H5网页）：运营选H5模板 → 商户配口令
+        ↓
+B04-S2 新增
+
+H5链接：运营仅选择类型 → 商户直接配H5链接URL
+        无需总后台额外配置
+```
+
+### 1.2 一句话业务模型
+
+```text
+第三方活动跳转方式枚举扩展为三项
+  跳转方式（枚举：小程序 / 口令 / H5链接，存量默认小程序）
+        │
+        ├─ 小程序 → 填AppID + 默认推广位路径（B04已有）
+        ├─ 口令   → 选H5模板 + 商户配口令（B04-S1新增）
+        └─ H5链接 → 总后台无需配置 + 商户直接配H5链接URL（B04-S2新增）
+```
+
+### 1.3 最终目标
+
+- **第三方活动支持直接 H5 链接跳转：** 运营在总后台将活动跳转方式设为「H5链接」，商户在客户端直接填写 H5 链接 URL，推广位据此跳转。
+- **总后台零配置：** H5链接类型不需要总后台填写 AppID、不需要选择 H5 模板——运营仅需选择跳转方式为「H5链接」即可保存。
+- **存量活动零影响：** B04-S1 已有的「小程序」和「口令」两种跳转方式行为完全不变。新增活动默认仍为「小程序」。
+
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌────────────────────────┬────────────────────────┐
+│ SaaS 总后台            │ 客户端后台             │
+├────────────────────────┼────────────────────────┤
+│ ① 维护第三方活动分组   │                        │
+│          │             │                        │
+│          ▼             │                        │
+│ ② 新增/编辑预设活动    │                        │
+│    选择跳转方式        │                        │
+│    ├─ 小程序 → 填AppID │                        │
+│    ├─ 口令   → 选模板  │                        │
+│    └─ H5链接 → 无需配置│ ← B04-S2 新增          │
+│       (展示与排序隐藏)   │                        │
+│    【活动状态：已发布】 │                        │
+│          │             │                        │
+│          └────────────→│ ③ 查看第三方活动清单   │
+│                        │    按跳转方式分流展示   │
+│                        │    ├─ 小程序：显示AppID │
+│                        │    ├─ 口令：显示模板名  │
+│                        │    └─ H5链接：显示链接  │
+│                        │          │             │
+│                        │          ▼             │
+│                        │ ④ 配置活动跳转路径     │
+│                        │    ├─ 小程序活动：      │
+│                        │    │  配置推广位路径     │
+│                        │    ├─ 口令活动：        │
+│                        │    │  配置推广位口令     │
+│                        │    └─ H5链接活动：      │
+│                        │      配置推广位H5链接   │
+│                        │          │             │
+│ ⑤ 代客查阅与修正路径 ←─┴────────               │
+│    H5链接活动可改链URL                            │
+└────────────────────────────────────────────────┘
+```
+
+B04-S2 的增量集中在步骤②中新增的「H5链接」跳转方式选项，步骤③中 H5链接活动的列表展示，以及步骤④中商户配置 H5 链接 URL 的交互。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序展开：
+
+1. **第一阶段：总后台运营配置（主要参与方：SaaS 总后台运营）**：运营在预设活动列表和新增/编辑弹窗中可选择「H5链接」跳转方式，选择后无需填写 AppID 和 H5 模板。
+2. **第二阶段：客户端商户查看与使用（主要参与方：客户端商户）**：商户在活动清单看到 H5链接标识，进入抽屉后配置各推广位的 H5 链接 URL。
+
+```text
+第一阶段：总后台配置
+① 查看活动列表（跳转方式列新增H5链接）→ ② 新增/编辑活动（跳转方式新增第三选项，选择后无需填写其他字段）
+                                          ↓
+第二阶段：客户端查看与使用
+③ 查看活动清单（H5链接活动展示URL）→ ④ 配置H5链接（商户填写各推广位H5链接URL）
+                                          ↑
+                              ⑤ 总后台代客修正（横向支撑）
+```
+
+### 2.3 页面类型说明
+
+本次改造涉及以下页面类型：
+
+| 页面类型 | 面向对象 | 本次涉及页面 |
+| --- | --- | --- |
+| 列表页 | 后台操作人员 | 总后台第三方活动列表、总后台客户路径查阅、客户端活动清单 |
+| 页面编辑类 | 后台操作人员 | 总后台新增/编辑预设活动弹窗、客户端路径/口令/链接配置抽屉 |
+
+### 2.4 业务路径与真实汇合点
+
+本次改造在 B04-S1 的两条路径基础上引入第三条跳转路径：
+
+```text
+跳转方式 = 小程序（存量默认）
+运营填写 AppID + 默认推广位路径
+        ↓
+商户看到 AppID + 可配置推广位路径
+                         ┐
+跳转方式 = 口令（B04-S1新增）│
+运营选择 H5 模板            │
+        ↓                   ├→ 活动发布，商户可见 → 推广位跳转使用对应方式
+商户看到 H5标识 + 模板名称   │
+商户配置口令                 │
+                         ┐   │
+跳转方式 = H5链接（B04-S2新增）│
+运营仅选择类型，无需额外配置  │   │
+        ↓                   │   │
+商户看到 H5链接标识 + URL    │   │
+商户直接配置 H5链接URL      ┘   ┘
+```
+
+三条路径的活动发布后统一进入客户端活动清单，但列表展示和抽屉配置行为各不相同。
+
+
+---
+
+## 3. 第一阶段：总后台运营配置
+
+### 3.1 第三方活动列表 — 列表页（改造页面）
+
+<!-- @页面类型: 列表页 -->
+
+#### 业务背景
+
+当前环节：② 新增/编辑预设活动（查看已有活动记录）<br>
+页面路径：SaaS 总后台 > 活动管理 > 第三方活动<br>
+对下游影响：列表展示的跳转方式帮助运营快速识别活动类型，包括新增的「H5链接」类型<br>
+表格类型：列表页<br>
+
+本次改造在 B04-S1 的列表基础上，跳转方式列新增「H5链接」标签展示。H5链接活动无 AppID（显示`--`），无 H5模板（显示`--`），新增「H5链接」列展示活动默认链接。
+
+#### 字段说明
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 排序 | number | 是 | 否 | 是（可编辑） | **数据来源：** 运营填写。<br>**逻辑：** 正整数，数字越大越靠前。<br>**用途：** 控制商户端活动列表展示顺序。 |
+| 活动名称 | string | 是 | 否 | 是（可编辑） | **数据来源：** 运营填写。<br>**逻辑：** 1-50 字符，同一分组下不可重名。<br>**用途：** 商户端识别和选择活动。 |
+| AppID | string | 是 | 否 | 是（可编辑） | **数据来源：** 运营填写。<br>**逻辑：** redirectType=miniprogram 时正常展示；redirectType=h5 和 redirectType=h5link 时显示 `--`。<br>**用途：** 小程序跳转目标标识。 |
+| 🆕 跳转方式 | enum（小程序、口令、H5链接） | 是 | 否 | 是（可编辑） | **数据来源：** 运营在新增/编辑弹窗中选择。<br>**逻辑：** 展示对应标签——「小程序」蓝色标签 `🏷 小程序`，「口令」橙色标签 `🔑 口令`，「H5链接」绿色标签 `🔗 H5链接`。B04-S1存量活动默认「小程序」，B04-S2新增活动可选三种。<br>**用途：** 帮助运营快速识别活动跳转类型。 |
+| H5模板 | string | 是 | 否 | 否 | **数据来源：** 关联 h5Templates 表的模板名称。<br>**逻辑：** redirectType=h5 且已关联模板时展示模板名称；redirectType=miniprogram 或 h5link 时显示 `--`。<br>**用途：** 帮助运营确认口令活动关联了哪个模板。 |
+| 🆕 H5链接 | string | 是 | 否 | 否 | **数据来源：** 商户在客户端配置的默认 H5 链接。<br>**逻辑：** redirectType=h5link 且商户已配置默认链接时展示链接 URL（截断显示前40字符）；redirectType=miniprogram 或 h5 时显示 `--`。<br>**用途：** 帮助运营确认 H5链接活动的目标 URL。 |
+| 所属分组 | string | 是 | 否 | 是（可编辑） | **数据来源：** 运营在新增/编辑弹窗中选择。<br>**逻辑：** 展示分组名称。<br>**用途：** 标识活动归属。 |
+| 预设 | enum（是、否） | 是 | 否 | 是（可编辑） | **数据来源：** 运营在新增/编辑弹窗中切换。<br>**逻辑：** 开关控件，开启后客户可见。<br>**用途：** 控制活动对客户的可见性。 |
+| 主图 | file | 是 | 否 | 是（可编辑） | **数据来源：** 运营填写图片 URL。<br>**逻辑：** 缩略图展示。<br>**用途：** 活动展示主图。 |
+| 状态 | enum（上架、下架） | 是 | 否 | 是（可编辑） | **数据来源：** 运营在新增/编辑弹窗中选择。<br>**逻辑：** 上架=客户端可见，下架=客户端不可见。<br>**用途：** 控制活动上下架。 |
+
+#### 列表交互
+
+**交互：新增活动**<br>
+**业务用途**：打开新增预设活动弹窗。弹窗内跳转方式新增「H5链接」选项，详见 3.2 节。<br>
+
+**交互：编辑活动**<br>
+**业务用途**：打开编辑弹窗，可修改跳转方式为「H5链接」。切换后 AppID、H5模板等字段按联动规则置灰/隐藏，详见 3.2 节。<br>
+
+**交互：上架 / 下架**<br>
+**业务用途**：切换活动在客户端的可见状态。不改变跳转方式。<br>
+
+**交互：删除**<br>
+**业务用途**：删除活动前提示引用商户数。删除后客户端不再展示该活动。<br>
+
+#### 业务逻辑
+
+**跳转方式列展示规则：** 列表根据 redirectType 值展示对应标签——miniprogram → `🏷 小程序`（蓝色），h5 → `🔑 口令`（橙色），h5link → `🔗 H5链接`（绿色）。
+
+**H5链接列展示规则：** 仅 redirectType=h5link 且商户已配置默认 H5 链接时展示链接 URL（截断显示）；其余情况展示 `--`。
+
+**B04-S1存量活动兼容：** B04-S1 的 h5 类型（口令）活动行为不变。新增 h5link 类型不影响已有数据。
+
+
+### 3.2 新增/编辑预设活动弹窗 — 页面编辑类（改造页面）
+
+<!-- @页面类型: 页面编辑类 -->
+
+#### 业务背景
+
+当前环节：② 新增/编辑预设活动，选择跳转方式<br>
+页面路径：SaaS 总后台 > 活动管理 > 第三方活动 > 新增/编辑弹窗<br>
+对下游影响：弹窗中配置的跳转方式决定客户端活动清单的展示内容、商户端配置抽屉展示何种配置区、以及 C 端最终跳转行为<br>
+表格类型：页面编辑类<br>
+
+本次改造在 B04-S1 弹窗的「跳转方式」字段中新增第三个枚举值「H5链接」。选择「H5链接」后，AppID、H5模板和默认推广位路径均不需要——三个区域的字段全部置灰/隐藏，弹窗底部显示提示"选择H5链接后无需总后台额外配置，商户在客户端直接填写H5链接URL"。
+
+#### 字段说明
+
+##### [页面编辑类] — 基础信息区
+
+路径：SaaS 总后台 > 活动管理 > 第三方活动 > 新增/编辑弹窗 > 分区A：基础信息
+
+| 配置项 | 字段类型 | 配置值 | 编辑性 | 适用场景 | 说明 | 枚举值控制逻辑 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 所属分组 | string | 当前分组名称（只读） | 只读 | 编辑时不可更改 | **数据来源：** 新增时自动带入当前分组。<br>**逻辑：** 编辑时不可更改分组归属。<br>**用途：** 确定活动归属的分组。 | — |
+| 活动名称 | string | 运营填写，1-50字符 | 可编辑 | 新增、编辑 | **数据来源：** 运营填写。<br>**逻辑：** 同一分组下不可重名。<br>**用途：** 商户端活动卡片显示名称。 | — |
+| AppID | string | 运营填写，wx开头+字母数字 | 条件 | redirectType=miniprogram 时 | **数据来源：** 运营填写。<br>**逻辑：** redirectType=h5 或 h5link 时置灰不可填，显示 `--`。<br>**用途：** 推广位跳转时使用的目标小程序。 | miniprogram → 正常可填，必填校验；h5 / h5link → 置灰不可填，显示 `--`，不校验 |
+| 🆕 跳转方式 | enum（miniprogram、h5、h5link） | 默认 miniprogram | 可编辑 | 新增、编辑 | **数据来源：** 运营选择。<br>**逻辑：** 枚举值——`miniprogram`（小程序）、`h5`（口令）、`h5link`（H5链接）。新增时默认选中「小程序」。B04-S1存量活动回显已有值（小程序或口令）。<br>**用途：** 决定活动跳转目标类型，并控制同弹窗内 AppID、默认推广位路径、H5模板字段的置灰/启用和必填性。 | 见本表「枚举值控制逻辑」列其余字段行 |
+| H5模板 | string | 下拉选择，选项来自 h5Templates 表中 status=enabled 的模板 | 条件 | redirectType=h5 时 | **数据来源：** 运营从下拉列表中选择。<br>**逻辑：** redirectType=h5 时必填（保存校验："请选择 H5 模板"）。redirectType=miniprogram 或 h5link 时置灰不可选，值自动清空。<br>**用途：** 关联的 H5 模板决定 C 端用户打开活动后的页面样式和跳转行为。 | miniprogram / h5link → 置灰不可选，值清空；h5 → 正常，必填校验 |
+
+##### [页面编辑类] — 展示与排序区
+
+路径：SaaS 总后台 > 活动管理 > 第三方活动 > 新增/编辑弹窗 > 分区B：展示与排序
+
+| 配置项 | 字段类型 | 配置值 | 编辑性 | 适用场景 | 说明 | 枚举值控制逻辑 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 默认推广位路径 | string | 运营填写，小程序页面路径 | 条件 | redirectType=miniprogram 时 | **数据来源：** 运营填写。<br>**逻辑：** 商户端推广位路径留空时的兜底路径。redirectType=h5 或 h5link 时置灰不可填，值清空。<br>**用途：** 商户未配置推广位路径时的全局 fallback。 | miniprogram → 正常，选填；h5 / h5link → 置灰不可填，值清空 |
+| 预设 | enum（是、否） | 默认是 | 条件 | redirectType=miniprogram 或 h5 时 | **数据来源：** 运营切换开关。<br>**逻辑：** 开启后客户可见，关闭后客户不可见。redirectType=h5link 时整个「展示与排序」分区隐藏，此字段不显示。<br>**用途：** 控制活动对客户的可见性。 | miniprogram / h5 → 正常可编辑；h5link → 隐藏（随分区整体隐藏） |
+| 排序 | number | 正整数，数字越大越靠前 | 条件 | redirectType=miniprogram 或 h5 时 | **数据来源：** 运营填写。<br>**逻辑：** 默认取当前最大值+1。redirectType=h5link 时隐藏。<br>**用途：** 商户端活动列表展示顺序。 | miniprogram / h5 → 正常可编辑；h5link → 隐藏 |
+| 活动主图 | string | URL，选填 | 条件 | redirectType=miniprogram 或 h5 时 | **数据来源：** 运营填写图片 URL。<br>**逻辑：** 建议尺寸 750×400。留空不显示图片。redirectType=h5link 时隐藏。<br>**用途：** 活动展示主图。 | miniprogram / h5 → 正常可编辑；h5link → 隐藏 |
+| 状态 | enum（上架、下架） | 默认上架 | 条件 | redirectType=miniprogram 或 h5 时 | **数据来源：** 运营选择。<br>**逻辑：** 上架=客户端可见，下架=客户端不可见。redirectType=h5link 时隐藏——H5链接活动发布即上架，无需状态控制。<br>**用途：** 控制活动上下架。 | miniprogram / h5 → 正常可编辑；h5link → 隐藏 |
+
+#### 详情字段分组
+
+编辑弹窗中字段按以下分组展示：
+
+| 组名 | 字段 | 备注 |
+| --- | --- | --- |
+| 基础信息 | 所属分组、活动名称、AppID、跳转方式、H5模板 | 所有跳转方式均显示 |
+| 展示与排序 | 默认推广位路径、预设、排序、活动主图、状态 | 仅 miniprogram / h5 时显示；h5link 时整组隐藏 |
+
+#### 列表交互
+
+**交互：保存**<br>
+**业务用途**：校验字段规则后保存活动配置。跳转方式=miniprogram 时校验 AppID 必填；跳转方式=h5 时校验 H5 模板必填；跳转方式=h5link 时无需额外校验（AppID 和 H5模板均置灰）。保存成功后关闭弹窗，刷新列表。<br>
+
+**交互：切换跳转方式**<br>
+**业务用途**：运营在「小程序」「口令」「H5链接」之间切换。切换为「H5链接」时 AppID、默认推广位路径、H5模板全部置灰不可操作，弹窗底部显示提示信息。切回其他类型时恢复对应字段的可用性和原值。<br>
+
+#### 业务逻辑
+
+**跳转方式联动规则（B04-S2 扩展）：** 跳转方式字段的值决定同弹窗内以下字段的置灰/启用和必填性——
+
+| 跳转方式 | AppID | 默认推广位路径 | H5模板 |
+| --- | --- | --- | --- |
+| miniprogram（小程序） | 正常，可填，必填校验 | 正常，选填 | 置灰不可选，值自动清空 |
+| h5（口令） | 置灰不可填，显示 `--`，不校验 | 置灰不可填，值清空 | 正常，必填校验 |
+| h5link（H5链接） | 置灰不可填，显示 `--`，不校验 | 置灰不可填，值清空 | 置灰不可选，值自动清空 |
+
+**H5链接类型的特殊规则：** 选择 h5link 后，总后台弹窗内 AppID、H5模板、默认推广位路径全部置灰/隐藏，**「展示与排序」分区整体隐藏**（预设、排序、活动主图、状态均不显示）。运营仅需填写活动名称和选择跳转方式即可保存。H5链接活动发布即上架，无需状态控制。这种设计是因为 H5 链接由第三方直接提供，所有配置由商户在客户端完成。
+
+**编辑存量活动切换跳转方式的值保留（B04-S1 规则延续）：** 运营将存量 miniprogram 活动切换为 h5link 时，原 AppID 和默认推广位路径保留在数据层但不展示。切回 miniprogram 时恢复展示原值。从 h5 切为 h5link 时 h5TemplateId 保留但不展示；切回 h5 时需重新选择模板。
+
+**保存校验：** 跳转方式=h5link 时不校验 AppID、H5模板、默认推广位路径、预设、排序、活动主图、状态——这些字段全部置灰或随分区隐藏，运营仅需填写活动名称即可保存。跳转方式=miniprogram 时校验 AppID 非空且符合 wx 开头格式；跳转方式=h5 时校验 h5TemplateId 非空。
+
+
+## 4. 第二阶段：客户端商户查看与使用
+
+### 4.1 第三方活动清单 — 列表页（改造页面）
+
+<!-- @页面类型: 列表页 -->
+
+#### 业务背景
+
+当前环节：③ 查看第三方活动清单，按跳转方式分流展示<br>
+页面路径：客户端后台 > 推广管理 > 活动清单 > 第三方活动 Tab<br>
+对下游影响：商户看到的活动卡片按跳转方式分流展示，H5链接活动展示链接标识，点击后进入链接配置抽屉<br>
+表格类型：列表页<br>
+
+本次改造在 B04-S1 的客户端清单基础上，H5链接活动卡片展示「🔗 H5链接 · {默认链接URL截断}」。
+
+#### 字段说明
+
+##### [列表页字段]
+
+以下仅列出本次改造涉及的字段变化：
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 活动名称 | string | 是 | 否 | 否 | **数据来源：** 活动记录。<br>**逻辑：** 保持现有展示不变。<br>**用途：** 商户识别和选择活动。 |
+| 跳转标识（替代原AppID位置） | 组合字段 | 是 | 否 | 否 | **数据来源：** 活动的 redirectType 和关联数据。<br>**逻辑：** redirectType=miniprogram 时展示 AppID；redirectType=h5 时展示 `🔑 口令 · {模板名称}`；redirectType=h5link 时展示 `🔗 H5链接 · {默认链接截断}`。<br>**用途：** 帮助商户识别活动跳转类型。 |
+| 使用中标识 | string | 是 | 否 | 否 | **数据来源：** 系统判断。<br>**逻辑：** miniprogram 活动已配置路径时显示「使用中」；h5 活动不展示；h5link 活动已配置默认链接时显示「使用中」。<br>**用途：** 帮助商户快速识别已配置的活动。 |
+| 分组标签 | string | 是 | 否 | 否 | **数据来源：** 活动所属分组。<br>**逻辑：** 保持现有展示不变。<br>**用途：** 帮助商户识别活动来源。 |
+
+#### 列表交互
+
+**交互：点击活动行**<br>
+**业务用途**：打开配置抽屉。miniprogram 活动进入路径配置界面；h5 活动进入口令配置界面；h5link 活动进入 H5链接配置界面（4.2 节）。<br>
+
+**交互：删除自定义活动**<br>
+**业务用途**：仅「其他」分组下的自定义活动可删除。H5链接自定义活动的删除逻辑与其他类型一致。<br>
+
+**交互：新增活动（仅「其他」Tab）**<br>
+**业务用途**：商户在「其他」分组下新建自定义活动。商户自建活动默认跳转方式为「小程序」，不支持商户自行选择跳转方式（此配置仅总后台可操作）。<br>
+
+#### 业务逻辑
+
+**H5链接活动展示「使用中」标识：** 与 h5（口令）活动不同，H5链接活动商户需要配置链接 URL，因此当默认链接非空或任一推广位已配置链接时展示「使用中」标识。这一点与小程序活动一致。
+
+**搜索筛选兼容：** H5链接活动的默认链接 URL 纳入搜索范围（商户搜索链接关键词可匹配到关联活动）。
+
+**分组 Tab 切换：** 保持 B04/B04-S1 逻辑不变。三种跳转方式的活动可在同一分组下混合展示，按排序值降序排列。
+
+
+### 4.2 活动配置抽屉 — 页面编辑类（改造页面）
+
+<!-- @页面类型: 页面编辑类 -->
+
+#### 业务背景
+
+当前环节：④ 配置活动跳转方式对应的内容<br>
+页面路径：客户端后台 > 推广管理 > 活动清单 > 点击活动行 > 配置抽屉<br>
+对下游影响：H5链接活动的链接 URL 用于推广位直接跳转<br>
+表格类型：页面编辑类<br>
+
+本次改造让配置抽屉根据活动的 redirectType 展示三种不同内容：
+- miniprogram → 小程序路径配置区（B04原有）
+- h5 → 推广位口令配置区（B04-S1新增）
+- h5link → 推广位H5链接配置区（B04-S2新增）
+
+#### 字段说明
+
+##### [页面编辑类]
+
+| 配置项 | 字段类型 | 配置值 | 编辑性 | 适用场景 | 说明 | 枚举值控制逻辑 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 活动名称 | string | 只读 | 只读 | 全部 | **数据来源：** 活动记录。<br>**逻辑：** 保持现有展示不变。<br>**用途：** 确认当前配置的活动。 | — |
+| 跳转标识 | 组合字段 | 只读 | 只读 | 全部 | **数据来源：** 活动的 redirectType 和关联数据。<br>**逻辑：** miniprogram 展示 AppID（可复制）；h5 展示 `🔑 口令 · {模板名称}`；h5link 展示 `🔗 H5链接 · {默认链接截断}`。<br>**用途：** 告知商户当前活动的跳转类型和目标。 | — |
+| 默认推广位路径 | string | 运营或商户填写 | 条件 | redirectType=miniprogram | **数据来源：** 运营预设或商户填写。<br>**逻辑：** B04 现有逻辑不变。<br>**用途：** 推广位路径留空时的兜底值。 | miniprogram → 正常；h5 / h5link → 置灰 |
+| 独立配置开关 | enum（开、关） | 默认开启 | 条件 | redirectType=miniprogram | B04 现有逻辑不变。 | miniprogram → 正常；h5 / h5link → 各自有独立开关 |
+| 推广位路径表格 | 组合字段 | 商户填写 | 条件 | redirectType=miniprogram | B04 现有逻辑不变。 | miniprogram → 正常；h5 / h5link → 不展示 |
+| H5模板信息 | string | 只读 | 只读 | redirectType=h5 | **数据来源：** 活动关联的 h5TemplateId → h5Templates.name。<br>**逻辑：** 展示模板名称（只读）。<br>**用途：** 告知商户口令活动使用的模板。 | h5 → 正常；miniprogram / h5link → 不展示 |
+| 默认口令 | string | 运营预设或商户填写 | 条件 | redirectType=h5 | B04-S1 逻辑。<br>**用途：** 推广位口令留空时的兜底值。 | h5 → 正常；miniprogram / h5link → 不展示 |
+| 推广位口令表格 | 组合字段 | 商户填写 | 条件 | redirectType=h5 | B04-S1 逻辑。 | h5 → 正常；miniprogram / h5link → 不展示 |
+| 🆕 默认H5链接 | string | 商户填写，URL格式 | 条件 | redirectType=h5link | **数据来源：** 商户填写。<br>**逻辑：** 推广位 H5链接留空时的兜底值。URL 格式校验（http/https开头）。<br>**用途：** 推广位 H5链接留空时的 fallback。 | h5link → 正常，选填；miniprogram / h5 → 不展示 |
+| 🆕 H5链接独立配置开关 | enum（开、关） | 默认开启 | 条件 | redirectType=h5link | **数据来源：** 商户操作。<br>**逻辑：** 控制是否允许按推广位独立配置 H5链接。<br>**用途：** 控制是否展开推广位H5链接编辑表格。 | h5link → 正常；miniprogram / h5 → 不展示 |
+| 🆕 推广位H5链接表格 | 组合字段 | 商户填写 | 条件 | redirectType=h5link | **数据来源：** 商户为各推广位填写的 H5链接 URL。<br>**逻辑：** 该推广位跳转时优先使用此链接。三级兜底：推广位级链接 → 默认H5链接 → 无链接（不跳转）。<br>**用途：** H5链接活动各推广位跳转时使用的目标 URL。 | h5link → 正常；miniprogram / h5 → 不展示 |
+
+#### 列表交互
+
+**交互：保存默认H5链接（仅 h5link）**<br>
+**业务用途**：保存当前活动的默认 H5链接 URL。校验 URL 格式（http/https开头），格式错误时提示"请输入有效的 HTTP/HTTPS 链接"。<br>
+
+**交互：切换H5链接独立配置开关（仅 h5link）**<br>
+**业务用途**：控制是否展开推广位独立 H5链接编辑表格。<br>
+
+**交互：保存推广位H5链接 / 一键保存全部（仅 h5link）**<br>
+**业务用途**：保存单个或全部推广位 H5链接 URL。每个链接独立校验格式。<br>
+
+**交互：返回活动清单**<br>
+**业务用途**：关闭抽屉，返回活动清单。三种跳转方式均可操作。<br>
+
+#### 业务逻辑
+
+**H5链接抽屉的展示规则：** 打开 H5链接活动的抽屉时，展示活动名称、跳转标识（🔗 H5链接）、默认H5链接输入区、独立配置开关、推广位H5链接表格。不展示 AppID 复制按钮、H5模板信息和推广位口令表格。
+
+**小程序活动和口令活动抽屉保持不变：** B04 和 B04-S1 的抽屉配置逻辑完全不变。
+
+**H5链接 URL 校验规则：**
+- 非空时必须以 `http://` 或 `https://` 开头
+- 链接长度限制 2048 字符
+- 保存时校验格式，不校验链接可达性（避免保存超时）
+
+**切换跳转方式后已配置数据的处理：** 如果运营将活动从 h5link 改为其他类型，商户端已配置的 H5链接数据在数据库中保留但不展示。切回 h5link 时恢复展示和编辑。
+
+
+---
+
+## 6. 关键业务规则
+
+### 6.1 B04-S1 存量兼容（保留沿用）
+
+B04-S1 中所有规则继续生效：
+- 所有已有第三方活动 redirectType 默认 `miniprogram`，h5TemplateId 默认 `''`
+- B04-S1 实施后产生的 h5（口令）类型活动行为不变
+- 商户已配置的推广位路径和口令不受影响
+
+B04-S2 新增兼容规则：
+- B04-S2 实施后，已有活动 redirectType 不存在 `h5link`，全部为 miniprogram 或 h5
+- B04-S2 实施后新增活动可选三种跳转方式，默认仍为「小程序」
+
+### 6.2 跳转方式联动规则（B04-S2 三值版）
+
+跳转方式字段的值决定同页面内以下内容：
+
+| 影响范围 | miniprogram（小程序） | h5（口令） | h5link（H5链接） |
+| --- | --- | --- | --- |
+| 总后台弹窗 - AppID | 显示，必填 | 置灰，不校验 | 置灰，不校验 |
+| 总后台弹窗 - 默认推广位路径 | 显示，选填 | 隐藏，值清空 | 隐藏，值清空 |
+| 总后台弹窗 - H5模板 | 隐藏，值清空 | 显示，必填 | 隐藏，值清空 |
+| 总后台弹窗 - 展示与排序分区 | 显示 | 显示 | **整组隐藏** |
+| 总后台弹窗 - 预设 | 正常可编辑 | 正常可编辑 | **隐藏** |
+| 总后台弹窗 - 排序 | 正常可编辑 | 正常可编辑 | **隐藏** |
+| 总后台弹窗 - 活动主图 | 正常可编辑 | 正常可编辑 | **隐藏** |
+| 总后台弹窗 - 状态 | 正常可编辑 | 正常可编辑 | **隐藏（发布即上架）** |
+| 总后台列表 - AppID列 | 正常展示 | 显示 `--` | 显示 `--` |
+| 总后台列表 - H5模板列 | 显示 `--` | 展示模板名称 | 显示 `--` |
+| 总后台列表 - H5链接列 | 显示 `--` | 显示 `--` | 展示链接URL截断 |
+| 客户端清单 - 跳转标识 | 展示 AppID | 展示 `🔑 口令 · {模板名称}` | 展示 `🔗 H5链接 · {URL截断}` |
+| 客户端清单 - 使用中标识 | 正常展示 | 不展示 | 正常展示（已配置时） |
+| 客户端抽屉 - 配置区 | 小程序路径配置 | 推广位口令配置 | 推广位H5链接配置 |
+
+### 6.3 H5链接 URL 数据存储
+
+H5链接活动相关的 URL 数据存储在活动-推广位关联表中：
+- `defaultH5Link`：默认 H5链接（兜底值）
+- 推广位级链接：各推广位独立配置的 H5链接 URL
+- 链接可以为空，空链接意味着该推广位不展示跳转入口
+
+### 6.4 客户端权限
+
+- 商户不可修改跳转方式——此配置仅总后台运营可操作
+- 商户自建自定义活动默认跳转方式为「小程序」，不支持商户自行选择
+- H5链接活动在客户端展示链接配置区，商户可编辑默认链接和各推广位链接
+- 商户不可修改 H5 模板（仅口令活动适用），H5链接活动无此概念
+
+
+## 7. 权限说明
+
+| 功能或操作 | SaaS 总后台运营 | 客户端商户 |
+| --- | :---: | :---: |
+| 查看第三方活动列表 | 是 | 是 |
+| 新增/编辑活动时选择跳转方式（含H5链接） | 是 | 否 |
+| 选择/修改 H5 模板 | 是（仅口令活动） | 否 |
+| 配置小程序推广位路径 | 是（代客修正） | 是（仅 miniprogram 活动） |
+| 配置推广位口令 | 是（代客修正） | 是（仅 h5 活动） |
+| 配置推广位H5链接 | 是（代客修正） | 是（仅 h5link 活动） |
+| 修改跳转方式 | 是 | 否 |
+| 删除自定义活动 | 否 | 是（仅「其他」分组） |
+
+
+---
+
+## 8. AI 维护说明
+
+### 8.1 文档设计理念
+
+本文档是 B04-S1 的增量变更文档，在 B04-S1 基础上新增第三种跳转方式「H5链接」。采用双层结构：
+
+1. **人类阅读模块**（第 1～7 章）：按业务发生顺序组织，先总后台配置再客户端使用。
+2. **AI 维护模块**（第 8 章）：集中保存维护约束、上下游检查和待确认逻辑。
+
+### 8.2 正文组织原则
+
+- 正文按「第一阶段（总后台）→ 第二阶段（客户端）」线性展开
+- 每个页面小节内部按「业务背景 → 字段说明 → 列表交互 → 业务逻辑」组织
+- B04 和 B04-S1 中已讲清的规则不在本文档重复，仅标注沿用
+- H5链接是纯客户端配置模式，总后台零配置
+
+### 8.3 与现有文档的关系
+
+| 关联文档 | 关系 |
+| --- | --- |
+| B04 活动管理-第三方 | 本文档的祖父文档。分组管理、路径三级兜底等规则以 B04 为准 |
+| B04-S1 第三方活动增加H5跳转 | 本文档的父文档。口令（h5）跳转方式的所有规则以 B04-S1 为准，本文档仅新增 h5link 枚举值 |
+| B02 联盟活动 | H5 模板的定义和维护在 B02，h5link 类型不使用模板 |
+
+### 8.4 上下游检查
+
+| 修改内容 | 必须检查的影响 |
+| --- | --- |
+| redirectType 新增 h5link 枚举值 | 所有含此字段的页面：总后台列表、弹窗、客户路径查阅、客户端清单、客户端抽屉 |
+| redirectType=h5link 时展示与排序分区整体隐藏 | 预设、排序、活动主图、状态四个字段的保存校验（全部跳过）、数据库默认值（发布即上架） |
+| defaultH5Link 字段 | 商户端抽屉输入校验（URL格式）、列表展示（截断）、代客查阅（可编辑） |
+| 推广位级 H5链接字段 | 三级兜底逻辑、独立配置开关联动、一键保存 |
+| redirectType=h5link 时 AppID/H5模板联动置灰 | 保存校验逻辑、存量兼容、列表展示 |
+
+### 8.5 术语同步
+
+- **跳转方式（redirectType）**：枚举值 `miniprogram`（小程序）、`h5`（口令）、`h5link`（H5链接）。全篇统一使用。
+- **H5链接**：指第三方直接提供的完整 H5 URL（如 `https://act.example.com/xxx`），与 H5模板不同——H5模板是页面载体，H5链接是完整目标地址。
+- **默认H5链接（defaultH5Link）**：h5link 活动的兜底链接 URL，对应 miniprogram 活动的默认推广位路径。
+
+### 8.6 不得混淆
+
+- H5链接（h5link）≠ 口令（h5）≠ 小程序（miniprogram）。三者是并列的跳转方式枚举值。
+- H5链接不需要 H5 模板——链接即是完整的跳转目标，不需要通过模板二次包装。
+- H5链接 ≠ H5模板。模板是 B02 中维护的页面载体，链接是第三方直接提供的目标 URL。
+- redirectType=h5link 时显示「使用中」标识，这一点与 redirectType=h5（口令）不同——口令活动由模板统一控制不展示使用中标识，H5链接活动由商户配置链接故展示使用中标识。
+
+### 8.7 示例活动数据
+
+#### 示例 A：跳小程序（存量默认，B04 已有）
+
+```json
+{
+  "id": "PRE_DEMO_001",
+  "groupId": "GRP001",
+  "name": "京东618红包活动",
+  "appId": "wx_jd_618_2026",
+  "defaultPath": "/pages/jd/618/index",
+  "redirectType": "miniprogram",
+  "h5TemplateId": "",
+  "defaultH5Link": "",
+  "merchantCount": 12,
+  "status": "active",
+  "isPreset": true,
+  "mainImage": "",
+  "sortOrder": 1
+}
+```
+
+#### 示例 B：跳口令（B04-S1 新增类型）
+
+```json
+{
+  "id": "PRE_DEMO_002",
+  "groupId": "GRP002",
+  "name": "美团外卖超级红包",
+  "appId": "",
+  "defaultPath": "",
+  "redirectType": "h5",
+  "h5TemplateId": "TPL001",
+  "defaultH5Link": "",
+  "merchantCount": 8,
+  "status": "active",
+  "isPreset": true,
+  "mainImage": "",
+  "sortOrder": 2
+}
+```
+
+#### 示例 C：跳H5链接（B04-S2 新增类型）
+
+```json
+{
+  "id": "PRE_DEMO_003",
+  "groupId": "GRP003",
+  "name": "饿了么周末大促",
+  "appId": "",
+  "defaultPath": "",
+  "redirectType": "h5link",
+  "h5TemplateId": "",
+  "defaultH5Link": "https://act.ele.me/weekend/2026?from=saas",
+  "merchantCount": 5,
+  "status": "active",
+  "isPreset": true,
+  "mainImage": "",
+  "sortOrder": 3
+}
+```
+
+### 8.8 复用字段演示参考
+
+本文档的客户端 H5链接配置抽屉为新设计，参考了 B04-S1 中推广位口令配置表格的交互模式。字段联动规则参考了 B04-S1 中 `置灰切换_3_2()` 的 JavaScript 实现模式。
+
+总后台弹窗的字段联动规则在 B04-S1 基础上扩展为三路分支，参考 [activity-admin.js](003总后台演示稿/admin-demo/js/activity-admin.js) 中 `openPresetModal()` 的现有弹窗结构。
+
+### 8.9 示例活动数据渲染对照
+
+以下对照展示三种跳转方式的活动在客户端活动清单中的预期渲染效果：
+
+**示例 A（PRE_DEMO_001，跳小程序）的客户端卡片：**
+
+```text
+┌─────────────────────────────────────┐
+│  🏷 京东                             │
+│  京东618红包活动                     │
+│  wx_jd_618_2026              [使用中]│
+└─────────────────────────────────────┘
+```
+
+**示例 B（PRE_DEMO_002，跳口令）的客户端卡片：**
+
+```text
+┌─────────────────────────────────────┐
+│  🏷 打车                             │
+│  美团外卖超级红包                    │
+│  🔑 口令 · 618大促活动页             │
+└─────────────────────────────────────┘
+```
+
+**示例 C（PRE_DEMO_003，跳H5链接）的客户端卡片：**
+
+```text
+┌─────────────────────────────────────┐
+│  🏷 餐饮                             │
+│  饿了么周末大促                      │
+│  🔗 H5链接 · https://act.ele.me/...  │  [使用中]
+└─────────────────────────────────────┘
+```
+
+### 8.10 待确认逻辑
+
+1. h5link 活动总后台是否真的完全不用预设/排序/主图/状态？当前按「展示与排序分区整体隐藏，活动发布即上架，排序默认置底」编写。如后续运营有管理需求可重新放开。
+2. H5链接 URL 是否需要支持动态参数（如 `{slotId}`、`{merchantId}` 等占位符替换）？当前按「纯 URL，不支持动态参数」编写。
+3. 运营在总后台代客修正时，H5链接活动默认展示什么可编辑字段？当前按「可编辑默认H5链接和各推广位链接」编写。
+4. H5链接的 URL 校验是否需要校验域名白名单？当前按「仅校验 http/https 格式，不校验域名」编写。
+5. 是否需要为商户提供链接预览/测试跳转功能？当前按「不提供」编写。
+
+
+---
+
+## 附录：页面原型 ASCII 示意图
+
+### A. 总后台预设活动新增/编辑弹窗（B04-S2 改造后，三选项版）
+
+```text
+┌─────────────────────────────────────────┐
+│  新增预设活动                      ✕    │
+├─────────────────────────────────────────┤
+│                                         │
+│  基础信息                               │
+│  ┌──────────────────────────────────┐   │
+│  │ 所属分组*  [京东 ▾]              │   │
+│  │ 活动名称*  [__________________]  │   │
+│  │ AppID      [__________________]  │   │  ← 仅miniprogram时正常
+│  │            ⚠ wx开头+字母数字      │   │
+│  │                                    │   │
+│  │ 🆕 跳转方式*                       │   │
+│  │   ○ 小程序  ○ 口令  ● H5链接     │   │  ← B04-S2新增H5链接选项
+│  │                                    │   │
+│  │ 💡 选择「H5链接」后无需总后台      │   │  ← 仅h5link时显示
+│  │    额外配置，商户在客户端直接       │   │
+│  │    填写H5链接URL。                  │   │
+│  │    （展示与排序分区整体隐藏）        │   │
+│  └──────────────────────────────────┘   │
+│                                         │
+│  展示与排序（H5链接时隐藏）             │
+│  ┌──────────────────────────────────┐   │
+│  │ 默认推广位路径 [_______________] │   │  ← 仅miniprogram时显示
+│  │ 预设  [🔘] 客户可见               │   │
+│  │ 排序* [___] 数字越大越靠前        │   │
+│  │ 活动主图 [_______________]        │   │
+│  │ 状态  [上架 ▾]                   │   │
+│  └──────────────────────────────────┘   │
+│                                         │
+│           [取消]    [保存]              │
+└─────────────────────────────────────────┘
+```
+
+### B. 客户端活动清单（B04-S2 改造后，三种活动混合展示）
+
+```text
+┌─────────────────────────────────────────┐
+│  推广管理 > 活动清单 > 第三方活动        │
+│                                         │
+│  [京东]  [打车]  [餐饮]  [其他]         │
+│                                         │
+│  🔍 搜索活动...                         │
+│                                         │
+│  ┌──────────────────────────────────┐   │
+│  │ 京东618红包活动                   │   │
+│  │ wx_jd_618_2026            [使用中]│   │  ← 小程序
+│  └──────────────────────────────────┘   │
+│                                         │
+│  ┌──────────────────────────────────┐   │
+│  │ 美团外卖超级红包                  │   │
+│  │ 🔑 口令 · 618大促活动页           │   │  ← 口令 (B04-S1)
+│  └──────────────────────────────────┘   │
+│                                         │
+│  ┌──────────────────────────────────┐   │
+│  │ 饿了么周末大促                    │   │
+│  │ 🔗 H5链接 · act.ele.me/weekend   │   │  [使用中] ← H5链接 (B04-S2新增)
+│  └──────────────────────────────────┘   │
+│                                         │
+│         [+ 新增活动]  (仅"其他"Tab)     │
+└─────────────────────────────────────────┘
+```
+
+### C. 客户端配置抽屉（H5链接活动时，B04-S2 新增）
+
+```text
+┌─────────────────────────────────────────┐
+│  ← 返回活动清单                          │
+│                                         │
+│  饿了么周末大促                          │
+│  🔗 H5链接                             │
+│                                         │
+│  ┌──────────────────────────────────┐   │
+│  │ 🔗 H5链接配置                     │   │
+│  │                                    │   │
+│  │ 默认H5链接                          │   │
+│  │ [https://act.ele.me/weekend  ]    │   │
+│  │ ⚠ 以http://或https://开头   [保存] │   │
+│  │                                    │   │
+│  │ 允许各推广位单独编辑链接  [🔘]     │   │
+│  │                                    │   │
+│  │ 推广位名称    H5链接URL     操作    │   │
+│  │ 首页Banner   [________]  [保存]   │   │
+│  │ 商品详情页   [________]  [保存]   │   │
+│  │ ...                               │   │
+│  │                                    │   │
+│  │         [一键保存全部]             │   │
+│  └──────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+```
+
+### D. 客户端配置抽屉（口令活动时，B04-S1 保持不变）
+
+```text
+┌─────────────────────────────────────────┐
+│  ← 返回活动清单                          │
+│                                         │
+│  美团外卖超级红包                        │
+│  🔑 口令 · 618大促活动页                │
+│                                         │
+│  ┌──────────────────────────────────┐   │
+│  │ 🔑 推广位口令配置                 │   │
+│  │                                    │   │
+│  │ H5模板：618大促活动页  （只读）    │   │
+│  │                                    │   │
+│  │ 默认口令                            │   │
+│  │ [￥618mrhb￥            ]  [保存]  │   │
+│  │                                    │   │
+│  │ 允许各推广位单独编辑口令  [🔘]     │   │
+│  │                                    │   │
+│  │ 推广位名称    口令          操作    │   │
+│  │ 首页Banner   [________]  [保存]   │   │
+│  │ 商品详情页   [________]  [保存]   │   │
+│  │                                    │   │
+│  │         [一键保存全部]             │   │
+│  └──────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+```
+
+</script><!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>B04-S2 第三方活动增加H5链接跳转</title>
+<style id="css-布局">
+*, *::before, *::after { box-sizing: border-box; }
+:root { --侧栏间距: 28px; --左栏宽: max(420px, 22vw); --右栏宽: 300px; --标签栏高: 52px; }
+body { margin: 0; padding: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用容器 { min-height: 100vh; }
+.阶段区域 { display: grid; grid-template-columns: var(--左栏宽) minmax(0, 1fr) var(--右栏宽); gap: var(--侧栏间距); width: min(calc(100vw - 28px), 2400px); margin: 0 auto; align-items: start; }
+.左侧栏 { grid-column: 1; position: sticky; top: calc(var(--标签栏高) + 16px); max-height: calc(100vh - var(--标签栏高) - 32px); overflow-y: auto; overflow-x: visible; background: #fff; border-right: 1px solid #e2e8f0; padding: 16px 0 0 0; }
+.内容摘要 { margin: 0 10px 16px 10px; }
+.内容摘要内 { min-width: 0; border: 1px solid #d9e2ec; border-left: 4px solid #0f6b8f; border-radius: 6px; background: #fff; padding: 7px 12px; box-shadow: 0 4px 14px rgba(15, 35, 52, 0.05); }
+.内容摘要内 h1 { font-size: 18px; line-height: 1.3; margin: 0 0 6px 0; color: #172033; }
+.业务简介 { min-width: 0; margin: 0; }
+.业务简介 blockquote { margin: 0; border: 0; border-radius: 0; background: transparent; padding: 0; color: #344054; font-size: 13px; line-height: 1.6; }
+.业务简介 blockquote p { margin: 4px 0; }
+.阶段导航区 { margin: 0 10px 16px 10px; }
+.全局泳道 { margin: 0 10px 16px 10px; background: #fff; border: 1px solid #d9e2ec; border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 35, 52, 0.08); padding: 10px; }
+.主舞台 { grid-column: 2; padding: 24px 32px 48px; min-width: 0; background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(15, 35, 52, 0.04); }
+.右侧栏 { grid-column: 3; position: sticky; top: calc(var(--标签栏高) + 30px); max-height: calc(100vh - var(--标签栏高) - 32px); overflow-y: auto; background: #fff; border-left: 1px solid #e2e8f0; padding: 24px 16px 16px 16px; min-width: 0; }
+.标签包裹 { position: sticky; top: 0; z-index: 100; background: rgba(246, 248, 251, 0.96); border-bottom: 1px solid #e2e8f0; backdrop-filter: blur(8px); }
+.标签包裹内 { display: flex; gap: 8px; overflow-x: auto; width: min(calc(100vw - 28px), 2400px); margin: 0 auto; padding: 12px 0; padding-left: calc(var(--左栏宽) + var(--侧栏间距)); }
+.标签面板 { display: none; } .标签面板.激活 { display: block; }
+.面板布局 { display: grid; grid-template-columns: 1fr 220px; gap: 32px; align-items: start; }
+.面板布局 .节目录 { position: sticky; top: calc(var(--标签栏高) + 72px); }
+@media (max-width: 1200px) { .阶段区域 { grid-template-columns: 1fr; } .左侧栏, .右侧栏 { display: none; } .标签包裹内 { padding-left: 0; } .面板布局 { grid-template-columns: 1fr; } .面板布局 .节目录 { display: none; } }
+</style>
+<style id="css-组件">
+/* 大 tab 标签按钮 */
+.标签按钮 { flex: 0 0 auto; display: flex; align-items: center; border: 1px solid #bcccdc; background: #fff; color: #344054; border-radius: 8px; padding: 9px 12px; font: inherit; font-size: 14px; line-height: 1.25; cursor: pointer; white-space: nowrap; }
+.标签按钮:hover { border-color: #0f6b8f; } .标签按钮.激活 { border-color: #0f6b8f; background: #0f6b8f; color: #fff; }
+.标签编号 { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; margin-right: 7px; border-radius: 999px; background: #edf2f7; color: #475467; font-size: 12px; font-weight: 700; }
+.标签按钮.激活 .标签编号 { background: rgba(255,255,255,0.18); color: #fff; }
+.阶段页面导航 { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-top: 1px solid #e2e8f0; }
+.阶段链接 { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; text-decoration: none; color: #475569; font-size: 13px; transition: all 0.15s; }
+.阶段链接:hover { background: #f1f5f9; color: #1e293b; } .阶段链接.激活 { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.页面编号 { font-size: 11px; color: #94a3b8; font-family: monospace; min-width: 24px; } .页面类型图标 { font-size: 14px; }
+.阶段链接.激活 .页面编号 { color: #3b82f6; }
+.注释卡片组 { display: flex; flex-direction: column; gap: 14px; }
+.注释卡片 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+.注释卡片头 { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.注释图标 { font-size: 16px; } .注释标题 { font-size: 14px; font-weight: 600; color: #334155; }
+.注释卡片正文 { padding: 12px 16px; font-size: 13px; line-height: 1.7; color: #475569; }
+.注释卡片正文 p { margin: 0 0 8px 0; } .注释卡片正文 p:last-child { margin-bottom: 0; }
+.注释卡片正文 ul { margin: 4px 0; padding-left: 20px; } .注释卡片正文 li { margin: 3px 0; }
+.注释卡片正文 strong { color: #1e293b; }
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 30px 0 12px; font-size: 21px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; scroll-margin-top: 68px; }
+.阅读标题 { scroll-margin-top: 68px; line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 21px; margin: 30px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 17px; margin: 24px 0 8px; } .文档正文 h5 { font-size: 15px; margin: 20px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.行内代码 { font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 0.92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; font-weight: 500; }
+.代码块 pre { margin: 0; padding: 16px; background: #ffffff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; border: 0; }
+.代码块 code { display: block; padding: 0; border: 0; background: transparent; color: inherit; font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 13px; white-space: pre; }
+.节目录列表 { list-style: none; padding: 0; margin: 0; } .节目录列表 ul { list-style: none; padding-left: 16px; }
+.目录项 { margin: 2px 0; line-height: 1.6; }
+.目录项 a { display: block; padding: 4px 10px; border-radius: 4px; color: #475569; text-decoration: none; font-size: 13px; border-left: 2px solid transparent; transition: all 0.15s; }
+.目录项 a:hover { background: #f1f5f9; color: #1e293b; border-left-color: #3b82f6; } .目录层级3 a { font-weight: 600; font-size: 14px; } .目录层级4 a { padding-left: 20px; } .目录层级5 a { padding-left: 30px; font-size: 12px; color: #64748b; }
+.演示壳 { display: grid; grid-template-columns: 180px 1fr; gap: 0; min-height: 480px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0; }
+.演示侧标 { background: linear-gradient(160deg, #1e293b 0%, #334155 100%); padding: 28px 20px; display: flex; flex-direction: column; gap: 10px; color: #e2e8f0; user-select: none; }
+.角色标签 { display: inline-block; padding: 4px 12px; background: rgba(59, 130, 246, 0.25); border: 1px solid rgba(96, 165, 250, 0.4); border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; align-self: flex-start; }
+.模块标签 { font-size: 18px; font-weight: 700; margin-top: 8px; line-height: 1.4; }
+.范围标签 { font-size: 11px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-top: auto; }
+.演示主体 { background: #f8fafc; display: flex; flex-direction: column; }
+.演示顶栏 { display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; }
+.浏览器按钮 { display: flex; gap: 6px; flex-shrink: 0; } .浏览器圆点 { width: 10px; height: 10px; border-radius: 50%; }
+.浏览器圆点.红 { background: #ef4444; } .浏览器圆点.黄 { background: #f59e0b; } .浏览器圆点.绿 { background: #10b981; }
+.地址栏 { flex: 1; padding: 5px 12px; background: #f1f5f9; border-radius: 6px; font-size: 12px; }
+.地址文本 { color: #64748b; font-family: "Sarasa Mono SC", "Cascadia Code", "Consolas", monospace; }
+.演示内容区 { flex: 1; padding: 24px; overflow-y: auto; }
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 130px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 130px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.编辑卡片区 { display: flex; flex-direction: column; gap: 24px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-row.muted { opacity: 0.55; background: #f8fafc; border-radius: 4px; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; } .field-card-path { font-size: 12px; color: #94a3b8; font-family: monospace; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 140px 1fr 32px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 120px; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+.field-info-btn:hover, .field-info-btn.is-open { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.field-detail-panel { display: none; margin: 4px 0 8px 140px; padding: 10px 14px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
+.field-detail-panel.show { display: block; } .field-detail-panel dl { display: grid; grid-template-columns: 80px 1fr; gap: 4px 10px; margin: 0; font-size: 12px; }
+.field-detail-panel dt { color: #94a3b8; } .field-detail-panel dd { color: #475569; margin: 0; }
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; height: 100vh; background: #fff; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 64px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; }
+.panel-title { font-size: 18px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.detail-item { min-height: 58px; padding: 10px 14px; border-bottom: 1px solid #d9e2ec; } .detail-item:nth-child(odd) { border-right: 1px solid #d9e2ec; }
+.detail-item:last-child { border-bottom: 0; } .detail-label { color: #8a93a3; font-size: 12px; margin-bottom: 4px; }
+.detail-value { color: #303744; font-size: 13px; font-weight: 550; word-break: break-word; }
+.type-tag { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; vertical-align: middle; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+.泳道原始 { margin: 0; padding: 10px 6px; font-family: "Sarasa Mono SC", "Cascadia Code", "Consolas", "Courier New", monospace; font-size: 13px; line-height: 1.55; color: #1e293b; white-space: pre; overflow-x: visible; background: transparent; }
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+.H5链接提示区 { padding: 12px 16px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; font-size: 13px; line-height: 1.7; color: #15803d; margin-bottom: 16px; }
+.H5链接提示区 strong { color: #0f6b8f; }
+</style>
+<style id="css-状态">
+.标签按钮.激活 { border-color: #0f6b8f; background: #0f6b8f; color: #fff; }
+.标签面板.激活 { display: block; }
+.阶段链接.激活 { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-row.muted { opacity: 0.55; background: #f8fafc; border-radius: 4px; }
+.field-row.muted .field-display { color: #94a3b8; font-style: italic; }
+.字段行.禁用 { opacity: 0.4; pointer-events: none; } .字段行.隐藏 { display: none; }
+</style>
+</head>
+<body>
+<div class="应用容器">
+<div id="标签导航" class="标签包裹"><div class="标签包裹内">
+<button class="标签按钮 激活" data-stage="1" onclick="切换标签(1)"><span class="标签编号">1</span> 需求背景与目标</button>
+<button class="标签按钮" data-stage="2" onclick="切换标签(2)"><span class="标签编号">2</span> 业务流程</button>
+<button class="标签按钮" data-stage="3" onclick="切换标签(3)"><span class="标签编号">3</span> 第一阶段：总后台运营配置</button>
+<button class="标签按钮" data-stage="4" onclick="切换标签(4)"><span class="标签编号">4</span> 第二阶段：客户端商户查看与使用</button>
+<button class="标签按钮" data-stage="6" onclick="切换标签(6)"><span class="标签编号">6</span> 关键业务规则</button>
+<button class="标签按钮" data-stage="7" onclick="切换标签(7)"><span class="标签编号">7</span> 权限说明</button>
+<button class="标签按钮" data-stage="8" onclick="切换标签(8)"><span class="标签编号">8</span> AI 维护说明</button>
+</div></div>
+<div class="阶段区域">
+<aside class="左侧栏">
+<div class="内容摘要"><div class="内容摘要内">
+<h1>B04-S2 第三方活动增加H5链接跳转</h1>
+<div class="业务简介"><blockquote><p>在B04-S1基础上新增第三种跳转方式「H5链接」。总后台无需额外配置，商户在客户端直接填写H5链接URL。</p></blockquote></div>
+</div></div>
+<div class="阶段导航区" id="阶段导航区">
+<nav id="阶段03导航" class="阶段页面导航" style="display:none;">
+<a class="阶段链接 激活" href="javascript:切换页面('3.1','列表页')" data-page="3.1" data-page-type="列表页"><span class="页面编号">3.1</span><span class="页面类型图标">📋</span><span class="页面标题">第三方活动列表</span></a>
+<a class="阶段链接" href="javascript:切换页面('3.2','页面编辑类')" data-page="3.2" data-page-type="页面编辑类"><span class="页面编号">3.2</span><span class="页面类型图标">📝</span><span class="页面标题">新增/编辑预设活动弹窗</span></a>
+</nav>
+<nav id="阶段04导航" class="阶段页面导航" style="display:none;">
+<a class="阶段链接 激活" href="javascript:切换页面('4.1','列表页')" data-page="4.1" data-page-type="列表页"><span class="页面编号">4.1</span><span class="页面类型图标">📋</span><span class="页面标题">第三方活动清单（客户端）</span></a>
+<a class="阶段链接" href="javascript:切换页面('4.2','页面编辑类')" data-page="4.2" data-page-type="页面编辑类"><span class="页面编号">4.2</span><span class="页面类型图标">📝</span><span class="页面标题">活动配置抽屉</span></a>
+</nav>
+</div>
+<div class="全局泳道"><h3>多方业务泳道图</h3><pre class="泳道原始">┌────────────────────────┬────────────────────────┐
+│ SaaS 总后台            │ 客户端后台             │
+├────────────────────────┼────────────────────────┤
+│ ① 维护第三方活动分组   │                        │
+│          │             │                        │
+│          ▼             │                        │
+│ ② 新增/编辑预设活动    │                        │
+│    选择跳转方式        │                        │
+│    ├─ 小程序 → 填AppID │                        │
+│    ├─ 口令   → 选模板  │                        │
+│    └─ H5链接 → 无需配置│ ← B04-S2 新增          │
+│       (展示与排序隐藏)   │                        │
+│    【活动状态：已发布】 │                        │
+│          │             │                        │
+│          └────────────→│ ③ 查看第三方活动清单   │
+│                        │    按跳转方式分流展示   │
+│                        │          │             │
+│                        │          ▼             │
+│                        │ ④ 配置活动跳转内容     │
+│                        │    ├─ 小程序：配置路径   │
+│                        │    ├─ 口令：配置口令     │
+│                        │    └─ H5链接：配置链接   │
+│                        │          │             │
+│ ⑤ 代客查阅与修正路径 ←─┴────────               │
+│    H5链接活动可改链URL                            │
+└────────────────────────────────────────────────┘</pre></div>
+</aside>
+<main class="主舞台">
+<!-- Tag 1: 需求背景与目标 -->
+<section class="标签面板 激活" data-stage="1">
+  <div class="面板布局">
+    <div id="节1正文" class="文档正文">
+      <div id="s1_1_1"><h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>B04-S1 已为第三方活动新增了「口令（H5网页）」跳转方式，运营选择后关联 H5 模板，商户在客户端配置口令。但实际运营中还存在另一类场景：部分第三方合作方直接提供一个 H5 活动链接 URL，不需要模板包装，也不需要口令跳转，商户只需将此链接配置到推广位即可。</p>
+<p>这类「纯 H5 链接」场景的特点是：链接由第三方提供（如 <code class="行内代码">https://act.example.com/618/discount?sid=xxx</code>），不需要总后台维护模板，商户可能需要按推广位配置不同的链接参数。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>B04-S1 已有跳转方式
+
+小程序：运营填AppID → 商户配小程序路径
+口令（H5网页）：运营选H5模板 → 商户配口令
+        ↓
+B04-S2 新增
+
+H5链接：运营仅选择类型 → 商户直接配H5链接URL
+        总后台零配置（含展示与排序分区整体隐藏）</code></pre></div></div>
+      <div id="s1_1_2"><h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>第三方活动跳转方式枚举扩展为三项
+  跳转方式（枚举：小程序 / 口令 / H5链接，存量默认小程序）
+        │
+        ├─ 小程序 → 填AppID + 默认推广位路径 + 展示与排序配置（B04已有）
+        ├─ 口令   → 选H5模板 + 展示与排序配置 + 商户配口令（B04-S1新增）
+        └─ H5链接 → 总后台仅填名称+选类型，展示与排序分区隐藏
+                    商户直接配H5链接URL，发布即上架（B04-S2新增）</code></pre></div></div>
+      <div id="s1_1_3"><h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>第三方活动支持直接 H5 链接跳转：</strong> 运营在总后台将活动跳转方式设为「H5链接」，商户在客户端直接填写 H5 链接 URL。</li>
+<li><strong>总后台零配置：</strong> H5链接类型不需要填写 AppID、不需要选择 H5 模板、不需要配置预设/排序/主图/状态——「展示与排序」分区整体隐藏，运营仅需填活动名称和选择跳转方式即可保存，活动发布即上架。</li>
+<li><strong>存量活动零影响：</strong> B04-S1 已有的「小程序」和「口令」两种跳转方式行为完全不变。</li>
+</ul></div></div>
+    <nav id="节1目录" class="节目录"><ul class="节目录列表">
+<li class="目录项 目录层级3"><a href="#s1_1_1">1.1 为什么要做</a></li>
+<li class="目录项 目录层级3"><a href="#s1_1_2">1.2 一句话业务模型</a></li>
+<li class="目录项 目录层级3"><a href="#s1_1_3">1.3 最终目标</a></li>
+</ul></nav>
+  </div>
+</section>
+
+<!-- Tag 2: 业务流程 -->
+<section class="标签面板" data-stage="2">
+  <div class="面板布局">
+    <div id="节2正文" class="文档正文">
+      <div id="s2_2_1"><h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<p>B04-S2 的增量集中在步骤②中新增的「H5链接」跳转方式选项，步骤③中 H5链接活动的列表展示，以及步骤④中商户配置 H5 链接 URL 的交互。</p></div>
+      <div id="s2_2_2"><h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：总后台配置
+① 查看活动列表（跳转方式列新增H5链接）→ ② 新增/编辑活动
+    ├─ 小程序：填AppID + 展示与排序配置
+    ├─ 口令：选H5模板 + 展示与排序配置
+    └─ H5链接：仅填名称+选类型，展示与排序隐藏
+                                          ↓
+第二阶段：客户端查看与使用
+③ 查看活动清单（H5链接活动展示URL）→ ④ 配置H5链接（商户填写各推广位H5链接URL）
+                                          ↑
+                              ⑤ 总后台代客修正（横向支撑）</code></pre></div></div>
+      <div id="s2_2_3"><h3 class="阅读节标题">2.3 页面类型说明</h3>
+<div class="表格容器"><table class="阅读表格"><tr><th>页面类型</th><th>面向对象</th><th>本次涉及页面</th></tr>
+<tr><td>列表页</td><td>后台操作人员</td><td>总后台第三方活动列表、总后台客户路径查阅、客户端活动清单</td></tr>
+<tr><td>页面编辑类</td><td>后台操作人员</td><td>总后台新增/编辑预设活动弹窗、客户端配置抽屉</td></tr>
+</table></div></div>
+      <div id="s2_2_4"><h3 class="阅读节标题">2.4 业务路径与真实汇合点</h3>
+<p>本次改造在 B04-S1 的两条路径基础上引入第三条跳转路径。三条路径的总后台配置复杂度递减：小程序需填 AppID+展示与排序，口令需选模板+展示与排序，H5链接仅需名称和类型。活动发布后统一进入客户端活动清单，但列表展示和抽屉配置行为各不相同。</p>
+</div></div>
+    <nav id="节2目录" class="节目录"><ul class="节目录列表">
+<li class="目录项 目录层级3"><a href="#s2_2_1">2.1 多方业务泳道图</a></li>
+<li class="目录项 目录层级3"><a href="#s2_2_2">2.2 阶段划分与阅读说明</a></li>
+<li class="目录项 目录层级3"><a href="#s2_2_3">2.3 页面类型说明</a></li>
+<li class="目录项 目录层级3"><a href="#s2_2_4">2.4 业务路径与真实汇合点</a></li>
+</ul></nav>
+  </div>
+</section>
+
+<!-- Tag 3: 第一阶段 - 总后台 -->
+<section class="标签面板" data-stage="3">
+<!-- 3.1 列表页 -->
+<div id="阶段03列表区" class="阶段列表区">
+<div class="演示壳" data-page="3.1"><div class="演示侧标"><span class="角色标签">SaaS 总后台运营</span><span class="模块标签">第三方活动列表</span><span class="范围标签">SaaS 总后台</span></div>
+<div class="演示主体"><div class="演示顶栏"><div class="浏览器按钮"><span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span></div><div class="地址栏"><span class="地址文本">SaaS 总后台 &gt; 活动管理 &gt; 第三方活动</span></div></div>
+<div class="演示内容区">
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索活动名称或AppID"></div><div class="筛选区"><span class="筛选标签">分组：</span><select class="筛选下拉"><option>全部</option><option>京东</option><option>打车</option><option>餐饮</option><option>电商</option></select><span class="筛选标签">状态：</span><select class="筛选下拉"><option>全部</option><option>上架</option><option>下架</option></select></div><button class="详情按钮" style="background:#0f6b8f;color:#fff;border-color:#0f6b8f;margin-left:auto;" onclick="打开新增抽屉('3.1')">＋ 新增</button></div>
+<table class="数据表格"><thead><tr>
+<th class="列表表头"><span class="表头字段名">排序</span><span class="类型标签 number">number</span><button class="信息按钮" onclick="显示字段弹窗('排序', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">活动名称</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('活动名称', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">跳转方式</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('跳转方式', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">H5模板</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('H5模板', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">H5链接</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('H5链接', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">AppID</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('AppID', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">所属分组</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('所属分组', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">预设</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('预设', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">状态</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('状态', event)">ⓘ</button></th>
+<th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">1</td><td class="列表单元格">京东618红包活动</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#eff6ff;color:#1d4ed8;">🏷 小程序</span></td><td class="列表单元格">--</td><td class="列表单元格">--</td><td class="列表单元格">wx_jd_618_2026</td><td class="列表单元格">京东</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">是</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'1',活动名称:'京东618红包活动',AppID:'wx_jd_618_2026',跳转方式:'小程序',H5模板:'--',H5链接:'--',所属分组:'京东',预设:'是',状态:'上架',_壳节编号:'3.1'}, '第三方活动详情')">详情</button></td></tr>
+<tr class="数据行"><td class="列表单元格">2</td><td class="列表单元格">美团外卖超级红包</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#fff7ed;color:#c2410c;">🔑 口令</span></td><td class="列表单元格">618大促活动页</td><td class="列表单元格">--</td><td class="列表单元格">--</td><td class="列表单元格">打车</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">是</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'2',活动名称:'美团外卖超级红包',AppID:'--',跳转方式:'口令',H5模板:'618大促活动页',H5链接:'--',所属分组:'打车',预设:'是',状态:'上架',_壳节编号:'3.1'}, '第三方活动详情')">详情</button></td></tr>
+<tr class="数据行"><td class="列表单元格">3</td><td class="列表单元格">饿了么周末大促</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#f0fdf4;color:#15803d;">🔗 H5链接</span></td><td class="列表单元格">--</td><td class="列表单元格">https://act.ele.me/weekend...</td><td class="列表单元格">--</td><td class="列表单元格">餐饮</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">是</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'3',活动名称:'饿了么周末大促',AppID:'--',跳转方式:'H5链接',H5模板:'--',H5链接:'https://act.ele.me/weekend/2026?from=saas',所属分组:'餐饮',预设:'是',状态:'上架',_壳节编号:'3.1'}, '第三方活动详情')">详情</button></td></tr>
+<tr class="数据行"><td class="列表单元格">4</td><td class="列表单元格">花小猪周末特惠</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#eff6ff;color:#1d4ed8;">🏷 小程序</span></td><td class="列表单元格">--</td><td class="列表单元格">--</td><td class="列表单元格">wx_hxz_weekend</td><td class="列表单元格">打车</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">是</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">上架</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({排序:'4',活动名称:'花小猪周末特惠',AppID:'wx_hxz_weekend',跳转方式:'小程序',H5模板:'--',H5链接:'--',所属分组:'打车',预设:'是',状态:'上架',_壳节编号:'3.1'}, '第三方活动详情')">详情</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 4 条记录（三种跳转方式混合展示）</div>
+</div></div></div></div>
+<!-- 3.2 编辑弹窗 -->
+<div id="阶段03编辑区" class="阶段编辑区" style="display:none;">
+<div class="演示壳" data-page="3.2"><div class="演示侧标"><span class="角色标签">SaaS 总后台运营</span><span class="模块标签">新增/编辑预设活动</span><span class="范围标签">SaaS 总后台</span></div>
+<div class="演示主体"><div class="演示顶栏"><div class="浏览器按钮"><span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span></div><div class="地址栏"><span class="地址文本">SaaS 总后台 &gt; 活动管理 &gt; 第三方活动 &gt; 新增/编辑弹窗</span></div></div>
+<div class="演示内容区">
+<div style="margin-bottom:16px;padding:10px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px;line-height:1.8;color:#92400e;"><strong>ⓘ 字段置灰规则（B04-S2 三值版）</strong><br>• 跳转方式=<strong>小程序</strong> → 启用 AppID（必填）+ 默认推广位路径（选填）+ 展示与排序；H5模板置灰<br>• 跳转方式=<strong>口令</strong> → 启用 H5模板（必填）+ 展示与排序；AppID、默认推广位路径置灰<br>• 跳转方式=<strong>H5链接</strong> → AppID、H5模板、默认推广位路径全部置灰；展示与排序分区整体隐藏；仅需填活动名称</div>
+<div class="编辑卡片区">
+<div class="field-card"><div class="field-card-header"><h4>基础信息</h4><span class="field-card-path">新增/编辑弹窗 &gt; 分区A</span></div><div class="field-card-body">
+<div class="field-row"><span class="field-label">所属分组</span><span class="field-control"><span class="field-display">京东</span><span class="field-type-tag">string</span><span class="编辑性标签 只读">只读</span><button class="field-info-btn" onclick="切换字段详情('f_3_2_所属分组', this)">ⓘ</button></span></div>
+<div id="f_3_2_所属分组" class="field-detail-panel"><dl class="弹窗属性"><dt>数据来源</dt><dd>新增时自动带入当前分组</dd><dt>逻辑</dt><dd>编辑时不可更改分组归属</dd><dt>用途</dt><dd>确定活动归属的分组</dd></dl></div>
+<div class="field-row"><span class="field-label">活动名称</span><span class="field-control"><span class="field-display">（填写）</span><span class="field-type-tag">string</span><span class="编辑性标签 可编辑">可编辑</span><button class="field-info-btn" onclick="切换字段详情('f_3_2_活动名称', this)">ⓘ</button></span></div>
+<div id="f_3_2_活动名称" class="field-detail-panel"><dl class="弹窗属性"><dt>数据来源</dt><dd>运营填写</dd><dt>逻辑</dt><dd>1-50字符，同一分组下不可重名</dd><dt>用途</dt><dd>商户端活动卡片显示名称</dd></dl></div>
+<div class="field-row"><span class="field-label">🆕 跳转方式</span><span class="field-control"><select class="field-select" style="color:#dc2626;" onchange="置灰切换_3_2(this.value)"><option value="miniprogram">小程序</option><option value="h5">口令</option><option value="h5link">H5链接</option></select><span class="field-type-tag">enum</span><span class="编辑性标签 可编辑">可编辑</span><button class="field-info-btn" onclick="切换字段详情('f_3_2_跳转方式', this)">ⓘ</button></span></div>
+<div id="f_3_2_跳转方式" class="field-detail-panel"><dl class="弹窗属性"><dt>数据来源</dt><dd>运营选择</dd><dt>逻辑</dt><dd>枚举值——miniprogram（小程序）、h5（口令）、h5link（H5链接）。新增时默认「小程序」。B04-S1存量活动回显已有值。</dd><dt>用途</dt><dd>决定活动跳转目标类型，控制同弹窗内字段的置灰/启用</dd></dl></div>
+</div></div>
+
+<div id="grp_3_2_小程序" style="margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px;transition:opacity 0.25s;">
+<h4 style="margin:0 0 12px 0;font-size:15px;color:#1e293b;">小程序配置 <span style="font-size:11px;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:4px;margin-left:8px;">跳转方式=小程序</span></h4>
+<div class="field-row"><span class="field-label">🔴 AppID</span><span class="field-control"><span class="field-display" style="color:#dc2626;">（填写）</span><span class="field-type-tag">string</span><span class="编辑性标签 条件">条件</span><span style="font-size:11px;color:#92400e;margin-left:10px;">wx开头+字母数字，必填</span></span></div>
+<div class="field-row"><span class="field-label">默认推广位路径</span><span class="field-control"><span class="field-display">（填写）</span><span class="field-type-tag">string</span><span class="编辑性标签 条件">条件</span><span style="font-size:11px;color:#92400e;margin-left:10px;">选填</span></span></div>
+</div>
+
+<div id="grp_3_2_H5" style="margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px;opacity:0.35;pointer-events:none;transition:opacity 0.25s;">
+<h4 style="margin:0 0 12px 0;font-size:15px;color:#1e293b;">口令配置 <span style="font-size:11px;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:4px;margin-left:8px;">跳转方式=口令</span></h4>
+<div class="field-row"><span class="field-label">🔴 H5模板</span><span class="field-control"><span class="field-display" style="color:#dc2626;">（下拉选择）</span><span class="field-type-tag">string</span><span class="编辑性标签 条件">条件</span><span style="font-size:11px;color:#92400e;margin-left:10px;">必填</span></span></div>
+</div>
+
+<div id="grp_3_2_H5链接提示" class="H5链接提示区" style="margin-top:16px;display:none;">
+<strong>💡 选择「H5链接」后无需总后台额外配置</strong><br>
+商户在客户端直接填写各推广位的 H5 链接 URL。总后台不需要维护 AppID，也不需要选择 H5 模板。
+</div>
+
+<div class="field-card" style="margin-top:16px;" id="grp_3_2_展示与排序"><div class="field-card-header"><h4>展示与排序</h4><span class="field-card-path">新增/编辑弹窗 &gt; 分区B</span></div><div class="field-card-body">
+<div class="field-row"><span class="field-label">预设</span><span class="field-control"><span class="field-display">是</span><span class="field-type-tag">enum</span><span class="编辑性标签 可编辑">可编辑</span></span></div>
+<div class="field-row"><span class="field-label">排序</span><span class="field-control"><span class="field-display">（填写）</span><span class="field-type-tag">number</span><span class="编辑性标签 可编辑">可编辑</span></span></div>
+<div class="field-row"><span class="field-label">活动主图</span><span class="field-control"><span class="field-display">（选填，URL）</span><span class="field-type-tag">file</span><span class="编辑性标签 可编辑">可编辑</span></span></div>
+<div class="field-row"><span class="field-label">状态</span><span class="field-control"><select class="field-select"><option>上架</option><option>下架</option></select><span class="field-type-tag">enum</span><span class="编辑性标签 可编辑">可编辑</span></span></div>
+</div></div>
+</div>
+<div style="display:flex;justify-content:flex-end;gap:12px;padding-top:16px;border-top:1px solid #e2e8f0;margin-top:16px;"><button class="btn-secondary" onclick="显示提示('取消编辑，关闭弹窗', '信息', 2000)">取消</button><button class="详情按钮" style="background:#0f6b8f;color:#fff;border-color:#0f6b8f;padding:8px 24px;font-size:14px;" onclick="显示提示('校验字段规则后保存活动配置', '成功', 3000)">保存</button></div>
+</div></div></div></div>
+</section>
+
+<!-- Tag 4: 第二阶段 - 客户端 -->
+<section class="标签面板" data-stage="4">
+<!-- 4.1 客户端清单 -->
+<div id="阶段04列表区" class="阶段列表区">
+<div class="演示壳" data-page="4.1"><div class="演示侧标"><span class="角色标签">客户端商户</span><span class="模块标签">第三方活动清单</span><span class="范围标签">客户端后台</span></div>
+<div class="演示主体"><div class="演示顶栏"><div class="浏览器按钮"><span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span></div><div class="地址栏"><span class="地址文本">客户端后台 &gt; 推广管理 &gt; 活动清单 &gt; 第三方活动 Tab</span></div></div>
+<div class="演示内容区">
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索活动名称、AppID或链接"></div><div class="筛选区"><span class="筛选标签">分组：</span><select class="筛选下拉"><option>全部</option><option>京东</option><option>打车</option><option>餐饮</option><option>其他</option></select></div></div>
+<table class="数据表格"><thead><tr>
+<th class="列表表头"><span class="表头字段名">活动名称</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('活动名称', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">跳转标识</span><span class="类型标签 组合字段">组合字段</span><button class="信息按钮" onclick="显示字段弹窗('跳转标识', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">使用中标识</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('使用中标识', event)">ⓘ</button></th>
+<th class="列表表头"><span class="表头字段名">分组标签</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('分组标签', event)">ⓘ</button></th>
+<th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">京东618红包活动</td><td class="列表单元格">wx_jd_618_2026</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">使用中</span></td><td class="列表单元格">京东</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({活动名称:'京东618红包活动',跳转方式:'小程序',_壳节编号:'4.1'}, '配置')">详情</button></td></tr>
+<tr class="数据行"><td class="列表单元格">美团外卖超级红包</td><td class="列表单元格">🔑 口令 · 618大促活动页</td><td class="列表单元格"></td><td class="列表单元格">打车</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({活动名称:'美团外卖超级红包',跳转方式:'口令',_壳节编号:'4.1'}, '配置')">详情</button></td></tr>
+<tr class="数据行"><td class="列表单元格">饿了么周末大促</td><td class="列表单元格">🔗 H5链接 · act.ele.me/weekend...</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">使用中</span></td><td class="列表单元格">餐饮</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({活动名称:'饿了么周末大促',跳转方式:'H5链接',_壳节编号:'4.1'}, '配置')">详情</button></td></tr>
+<tr class="数据行"><td class="列表单元格">花小猪周末特惠</td><td class="列表单元格">wx_hxz_weekend</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48;">使用中</span></td><td class="列表单元格">打车</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({活动名称:'花小猪周末特惠',跳转方式:'小程序',_壳节编号:'4.1'}, '配置')">详情</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 4 条记录（三种跳转方式混合展示）</div>
+</div></div></div></div>
+
+<!-- 4.2 客户端抽屉 -->
+<div id="阶段04编辑区" class="阶段编辑区" style="display:none;">
+<div class="演示壳" data-page="4.2"><div class="演示侧标"><span class="角色标签">客户端商户</span><span class="模块标签">活动配置抽屉</span><span class="范围标签">客户端后台</span></div>
+<div class="演示主体"><div class="演示顶栏"><div class="浏览器按钮"><span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span></div><div class="地址栏"><span class="地址文本">客户端后台 &gt; 推广管理 &gt; 活动清单 &gt; 点击活动行 &gt; 配置抽屉</span></div></div>
+<div class="演示内容区">
+<div style="margin-bottom:16px;padding:10px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px;line-height:1.8;color:#92400e;"><strong>ⓘ 抽屉切换演示</strong> 使用下方下拉切换跳转方式查看不同配置界面：<br>
+<select class="field-select" onchange="置灰切换_4_2(this.value)" style="margin-top:6px;"><option value="miniprogram">小程序 — 路径配置</option><option value="h5">口令 — 口令配置</option><option value="h5link" selected>H5链接 — 链接配置（B04-S2新增）</option></select></div>
+<div class="编辑卡片区">
+<div class="field-card"><div class="field-card-header"><h4>活动信息</h4></div><div class="field-card-body">
+<div class="field-row"><span class="field-label">活动名称</span><span class="field-control"><span class="field-display">饿了么周末大促</span><span class="field-type-tag">string</span><span class="编辑性标签 只读">只读</span></span></div>
+<div class="field-row"><span class="field-label" id="lbl_4_2_跳转标识">跳转标识</span><span class="field-control"><span class="field-display" id="val_4_2_跳转标识">🔗 H5链接 · https://act.ele.me/...</span><span class="field-type-tag">组合字段</span><span class="编辑性标签 只读">只读</span></span></div>
+</div></div>
+
+<div id="grp_4_2_小程序" style="margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px;opacity:0.35;pointer-events:none;transition:opacity 0.25s;">
+<h4 style="margin:0 0 12px 0;font-size:15px;color:#1e293b;">小程序路径配置 <span style="font-size:11px;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:4px;margin-left:8px;">跳转方式=小程序</span></h4>
+<div class="field-row"><span class="field-label">AppID</span><span class="field-control"><span class="field-display">wx_jd_618_2026</span><span class="field-type-tag">string</span><span class="编辑性标签 只读">只读</span><button class="详情按钮" style="margin-left:8px;" onclick="显示提示('AppID 已复制', '成功', 2000)">📄 复制</button></span></div>
+<div class="field-row"><span class="field-label">默认推广位路径</span><span class="field-control"><span class="field-display">/pages/jd/618/index</span><span class="field-type-tag">string</span><span class="编辑性标签 条件">条件</span></span></div>
+<div class="field-row"><span class="field-label">独立配置开关</span><span class="field-control"><select class="field-select"><option>开</option><option>关</option></select></span></div>
+<table class="数据表格"><thead><tr><th class="列表表头">推广位名称</th><th class="列表表头">小程序路径</th><th class="列表表头 操作列">操作</th></tr></thead><tbody><tr class="数据行"><td class="列表单元格">首页Banner</td><td class="列表单元格">/pages/jd/618/index</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="显示提示('已保存', '成功', 2000)">保存</button></td></tr></tbody></table>
+<div style="margin-top:12px;text-align:right;"><button class="详情按钮" style="background:#0f6b8f;color:#fff;border-color:#0f6b8f;">一键保存全部</button></div>
+</div>
+
+<div id="grp_4_2_H5" style="margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px;opacity:0.35;pointer-events:none;transition:opacity 0.25s;">
+<h4 style="margin:0 0 12px 0;font-size:15px;color:#1e293b;">推广位口令配置 <span style="font-size:11px;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:4px;margin-left:8px;">跳转方式=口令</span></h4>
+<div class="field-row"><span class="field-label">H5模板</span><span class="field-control"><span class="field-display">618大促活动页</span><span class="field-type-tag">string</span><span class="编辑性标签 只读">只读</span></span></div>
+<div class="field-row"><span class="field-label">默认口令</span><span class="field-control"><span class="field-display" style="color:#c2410c;">￥618mrhb￥</span><span class="field-type-tag">string</span><span class="编辑性标签 条件">条件</span></span></div>
+<div class="field-row"><span class="field-label">独立配置开关</span><span class="field-control"><select class="field-select"><option>开</option><option>关</option></select></span></div>
+<table class="数据表格"><thead><tr><th class="列表表头">推广位名称</th><th class="列表表头">口令</th><th class="列表表头 操作列">操作</th></tr></thead><tbody><tr class="数据行"><td class="列表单元格">首页Banner</td><td class="列表单元格" style="color:#c2410c;">￥618dzqpor￥</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="显示提示('已保存', '成功', 2000)">保存</button></td></tr></tbody></table>
+<div style="margin-top:12px;text-align:right;"><button class="详情按钮" style="background:#0f6b8f;color:#fff;border-color:#0f6b8f;">一键保存全部</button></div>
+</div>
+
+<div id="grp_4_2_H5链接" style="margin-top:16px;border-top:1px solid #10b981;padding-top:16px;transition:opacity 0.25s;">
+<h4 style="margin:0 0 12px 0;font-size:15px;color:#1e293b;">🔗 H5链接配置 <span style="font-size:11px;color:#15803d;background:#f0fdf4;padding:2px 8px;border-radius:4px;margin-left:8px;">跳转方式=H5链接（B04-S2新增）</span></h4>
+<div class="H5链接提示区" style="margin-bottom:12px;">💡 H5链接由第三方合作方直接提供，总后台无需配置。商户在此处为各推广位填写H5链接URL，支持按推广位配置不同链接参数。</div>
+<div class="field-row"><span class="field-label">🆕 默认H5链接</span><span class="field-control"><span class="field-display" style="color:#15803d;">https://act.ele.me/weekend/2026?from=saas</span><span class="field-type-tag">string</span><span class="编辑性标签 条件">条件</span><button class="field-info-btn" onclick="切换字段详情('f_4_2_默认H5链接', this)">ⓘ</button></span></div>
+<div id="f_4_2_默认H5链接" class="field-detail-panel"><dl class="弹窗属性"><dt>数据来源</dt><dd>商户填写</dd><dt>逻辑</dt><dd>推广位H5链接留空时的兜底值。URL格式校验（http/https开头）</dd><dt>用途</dt><dd>推广位H5链接留空时的fallback</dd></dl></div>
+<div class="field-row"><span class="field-label">🆕 独立配置开关</span><span class="field-control"><select class="field-select"><option>开</option><option>关</option></select><span class="field-type-tag">enum</span><span class="编辑性标签 条件">条件</span><button class="field-info-btn" onclick="切换字段详情('f_4_2_独立配置开关_H5链接', this)">ⓘ</button></span></div>
+<div id="f_4_2_独立配置开关_H5链接" class="field-detail-panel"><dl class="弹窗属性"><dt>数据来源</dt><dd>商户操作</dd><dt>逻辑</dt><dd>控制是否允许按推广位独立配置H5链接</dd><dt>用途</dt><dd>控制是否展开推广位H5链接编辑表格</dd></dl></div>
+<table class="数据表格"><thead><tr><th class="列表表头">推广位名称</th><th class="列表表头" style="color:#15803d;">🔗 H5链接URL</th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">首页Banner</td><td class="列表单元格" style="color:#15803d;">https://act.ele.me/weekend/banner?slot=banner</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="显示提示('保存推广位H5链接', '成功', 2000)">保存</button></td></tr>
+<tr class="数据行"><td class="列表单元格">商品详情页</td><td class="列表单元格" style="color:#15803d;">https://act.ele.me/weekend/detail?slot=detail</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="显示提示('保存推广位H5链接', '成功', 2000)">保存</button></td></tr>
+</tbody></table>
+<div style="margin-top:12px;text-align:right;"><button class="详情按钮" style="background:#0f6b8f;color:#fff;border-color:#0f6b8f;padding:8px 20px;" onclick="显示提示('保存全部推广位H5链接', '成功', 3000)">一键保存全部</button></div>
+</div>
+</div>
+<div style="display:flex;justify-content:flex-end;padding-top:16px;border-top:1px solid #e2e8f0;margin-top:16px;"><button class="btn-secondary" onclick="显示提示('关闭抽屉，返回活动清单', '信息', 2000)">返回活动清单</button></div>
+</div></div></div></div>
+</section>
+
+<!-- Tag 6: 关键业务规则 -->
+<section class="标签面板" data-stage="6">
+  <div class="面板布局">
+    <div id="节6正文" class="文档正文">
+      <div id="s6_6_1"><h3 class="阅读节标题">6.1 B04-S1 存量兼容（保留沿用）</h3>
+<p>B04-S1 中所有规则继续生效：所有已有第三方活动 redirectType 默认 <code class="行内代码">miniprogram</code>，B04-S1 产生的 h5（口令）类型活动行为不变。B04-S2 实施后新增活动可选三种跳转方式，默认仍为「小程序」。</p></div>
+      <div id="s6_6_2"><h3 class="阅读节标题">6.2 跳转方式联动规则（B04-S2 三值版）</h3>
+<div class="表格容器"><table class="阅读表格"><tr><th>影响范围</th><th>miniprogram（小程序）</th><th>h5（口令）</th><th>h5link（H5链接）</th></tr>
+<tr><td>总后台弹窗 - AppID</td><td>显示，必填</td><td>置灰，不校验</td><td>置灰，不校验</td></tr>
+<tr><td>总后台弹窗 - 默认推广位路径</td><td>显示，选填</td><td>隐藏，值清空</td><td>隐藏，值清空</td></tr>
+<tr><td>总后台弹窗 - H5模板</td><td>隐藏，值清空</td><td>显示，必填</td><td>隐藏，值清空</td></tr>
+<tr><td>总后台列表 - AppID列</td><td>正常展示</td><td>显示 <code class="行内代码">--</code></td><td>显示 <code class="行内代码">--</code></td></tr>
+<tr><td>总后台列表 - H5模板列</td><td>显示 <code class="行内代码">--</code></td><td>展示模板名称</td><td>显示 <code class="行内代码">--</code></td></tr>
+<tr><td>总后台列表 - H5链接列</td><td>显示 <code class="行内代码">--</code></td><td>显示 <code class="行内代码">--</code></td><td>展示链接URL截断</td></tr>
+<tr><td>客户端清单 - 跳转标识</td><td>展示 AppID</td><td>展示 <code class="行内代码">🔑 口令 · {模板名称}</code></td><td>展示 <code class="行内代码">🔗 H5链接 · {URL截断}</code></td></tr>
+<tr><td>客户端清单 - 使用中标识</td><td>正常展示</td><td>不展示</td><td>正常展示（已配置时）</td></tr>
+<tr><td>客户端抽屉 - 配置区</td><td>小程序路径配置</td><td>推广位口令配置</td><td>推广位H5链接配置</td></tr>
+</table></div></div>
+      <div id="s6_6_3"><h3 class="阅读节标题">6.3 H5链接 URL 数据存储</h3>
+<p>H5链接活动的 URL 数据存储在活动-推广位关联表中：<code class="行内代码">defaultH5Link</code>（默认链接，兜底值）和推广位级链接。链接可以为空，空链接意味着该推广位不展示跳转入口。三级兜底：推广位级链接 → 默认H5链接 → 无链接（不跳转）。</p></div>
+      <div id="s6_6_4"><h3 class="阅读节标题">6.4 客户端权限</h3>
+<ul><li>商户不可修改跳转方式——此配置仅总后台运营可操作</li><li>商户自建自定义活动默认跳转方式为「小程序」</li><li>H5链接活动在客户端展示链接配置区，商户可编辑默认链接和各推广位链接</li><li>商户不可修改 H5 模板（仅口令活动适用），H5链接活动无此概念</li></ul></div>
+    </div>
+    <nav id="节6目录" class="节目录"><ul class="节目录列表">
+<li class="目录项 目录层级3"><a href="#s6_6_1">6.1 存量兼容</a></li>
+<li class="目录项 目录层级3"><a href="#s6_6_2">6.2 联动规则</a></li>
+<li class="目录项 目录层级3"><a href="#s6_6_3">6.3 数据存储</a></li>
+<li class="目录项 目录层级3"><a href="#s6_6_4">6.4 客户端权限</a></li>
+</ul></nav>
+  </div>
+</section>
+
+<!-- Tag 7: 权限说明 -->
+<section class="标签面板" data-stage="7">
+  <div class="面板布局">
+    <div id="节7正文" class="文档正文"><div class="表格容器"><table class="阅读表格"><tr><th>功能或操作</th><th>SaaS 总后台运营</th><th>客户端商户</th></tr>
+<tr><td>查看第三方活动列表</td><td>是</td><td>是</td></tr>
+<tr><td>新增/编辑活动时选择跳转方式（含H5链接）</td><td>是</td><td>否</td></tr>
+<tr><td>选择/修改 H5 模板</td><td>是（仅口令活动）</td><td>否</td></tr>
+<tr><td>配置小程序推广位路径</td><td>是（代客修正）</td><td>是（仅 miniprogram 活动）</td></tr>
+<tr><td>配置推广位口令</td><td>是（代客修正）</td><td>是（仅 h5 活动）</td></tr>
+<tr><td>🆕 配置推广位H5链接</td><td>是（代客修正）</td><td>是（仅 h5link 活动）</td></tr>
+<tr><td>修改跳转方式</td><td>是</td><td>否</td></tr>
+<tr><td>删除自定义活动</td><td>否</td><td>是（仅「其他」分组）</td></tr>
+</table></div></div>
+    <nav id="节7目录" class="节目录"><ul class="节目录列表"></ul></nav>
+  </div>
+</section>
+
+<!-- Tag 8: AI 维护说明 -->
+<section class="标签面板" data-stage="8">
+  <div class="面板布局">
+    <div id="节8正文" class="文档正文">
+      <div id="s8_8_1"><h3 class="阅读节标题">8.1 文档设计理念</h3>
+<p>本文档是 B04-S1 的增量变更文档，在 B04-S1 基础上新增第三种跳转方式「H5链接」。采用双层结构：人类阅读模块（第 1～7 章）按业务发生顺序组织；AI 维护模块（第 8 章）集中保存维护约束。</p></div>
+      <div id="s8_8_2"><h3 class="阅读节标题">8.2 正文组织原则</h3>
+<ul><li>正文按「第一阶段（总后台）→ 第二阶段（客户端）」线性展开</li><li>每个页面小节内部按「业务背景 → 字段说明 → 列表交互 → 业务逻辑」组织</li><li>B04 和 B04-S1 中已讲清的规则不在本文档重复，仅标注沿用</li><li>H5链接是纯客户端配置模式，总后台零配置</li></ul></div>
+      <div id="s8_8_3"><h3 class="阅读节标题">8.3 与现有文档的关系</h3>
+<div class="表格容器"><table class="阅读表格"><tr><th>关联文档</th><th>关系</th></tr>
+<tr><td>B04 活动管理-第三方</td><td>祖父文档。分组管理、路径三级兜底等规则以 B04 为准</td></tr>
+<tr><td>B04-S1 第三方活动增加H5跳转</td><td>父文档。口令（h5）跳转方式的所有规则以 B04-S1 为准，本文档仅新增 h5link 枚举值</td></tr>
+<tr><td>B02 联盟活动</td><td>H5 模板的定义和维护在 B02，h5link 类型不使用模板</td></tr>
+</table></div></div>
+      <div id="s8_8_4"><h3 class="阅读节标题">8.4 上下游检查</h3>
+<div class="表格容器"><table class="阅读表格"><tr><th>修改内容</th><th>必须检查的影响</th></tr>
+<tr><td>redirectType 新增 h5link 枚举值</td><td>所有含此字段的页面：总后台列表、弹窗、客户路径查阅、客户端清单、客户端抽屉</td></tr>
+<tr><td>defaultH5Link 字段</td><td>商户端抽屉输入校验（URL格式）、列表展示（截断）、代客查阅（可编辑）</td></tr>
+<tr><td>推广位级 H5链接字段</td><td>三级兜底逻辑、独立配置开关联动、一键保存</td></tr>
+</table></div></div>
+      <div id="s8_8_5"><h3 class="阅读节标题">8.5 术语同步</h3>
+<ul><li><strong>跳转方式（redirectType）</strong>：枚举值 <code class="行内代码">miniprogram</code>（小程序）、<code class="行内代码">h5</code>（口令）、<code class="行内代码">h5link</code>（H5链接）。全篇统一使用。</li><li><strong>H5链接</strong>：指第三方直接提供的完整 H5 URL（如 <code class="行内代码">https://act.example.com/xxx</code>），与 H5模板不同——H5模板是页面载体，H5链接是完整目标地址。</li></ul></div>
+      <div id="s8_8_6"><h3 class="阅读节标题">8.6 不得混淆</h3>
+<ul><li>H5链接（h5link）≠ 口令（h5）≠ 小程序（miniprogram）。三者是并列的跳转方式枚举值。</li><li>H5链接不需要 H5 模板——链接即是完整的跳转目标。</li><li>H5链接 ≠ H5模板。模板是 B02 中维护的页面载体，链接是第三方直接提供的目标 URL。</li><li>redirectType=h5link 时显示「使用中」标识，与 h5（口令）不同——口令活动不展示使用中标识，H5链接活动展示。</li></ul></div>
+    </div>
+    <nav id="节8目录" class="节目录"><ul class="节目录列表">
+<li class="目录项 目录层级3"><a href="#s8_8_1">8.1 文档设计理念</a></li>
+<li class="目录项 目录层级3"><a href="#s8_8_2">8.2 正文组织原则</a></li>
+<li class="目录项 目录层级3"><a href="#s8_8_3">8.3 与现有文档的关系</a></li>
+<li class="目录项 目录层级3"><a href="#s8_8_4">8.4 上下游检查</a></li>
+<li class="目录项 目录层级3"><a href="#s8_8_5">8.5 术语同步</a></li>
+<li class="目录项 目录层级3"><a href="#s8_8_6">8.6 不得混淆</a></li>
+</ul></nav>
+  </div>
+</section>
+</main>
+
+<aside class="右侧栏" id="右侧栏" style="display:none;">
+<div id="阶段03右侧栏" class="阶段右侧栏组" style="display:none;">
+<div class="注释卡片组" data-page="3.1">
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">&#128269;</span><span class="注释标题">业务背景</span></div><div class="注释卡片正文">当前环节：② 新增/编辑预设活动（查看已有活动记录）<br><br>本次改造在B04-S1列表基础上，跳转方式列新增「H5链接」标签，新增「H5链接」列展示活动默认链接URL。</div></div>
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">💡</span><span class="注释标题">业务逻辑</span></div><div class="注释卡片正文"><strong>跳转方式列展示规则：</strong> miniprogram → <code class="行内代码">🏷 小程序</code>（蓝色），h5 → <code class="行内代码">🔑 口令</code>（橙色），h5link → <code class="行内代码">🔗 H5链接</code>（绿色）。<br><br><strong>H5链接列：</strong> 仅h5link且已配置链接时展示截断URL，其余显示 <code class="行内代码">--</code>。</div></div>
+</div>
+<div class="注释卡片组" data-page="3.2" style="display:none;">
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">💡</span><span class="注释标题">H5链接特殊规则</span></div><div class="注释卡片正文"><strong>总后台零配置：</strong> 选择「H5链接」后，AppID、H5模板、默认推广位路径全部置灰/隐藏；<strong>展示与排序分区整体隐藏</strong>（预设、排序、活动主图、状态均不显示，发布即上架）。运营仅需填活动名称和选跳转方式即可保存。商户在客户端自行配置链接URL。<br><br><strong>保存校验：</strong> h5link 时跳过 AppID、H5模板、默认推广位路径、预设、排序、活动主图、状态的全部校验。</div></div>
+</div></div>
+<div id="阶段04右侧栏" class="阶段右侧栏组" style="display:none;">
+<div class="注释卡片组" data-page="4.2">
+<div class="注释卡片"><div class="注释卡片头"><span class="注释图标">💡</span><span class="注释标题">H5链接配置区说明</span></div><div class="注释卡片正文"><strong>默认H5链接：</strong> 商户填写的兜底链接URL。非空时需以 http:// 或 https:// 开头，长度≤2048字符。<br><br><strong>独立配置开关：</strong> 开启后可按推广位独立配置不同的H5链接URL。<br><br><strong>推广位H5链接表格：</strong> 每个推广位可填写独立的H5链接URL，留空则使用默认链接。<br><br><strong>三级兜底：</strong> 推广位级链接 → 默认H5链接 → 无链接（不跳转）</div></div>
+</div></div>
+</aside>
+</div>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭抽屉();关闭新增抽屉()"></div>
+<aside id="detailDrawer" class="drawer">
+  <div class="panel-head"><div class="panel-title" id="detailDrawerTitle">详情</div><button class="btn-close" onclick="关闭抽屉()">×</button></div>
+  <div id="detailBody" class="panel-body"></div>
+  <div class="panel-foot"><button class="btn-secondary" onclick="关闭抽屉()">关闭</button></div>
+</aside>
+<aside id="新增抽屉面板" class="drawer">
+  <div class="panel-head"><div class="panel-title" id="新增抽屉标题">新增</div><button class="btn-close" onclick="关闭新增抽屉()">×</button></div>
+  <div id="新增抽屉正文" class="panel-body"></div>
+  <div class="panel-foot"><button class="btn-secondary" onclick="关闭新增抽屉()">关闭</button></div>
+</aside>
+
+<script id="js-标签切换">
+function 切换标签(n) {
+  document.querySelectorAll('.标签按钮').forEach(function(b) { b.classList.remove('激活'); });
+  var btn = document.querySelector('.标签按钮[data-stage="' + n + '"]'); if (btn) btn.classList.add('激活');
+  document.querySelectorAll('.标签面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.querySelector('.标签面板[data-stage="' + n + '"]'); if (panel) panel.classList.add('激活');
+  var 所有导航 = document.querySelectorAll('.阶段页面导航');
+  for (var i = 0; i < 所有导航.length; i++) { 所有导航[i].style.display = 'none'; }
+  if (n >= 3) {
+    var N = n.toString().padStart(2, '0');
+    var 当前导航 = document.getElementById('阶段' + N + '导航');
+    if (当前导航) { 当前导航.style.display = ''; var 首个 = 当前导航.querySelector('.阶段链接'); if (首个) { var 页码 = 首个.getAttribute('data-page'); var 类型 = 首个.getAttribute('data-page-type'); if (页码) 切换页面(页码, 类型); } }
+  }
+  var 右侧栏 = document.getElementById('右侧栏');
+  var 所有右侧栏组 = document.querySelectorAll('.阶段右侧栏组');
+  for (var i = 0; i < 所有右侧栏组.length; i++) { 所有右侧栏组[i].style.display = 'none'; }
+  if (n >= 3) {
+    if (右侧栏) 右侧栏.style.display = '';
+    var N = n.toString().padStart(2, '0');
+    var 当前右侧栏 = document.getElementById('阶段' + N + '右侧栏');
+    if (当前右侧栏) { 当前右侧栏.style.display = ''; var 首个卡片 = 当前右侧栏.querySelector('.注释卡片组'); if (首个卡片) 首个卡片.style.display = ''; }
+  } else { if (右侧栏) 右侧栏.style.display = 'none'; }
+}
+(function() { var 右侧栏 = document.getElementById('右侧栏'); if (右侧栏) 右侧栏.style.display = 'none'; })();
+</script>
+
+<script id="js-阶段切换">
+function 切换页面(页码, 页面类型) {
+  var N = 页码.toString().split('.')[0]; var N填充 = N.padStart(2, '0');
+  document.querySelectorAll('.阶段链接').forEach(function(l) { l.classList.remove('激活'); });
+  var link = document.querySelector('.阶段链接[data-page="' + 页码 + '"]'); if (link) link.classList.add('激活');
+  var 编辑区 = document.getElementById('阶段' + N填充 + '编辑区');
+  var 列表区 = document.getElementById('阶段' + N填充 + '列表区');
+  if (页面类型 === '列表页') {
+    if (列表区) 列表区.style.display = '';
+    if (编辑区) 编辑区.style.display = 'none';
+    [列表区].forEach(function(c) { if (!c) return; var ss = c.querySelectorAll('.演示壳'); for (var i = 0; i < ss.length; i++) { ss[i].style.display = (ss[i].getAttribute('data-page') === 页码) ? '' : 'none'; } });
+  } else {
+    if (编辑区) 编辑区.style.display = '';
+    if (列表区) 列表区.style.display = 'none';
+    if (编辑区) { var ss = 编辑区.querySelectorAll('.演示壳'); for (var i = 0; i < ss.length; i++) { ss[i].style.display = (ss[i].getAttribute('data-page') === 页码) ? '' : 'none'; } }
+  }
+  var 右侧栏容器 = document.getElementById('阶段' + N填充 + '右侧栏');
+  if (右侧栏容器) { var 所有卡片组 = 右侧栏容器.querySelectorAll('.注释卡片组'); for (var i = 0; i < 所有卡片组.length; i++) { 所有卡片组[i].style.display = 'none'; } var 目标 = 右侧栏容器.querySelector('.注释卡片组[data-page="' + 页码 + '"]'); if (目标) 目标.style.display = ''; }
+}
+</script>
+
+<script id="js-字段联动">
+function 置灰切换_3_2(val) {
+  var 小程序区 = document.getElementById('grp_3_2_小程序');
+  var H5区 = document.getElementById('grp_3_2_H5');
+  var H5链接提示 = document.getElementById('grp_3_2_H5链接提示');
+  var 展示与排序区 = document.getElementById('grp_3_2_展示与排序');
+  if (!小程序区 || !H5区 || !H5链接提示) return;
+  if (val === 'h5') {
+    小程序区.style.opacity = '0.35'; 小程序区.style.pointerEvents = 'none';
+    H5区.style.opacity = '1'; H5区.style.pointerEvents = 'auto';
+    H5链接提示.style.display = 'none';
+    if (展示与排序区) { 展示与排序区.style.opacity = '1'; 展示与排序区.style.pointerEvents = 'auto'; }
+  } else if (val === 'h5link') {
+    小程序区.style.opacity = '0.35'; 小程序区.style.pointerEvents = 'none';
+    H5区.style.opacity = '0.35'; H5区.style.pointerEvents = 'none';
+    H5链接提示.style.display = '';
+    if (展示与排序区) { 展示与排序区.style.opacity = '0.35'; 展示与排序区.style.pointerEvents = 'none'; }
+  } else {
+    小程序区.style.opacity = '1'; 小程序区.style.pointerEvents = 'auto';
+    H5区.style.opacity = '0.35'; H5区.style.pointerEvents = 'none';
+    H5链接提示.style.display = 'none';
+    if (展示与排序区) { 展示与排序区.style.opacity = '1'; 展示与排序区.style.pointerEvents = 'auto'; }
+  }
+}
+
+function 置灰切换_4_2(val) {
+  var 小程序区 = document.getElementById('grp_4_2_小程序');
+  var H5区 = document.getElementById('grp_4_2_H5');
+  var H5链接区 = document.getElementById('grp_4_2_H5链接');
+  var 跳转标识 = document.getElementById('val_4_2_跳转标识');
+  if (!小程序区 || !H5区 || !H5链接区) return;
+  if (val === 'miniprogram') {
+    小程序区.style.opacity = '1'; 小程序区.style.pointerEvents = 'auto';
+    H5区.style.opacity = '0.35'; H5区.style.pointerEvents = 'none';
+    H5链接区.style.opacity = '0.35'; H5链接区.style.pointerEvents = 'none';
+    if (跳转标识) 跳转标识.textContent = 'wx_jd_618_2026';
+  } else if (val === 'h5') {
+    小程序区.style.opacity = '0.35'; 小程序区.style.pointerEvents = 'none';
+    H5区.style.opacity = '1'; H5区.style.pointerEvents = 'auto';
+    H5链接区.style.opacity = '0.35'; H5链接区.style.pointerEvents = 'none';
+    if (跳转标识) 跳转标识.textContent = '🔑 口令 · 618大促活动页';
+  } else {
+    小程序区.style.opacity = '0.35'; 小程序区.style.pointerEvents = 'none';
+    H5区.style.opacity = '0.35'; H5区.style.pointerEvents = 'none';
+    H5链接区.style.opacity = '1'; H5链接区.style.pointerEvents = 'auto';
+    if (跳转标识) 跳转标识.textContent = '🔗 H5链接 · https://act.ele.me/...';
+  }
+}
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); if (按钮) 按钮.classList.toggle('is-open'); }
+}
+</script>
+
+<script id="js-抽屉">
+window._详情字段按节 = window._详情字段按节 || {};
+function 打开抽屉(行数据, 标题) {
+  var drawer = document.getElementById('detailDrawer'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('detailBody'); var titleEl = document.getElementById('detailDrawerTitle');
+  if (!drawer || !body) return; titleEl.textContent = 标题 || '详情';
+  var 当前节 = (行数据 && 行数据._壳节编号) || '';
+  var 详情字段 = (当前节 && window._详情字段按节[当前节]) ? window._详情字段按节[当前节] : [];
+  if (详情字段.length === 0) { var 已见 = {}; var keys = Object.keys(window._详情字段按节); for (var k = 0; k < keys.length; k++) { var fl = window._详情字段按节[keys[k]]; for (var i = 0; i < fl.length; i++) { if (!已见[fl[i].名称]) { 已见[fl[i].名称] = true; 详情字段.push(fl[i]); } } } }
+  var html = '<div class="编辑卡片区">';
+  function 渲染详情字段行(f, 值) {
+    var 可编辑 = (f.详情可编辑 !== undefined) ? f.详情可编辑 : f.可编辑;
+    var 标签后缀 = 可编辑 ? '（可编辑）' : '（只读）';
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span><span class="field-control"><span class="field-display">' + 值 + ' <span style="font-size:11px;color:#94a3b8;">' + 标签后缀 + '</span></span><span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span><button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (当前节 && window._详情字段分组 && window._详情字段分组[当前节]) ? window._详情字段分组[当前节] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 详情字段.length; k++) {
+          if (详情字段[k].名称 === 组.字段[j]) {
+            var val = (行数据 && 行数据[组.字段[j]] !== undefined) ? String(行数据[组.字段[j]]) : '—';
+            html += 渲染详情字段行(详情字段[k], val); break;
+          }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="detail-grid">';
+    if (详情字段.length > 0) { for (var i = 0; i < 详情字段.length; i++) { var f = 详情字段[i]; var val = (行数据 && 行数据[f.名称] !== undefined) ? String(行数据[f.名称]) : '—'; html += '<div class="detail-item"><div class="detail-label">' + f.名称 + '<span class="type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span></div><div class="detail-value">' + val + '</div></div>'; } }
+    else if (行数据) { var ks = Object.keys(行数据).filter(function(k) { return k.indexOf('_') !== 0; }); for (var i = 0; i < ks.length; i++) { html += '<div class="detail-item"><div class="detail-label">' + ks[i] + '</div><div class="detail-value">' + String(行数据[ks[i]] || '—') + '</div></div>'; } }
+    else { html += '<div class="detail-item"><div class="detail-value">暂无数据</div></div>'; }
+    html += '</div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭抽屉() { var d = document.getElementById('detailDrawer'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+
+<script id="js-新增抽屉">
+function 打开新增抽屉(节编号) {
+  var drawer = document.getElementById('新增抽屉面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('新增抽屉正文'); var titleEl = document.getElementById('新增抽屉标题');
+  if (!drawer || !body) return;
+  var 字段列表 = (节编号 && window._详情字段按节[节编号]) ? window._详情字段按节[节编号] : [];
+  var 新增字段 = []; for (var i = 0; i < 字段列表.length; i++) { if (字段列表[i].在新增) 新增字段.push(字段列表[i]); }
+  titleEl.textContent = (节编号 || '') + ' — 新增';
+  var html = '<div class="编辑卡片区">';
+  function 渲染字段行(f) {
+    var 可编辑 = (f.新增可编辑 !== undefined) ? f.新增可编辑 : f.可编辑;
+    var 标签后缀 = 可编辑 ? '（可编辑）' : '（只读）';
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span><span class="field-control"><span class="field-display">' + (f.示例值 || (f.基础类型 === 'enum' ? '（下拉选择）' : '（填写）')) + ' <span style="font-size:11px;color:#94a3b8;">' + 标签后缀 + '</span></span><span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span><button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (节编号 && window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 新增字段.length; k++) {
+          if (新增字段[k].名称 === 组.字段[j]) { html += 渲染字段行(新增字段[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-body">';
+    if (新增字段.length === 0) { html += '<div class="空状态">该页面无可新增字段</div>'; }
+    else { for (var i = 0; i < 新增字段.length; i++) { html += 渲染字段行(新增字段[i]); } }
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭新增抽屉() { var d = document.getElementById('新增抽屉面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+</script>
+
+<script id="js-单元格截断">
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+
+<script>
+// 3.1 第三方活动列表 — 字段注册（B04-S2 扩展）
+window._详情字段按节=window._详情字段按节||{};
+window._详情字段按节["3.1"]=[
+  {名称:"排序",类型原文:"number",基础类型:"number",在详情:true,详情可编辑:true,在新增:true,新增可编辑:true,数据来源:"运营填写",逻辑:"正整数，数字越大越靠前",用途:"控制商户端活动列表展示顺序",节编号:"3.1"},
+  {名称:"活动名称",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:true,在新增:true,新增可编辑:true,数据来源:"运营填写",逻辑:"1-50字符，同一分组下不可重名",用途:"商户端识别和选择活动",节编号:"3.1"},
+  {名称:"AppID",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:true,新增可编辑:true,数据来源:"运营填写",逻辑:"仅miniprogram时展示；h5和h5link时显示--",用途:"小程序跳转目标标识",节编号:"3.1"},
+  {名称:"跳转方式",类型原文:"enum（小程序、口令、H5链接）",基础类型:"enum",枚举值:"小程序、口令、H5链接",在详情:true,详情可编辑:true,在新增:true,新增可编辑:true,数据来源:"运营选择",逻辑:"三种标签：小程序蓝色、口令橙色、H5链接绿色。B04-S1存量默认小程序",用途:"帮助运营快速识别活动跳转类型",节编号:"3.1"},
+  {名称:"H5模板",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:false,新增可编辑:false,数据来源:"关联h5Templates表",逻辑:"仅h5时展示模板名称；miniprogram和h5link时显示--",用途:"帮助运营确认口令活动关联的模板",节编号:"3.1"},
+  {名称:"H5链接",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:false,新增可编辑:false,数据来源:"商户在客户端配置",逻辑:"仅h5link且已配置时展示链接URL截断",用途:"帮助运营确认H5链接活动的目标URL",节编号:"3.1"},
+  {名称:"所属分组",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:true,在新增:true,新增可编辑:true,数据来源:"运营选择",逻辑:"展示分组名称",用途:"标识活动归属",节编号:"3.1"},
+  {名称:"预设",类型原文:"enum（是、否）",基础类型:"enum",枚举值:"是、否",在详情:true,详情可编辑:true,在新增:true,新增可编辑:true,数据来源:"运营切换",逻辑:"开启后客户可见",用途:"控制活动对客户的可见性",节编号:"3.1"},
+  {名称:"状态",类型原文:"enum（上架、下架）",基础类型:"enum",枚举值:"上架、下架",在详情:true,详情可编辑:true,在新增:true,新增可编辑:true,数据来源:"运营选择",逻辑:"上架=客户端可见",用途:"控制活动上下架",节编号:"3.1"}
+];
+window._详情字段分组=window._详情字段分组||{};
+window._详情字段分组["3.1"]=[{组名:"基本信息",字段:["排序","活动名称","AppID","跳转方式","H5模板","H5链接","所属分组"]},{组名:"展示与发布",字段:["预设","状态"]}];
+window._新增字段分组=window._新增字段分组||{};
+window._新增字段分组["3.1"]=[{组名:"基本信息",字段:["排序","活动名称","AppID","跳转方式","所属分组"]},{组名:"展示与发布",字段:["预设","状态"]}];
+window._详情字段分组["3.2"]=[{组名:"基础信息",字段:["所属分组","活动名称","跳转方式"]},{组名:"展示与排序",字段:["预设","排序","活动主图","状态"]}];
+
+// 4.1 客户端活动清单
+window._详情字段按节["4.1"]=[
+  {名称:"活动名称",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:false,数据来源:"活动记录",用途:"商户识别和选择活动",节编号:"4.1"},
+  {名称:"跳转标识",类型原文:"组合字段",基础类型:"组合字段",在详情:true,详情可编辑:false,在新增:false,数据来源:"redirectType和关联数据",逻辑:"miniprogram→AppID；h5→口令·模板名；h5link→H5链接·URL截断",用途:"帮助商户识别活动跳转类型",节编号:"4.1"},
+  {名称:"使用中标识",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:false,数据来源:"系统判断",逻辑:"miniprogram和h5link已配置时显示使用中；h5不展示",用途:"帮助商户识别已配置的活动",节编号:"4.1"},
+  {名称:"分组标签",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,在新增:false,数据来源:"活动所属分组",用途:"帮助商户识别活动来源",节编号:"4.1"}
+];
+window._详情字段分组["4.1"]=[{组名:"活动信息",字段:["活动名称","跳转标识","使用中标识","分组标签"]}];
+
+// 4.2 页面编辑类字段
+window._详情字段按节["4.2"]=[
+  {名称:"活动名称",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,数据来源:"活动记录（只读）",用途:"确认当前配置的活动",节编号:"4.2"},
+  {名称:"跳转方式",类型原文:"enum（小程序、口令、H5链接）",基础类型:"enum",枚举值:"小程序、口令、H5链接",在详情:true,详情可编辑:false,数据来源:"活动redirectType（只读）",用途:"告知商户跳转类型",节编号:"4.2"},
+  {名称:"AppID",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,数据来源:"活动appId（只读，可复制）",用途:"告知商户目标小程序",节编号:"4.2"},
+  {名称:"H5模板",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:false,数据来源:"活动h5TemplateId（只读）",逻辑:"仅h5活动显示",用途:"告知商户口令活动使用的模板",节编号:"4.2"},
+  {名称:"默认H5链接",类型原文:"string",基础类型:"string",在详情:true,详情可编辑:true,数据来源:"商户填写",逻辑:"URL格式校验(http/https开头)。仅h5link活动显示",用途:"推广位H5链接留空时的fallback",节编号:"4.2"},
+  {名称:"推广位H5链接表格",类型原文:"组合字段",基础类型:"组合字段",在详情:true,详情可编辑:true,数据来源:"商户为各推广位填写的H5链接URL",逻辑:"仅h5link活动显示",用途:"各推广位跳转时使用的H5链接",节编号:"4.2"}
+];
+window._详情字段分组["4.2"]=[{组名:"活动信息",字段:["活动名称","跳转方式"]}];
+
+// 字段总库
+(window._字段总库||[]).push(
+  {名称:"排序",类型原文:"number",基础类型:"number",数据来源:"运营填写",逻辑:"正整数，数字越大越靠前",用途:"控制商户端活动列表展示顺序",节编号:"3.1"},
+  {名称:"活动名称",类型原文:"string",基础类型:"string",数据来源:"运营填写",逻辑:"1-50字符，同一分组下不可重名",用途:"商户端识别和选择活动",节编号:"3.1"},
+  {名称:"AppID",类型原文:"string",基础类型:"string",数据来源:"运营填写",逻辑:"仅miniprogram时必填；h5和h5link时置灰显示--",用途:"小程序跳转目标标识",节编号:"3.1"},
+  {名称:"跳转方式",类型原文:"enum（miniprogram、h5、h5link）",基础类型:"enum",枚举值:"miniprogram、h5、h5link",数据来源:"运营选择",逻辑:"三种值：miniprogram(小程序)、h5(口令)、h5link(H5链接)。新增默认小程序。B04-S1存量回显已有值。控制同弹窗内字段的置灰/启用和必填性",用途:"决定活动跳转目标类型",节编号:"3.2"},
+  {名称:"H5模板",类型原文:"string",基础类型:"string",数据来源:"运营从下拉列表中选择",逻辑:"仅h5时必填。miniprogram和h5link时置灰不可选，值清空",用途:"关联的H5模板决定C端页面样式和跳转行为",节编号:"3.2"},
+  {名称:"H5链接",类型原文:"string",基础类型:"string",数据来源:"商户在客户端配置",逻辑:"仅h5link时展示截断URL",用途:"帮助运营确认H5链接活动的目标URL",节编号:"3.1"},
+  {名称:"默认H5链接",类型原文:"string",基础类型:"string",数据来源:"商户填写",逻辑:"URL格式校验(http/https开头)，选填，仅h5link活动",用途:"推广位H5链接留空时的fallback",节编号:"4.2"},
+  {名称:"跳转标识",类型原文:"组合字段",基础类型:"组合字段",数据来源:"redirectType和关联数据",逻辑:"miniprogram→AppID；h5→口令·模板名；h5link→H5链接·URL截断",用途:"帮助商户识别活动跳转类型",节编号:"4.1"},
+  {名称:"使用中标识",类型原文:"string",基础类型:"string",数据来源:"系统判断",逻辑:"miniprogram和h5link已配置时显示使用中；h5不展示",用途:"帮助商户识别已配置的活动",节编号:"4.1"}
+);
+</script>
+</body>
+</html>

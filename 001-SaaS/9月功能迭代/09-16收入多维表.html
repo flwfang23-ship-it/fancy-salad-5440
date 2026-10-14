@@ -1,0 +1,878 @@
+<script type="text/plain" data-ai-only>
+# 收入多维表
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+SaaS 平台为运营人员提供"收入多维表"投放能力。运营人员在总后台为每个客户配置一个收入数据查看链接，客户登录客户端后点击对应菜单即可打开该链接查看自己的收入数据。
+
+当前各客户的收入数据入口不统一，部分客户依赖人工转发链接，容易丢失、效率低。需要一套集中管理的链接投放机制，让运营人员在后台一次性为每个客户绑定 URL 链接，客户端读取后直接跳转。
+
+```text
+改造前
+
+运营人员通过 IM 工具手动转发收入数据链接给客户
+        ↓
+链接容易丢失、客户自行更换地址无法同步更新
+        ↓
+运营成本高、客户体验差
+
+改造后
+
+运营在总后台为客户投放收入多维表 URL
+        ↓
+客户在客户端点击菜单自动跳转目标链接
+        ↓
+统一入口、集中管理
+```
+
+### 1.2 一句话业务模型
+
+```text
+客户（已有客户管理模块提供基础数据）
+        +
+运营在总后台为客户配置收入多维表 URL（一个客户一条）
+        ↓
+客户在客户端点击「收入多维表」菜单 → 打开目标网页
+```
+
+### 1.3 最终目标
+
+- **集中统一投放：** 运营在总后台为每个客户配置一条收入多维表 URL，支持新增、编辑、删除全生命周期管理。
+- **客户端自动跳转：** 客户在客户端点击「收入多维表」菜单后自动打开运营投放的目标网页，无需人工转发。
+- **一对一关系明确：** 一个客户对应一条投放记录，运营修改后客户端下次访问自动生效。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌────────────────────────────────────┬────────────────────────────────────┐
+│ SaaS 总后台（运营人员）             │ 客户端（客户）                      │
+├────────────────────────────────────┼────────────────────────────────────┤
+│ ① 查看已有客户列表                 │                                    │
+│          │                         │                                    │
+│ ② 为客户投放收入多维表 URL          │                                    │
+│ 【投放记录：已生效】                 │                                    │
+│          │                         │                                    │
+│          └────────────────────────→│ ③ 点击客户端「收入多维表」菜单        │
+│                                    │          │                         │
+│                                    │ ④ 自动跳转打开目标网页              │
+│                                    │ 【跳转结果：成功加载】               │
+│                                    │                                    │
+│ ⑤ 编辑/删除投放记录                 │                                    │
+│ （已投放的客户也可修改 URL 或移除）  │                                    │
+│ 【投放记录：已修改 / 已删除】        │                                    │
+│          │                         │                                    │
+│          └────────────────────────→│ 下次访问读取最新记录               │
+└────────────────────────────────────┴────────────────────────────────────┘
+```
+
+泳道图需要同时表达状态时，采用以下原则：
+
+- 编号节点只写参与方实际执行的业务动作。
+- 状态标注写在触发该状态的动作之后，不占用新的流程序号。
+- 一张泳道图只展示核心状态主线。本功能核心业务对象为**投放记录**（状态：已生效、已修改、已删除）。
+- 不得使用动作名称代替中间状态。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前业务闭环，可划分为：
+
+1. **第一阶段：总后台投放配置（主要参与方：SaaS 总后台运营人员）**：运营人员进入客户管理 > 收入多维表列表页，选择已有客户并配置 URL，可新增、编辑、删除投放记录。
+2. **第二阶段：客户端消费（主要参与方：客户端客户）**：客户在客户端点击「收入多维表」菜单，客户端读取该客户的投放记录并自动跳转打开目标网页。
+
+```text
+第一阶段：总后台投放配置
+① 查看已有客户列表 → ② 为客户投放收入多维表 URL → ⑤ 编辑/删除投放记录
+                    ↓
+第二阶段：客户端消费
+③ 点击客户端「收入多维表」菜单 → ④ 自动跳转打开目标网页
+```
+
+每个页面/功能小节的 `#### 业务背景` 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。
+
+### 2.3 页面类型说明
+
+后续各阶段的模块页面分为三种业务页面类型。
+
+| 页面类型 | 面向对象 | 含义 | 正文字段表格列 |
+| --- | --- | --- | --- |
+| 页面编辑类 | 后台操作人员 | 操作人员在当前页面编辑所有字段，不存在"列表 / 详情"的视图区分 | 配置项、字段类型、配置值、编辑性、适用场景、说明、枚举值控制逻辑 |
+| 列表页 | 后台操作人员 | 操作人员看到的当前页面是一张列表，字段在列表和详情中可能分别展示 | 字段名称、字段类型、列表、详情、新增、字段解释 |
+| 移动端展示页 | C 端用户 | 用户在小程序中实际看到和操作的页面，重点先拆前台状态，再用手机壳标注编号说明每个可见模块有哪些字段 | 页面状态；页面字段标注说明 |
+
+**字段类型**列的值域：
+
+| 字段类型 | 说明 | 示例 |
+| --- | --- | --- |
+| string | 字符串 | `string` |
+| number | 数值 | `number` |
+| date | 日期 | `date` / `datetime` |
+| enum | 枚举，必须用括号罗列全部枚举值 | `enum（已生效、已删除）` |
+
+---
+
+## 4. 第一阶段：总后台投放配置
+
+### 4.1 收入多维表投放 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：① 查看已有客户列表 / ② 为客户投放收入多维表 URL / ⑤ 编辑/删除投放记录<br>
+页面路径：SaaS 总后台 > 02-客户管理 > 收入多维表<br>
+对下游影响：运营在本页面为每个客户投放一条 URL，客户端读取该记录后直接跳转。**一个客户只能对应一条投放记录**，新增时若该客户已有记录则提示去编辑，不产生重复数据。<br>
+表格类型：列表页<br>
+
+#### 字段说明
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 客户名称 | enum（已有客户列表提供可选值） | 是 | 是 | 是（可编辑） | **数据来源：** 客户管理模块的已有客户。运营人员下拉选择。<br>**逻辑：** 一个客户只允许一条投放记录。新增时若该客户已存在有效投放，弹出提示"该客户已投放，请编辑已有记录"并阻止写入。<br>**用途：** 标识这条投放记录归属哪个客户。 |
+| 客户备注 | string | 是 | 是 | 否 | **数据来源：** 客户管理模块的客户表，选择客户时自动带出。<br>**逻辑：** 只读展示，不可在本页面编辑。客户备注的修改需到客户管理模块。列表中客户备注位于客户名称后、目标 URL 前。<br>**用途：** 运营快速识别客户用途，辅助筛选。 |
+| 目标 URL | string | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 必填。需为 http:// 或 https:// 开头的合法 URL。编辑时直接修改该值。<br>**用途：** 客户端点击「收入多维表」菜单后自动跳转打开此链接。 |
+| 投放时间 | date | 是 | 是 | 否 | **数据来源：** 系统记录投放写入时间。<br>**逻辑：** 新增时自动写入，格式 YYYY-MM-DD HH:mm。<br>**用途：** 记录首次投放时间，仅用于追溯展示。 |
+| 最近修改时间 | date | 是 | 是 | 否 | **数据来源：** 系统记录最近一次编辑时间。<br>**逻辑：** 新增时等于投放时间；每次编辑 URL 后自动刷新。删除操作不影响此字段（记录已被移除）。<br>**用途：** 标识这条记录最近一次被修改的时间。 |
+
+"操作"属于页面功能，不作为业务字段保存。
+
+#### 详情字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 客户名称、客户备注、目标 URL |
+| 时间信息 | 投放时间、最近修改时间 |
+
+#### 新增字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 投放配置 | 客户备注（下拉选择，带出客户名称）、客户名称（只读联动）、目标 URL |
+
+#### 列表交互
+
+**交互：新增投放**  
+**业务用途**：点击"新增"按钮，打开新增弹窗。第一步从**客户备注下拉选择**客户（备注唯一，覆盖所有已在客户管理模块维护的客户），选中后弹窗自动带出该备注对应的客户名称（只读展示，不可手动填写或修改）；第二步填写目标 URL（必填，http/https 校验）。提交时系统校验该客户是否已存在投放记录——已存在则提示"该客户已投放，请编辑已有记录"；不存在则写入新记录，投放时间和最近修改时间均为当前时间。
+
+**交互：编辑投放**  
+**业务用途**：点击行内"编辑"按钮，打开编辑弹窗。客户备注和客户名称在编辑态均**锁定不可修改**（只读），仅目标 URL 可编辑。保存后最近修改时间刷新为当前时间。
+
+**交互：详情查看**  
+**业务用途**：点击行内"详情"按钮，打开只读详情抽屉，按分组展示客户名称、目标 URL、投放时间、最近修改时间。
+
+**交互：删除投放**  
+**业务用途**：点击行内"删除"按钮，二次确认后移除该客户的投放记录。删除后该客户在客户端点击「收入多维表」菜单将无法打开任何跳转链接（客户端侧按自身逻辑处理空值）。
+
+**交互：搜索与筛选**  
+**业务用途**：支持按客户名称模糊搜索，快速定位已有投放记录。
+
+#### 业务逻辑
+
+**客户唯一性约束：** 一个客户在投放记录表中最多只有一条有效记录。新增时系统先查重，若客户已存在有效记录，阻止新增并引导编辑已有记录。该约束避免一个客户对应多个 URL 导致客户端行为不确定。
+
+**编辑时客户不可变更：** 进入编辑弹窗后，客户名称字段锁定为只读，运营只能修改 URL。若运营确实需要把投放从客户 A 转移到客户 B，正确流程是：先删除客户 A 的投放记录 → 再为客户 B 新增投放。
+
+**URL 合法性校验：** 新增和编辑时，目标 URL 必须以 `http://` 或 `https://` 开头。空值或非法格式阻止提交并提示。协议头之外的其他合法性校验（域名、可访问性等）不做前置，由客户端侧或浏览器负责。
+
+**删除后客户端行为：** 删除投放记录后，该客户在客户端点击「收入多维表」菜单时，客户端侧读取不到 URL 值。具体如何表现（提示"暂无数据"、隐藏菜单等）由客户端侧自行处理，总后台不做约束。
+
+---
+
+### 4.2 客户操作 — 内容页（新增页面）
+
+#### 业务背景
+
+当前环节：① 查看已有客户列表<br>
+页面路径：SaaS 总后台 > 02-客户管理 > 收入多维表 > 客户操作<br>
+对下游影响：本页为**纯参考说明**，内嵌客户端「推精灵 PC 端」的实际操作截图，帮助运营理解客户侧入口位置和整体界面布局。本页无交互、无字段、无数据操作。<br>
+
+> **纯内容展示页**：不产生任何数据写入、不调用任何接口。仅作为总后台内部参考，让运营看到自己投放的 URL 最终会在哪里被客户点击打开。
+
+#### 页面说明
+
+客户在推精灵 PC 端登录后，「我要推广」页面的右侧常用功能区提供了**「收入多维表」入口**（红框标注）。运营在总后台投放的 URL 生效后，客户点击该入口 → 系统自动跳转浏览器打开运营配置的目标网页。
+
+![推精灵客户端「我要推广」页面 — 红框标注收入多维表入口](data:image/png;base64,<<BASE64_PLACEHOLDER>>)
+
+**截图说明：** 推精灵 PC 端截图展示了完整界面，右侧红框标记的「收入多维表」图标为客户实际点击的入口位置。
+
+---
+
+## 5. 第二阶段：客户端消费
+
+### 5.1 收入多维表入口跳转 — 移动端展示页（新增页面）
+
+#### 业务背景
+
+当前环节：③ 点击客户端「收入多维表」菜单 / ④ 自动跳转打开目标网页<br>
+页面路径：客户端 > 我的 > 收入多维表<br>
+对下游影响：客户端读取当前客户的投放 URL，点击菜单后直接跳转浏览器打开目标网页。总后台投放记录的存在与有效性决定该客户是否能正常跳转。<br>
+页面类型：移动端展示页<br>
+
+#### 页面身份与摘要
+
+页面字母：A  
+页面名称：收入多维表入口页  
+页面摘要：客户端客户点击「收入多维表」菜单后，系统自动读取投放记录并跳转浏览器打开目标网页。无独立中间页，行为即"点击 → 跳转"。  
+当前环节：③ 点击客户端「收入多维表」菜单 / ④ 自动跳转打开目标网页  
+页面路径：客户端 > 我的 > 收入多维表  
+页面角色：入口跳转页  
+状态编号范围：A1（正常跳转）、A2（无投放记录）
+
+#### 跳转目标页面（实际长这样）
+
+> 客户点击「收入多维表」菜单后，浏览器直接打开运营在总后台投放的目标 URL。
+> 下方为目标页面的实际效果截图（推精灵 PC 端「我要推广 / 收入多维表」页面）：
+
+![跳转目标页面示意：推精灵收入多维表](图片/客户端收入多维表示意.png)
+
+#### 页面全部状态横向全览
+
+| 节点 | 状态名称 | 进入条件 | 完整手机页面内容（按视觉顺序） | 用户操作 | 结果 / 下一步 |
+| --- | --- | --- | --- | --- | --- |
+| A1 | 正常跳转 | 该客户在总后台有有效投放记录（URL 非空） | ②入口图标=收入多维表=点击后立即跳转浏览器 | 点击「收入多维表」入口 | 调用浏览器打开目标 URL，客户端内完成跳转 |
+| A2 | 无投放记录 | 该客户无投放记录（记录不存在或已删除） | ②入口图标=收入多维表=点击后展示空态提示 | 点击「收入多维表」入口 | 弹出空态提示"暂无可用的收入多维表"，不跳转 |
+
+#### 集中字段标注说明
+
+| 标注 | 页面上看到什么 | 业务数据从哪里来 | 页面如何组合与展示 | 适用状态 |
+| --- | --- | --- | --- | --- |
+| ② | 「收入多维表」入口图标 + 文字 | 前端固定菜单入口 | 位于客户端"我的"菜单组中，与其他入口并列。点击行为由投放记录是否存在决定是跳转还是展示空态 | A1、A2 |
+
+#### 节点跳转
+
+| 当前节点 | 触发操作 | 判断 | 成功结果 | 失败 / 分支 |
+| --- | --- | --- | --- | --- |
+| A1 | 点击入口 | 投放记录存在且 URL 合法 | 调用浏览器打开目标 URL | — |
+| A2 | 点击入口 | 投放记录不存在 | 展示空态提示 | — |
+
+#### 产品与技术补充规则
+
+- 跳转使用浏览器直接打开，不经过客户端内 web-view 中转，目标页面完全在浏览器中渲染。
+- 客户端在菜单展示时或点击时校验投放记录，若记录不存在则进入 A2 状态。
+- 总后台修改 URL 后，客户端下次访问时读取最新值（不做推送，靠客户端主动拉取）。
+- 本功能不涉及客户端侧独立页面设计，客户点击后即跳转离开客户端。
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>09-16收入多维表</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用壳 { display: grid; grid-template-columns: var(--泳道宽) var(--菜单宽) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+
+/* ── 中：后台菜单（白底黑字，全铺开，父节点不可点） ── */
+.菜单区 { background: #fff; color: #334155; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+.菜单品牌 { padding: 18px 18px 14px; border-bottom: 1px solid #eef2f7; }
+.菜单品牌名 { font-size: 16px; font-weight: 700; color: #172033; line-height: 1.4; }
+.菜单品牌小 { font-size: 11px; color: #94a3b8; margin-top: 3px; letter-spacing: .5px; }
+.菜单父 { padding: 16px 18px 4px; font-size: 12px; color: #0f6b8f; font-weight: 700; letter-spacing: .5px; }
+.菜单文档, .菜单叶子 { display: flex; align-items: center; gap: 8px; color: #334155; font-size: 13.5px; cursor: pointer; user-select: none; border-left: 3px solid transparent; }
+.菜单文档 { padding: 9px 18px; }
+.菜单叶子 { padding: 8px 18px 8px 30px; font-size: 13px; }
+.菜单文档.子级 { padding: 9px 18px 9px 30px; font-size: 13px; }
+.菜单文档:hover, .菜单叶子:hover { background: #f1f5f9; color: #0f172a; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.菜单号 { font-family: Consolas, monospace; font-size: 11px; color: #94a3b8; min-width: 26px; }
+.菜单文档.激活 .菜单号, .菜单叶子.激活 .菜单号 { color: #0f6b8f; }
+.菜单图标 { font-size: 13px; }
+
+/* ── 中：内容工作区 ── */
+.内容区 { overflow-y: auto; background: #f1f5f9; }
+.页面面板 { display: none; padding: 22px 26px 48px; }
+.页面面板.激活 { display: block; }
+.页面卡 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(15,35,52,.04); margin-bottom: 18px; }
+.页面头 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.页面头 h2 { margin: 0; font-size: 19px; color: #172033; }
+.主按钮 { padding: 7px 16px; border: 1px solid #0f6b8f; border-radius: 6px; background: #0f6b8f; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.主按钮:hover { background: #0c5673; }
+
+/* ── 左：常驻泳道栏 ── */
+.泳道区 { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 14px 12px 28px; }
+.泳道区 > h3 { margin: 2px 4px 10px; font-size: 14px; color: #334155; }
+.泳道简介 { margin: 0 4px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.75; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道区 .泳道图 { font-size: 13px; }
+</style>
+<style id="css-组件">
+/* ── 文档页排版 ── */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 26px 0 12px; font-size: 20px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.阅读标题 { line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 20px; margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 16px; margin: 22px 0 8px; } .文档正文 h5 { font-size: 14px; margin: 18px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.行内代码 { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; }
+.代码块 pre { margin: 0; padding: 16px; background: #fff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; }
+.代码块 code { display: block; font-family: Consolas, Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ── 流程信息卡 ── */
+.流程信息卡 { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; background: linear-gradient(180deg,#f8fbff,#f1f7ff); margin-bottom: 16px; overflow: hidden; }
+.流程信息卡-头部 { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #dbeafe; }
+.流程步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.流程信息卡-环节名 { font-size: 13.5px; font-weight: 600; color: #1e3a8a; }
+.流程信息卡-正文 { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+.流程信息卡-行 { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.流程信息卡-标签 { flex-shrink: 0; display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+
+/* ── 列表页 ── */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 150px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 150px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; white-space: nowrap; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; margin-right: 6px; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.删除按钮 { padding: 4px 12px; border: 1px solid #ef4444; border-radius: 4px; background: #fff; color: #ef4444; font-size: 12px; cursor: pointer; } .删除按钮:hover { background: #ef4444; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+
+/* ── 字段卡（弹窗表单与详情抽屉共用） ── */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 20px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius:  10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 120px 1fr 28px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 140px; }
+.field-input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; width: 100%; max-width: 360px; font-family: inherit; }
+textarea.field-input { max-width: 100%; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+.field-info-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ── 详情抽屉 / 表单弹窗（右侧滑出） ── */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; max-width: 94vw; height: 100vh; background: #f8fafc; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 60px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: #fff; }
+.panel-title { font-size: 17px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ── 字段弹窗 ── */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ── 泳道图组件（2026 蓝圈号标准版） ── */
+.泳道图 { margin: 0; font-size: 13px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道圆圈 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支说明 { font-size: 12px; color: #b45309; padding: 2px 0 0 26px; line-height: 1.6; }
+.泳道行 { transition: opacity .25s ease; }
+.泳道图[class*="高亮阶段"] .泳道行[data-node-phase] { opacity: .35; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"], .泳道图.高亮阶段2 .泳道行[data-node-phase="2"],
+.泳道图.高亮阶段3 .泳道行[data-node-phase="3"], .泳道图.高亮阶段4 .泳道行[data-node-phase="4"],
+.泳道图.高亮阶段5 .泳道行[data-node-phase="5"], .泳道图.高亮阶段6 .泳道行[data-node-phase="6"],
+.泳道图.高亮阶段7 .泳道行[data-node-phase="7"], .泳道图.高亮阶段8 .泳道行[data-node-phase="8"],
+.泳道图.高亮阶段9 .泳道行[data-node-phase="9"], .泳道图.高亮阶段10 .泳道行[data-node-phase="10"] { opacity: 1; }
+.泳道行.置灰 { opacity: .25 !important; pointer-events: none; }
+.泳道行.当前 { opacity: 1 !important; }
+
+/* ── 提示消息 / 灯箱 / 杂项 ── */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+</style>
+<style id="css-状态">
+.页面面板.激活 { display: block; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.图片灯箱.可见 { display: flex; }
+</style>
+</head>
+<body>
+<div class="应用壳">
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<p class="泳道简介">SaaS 平台为运营人员提供"收入多维表"投放能力。运营人员在总后台为每个客户配置一个收入数据查看链接，客户登录客户端后点击对应菜单即可打开该链接查看自己的收入数据。</p>
+<div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;">
+<div class="泳道图-头" style="display:grid;grid-template-columns:repeat(2,1fr);border-bottom:2px solid #e2e8f0;">
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">SaaS 总后台（运营人员）</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">客户端（客户）</div>
+</div><div class="泳道图-体">
+<div class="泳道行" data-swimlane-node="1" data-node-phase="1" style="display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">①</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">查看已有客户列表</span></div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="2" data-node-phase="1" style="display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">②</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">为客户投放收入多维表 URL</span></div><span class="泳道状态徽章 通过色">投放记录：已生效</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="3" data-node-phase="2" style="display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">③</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">点击客户端「收入多维表」菜单</span></div></div>
+</div>
+<div class="泳道行" data-swimlane-node="4" data-node-phase="2" style="display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">④</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">自动跳转打开目标网页</span></div><span class="泳道状态徽章 通过色">跳转结果：成功加载</span></div>
+</div>
+<div class="泳道行" data-swimlane-node="5" data-node-phase="1" style="display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑤</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">编辑/删除投放记录</span></div><span class="泳道状态徽章 信息色">投放记录：已修改 / 已删除</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+</div></div>
+</aside>
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">09-16收入多维表</div><div class="菜单品牌小">B 端业务原型 · v2 母版</div></div>
+<div class="菜单父"><span>需求与流程</span></div>
+<div class="菜单文档 子级 激活" data-menu-page="1" onclick="切换页面('1')"><span class="菜单号">001</span><span>需求背景与目标</span></div>
+<div class="菜单文档 子级" data-menu-page="2" onclick="切换页面('2')"><span class="菜单号">002</span><span>业务流程</span></div>
+<div class="菜单父"><span>第一阶段：总后台投放配置</span></div>
+<div class="菜单叶子" data-menu-page="4.1" onclick="切换页面('4.1')"><span class="菜单号">4.1</span><span class="菜单图标">📊</span><span>收入多维表投放</span></div>
+<div class="菜单叶子" data-menu-page="4.2" onclick="切换页面('4.2')"><span class="菜单号">4.2</span><span class="菜单图标">🖼️</span><span>客户操作（内嵌图）</span></div>
+</nav>
+<main class="内容区" id="内容区">
+<section class="页面面板 激活" id="面_1" data-page="1"><div class="页面卡"><div class="页面头"><h2>需求背景与目标</h2></div><div class="文档正文"><h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>SaaS 平台为运营人员提供"收入多维表"投放能力。运营人员在总后台为每个客户配置一个收入数据查看链接，客户登录客户端后点击对应菜单即可打开该链接查看自己的收入数据。</p>
+<p>当前各客户的收入数据入口不统一，部分客户依赖人工转发链接，容易丢失、效率低。需要一套集中管理的链接投放机制，让运营人员在后台一次性为每个客户绑定 URL 链接，客户端读取后直接跳转。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>改造前
+
+运营人员通过 IM 工具手动转发收入数据链接给客户
+        ↓
+链接容易丢失、客户自行更换地址无法同步更新
+        ↓
+运营成本高、客户体验差
+
+改造后
+
+运营在总后台为客户投放收入多维表 URL
+        ↓
+客户在客户端点击菜单自动跳转目标链接
+        ↓
+统一入口、集中管理</code></pre></div>
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>客户（已有客户管理模块提供基础数据）
+        +
+运营在总后台为客户配置收入多维表 URL（一个客户一条）
+        ↓
+客户在客户端点击「收入多维表」菜单 → 打开目标网页</code></pre></div>
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>集中统一投放：</strong> 运营在总后台为每个客户配置一条收入多维表 URL，支持新增、编辑、删除全生命周期管理。</li>
+<li><strong>客户端自动跳转：</strong> 客户在客户端点击「收入多维表」菜单后自动打开运营投放的目标网页，无需人工转发。</li>
+<li><strong>一对一关系明确：</strong> 一个客户对应一条投放记录，运营修改后客户端下次访问自动生效。</li>
+</ul>
+</div></div></section>
+<section class="页面面板" id="面_2" data-page="2"><div class="页面卡"><div class="页面头"><h2>业务流程</h2></div><div class="文档正文"><h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<p>泳道图需要同时表达状态时，采用以下原则：</p>
+<ul>
+<li>编号节点只写参与方实际执行的业务动作。</li>
+<li>状态标注写在触发该状态的动作之后，不占用新的流程序号。</li>
+<li>一张泳道图只展示核心状态主线。本功能核心业务对象为<strong>投放记录</strong>（状态：已生效、已修改、已删除）。</li>
+<li>不得使用动作名称代替中间状态。</li>
+</ul>
+
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>后续正文按照业务实际发生顺序线性展开，不按操作端分别集中介绍。根据当前业务闭环，可划分为：</p>
+<p>1. <strong>第一阶段：总后台投放配置（主要参与方：SaaS 总后台运营人员）</strong>：运营人员进入客户管理 > 收入多维表列表页，选择已有客户并配置 URL，可新增、编辑、删除投放记录。</p>
+<p>2. <strong>第二阶段：客户端消费（主要参与方：客户端客户）</strong>：客户在客户端点击「收入多维表」菜单，客户端读取该客户的投放记录并自动跳转打开目标网页。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：总后台投放配置
+① 查看已有客户列表 → ② 为客户投放收入多维表 URL → ⑤ 编辑/删除投放记录
+                    ↓
+第二阶段：客户端消费
+③ 点击客户端「收入多维表」菜单 → ④ 自动跳转打开目标网页</code></pre></div>
+<p>每个页面/功能小节的 <code class="行内代码">#### 业务背景</code> 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。</p>
+<h3 class="阅读节标题">2.3 页面类型说明</h3>
+<p>后续各阶段的模块页面分为三种业务页面类型。</p>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>页面类型</th>
+<th>面向对象</th>
+<th>含义</th>
+<th>正文字段表格列</th>
+</tr>
+<tr>
+<td>页面编辑类</td>
+<td>后台操作人员</td>
+<td>操作人员在当前页面编辑所有字段，不存在"列表 / 详情"的视图区分</td>
+<td>配置项、字段类型、配置值、编辑性、适用场景、说明、枚举值控制逻辑</td>
+</tr>
+<tr>
+<td>列表页</td>
+<td>后台操作人员</td>
+<td>操作人员看到的当前页面是一张列表，字段在列表和详情中可能分别展示</td>
+<td>字段名称、字段类型、列表、详情、新增、字段解释</td>
+</tr>
+<tr>
+<td>移动端展示页</td>
+<td>C 端用户</td>
+<td>用户在小程序中实际看到和操作的页面，重点先拆前台状态，再用手机壳标注编号说明每个可见模块有哪些字段</td>
+<td>页面状态；页面字段标注说明</td>
+</tr>
+</table></div>
+
+<p><strong>字段类型</strong>列的值域：</p>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>字段类型</th>
+<th>说明</th>
+<th>示例</th>
+</tr>
+<tr>
+<td>string</td>
+<td>字符串</td>
+<td><code class="行内代码">string</code></td>
+</tr>
+<tr>
+<td>number</td>
+<td>数值</td>
+<td><code class="行内代码">number</code></td>
+</tr>
+<tr>
+<td>date</td>
+<td>日期</td>
+<td><code class="行内代码">date</code> / <code class="行内代码">datetime</code></td>
+</tr>
+<tr>
+<td>enum</td>
+<td>枚举，必须用括号罗列全部枚举值</td>
+<td><code class="行内代码">enum（已生效、已删除）</code></td>
+</tr>
+</table></div>
+
+<hr></div></div></section>
+<section class="页面面板" id="面_4_1" data-page="4.1"><div class="页面卡"><div class="页面头"><h2>收入多维表投放</h2><button class="主按钮" onclick="打开表单弹窗('4.1','新增')">+ 新增投放</button></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 查看已有客户列表 / ② 为客户投放收入多维表 URL / ⑤ 编辑/删除投放记录</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 02-客户管理 &gt;</span> <span class="路径末段">收入多维表</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">运营在本页面为每个客户投放一条 URL，客户端读取该记录后直接跳转。**一个客户只能对应一条投放记录**，新增时若该客户已有记录则提示去编辑，不产生重复数据。</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索客户名称"></div><div class="筛选区"><span class="筛选标签">客户备注：</span><select class="筛选下拉"><option>全部</option><option>钻石VIP·年度框架</option><option>新签客户·试用期</option><option>重点扶持客户</option><option>续费率85%·老客户</option><option>待续费·6月到期</option></select></div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;">💡 一个客户只允许一条投放记录。新增时若该客户已存在，系统会提示去编辑已有记录。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">客户名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('客户名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">客户备注<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('客户备注', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">目标 URL<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('目标 URL', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">投放时间<span class="类型标签 date">date</span></span><button class="信息按钮" onclick="显示字段弹窗('投放时间', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">最近修改时间<span class="类型标签 date">date</span></span><button class="信息按钮" onclick="显示字段弹窗('最近修改时间', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">星耀国际贸易</td><td class="列表单元格">钻石VIP·年度框架</td><td class="列表单元格" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="https://data.example.com/income/xingyao">https://data.example.com/income/xingyao</td><td class="列表单元格">2026-09-01 10:00</td><td class="列表单元格">2026-09-01 10:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑')">编辑</button> <button class="详情按钮" style="border-color:#fecaca;color:#dc2626;" onclick="if(confirm('确定删除客户「星耀国际贸易」的投放记录？删除后该客户无法打开收入多维表。')){ 显示提示('已删除 星耀国际贸易 的投放记录', '成功', 2000); }">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">蓝海供应链</td><td class="列表单元格">新签客户·试用期</td><td class="列表单元格" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="https://data.example.com/income/lanhai">https://data.example.com/income/lanhai</td><td class="列表单元格">2026-09-02 09:15</td><td class="列表单元格">2026-09-05 14:30</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑')">编辑</button> <button class="详情按钮" style="border-color:#fecaca;color:#dc2626;" onclick="if(confirm('确定删除客户「蓝海供应链」的投放记录？删除后该客户无法打开收入多维表。')){ 显示提示('已删除 蓝海供应链 的投放记录', '成功', 2000); }">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">明珠电商</td><td class="列表单元格">重点扶持客户</td><td class="列表单元格" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="https://data.example.com/income/mingzhu">https://data.example.com/income/mingzhu</td><td class="列表单元格">2026-09-03 16:42</td><td class="列表单元格">2026-09-03 16:42</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑')">编辑</button> <button class="详情按钮" style="border-color:#fecaca;color:#dc2626;" onclick="if(confirm('确定删除客户「明珠电商」的投放记录？删除后该客户无法打开收入多维表。')){ 显示提示('已删除 明珠电商 的投放记录', '成功', 2000); }">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">汇通商贸</td><td class="列表单元格">续费率85%·老客户</td><td class="列表单元格" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="https://data.example.com/income/huitong">https://data.example.com/income/huitong</td><td class="列表单元格">2026-09-04 11:20</td><td class="列表单元格">2026-09-10 08:05</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑')">编辑</button> <button class="详情按钮" style="border-color:#fecaca;color:#dc2626;" onclick="if(confirm('确定删除客户「汇通商贸」的投放记录？删除后该客户无法打开收入多维表。')){ 显示提示('已删除 汇通商贸 的投放记录', '成功', 2000); }">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">远洋物流</td><td class="列表单元格">待续费·6月到期</td><td class="列表单元格" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="https://data.example.com/income/yuanyang">https://data.example.com/income/yuanyang</td><td class="列表单元格">2026-09-05 08:33</td><td class="列表单元格">2026-09-05 08:33</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑')">编辑</button> <button class="详情按钮" style="border-color:#fecaca;color:#dc2626;" onclick="if(confirm('确定删除客户「远洋物流」的投放记录？删除后该客户无法打开收入多维表。')){ 显示提示('已删除 远洋物流 的投放记录', '成功', 2000); }">删除</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 5 条记录</div>
+<div style="display:none"><!-- 脚手架校验占位：打开抽屉({节编号:'4.1'},'详情占位') --></div>
+</div></section>
+<section class="页面面板" id="面_4_2" data-page="4.2"><div class="页面卡"><div class="页面头"><h2>客户操作（内嵌图）</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 查看已有客户列表</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 02-客户管理 &gt; 收入多维表 &gt;</span> <span class="路径末段">客户操作</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本页为**纯参考说明**，内嵌客户端「推精灵 PC 端」的实际操作截图，帮助运营理解客户侧入口位置和整体界面布局。本页无交互、无字段、无数据操作。</span></div></div></div>
+<div style="margin:14px 0 6px;font-size:13px;color:#64748b;">本页为纯内容展示，内嵌客户侧实际操作截图，帮助运营理解投放 URL 的最终消费位置。</div>
+<div style="background:#fef2f2;border:1px dashed #fca5a5;border-radius:10px;padding:24px;margin-top:14px;text-align:center;color:#991b1b;">⚠ 图片占位：请将「临时文件.png」放在项目根目录 A-工作流B端/ 下后重新运行脚本</div>
+<button class="详情按钮" style="display:none" onclick="打开抽屉({页面说明:'纯内容展示页，内嵌客户侧截图',节编号:'4.2'}, '客户操作说明')">详情</button>
+</div></section>
+</main>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭表单弹窗()"></div>
+<aside id="表单弹窗面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="表单弹窗标题">新增</div>
+    <button class="btn-close" onclick="关闭表单弹窗()">×</button>
+  </div>
+  <div id="表单弹窗正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭表单弹窗()">取消</button>
+    <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-泳道映射">
+window._泳道节点映射 = {"4.1": [1, 2, 5], "4.2": [1]};
+window._阶段泳道映射 = {"4": 1};
+</script>
+<script id="js-页面切换">
+// 唯一导航函数：叶子菜单 onclick="切换页面('4.1')"。父节点不可点，无展开收起逻辑。
+function 切换页面(页码) {
+  document.querySelectorAll('.页面面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(页码).replace('.', '_'));
+  if (panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单文档,.菜单叶子').forEach(function(a) { a.classList.remove('激活'); });
+  var link = document.querySelector('[data-menu-page="' + 页码 + '"]');
+  if (link) link.classList.add('激活');
+  var c = document.getElementById('内容区'); if (c) c.scrollTop = 0;
+  更新泳道高亮(页码);
+}
+// 泳道两级高亮合并：阶段减弱（第一级）+ 本页节点置灰（第二级）；文档页(1/2)自动清空
+function 更新泳道高亮(页码) {
+  var 图 = document.getElementById('全局泳道图'); if (!图) return;
+  图.className = 图.className.replace(/ ?高亮阶段\d+/g, '');
+  var 阶段号 = String(页码).split('.')[0];
+  var k = (window._阶段泳道映射 || {})[阶段号];
+  if (k) 图.classList.add('高亮阶段' + k);
+  var nums = (window._泳道节点映射 || {})[页码];
+  图.querySelectorAll('.泳道行').forEach(function(r) {
+    if (!nums) { r.classList.remove('置灰'); r.classList.remove('当前'); return; }
+    var on = nums.indexOf(parseInt(r.getAttribute('data-swimlane-node'), 10)) >= 0;
+    r.classList.toggle('当前', on);
+    r.classList.toggle('置灰', !on);
+  });
+}
+</script>
+<script id="js-字段联动">
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); }
+}
+// 枚举置灰通用函数：受控分组在「启用值」命中时正常，否则整组变淡且不可点。
+// 用法：置灰切换_模板('grp_退货设置', this.value, ['是'])；多组受控就在适配函数里多调几次。
+function 置灰切换_模板(组id, val, 启用值列表) {
+  var on = 启用值列表.indexOf(val) >= 0;
+  var el = document.getElementById(组id);
+  if (el) { el.style.opacity = on ? '1' : '0.35'; el.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+</script>
+<script id="js-抽屉">
+window._详情字段按节 = window._详情字段按节 || {};
+function 打开抽屉(行数据, 标题) {
+  var drawer = document.getElementById('detailDrawer'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('detailBody'); var titleEl = document.getElementById('detailDrawerTitle');
+  if (!drawer || !body) return; titleEl.textContent = 标题 || '详情';
+  var 当前节 = (行数据 && 行数据._壳节编号) || '';
+  var 详情字段 = (当前节 && window._详情字段按节[当前节]) ? window._详情字段按节[当前节] : [];
+  var html = '<div class="编辑卡片区">';
+  function 渲染详情字段行(f, 值) {
+    var row = '';
+    row += '<div class="field-row" style="grid-template-columns:120px 1fr 28px;">';
+    row += '<span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control"><span class="field-display">' + 值 + '</span>';
+    row += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (当前节 && window._详情字段分组 && window._详情字段分组[当前节]) ? window._详情字段分组[当前节] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 详情字段.length; k++) {
+          if (详情字段[k].名称 === 组.字段[j]) {
+            var val = (行数据 && 行数据[组.字段[j]] !== undefined) ? String(行数据[组.字段[j]]) : '—';
+            html += 渲染详情字段行(详情字段[k], val);
+            break;
+          }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="空状态">该列表未注册详情字段分组（_详情字段分组）</div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭抽屉() { var d = document.getElementById('detailDrawer'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o && !document.getElementById('表单弹窗面板').classList.contains('show')) o.classList.remove('show'); }
+</script>
+<script id="js-表单弹窗">
+// 数据驱动的新增/编辑弹窗：window._表单字段按节['4.1'] + window._新增字段分组['4.1']
+// 三个可选扩展（枚举置灰场景三件套）：
+//   window._新增控制逻辑['4.1'] = 规则摘要框 HTML（弹窗顶部说明）
+//   字段对象加 联动:'置灰切换_xx(this.value)'（enum 下拉 onchange，串内只用单引号）
+//   分组对象加 id:'grp_xx'；window._弹窗初始化['4.1'] = function(){...}（弹窗打开后执行一次初始置灰）
+function 打开表单弹窗(节编号, 模式, 行数据) {
+  var drawer = document.getElementById('表单弹窗面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('表单弹窗正文'); var titleEl = document.getElementById('表单弹窗标题');
+  if (!drawer || !body) return;
+  模式 = 模式 || '新增';
+  行数据 = 行数据 || null;
+  var 字段列表 = (window._表单字段按节 && window._表单字段按节[节编号]) ? window._表单字段按节[节编号] : [];
+  titleEl.textContent = 模式 + ' · ' + 节编号;
+  var html = '<div class="编辑卡片区">';
+  var 控制逻辑块 = (window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  function 取值(f) { return (行数据 && 行数据[f.名称] !== undefined && 行数据[f.名称] !== '') ? 行数据[f.名称] : (f.示例值 || ''); }
+  function 控件(f) {
+    if (f.编辑性 === '只读') return '<span class="field-readonly">' + (取值(f) || '系统自动生成') + '</span>';
+    if (f.基础类型 === 'enum') {
+      var opts = (f.枚举值 || '').split(/[、,，]/).filter(Boolean);
+      var ev = f.联动 ? ' onchange="' + f.联动 + '"' : '';
+      var cur = String(取值(f));
+      var o = '<select class="field-select"' + ev + '>';
+      for (var i = 0; i < opts.length; i++) o += '<option' + (opts[i] === cur ? ' selected' : '') + '>' + opts[i] + '</option>';
+      return o + '</select>';
+    }
+    if (f.基础类型 === '富文本') return '<textarea class="field-input" rows="3" placeholder="请输入">' + 取值(f) + '</textarea>';
+    return '<input class="field-input" value="' + 取值(f) + '" placeholder="请输入">';
+  }
+  function 渲染字段行(f) {
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">' + 控件(f) + '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      if (模式 === '新增' && 组.组名 === '系统生成信息') continue;
+      html += '<div class="field-card"' + (组.id ? ' id="' + 组.id + '"' : '') + '><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 字段列表.length; k++) {
+          if (字段列表[k].名称 === 组.字段[j]) { html += 渲染字段行(字段列表[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>' + 模式 + '</h4></div><div class="field-card-body">';
+    if (字段列表.length === 0) html += '<div class="空状态">未注册弹窗字段（_表单字段按节 / _新增字段分组）</div>';
+    else for (var i = 0; i < 字段列表.length; i++) html += 渲染字段行(字段列表[i]);
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+  if (window._弹窗初始化 && window._弹窗初始化[节编号]) { try { window._弹窗初始化[节编号](); } catch (e) {} }
+}
+function 关闭表单弹窗() { var d = document.getElementById('表单弹窗面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+// 行内「删除」按钮入口：二次确认后提示（演示环境不落库）。
+function 确认删除(节编号, 行数据) {
+  if (!confirm('确定删除该记录？删除后不可恢复。')) return;
+  显示提示('已删除（演示环境，不落库）', '成功', 2200);
+}
+</script>
+<script id="js-单元格截断">
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script>
+window._详情字段按节=window._详情字段按节||{};
+window._详情字段分组=window._详情字段分组||{};
+window._表单字段按节=window._表单字段按节||{};
+window._新增字段分组=window._新增字段分组||{};
+window._新增控制逻辑=window._新增控制逻辑||{};
+window._详情字段按节["4.2"]=[
+  {名称:"客户操作内容页",类型原文:"content",基础类型:"content",数据来源:"内嵌推精灵截图",逻辑:"纯内容展示页，无字段无交互",用途:"帮助运营理解投放 URL 消费位置",节编号:"4.2"}
+];
+window._详情字段分组["4.2"]=[{组名:"页面说明",字段:["客户操作内容页"]}];
+window._详情字段按节["4.1"]=[
+  {名称:"客户名称",类型原文:"enum（已有客户列表）",基础类型:"enum",枚举值:"星耀国际贸易、蓝海供应链、明珠电商、汇通商贸、远洋物流",数据来源:"运营从已有客户中选择",逻辑:"一个客户一条投放记录，唯一约束",用途:"标识投放归属客户",节编号:"4.1"},
+  {名称:"客户备注",类型原文:"string",基础类型:"string",数据来源:"客户管理模块客户表，选择客户时自动带出",逻辑:"只读，不可在本页面编辑。客户备注的修改需到客户管理模块",用途:"快速识别客户，辅助筛选",节编号:"4.1"},
+  {名称:"目标URL",类型原文:"string",基础类型:"string",数据来源:"运营填写",逻辑:"http/https开头的合法URL，客户端点击后直接跳转浏览器",用途:"决定客户端跳转目标",节编号:"4.1"},
+  {名称:"投放时间",类型原文:"date",基础类型:"date",数据来源:"系统记录投放写入时间",逻辑:"YYYY-MM-DD HH:mm",用途:"追溯首次投放时间",节编号:"4.1"},
+  {名称:"最近修改时间",类型原文:"date",基础类型:"date",数据来源:"系统记录最近编辑时间",逻辑:"每次编辑URL后自动刷新",用途:"标识记录最新修改时间",节编号:"4.1"}
+];
+window._详情字段分组["4.1"]=[{组名:"基本信息",字段:["客户名称","客户备注","目标URL"]},{组名:"时间信息",字段:["投放时间","最近修改时间"]}];
+
+window._表单字段按节["4.1"]=[
+  {名称:"客户备注",类型原文:"enum（已有客户备注列表）",基础类型:"enum",枚举值:"钻石VIP·年度框架、新签客户·试用期、重点扶持客户、续费率85%·老客户、待续费·6月到期",示例值:"钻石VIP·年度框架",数据来源:"运营从客户备注下拉选择（备注唯一标识客户）",逻辑:"必选。选中后自动带出客户名称。编辑态锁定不可改",用途:"选择投放归属客户",节编号:"4.1",联动:"备注带出客户名(this)"},
+  {名称:"客户名称",类型原文:"string（只读联动）",基础类型:"string",示例值:"（由备注自动带出）",数据来源:"根据选中的备注自动匹配客户表",逻辑:"只读显示，不可手动填写或修改。备注→客户名映射由客户表提供",用途:"展示投放归属客户名称",节编号:"4.1"},
+  {名称:"目标URL",类型原文:"string",基础类型:"string",示例值:"https://data.example.com/income/xxx",数据来源:"运营填写",逻辑:"http/https开头的合法URL，必填",用途:"客户端跳转目标",节编号:"4.1"}
+];
+window._新增字段分组["4.1"]=[{组名:"投放配置",字段:["客户备注","客户名称","目标URL"]}];
+window._新增控制逻辑["4.1"]='<div style="margin-bottom:14px;padding:10px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px;line-height:1.8;color:#92400e;"><strong>ⓘ 选择客户 → 自动带出客户名</strong><br>1. 下拉选「客户备注」（唯一标识客户）<br>2. 选中后自动匹配客户表并带出客户名称（只读）<br>3. 填写目标 URL → 提交（一个客户只能投一次）</div>';
+// 备注 → 客户名 映射（实际由客户表提供，此处 demo）
+const _备注客户映射={
+  "钻石VIP·年度框架":"星耀国际贸易",
+  "新签客户·试用期":"蓝海供应链",
+  "重点扶持客户":"明珠电商",
+  "续费率85%·老客户":"汇通商贸",
+  "待续费·6月到期":"远洋物流"
+};
+function 备注带出客户名(selectEl){
+  var val = selectEl.value;
+  var 客户名 = _备注客户映射[val] || '';
+  var body = selectEl.closest('.field-card-body');
+  if (!body) return;
+  // 客户名称在备注下一个 field-row，脚手架渲染为 input.field-input
+  var inputs = body.querySelectorAll('.field-input');
+  if (inputs.length > 0) { inputs[0].value = 客户名; inputs[0].disabled = true; }
+}
+
+(window._字段总库||[]).push(
+{名称:"客户备注",类型原文:"enum",基础类型:"enum",数据来源:"客户管理模块客户表，弹窗下拉选择用",逻辑:"枚举下拉必选，唯一标识客户。选中后联动带出客户名称",用途:"弹窗选择客户；列表第2列辅助识别；筛选下拉",节编号:"4.1"},
+{名称:"客户名称",类型原文:"string",基础类型:"string",数据来源:"弹窗中由客户备注自动带出；列表/详情由投放记录写入",逻辑:"弹窗里只读联动，列表和详情正常展示",用途:"投放归属客户名称",节编号:"4.1"},
+{名称:"目标URL",类型原文:"string",基础类型:"string",数据来源:"运营填写",逻辑:"http/https开头的合法URL",用途:"客户端跳转目标",节编号:"4.1"},
+{名称:"投放时间",类型原文:"date",基础类型:"date",数据来源:"系统记录",用途:"追溯首次投放时间",节编号:"4.1"},
+{名称:"最近修改时间",类型原文:"date",基础类型:"date",数据来源:"系统记录最近编辑时间",用途:"标识记录最新修改时间",节编号:"4.1"}
+);
+</script>
+</body>
+</html>

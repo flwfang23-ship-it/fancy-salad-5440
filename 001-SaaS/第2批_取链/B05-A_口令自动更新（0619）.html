@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B05-A_口令自动更新（0619）</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;}
+body{margin:0;padding:24px 32px 48px;font-family:"PingFang SC","Microsoft YaHei",-apple-system,sans-serif;background:#fff;color:#1f2937;font-size:15px;line-height:1.75;max-width:900px;margin-left:auto;margin-right:auto;}
+h1{font-size:28px;margin:0 0 8px;padding-bottom:12px;border-bottom:2px solid #e2e8f0;color:#172033;}
+h2{font-size:22px;margin:32px 0 12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0;color:#1e293b;}
+h3{font-size:18px;margin:24px 0 8px;color:#334155;}
+h4{font-size:16px;margin:20px 0 6px;color:#475569;}
+p{margin:10px 0;}
+ul,ol{margin:10px 0 12px 22px;padding:0;}
+li{margin:5px 0;}
+strong{font-weight:750;color:#1e293b;}
+blockquote{margin:16px 0;border-left:4px solid #0f6b8f;background:#e8f4f8;border-radius:6px;padding:10px 14px;color:#223548;}
+blockquote p{margin:4px 0;}
+code{font-family:Consolas,"SFMono-Regular",Menlo,monospace;font-size:.9em;background:#eef2f6;border-radius:4px;padding:1px 5px;color:#111827;}
+pre{margin:16px 0;border:1px solid #d9e2ec;border-radius:8px;overflow-x:auto;background:#f8fafc;padding:16px;}
+pre code{background:transparent;padding:0;display:block;font-size:13px;line-height:1.55;white-space:pre;}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;}
+th{background:#f8fafc;padding:10px 14px;text-align:left;font-weight:700;color:#475569;border:1px solid #d9e2ec;}
+td{padding:8px 14px;border:1px solid #e2e8f0;color:#334155;}
+hr{margin:28px 0;border:0;border-top:1px solid #e2e8f0;}
+a{color:#2563eb;}
+img{max-width:100%;border-radius:8px;margin:16px 0;}
+</style>
+</head>
+<body>
+<h1>B05-A 口令自动更新</h1>
+<blockquote>
+<p>本功能覆盖SaaS系统定时从美团、饿了么平台刷新活动口令并写入缓存，供小程序和H5等下游模块读取展示。当前不涉及商户端操作页面，也不涉及C端用户直接交互。</p>
+</blockquote>
+<h2>1. 需求背景与目标</h2>
+<h3>1.1 为什么要做</h3>
+<p>商户取链生成的推广链接中包含口令信息。但小程序和H5等下游模块没有用户交互触发条件，无法在需要展示口令时实时调用美团或饿了么接口获取。因此需要系统提前准备好新鲜口令存入缓存，下游模块被动读取即可。</p>
+<p>系统内存在两条获取口令的链路，各自服务不同场景：</p>
+<p><strong>链路A：商户实时取链</strong>
+商户主动点击&quot;生成推广链接&quot;时，系统实时调用平台接口，每次生成全新链接。不需要缓存。</p>
+<p><strong>链路B：下游模块读缓存（本功能）</strong>
+小程序或H5需要展示活动口令时，不能实时调平台接口（无用户触发），必须从事先准备好的缓存中读取。本功能通过定时任务保证缓存中的口令始终在有效期内。</p>
+<pre><code class="language-text">改造前
+
+小程序/H5展示活动口令时无法实时调平台接口
+        ↓
+没有提前准备好的新鲜口令缓存
+        ↓
+下游模块无法稳定展示口令，或展示已过期口令
+
+
+改造后
+
+运营在总后台为活动开启&quot;自动更新口令&quot;
+        ↓
+系统每月1号、15号自动调平台接口刷新口令
+        ↓
+口令写入缓存
+        ↓
+小程序和H5从缓存读取口令展示给C端用户
+</code></pre>
+<h3>1.2 一句话业务模型</h3>
+<pre><code class="language-text">美团/饿了么平台的活动口令（有效期约30天）
+        +
+总后台运营开启活动的&quot;自动更新口令&quot;开关
+        +
+系统每月1号、15号自动调平台接口刷新
+        ↓
+口令缓存持续保持新鲜 → 小程序/H5等下游模块随时可读
+</code></pre>
+<h3>1.3 最终目标</h3>
+<p>本功能最优先保证下游模块始终能获取到有效的活动口令，其次降低运营手动维护成本。</p>
+<h4>核心业务目标：下游模块口令始终可用</h4>
+<ul>
+<li><strong>口令不过期：</strong> 每月两次定时刷新，确保缓存中的口令距离上次更新不超过16天，远在30天有效期内。</li>
+<li><strong>首次开启立即可用：</strong> 运营开启自动更新后立即执行一次刷新，缓存不会出现&quot;已开启但为空&quot;的情况。</li>
+</ul>
+<h4>经营效率目标：降低运营维护成本</h4>
+<ul>
+<li><strong>一次性配置：</strong> 运营只需在活动列表开启开关，后续口令由系统自动维护，无需每天人工刷新。</li>
+<li><strong>批量自动处理：</strong> 系统遍历所有已开启的活动统一刷新，运营不需要逐活动手动操作。</li>
+</ul>
+<h4>平台支撑目标：统一口令缓存机制</h4>
+<ul>
+<li><strong>同一缓存供多模块读取：</strong> 小程序和H5都从同一份缓存获取口令，不各自调平台接口。</li>
+<li><strong>下游只读不写：</strong> 下游模块只从缓存读取，不修改缓存内容，避免数据污染。</li>
+</ul>
+<h2>2. 业务流程</h2>
+<h3>2.1 多方业务泳道图</h3>
+<pre><code class="language-text">┌──────────────────────────┬──────────────────────────┐
+│ SaaS 总后台              │ 系统                     │
+├──────────────────────────┼──────────────────────────┤
+│ ① 运营在活动列表          │                          │
+│   开启自动更新口令        │                          │
+│        │                 │                          │
+│        └────────────────→│ ② 首次开启立即执行        │
+│                          │   一次口令刷新            │
+│                          │        │                 │
+│                          │ ③ 此后每月1号、15号      │
+│                          │   自动遍历已开启活动      │
+│                          │        │                 │
+│                          │ ④ 逐一调美团/饿了么      │
+│                          │   接口获取最新口令        │
+│                          │        │                 │
+│                          │ ⑤ 写入口令缓存           │
+│                          │        │                 │
+│                          │ ⑥ 下游模块读取缓存       │
+│                          │   （小程序/H5展示口令）   │
+└──────────────────────────┴──────────────────────────┘
+</code></pre>
+<blockquote>
+<p>口令缓存的消费者是小程序功能和H5功能，但它们属于本功能的下游模块，不在本功能中发起操作，因此不设独立泳道。</p>
+</blockquote>
+<h3>2.2 阶段划分与阅读说明</h3>
+<p>后续正文按业务发生顺序分为两个阶段：</p>
+<ol>
+<li><strong>配置自动更新清单</strong>：总后台运营为活动开启或关闭自动更新口令开关。</li>
+<li><strong>系统定时更新口令</strong>：系统按周期自动刷新口令缓存，下游模块从缓存读取。</li>
+</ol>
+<pre><code class="language-text">第一阶段：配置自动更新清单
+运营开启自动更新口令 → 活动纳入更新清单
+                    ↓
+第二阶段：系统定时更新口令
+系统每月1号/15号刷新 → 写入口令缓存 → 下游模块读取
+</code></pre>
+<h2>3. 第一阶段：配置自动更新清单</h2>
+<h3>3.1 阶段说明</h3>
+<p>总后台运营在活动管理列表页为联盟活动开启&quot;自动更新口令&quot;开关。只有开启此开关的活动才会被纳入定时更新范围。本阶段的结果决定了哪些活动的口令会被系统自动维护。</p>
+<h3>3.2 开启自动更新口令</h3>
+<h4>流程位置</h4>
+<pre><code class="language-text">运营登录总后台
+↓
+进入活动管理 → 活动列表
+↓
+【总后台运营】开启或关闭活动的&quot;自动更新口令&quot;开关（当前位置）
+↓
+活动纳入或移出自动更新清单
+</code></pre>
+<h4>业务说明</h4>
+<p>&quot;自动更新口令&quot;开关出现在总后台活动列表的每条联盟活动中。该开关仅对美团和饿了么活动可用，其他供应商的活动开关灰显不可操作。</p>
+<pre><code class="language-text">运营在活动列表找到目标活动
+        ↓
+判断供应商是否为美团或饿了么
+        ↓ 是
+点击开关开启
+        ↓
+系统立即执行一次口令刷新（不等下个1号/15号）
+        ↓
+刷新成功 → 开关保持开启 → 活动纳入自动更新清单
+刷新失败 → 提示运营 → 开关回弹关闭
+</code></pre>
+<p>关闭开关时，活动移出更新清单，已缓存的口令不清除（下游仍可读取最后一次缓存），但不再更新。</p>
+<blockquote>
+<p>首次开启时立即刷新是为了确保不会出现&quot;开关已开启但缓存为空、下游模块无数据可读&quot;的情况。</p>
+</blockquote>
+<h4>字段说明</h4>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>数据格式</th>
+<th>必填条件</th>
+<th>字段说明</th>
+<th>下游用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>自动更新口令</td>
+<td>开/关</td>
+<td>否，默认关闭</td>
+<td>是否将该活动纳入口令自动更新范围。仅美团、饿了么活动可操作</td>
+<td>决定活动是否进入定时更新清单，影响下游是否读到新鲜口令</td>
+</tr>
+</tbody></table>
+<h4>已确认的处理规则</h4>
+<ul>
+<li>仅美团和饿了么活动可开启，其他供应商灰显。</li>
+<li>开启时立即触发一次口令刷新，刷新成功则生效，失败则回弹。</li>
+<li>关闭时不清除已有缓存，下游仍可读取最后一次刷新的口令。</li>
+<li>活动从已上架变为已下架时，是否自动移出更新清单尚未确认（见8.10）。</li>
+</ul>
+<h2>4. 第二阶段：系统定时更新口令</h2>
+<h3>4.1 阶段说明</h3>
+<p>系统在每月1号和15号自动遍历自动更新清单中的所有活动，逐一调美团或饿了么接口获取最新口令，并写入缓存。下游模块从缓存读取口令展示给C端用户。</p>
+<h3>4.2 定时任务执行</h3>
+<h4>流程位置</h4>
+<pre><code class="language-text">活动已纳入自动更新清单
+↓
+到达每月1号或15号
+↓
+【系统】遍历清单中的活动，逐一更新口令缓存（当前位置）
+↓
+缓存可供下游模块读取
+</code></pre>
+<h4>业务说明</h4>
+<pre><code class="language-text">每月1号、15号触发
+        ↓
+查询所有&quot;自动更新口令=开启&quot;且&quot;状态=已上架&quot;的联盟活动
+        ↓
+对每个活动：
+  ├─ 查该活动关联的推广位
+  ├─ 取推广位的平台参数
+  ├─ 调美团或饿了么取链接口
+  ├─ 从返回结果中提取口令字段
+  └─ 写入缓存（活动+推广位为维度）
+        ↓
+个别活动更新失败时记录失败标记，继续处理下一个
+</code></pre>
+<h4>需要缓存的口令字段</h4>
+<p>系统从平台返回中提取以下字段缓存：</p>
+<table>
+<thead>
+<tr>
+<th>平台</th>
+<th>口令字段</th>
+<th>展示用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>美团</td>
+<td>团口令</td>
+<td>C端用户复制后打开美团App使用</td>
+</tr>
+<tr>
+<td>饿了么</td>
+<td>淘宝口令（短）</td>
+<td>C端用户复制后打开淘宝App使用</td>
+</tr>
+<tr>
+<td>饿了么</td>
+<td>淘宝口令（建议版）</td>
+<td>含活动描述的建议版口令，展示效果更丰富</td>
+</tr>
+<tr>
+<td>饿了么</td>
+<td>唤起协议</td>
+<td>含时效参数的App跳转链接</td>
+</tr>
+</tbody></table>
+<p>这些字段由美团或饿了么平台生成，有效期约30天。系统不修改口令内容，仅原样存储。</p>
+<h4>异常情况</h4>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单个活动取链失败</td>
+<td>记录失败标记，继续处理下一个活动</td>
+</tr>
+<tr>
+<td>平台接口超时</td>
+<td>重试一次，仍失败则跳过并告警</td>
+</tr>
+<tr>
+<td>推广位平台参数缺失</td>
+<td>跳过该推广位，记录配置缺失</td>
+</tr>
+<tr>
+<td>返回的口令字段为空</td>
+<td>写入空值，下游自行判断是否展示</td>
+</tr>
+</tbody></table>
+<p>连续两次定时更新均失败的活动，需要向运营发送通知。</p>
+<h3>4.3 下游模块读取口令缓存</h3>
+<h4>流程位置</h4>
+<pre><code class="language-text">系统完成口令缓存更新
+↓ 缓存就绪
+【下游模块】小程序/H5从缓存读取口令（当前位置）
+↓
+展示给C端用户复制使用
+</code></pre>
+<h4>业务说明</h4>
+<p>小程序功能和H5功能需要展示活动口令时，从口令缓存中按&quot;活动+推广位&quot;读取。</p>
+<p>读取时系统判断缓存新鲜度：</p>
+<ul>
+<li>最近一次更新时间在15天以内 → 正常使用。</li>
+<li>最近一次更新时间超过15天 → 仍可使用，但标记为&quot;可能过期&quot;，下游可自行决定是否展示提示。</li>
+<li>无缓存或更新状态为失败 → 下游展示&quot;口令暂不可用&quot;或隐藏入口。</li>
+</ul>
+<blockquote>
+<p>下游模块只读取缓存，不对缓存做任何修改。缓存的新鲜度完全由本功能的定时任务保证。</p>
+</blockquote>
+<h4>两条取链链路的区分</h4>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>商户实时取链（B05）</th>
+<th>口令缓存读取（本功能）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>触发方</td>
+<td>商户点击&quot;生成推广链接&quot;</td>
+<td>下游模块需要展示口令时</td>
+</tr>
+<tr>
+<td>是否调平台接口</td>
+<td>每次实时调用</td>
+<td>读缓存，不调平台接口</td>
+</tr>
+<tr>
+<td>是否使用缓存</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>链接有效期</td>
+<td>永久有效（每次全新生成）</td>
+<td>依赖缓存新鲜度</td>
+</tr>
+</tbody></table>
+<p>两条链路独立运行，互不干扰。B05商户取链每次都实时调接口生成新链接，不经过缓存；本功能的缓存仅供下游模块使用。</p>
+<h2>5. 关键业务规则</h2>
+<h3>5.1 更新时效保障</h3>
+<ul>
+<li>口令有效期约30天（由美团/饿了么平台决定）。</li>
+<li>系统每月1号和15号更新，两次更新之间最长间隔16天（15号→次月1号）。</li>
+<li>缓存对口令的最长滞后时间为16天，距离30天有效期仍有14天安全余量。</li>
+<li>运营可随时手动关闭再重新开启开关，触发一次立即刷新。</li>
+</ul>
+<h3>5.2 活动准入条件</h3>
+<ul>
+<li>仅美团和饿了么的联盟活动可开启自动更新口令。</li>
+<li>活动必须为&quot;已上架&quot;状态才会被定时任务处理。</li>
+<li>已下架的活动即使开关为开启，也不会被刷新。</li>
+</ul>
+<h3>5.3 缓存维度与独立性</h3>
+<ul>
+<li>缓存按&quot;活动+推广位&quot;维度存储，一个活动关联多个推广位时分别缓存。</li>
+<li>下游模块按需读取对应活动与推广位的口令。</li>
+<li>B05商户取链不使用本缓存，本缓存也不受B05取链结果影响。</li>
+</ul>
+<h3>5.4 异常与告警</h3>
+<ul>
+<li>单个活动更新失败不影响其他活动的刷新。</li>
+<li>同一活动连续两次定时更新（即相邻两个周期）均失败时，触发告警通知运营。</li>
+</ul>
+<h2>6. 权限说明</h2>
+<table>
+<thead>
+<tr>
+<th>功能或操作</th>
+<th align="center">SaaS总后台运营</th>
+<th align="center">系统</th>
+<th align="center">客户端商户</th>
+<th align="center">C端用户</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>开启/关闭自动更新口令</td>
+<td align="center">是</td>
+<td align="center">否</td>
+<td align="center">否</td>
+<td align="center">否</td>
+</tr>
+<tr>
+<td>触发定时更新</td>
+<td align="center">否</td>
+<td align="center">是（自动）</td>
+<td align="center">否</td>
+<td align="center">否</td>
+</tr>
+<tr>
+<td>查看口令缓存内容</td>
+<td align="center">否</td>
+<td align="center">—</td>
+<td align="center">否</td>
+<td align="center">否</td>
+</tr>
+<tr>
+<td>从缓存读取口令</td>
+<td align="center">否</td>
+<td align="center">—</td>
+<td align="center">否（由系统代为读取）</td>
+<td align="center">否</td>
+</tr>
+</tbody></table>
+<ul>
+<li>总后台运营仅可控制开关，不能手动触发定时更新，也不直接查看缓存内容。</li>
+<li>客户端商户不接触本功能的任何操作或页面。</li>
+<li>C端用户通过小程序/H5看到的是下游模块展示的口令结果，与本功能无直接交互。</li>
+</ul>
+<h2>7. AI 维护说明</h2>
+<h3>7.1 维护主线</h3>
+<p>维护本文档时，应优先保护以下连续业务主线：</p>
+<pre><code class="language-text">运营开启自动更新口令
+        ↓
+活动纳入定时更新清单
+        ↓
+每月1号、15号系统自动刷新口令缓存
+        ↓
+下游模块（小程序/H5）从缓存读取口令展示
+</code></pre>
+<h3>7.2 参与方与边界</h3>
+<ul>
+<li>&quot;SaaS总后台运营&quot;负责开启/关闭开关，使用B02活动列表页。</li>
+<li>&quot;系统&quot;负责定时遍历、调平台接口、写缓存。不拆分为Cron、后端服务、Redis等技术参与方。</li>
+<li>&quot;下游模块&quot;指小程序功能和H5功能，它们只读取缓存，不在本功能中发起操作。</li>
+<li>&quot;C端用户&quot;和&quot;客户端商户&quot;不参与本功能。</li>
+</ul>
+<h3>7.3 与相邻模块的关系</h3>
+<ul>
+<li>活动信息（名称、供应商、状态、自动更新口令开关）由B02活动管理模块维护。</li>
+<li>推广位的平台参数由B03推广位管理模块维护。</li>
+<li>B05商户取链与本功能是两条独立链路：B05实时调接口，本功能读缓存。两者互不干扰，共用同一套平台参数。</li>
+<li>小程序和H5功能是本功能的下游消费者，从缓存读取口令展示给C端用户。</li>
+</ul>
+<p>修改以下内容时需检查关联影响：</p>
+<table>
+<thead>
+<tr>
+<th>修改内容</th>
+<th>必须检查的影响</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>口令字段增减或口径变化</td>
+<td>下游模块展示内容、缓存存储结构</td>
+</tr>
+<tr>
+<td>更新频率变化</td>
+<td>缓存新鲜度保障、口令有效期余量</td>
+</tr>
+<tr>
+<td>活动准入条件变化</td>
+<td>更新清单范围、下游模块覆盖的活动</td>
+</tr>
+<tr>
+<td>供应商枚举变化</td>
+<td>开关可用范围、取链接口路由</td>
+</tr>
+</tbody></table>
+<h3>7.4 术语与字段口径</h3>
+<ul>
+<li>全文统一使用&quot;口令缓存&quot;，不混用&quot;token_cache&quot;或&quot;口令表&quot;。</li>
+<li>&quot;自动更新口令&quot;是活动表中的一个开关字段，不简称为&quot;自动更新&quot;。</li>
+<li>&quot;美团&quot;和&quot;饿了么&quot;是供应商，不是&quot;平台&quot;（平台指美团App或淘宝App）。</li>
+<li>口令字段名称：团口令（美团）、淘宝口令短版和淘宝口令建议版（饿了么）、唤起协议（饿了么）。</li>
+<li>下游模块统一称为&quot;小程序功能&quot;和&quot;H5功能&quot;，不混用&quot;小程序端&quot;&quot;H5端&quot;。</li>
+</ul>
+<h3>7.5 不得混淆</h3>
+<ul>
+<li>本功能的缓存读取不等于B05的实时取链。</li>
+<li>口令过期不等于链接过期（B05生成的链接永不过期）。</li>
+<li>更新失败不等于缓存数据丢失（失败时保留上次成功缓存）。</li>
+<li>关闭自动更新不等于删除历史缓存。</li>
+<li>活动下架不等于缓存立即失效。</li>
+<li>系统自动执行不等于运营手动触发。</li>
+</ul>
+<h3>7.6 待确认逻辑</h3>
+<ol>
+<li>活动从已上架变为已下架时，是否自动关闭自动更新口令开关？还是保持开关状态但定时任务跳过？</li>
+<li>运营关闭自动更新后，已缓存的过期口令保留多久后清理？建议30天。</li>
+<li>下游模块读取到超过15天的缓存时，是隐藏入口还是展示&quot;口令可能过期&quot;提示？</li>
+<li>是否需要向运营提供&quot;最近一次更新时间和结果&quot;的查看入口？</li>
+<li>定时任务的具体执行时间（1号/15号的几点）是否已确定？</li>
+<li>连续两次失败告警后，运营的处理方式是什么？手动重新开启开关还是等待下个周期自动重试？</li>
+<li>活动关联多个推广位时，是否所有推广位都需要缓存？还是只需为默认推广位缓存？</li>
+<li>是否需要记录每次更新的历史（时间、结果、失败原因）供排查？</li>
+</ol>
+
+</body>
+</html>

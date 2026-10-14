@@ -1,0 +1,1556 @@
+﻿<script type="text/plain" data-ai-only>
+# B16 小程序管理
+
+> 使用说明：本文档采用"人类阅读正文 + AI 维护说明"的双层结构。  
+> 第 1～7 章用于人类阅读，应优先保证业务主线连续、真实、简洁、好读。  
+> 第 8 章用于 AI 维护，集中记录写作约束、上下游检查、待确认逻辑和维护注意事项。
+
+> 业务主线：客户端后台的小程序管理页通过顶部两个 tab 区分"试用"和"正常"小程序 → 试用小程序通过扫码快速生成并在 14 天后过期 → 试用小程序可调用转正流程成为正常小程序 → 正常小程序完成备案和认证后获得版本代码更新资格。
+> 通用能力：试用小程序和正常小程序均支持详情、预览、同步名称、同步头像和软删除；客户端后台暂不提供手动修改名称和头像，避免引入微信审核流程。
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+客户端后台需要同时管理两类小程序。一类是通过扫码快速生成的试用小程序，用于让客户快速体验，但试用小程序只有 14 天有效期，需要转正后才能继续作为正式业务小程序使用。另一类是正常小程序，可以进入备案和认证流程。
+
+如果不区分试用和正常小程序，商户运营人员很难快速判断当前小程序处于体验、转正、备案还是认证阶段，也容易在小程序未满足条件时误操作。
+
+本功能在客户端后台通过"小程序管理"页面集中管理两类小程序，并使用顶部 tab 将试用和正常数据拆开展示。试用 tab 聚焦试用期、到期和转正；正常 tab 聚焦备案和认证。
+
+```text
+改造前
+
+试用小程序和正常小程序混在同一列表中，商户运营人员无法快速区分当前小程序所处阶段。
+
+
+改造后
+
+小程序管理页
+        ↓
+试用 tab（试用期 + 到期 + 转正）
+        +
+正常 tab（备案 + 认证 + 版本代码更新）
+        ↓
+商户运营人员按 tab 分别管理
+```
+
+### 1.2 一句话业务模型
+
+```text
+试用小程序（扫码生成，14 天有效期）
+        ↓
+发起转正
+        ↓
+正常小程序
+        ↓
+备案 + 认证
+        ↓
+获得版本代码更新资格
+```
+
+正常小程序也可以不是由试用转正而来（快速注册或接入已有小程序）。无论来源如何，只要进入正常小程序管理范围，都需要完成备案和认证；只有备案通过且认证通过后，才允许更新版本代码。
+
+### 1.3 最终目标
+
+- **分层管理：** 让商户运营人员在同一页面内通过 tab 分别管理试用小程序和正常小程序，清楚识别当前小程序所处阶段。
+- **状态追踪：** 追踪试用小程序的试用期限和转正状态，以及正常小程序的备案状态、认证状态和版本代码更新资格。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌──────────────────────────────┬──────────────────────────────┬──────────────────────────────┐
+│ 外部小程序平台               │ 客户端后台                  │ 商户运营人员                 │
+├──────────────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│                              │                              │ ① 进入小程序管理页          │
+│                              │                              │        │                     │
+│                              │ ② 展示试用小程序 tab         │                              │
+│                              │ 【小程序：试用中】           │                              │
+│                              │        │                     │                              │
+│ ③ 生成试用小程序信息         │ ←──────│ ④ 扫码生成试用小程序      │                              │
+│        │                     │        │                     │                              │
+│                              │ ⑤ 维护试用期和到期状态      │                              │
+│                              │ 【小程序：试用中 / 已过期】  │                              │
+│                              │        │                     │                              │
+│                              │ ⑥ 转正为正常小程序          │ ←────── ⑦ 发起转正           │
+│                              │ 【小程序：已转正】           │                              │
+│                              │        │                     │                              │
+│                              │ ⑧ 展示正常小程序 tab         │                              │
+│                              │ 【小程序：待备案待认证】     │                              │
+│                              │        │                     │                              │
+│ ⑨ 返回备案、认证结果         │ ←──────│ ⑩ 发起备案和认证          │ ←────── ⑪ 处理备案和认证     │
+│                              │        │                     │                              │
+│                              │ ⑫ 更新版本代码              │ ←────── 备案通过且认证通过后操作 │
+│                              │ 【小程序：可更新版本代码】   │                              │
+└──────────────────────────────┴──────────────────────────────┴──────────────────────────────┘
+```
+
+泳道图中的状态标注以"小程序"为核心业务对象，表示当前小程序所处管理阶段。状态标注不占用独立流程序号。
+
+后续所有页面/功能小节的 `#### 业务背景` 中"当前环节"均引用以上 ①～⑫ 节点编号和动作名称。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序划分为三个阶段：
+
+1. **第一阶段：小程序管理入口（主要参与方：商户运营人员、客户端后台）：** 商户运营人员进入小程序管理页，页面默认展示"试用"tab，并可切换到"正常"tab。
+2. **第二阶段：试用小程序管理（主要参与方：商户运营人员、客户端后台、外部小程序平台）：** 试用小程序通过扫码生成，系统维护 14 天试用期和到期状态；商户运营人员可将其转正为正常小程序。
+3. **第三阶段：正常小程序管理（主要参与方：商户运营人员、客户端后台、外部小程序平台）：** 正常小程序可以进行备案和认证，商户运营人员通过列表和详情追踪备案状态和认证状态。
+
+```text
+第一阶段：小程序管理入口
+① 进入小程序管理页 → ② 展示试用小程序 tab
+                    ↓
+第二阶段：试用小程序管理
+③ 生成试用小程序信息 → ④ 扫码生成试用小程序 → ⑤ 维护试用期和到期状态 → ⑥ 转正为正常小程序 → ⑦ 发起转正
+                    ↓
+第三阶段：正常小程序管理
+⑧ 展示正常小程序 tab → ⑨ 返回备案、认证结果 → ⑩ 发起备案和认证 → ⑪ 处理备案和认证 → ⑫ 更新版本代码
+```
+
+### 2.3 业务路径与真实汇合点
+
+小程序管理存在两条业务路径：
+
+```text
+路径一：试用小程序
+
+扫码生成
+→ 进入试用 tab
+→ 14 天试用期
+→ 发起转正
+                              ┐
+                              ├→ 正常小程序 tab
+路径二：正常小程序             │   → 备案
+                              │   → 认证
+                              │   → 更新版本代码
+正常小程序接入                │
+→ 进入正常 tab                ┘
+```
+
+两条路径在"正常小程序 tab"汇合。试用转正后形成的正常小程序，与原本就是正常小程序的记录使用同一套备案和认证规则。
+
+---
+
+## 3. 第一阶段：小程序管理入口
+
+### 3.1 小程序管理页（改造页面）
+
+小程序管理页用于在客户端后台集中查看和维护当前商户的小程序记录。页面顶部提供"试用"和"正常"两个 tab，默认进入"试用"。
+
+#### 业务背景
+
+当前环节：① 进入小程序管理页、② 展示试用小程序 tab<br>
+页面路径：客户端后台 / 小程序管理<br>
+对下游影响：选中试用 tab 时进入试用小程序列表，可进一步处理试用期、到期和转正；选中正常 tab 时进入正常小程序列表，可进一步处理备案、认证和版本代码更新<br>
+表格类型：列表页<br>
+
+#### 字段说明
+
+本页面只提供 tab 容器和列表入口，具体字段分别在 4.1"试用小程序列表与详情"和 5.1"正常小程序列表与详情"中说明。
+
+#### 列表交互
+
+**交互：切换到试用 tab**  <br>
+**业务用途**：查看通过扫码生成的试用小程序，重点处理试用期、到期和转正。<br>
+
+**交互：切换到正常 tab**  <br>
+**业务用途**：查看正常小程序，重点处理备案和认证。<br>
+
+#### 业务逻辑
+
+**默认 tab 规则：** 进入小程序管理页时默认展示"试用"tab。商户运营人员需要查看正常小程序时，再手动切换到"正常"tab。
+
+**两类数据隔离规则：** 试用小程序和正常小程序分别展示在不同 tab 中。试用小程序转正成功后，不再作为可转正试用记录处理，而是进入正常小程序管理范围。
+
+---
+
+## 4. 第二阶段：试用小程序管理
+
+试用小程序通过扫码快速生成。生成后进入 14 天试用期，并可通过转正操作进入正式业务流程。转正成功后，该小程序进入正常小程序管理范围，还需要继续完成备案和认证。
+
+### 4.1 试用小程序列表与详情（改造页面）
+
+试用小程序列表与详情用于管理通过扫码生成的试用小程序。商户运营人员可以查看试用状态、到期时间和转正状态，并发起转正流程。试用小程序支持详情、预览、同步名称、同步头像、转正和删除，其中删除为软删除。
+
+#### 业务背景
+
+当前环节：③ 生成试用小程序信息、④ 扫码生成试用小程序、⑤ 维护试用期和到期状态、⑥ 转正为正常小程序、⑦ 发起转正<br>
+页面路径：客户端后台 / 小程序管理 / 试用<br>
+对下游影响：试用小程序转正成功后进入正常小程序 tab，继续完成备案和认证；转正状态影响后续是否可发起备案和认证<br>
+表格类型：列表页<br>
+
+#### 字段说明
+
+试用小程序由扫码生成，客户端后台不提供手动新增表单。以下字段表汇总试用小程序在列表和详情中的展示位置。
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 小程序 | 组合字段 | 是 | 是 | 否 | **数据来源：** 名称和头像由外部小程序平台返回，生成时间由系统在扫码生成成功时记录。<br>**逻辑：** 组合展示"小程序名称 + 头像 + 生成时间"；客户端后台只展示和同步，不提供手动修改入口。<br>**用途：** 帮助商户运营人员快速识别当前试用小程序。 |
+| APPID | string | 是 | 是 | 否 | **数据来源：** 系统返回。<br>**逻辑：** 作为试用小程序唯一标识。<br>**用途：** 用于识别、预览、转正和后续正常小程序管理。 |
+| 试用到期时间 | datetime | 是 | 是 | 否 | **数据来源：** 系统根据生成时间计算。<br>**逻辑：** 生成时间 + 14 天。<br>**用途：** 判断试用小程序是否仍在试用期内。 |
+| 剩余天数 | number | 是 | 是 | 否 | **数据来源：** 系统根据试用到期时间和当前时间计算。<br>**逻辑：** 试用到期时间 − 当前时间；小于 0 时显示"已过期"。<br>**用途：** 帮助商户运营人员快速识别即将到期或已到期的试用小程序。 |
+| 试用状态 | enum（试用中、已过期、已转正） | 是 | 是 | 否 | **数据来源：** 系统根据剩余天数和转正结果判断。<br>**逻辑：** "已转正"优先级最高，一旦转正则覆盖显示，不再展示"试用中"或"已过期"。<br>**用途：** 表示试用小程序当前所处阶段。 |
+| 转正状态 | enum（未转正、转正中、已转正） | 是 | 是 | 否 | **数据来源：** 系统返回。<br>**逻辑：** 点击"转正"后进入"转正中"，转正成功后更新为"已转正"。<br>**用途：** 判断当前转正流程所处阶段。 |
+
+#### 列表交互
+
+**交互：详情**  <br>
+**业务用途**：打开当前试用小程序的详情页，查看完整识别信息和维护信息。<br>
+
+**交互：预览**  <br>
+**业务用途**：打开小程序二维码，用于扫码预览小程序实际展示效果。<br>
+
+**交互：同步名称**  <br>
+**业务用途**：从外部小程序平台同步小程序名称，覆盖客户端后台当前展示名称。客户端后台不提供手动修改入口。<br>
+
+**交互：同步头像**  <br>
+**业务用途**：从外部小程序平台同步小程序头像，覆盖客户端后台当前展示头像。客户端后台不提供手动修改入口。<br>
+
+**交互：转正**  <br>
+**业务用途**：调用转正逻辑，进入转正流程。转正成功后，该记录进入"正常"tab 管理，后续需要继续完成备案和认证。<br>
+
+**交互：删除**  <br>
+**业务用途**：对当前试用小程序执行系统软删除。删除后默认不再展示在试用列表中，但不物理删除历史记录。<br>
+
+#### 业务逻辑
+
+**试用有效期规则：** 试用小程序扫码生成后，有效期为 14 天。系统根据生成时间计算试用到期时间，并据此判断"试用中"或"已过期"。
+
+**试用状态优先级规则：** "已转正"优先级最高——一旦小程序完成转正，试用状态覆盖为"已转正"，不再根据剩余天数显示"试用中"或"已过期"。
+
+**转正流程规则：** 点击"转正"后调用转正逻辑，转正状态变为"转正中"；转正成功后状态变为"已转正"，该小程序成为正常小程序并进入正常小程序 tab。
+
+**名称和头像同步规则：** 修改小程序名称和头像需要审核，本功能暂不提供本地修改入口。商户运营人员只能通过"同步名称"和"同步头像"矫正本地展示信息。
+
+**删除规则：** 删除为系统软删除。删除后记录默认从试用列表移除，但保留历史记录，不执行物理删除。
+
+---
+
+## 5. 第三阶段：正常小程序管理
+
+正常小程序可以直接接入，也可以由试用小程序转正而来。正常小程序需要完成备案和认证。
+
+### 5.1 正常小程序列表与详情（新增页面）
+
+正常小程序列表与详情用于管理可进入正式业务流程的小程序。商户运营人员可以查看小程序来源、备案状态和认证状态，并按状态发起备案、认证或版本代码更新。正常小程序同样支持详情、预览、备案、认证、同步名称、同步头像和删除，其中删除为软删除。
+
+#### 业务背景
+
+当前环节：⑧ 展示正常小程序 tab、⑨ 返回备案、认证结果、⑩ 发起备案和认证、⑪ 处理备案和认证、⑫ 更新版本代码<br>
+页面路径：客户端后台 / 小程序管理 / 正常<br>
+对下游影响：备案通过且认证通过后，正常小程序获得版本代码更新资格，允许执行更新版本代码操作<br>
+表格类型：列表页<br>
+
+#### 字段说明
+
+正常小程序可能来自试用转正、快速注册或接入已有小程序。以下字段表汇总正常小程序在列表和详情中的展示位置。
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 小程序 | 组合字段 | 是 | 是 | 否 | **数据来源：** 名称和头像由外部小程序平台返回，生成时间由系统记录。<br>**逻辑：** 组合展示"小程序名称 + 头像 + 生成时间"；客户端后台只展示和同步，不提供手动修改入口。<br>**用途：** 帮助商户运营人员快速识别当前正常小程序。 |
+| APPID | string | 是 | 是 | 否 | **数据来源：** 系统返回。<br>**逻辑：** 作为正常小程序唯一标识。<br>**用途：** 用于识别、预览、备案和认证。 |
+| 来源 | enum（试用转正、快速注册、接入已有小程序） | 是 | 是 | 否 | **数据来源：** 系统根据记录形成路径判断。<br>**逻辑：** 区分正常小程序的来源渠道。<br>**用途：** 帮助商户运营人员了解当前正常小程序的来源。 |
+| 备案状态 | enum（备案通过、备案中、未备案、备案失败） | 是 | 是 | 否 | **数据来源：** 外部小程序平台或备案流程结果。<br>**逻辑：** 与认证状态独立维护，不能用其中一个状态代替另一个状态。<br>**用途：** 判断是否需要发起备案以及当前备案进展。 |
+| 认证状态 | enum（认证中、未认证、认证通过、认证失败） | 是 | 是 | 否 | **数据来源：** 外部小程序平台或认证流程结果。<br>**逻辑：** 与备案状态独立维护。<br>**用途：** 判断是否需要发起认证以及当前认证进展。 |
+
+#### 列表交互
+
+**交互：详情**  <br>
+**业务用途**：打开当前正常小程序的详情页，查看完整识别信息和状态信息。<br>
+
+**交互：预览**  <br>
+**业务用途**：打开小程序二维码，用于扫码预览小程序实际展示效果。<br>
+
+**交互：备案**  <br>
+**业务用途**：对未备案或备案失败的正常小程序发起备案。备案通过后，备案状态更新为"备案通过"。<br>
+
+**交互：认证**  <br>
+**业务用途**：对未认证或认证失败的正常小程序发起认证。认证通过后，认证状态更新为"认证通过"。<br>
+
+**交互：同步名称**  <br>
+**业务用途**：从外部小程序平台同步小程序名称，覆盖客户端后台当前展示名称。客户端后台不提供手动修改入口。<br>
+
+**交互：同步头像**  <br>
+**业务用途**：从外部小程序平台同步小程序头像，覆盖客户端后台当前展示头像。客户端后台不提供手动修改入口。<br>
+
+**交互：更新版本代码**  <br>
+**业务用途**：当正常小程序已备案通过且认证通过时，更新该小程序的版本代码，并记录最近版本代码。<br>
+
+**交互：删除**  <br>
+**业务用途**：对当前正常小程序执行系统软删除。删除后默认不再展示在正常列表中，但不物理删除历史记录。<br>
+
+#### 业务逻辑
+
+**来源统一规则：** 正常小程序可以来自试用转正、快速注册或接入已有小程序。三类来源进入正常 tab 后，使用同一套备案和认证规则。
+
+**备案与认证独立规则：** 备案状态和认证状态分别维护，不能用其中一个状态代替另一个状态。
+
+**版本代码更新准入规则：** 只有当备案状态为"备案通过"且认证状态为"认证通过"时，更新资格才显示为"可更新"，并允许执行"更新版本代码"操作。备案或认证任一项未通过、处理中、失败或未发起时，均显示为"不可更新"。
+
+**名称和头像同步规则：** 修改小程序名称和头像需要审核，本功能暂不提供本地修改入口。商户运营人员只能通过"同步名称"和"同步头像"获取外部小程序平台的最新名称和头像。
+
+**删除规则：** 删除为系统软删除。删除后记录默认从正常列表移除，但保留历史记录，不执行物理删除。
+
+---
+
+## 6. 关键业务规则
+
+> 本章只汇总跨页面、跨阶段或特别容易误解的已确认规则。已在单一页面小节"业务逻辑"中讲清且不会产生歧义的内容，不在此重复。
+
+### 6.1 状态流转规则
+
+试用状态、转正状态、备案状态和认证状态分别属于不同业务维度，不得合并成一个宽泛状态。
+
+```text
+试用小程序
+        ↓ 14 天后到期
+试用状态显示"已过期"
+        ↓ 调用转正流程
+正常小程序
+        ↓ 备案 + 认证
+获得版本代码更新资格
+```
+
+### 6.2 通用操作规则
+
+详情、预览、同步名称、同步头像和删除适用于试用小程序和正常小程序。删除统一为系统软删除；同步操作只同步外部小程序平台已经存在的名称或头像。
+
+### 6.3 名称和头像修改边界
+
+小程序名称和头像修改需要审核。为了避免本期功能复杂化，本功能不提供名称和头像的手动修改，只提供同步能力。同步操作只更新客户端后台展示的名称和头像，不代表客户端后台发起名称或头像修改审核。
+
+---
+
+## 7. 权限说明
+
+> 以下权限基于当前已确认的角色分工。未确认的角色拆分、数据权限和审批权限不在此展开。
+
+| 功能或操作 | 外部小程序平台 | SaaS 总后台 | 客户端后台（商户运营人员） | C 端用户 |
+| --- | :---: | :---: | :---: | :---: |
+| 查看小程序管理页 | — | — | 是 | — |
+| 查看试用小程序列表与详情 | — | — | 是 | — |
+| 查看正常小程序列表与详情 | — | — | 是 | — |
+| 扫码生成试用小程序 | — | — | 是 | — |
+| 发起转正 | — | — | 是 | — |
+| 发起备案 | — | — | 是 | — |
+| 发起认证 | — | — | 是 | — |
+| 更新版本代码 | — | — | 是 | — |
+| 同步名称 / 同步头像 | — | — | 是 | — |
+| 删除小程序（软删除） | — | — | 是 | — |
+| 预览小程序 | — | — | 是 | — |
+
+---
+
+## 8. AI 维护说明
+
+> 本章属于 AI 阅读和维护模块，不承担向人类读者重复解释业务正文的职责。  
+> AI 修改本文档时，应先保护业务真实性和阅读连续性，再考虑结构完整性。
+
+### 8.1 文档设计理念
+
+本文档采用双层结构：
+
+1. **人类阅读模块**：第 1～7 章。通过泳道图建立全局认知，再按照真实业务发生顺序线性表达，使读者能够连续理解业务起点、分支、汇合、处理和结果。
+2. **AI 维护模块**：第 8 章。集中保存维护顺序、边界约束、术语同步要求、上下游检查和待确认逻辑。
+
+维护目标：
+
+```text
+人类正文：连续、真实、简洁、好读
+AI 说明：可维护、可检查、不擅自推导
+```
+
+不得把 AI 维护所需的检查清单、推测和疑点大量前置到人类正文中，也不得让人类正文承担数据模型、系统架构或技术实现说明的职责。
+
+### 8.2 正文组织原则
+
+正式正文按照以下顺序组织：
+
+```text
+泳道图建立全局认知
+        ↓
+阶段划分解释整体流程和主要参与方
+        ↓
+识别真实业务分支（试用 + 正常两条路径）
+        ↓
+各分支在自身小节内讲完特有处理
+        ↓
+在"正常小程序 tab"真实汇合
+        ↓
+继续线性表达备案、认证和版本代码更新
+```
+
+具体规则：
+
+- 页面/功能小节内部采用"业务背景 → 字段说明 → 列表交互 → 业务逻辑"四段结构。
+- 2.1 泳道图是流程信息的唯一事实源；所有页面/功能小节通过 `#### 业务背景` 的"当前环节"引用泳道图节点编号和动作名称。
+- 每个页面章节末尾固定保留"列表交互"；无交互时写"无交互。"。
+- "业务逻辑"只写前三节未覆盖但读者必须理解的规则、条件、状态、边界、联动和限制。默认使用 `**规则标题：** 说明。`。
+- 页面章节已在功能标题中标记"（新增页面）"或"（改造页面）"。
+- 正文按业务实际发生顺序展开，不按总后台、客户端、C 端分别集中成章。
+- 阶段应体现业务目标、责任方或结果的明显变化；单纯技术处理不必独立成阶段。
+- 同一规则优先在实际发生位置完整说明一次；"关键业务规则"和"AI 维护说明"不机械复述正文。
+
+### 8.3 泳道和参与方识别规则
+
+- 当前功能参与方为：外部小程序平台、客户端后台、商户运营人员。
+- 没有 SaaS 总后台和 C 端用户直接参与当前功能的主流程。
+- 泳道按业务职责划分，不按技术架构划分。
+- 同一个参与方在泳道和正文中应使用统一称谓。
+- 泳道图中的编号节点只写参与方实际执行的业务动作；状态标注附着在触发动作之后，不占用新编号。
+- 状态标注格式为"【小程序：[状态名称]】"，带业务对象前缀。
+
+### 8.4 业务文档与系统架构的边界
+
+本文档描述业务背景、业务关系、操作流程、生效条件、字段口径、上下游影响、状态变化和异常结果。
+
+除非用户明确要求，不写入：
+
+- 服务、接口、数据库表、定时任务等技术实现。
+- 按部署位置拆分的系统架构。
+- 为技术复用而设计的中间处理层。
+- 与人类理解业务无关的数据模型细节。
+
+### 8.5 信息可信度与写入位置
+
+| 信息类型 | 写入方式 |
+| --- | --- |
+| 用户已经明确确认 | 写入人类正文，作为正式规则 |
+| 现有原型、旧文档或其他材料明确表达 | 写入人类正文，并保持原口径 |
+| AI 根据常见产品经验合理推导，但尚未确认 | 只写入"待确认逻辑" |
+| 与当前业务主线无关 | 不写 |
+
+核心原则：
+
+```text
+合理不等于已确认
+常见做法不等于当前产品规则
+文档完整不等于可以自行补充
+```
+
+### 8.6 AI 思考和维护顺序
+
+AI 修改文档前，先逆向检查业务是否闭环：
+
+```text
+最终结果为什么形成（版本代码更新资格）
+← 后续处理方执行了什么操作（备案 + 认证）
+← 业务发起方提交或确认了什么（发起转正 / 发起备案和认证）
+← 每条上游路径分别提供了什么条件（扫码生成试用 / 正常小程序接入）
+```
+
+确认闭环后，再正向组织正文：
+
+```text
+业务起点（进入小程序管理页）
+→ 各分支特有处理（试用路径 / 正常路径）
+→ 真实汇合点（正常小程序 tab）
+→ 后续处理（备案、认证、版本代码更新）
+→ 结果同步与闭环（获得更新资格）
+```
+
+具体维护步骤：
+
+1. 识别当前功能的真实参与方和业务称谓。
+2. 区分已确认事实、材料明确内容、AI 推测和无关信息。
+3. 找出业务分支及其真实汇合点。
+4. 按业务发生顺序划分阶段，不按技术组件划分。
+5. 建立唯一泳道图，为每个节点分配唯一编号、参与方和业务动作。
+6. 在每个页面/功能小节的"业务背景"中标注当前环节，节点编号和动作名称必须来自 2.1 泳道图。
+7. 在功能标题中标记"（新增页面）"或"（改造页面）"；业务背景使用四行短标签。
+8. 先按业务入口判断页面边界，将同一页面内的列表、新增、编辑、详情和预览合并为一个页面能力章节。
+9. 分别识别列表、详情和新增的真实字段；同一业务对象使用一张后置的统一字段表汇总，通过位置列表达页面差异，并用 `是`、`否`、`是（可编辑）` 明确每个字段在对应页面是否展示、是否可编辑。
+10. 将已确认内容写入正文，将未确认推测放入待确认逻辑。
+11. 删除机械套用模板产生的空栏目、重复表达和要求读者反向查找的引用。
+12. 检查称谓、字段、状态、上下游边界和权限是否全篇一致。
+
+### 8.7 上下游与模块边界检查
+
+| 检查项 | 检查说明 |
+| --- | --- |
+| 试用小程序生成 | 检查扫码生成成功后是否形成试用小程序记录，并能计算 14 天到期时间。 |
+| 试用状态优先级 | 检查"已转正"是否优先级最高，转正后覆盖"试用中"或"已过期"。 |
+| 转正状态 | 检查转正状态是否由系统返回，枚举值是否为"未转正、转正中、已转正"。 |
+| 试用转正 | 检查试用小程序转正后是否进入正常小程序 tab，并继续要求备案和认证。 |
+| 备案状态 | 检查备案状态是否独立维护，不能被认证状态替代。枚举值是否为"备案通过、备案中、未备案、备案失败"。 |
+| 认证状态 | 检查认证状态是否独立维护，不能被备案状态替代。枚举值是否为"认证中、未认证、认证通过、认证失败"。 |
+| 更新资格 | 检查是否只有"备案通过 + 认证通过"同时成立时才允许更新版本代码。 |
+| 最近版本代码 | 检查版本代码更新成功后是否记录最近版本代码；未更新时是否显示为空值占位。 |
+| 来源类型 | 检查正常小程序来源是否包含"试用转正、快速注册、接入已有小程序"三种类型。 |
+| 通用操作 | 检查试用和正常小程序是否都支持详情、预览、同步名称、同步头像和软删除。 |
+| 同步信息 | 检查同步名称和同步头像是否为独立操作，且没有写成本地编辑名称或头像。 |
+| 名称和头像 | 检查是否没有写入本地修改名称、修改头像或提交审核能力。 |
+
+模块边界应明确：
+
+- 本模块负责形成、处理或维护哪些业务内容。
+- 上游模块已经完成什么，本模块只接收什么。
+- 下游模块从本模块获得什么结果。
+- 不得将上游对象误写为由当前模块生成。
+- 不得把下游处理规则提前塞入当前模块正文。
+
+### 8.8 术语、字段和状态同步规则
+
+- 术语和字段优先参考项目术语表、数据字典及已经确认的原型口径。
+- 同一业务概念全篇使用同一称谓，不因页面不同随意换名。
+- 不同业务对象的状态必须分别定义：试用状态、转正状态、备案状态、认证状态分别维护。
+- 不得因为两个对象状态会同步变化，就将它们写成同一个状态维度。
+- enum 字段必须在字段类型中用括号罗列全部枚举值。
+- "列表、详情、新增"三列只允许使用 `是`、`否`、`是（可编辑）`。
+- 字段解释优先使用"数据来源 / 逻辑 / 用途"三段。
+- 列表页使用 6 列结构（字段名称 / 字段类型 / 列表 / 详情 / 新增 / 字段解释）。
+- 页面编辑类统一使用 6 列结构（配置项 / 字段类型 / 配置值 / 适用场景 / 说明 / 枚举值控制逻辑），无控制关系时"枚举值控制逻辑"列留空。
+- 流程动作与状态必须分开：动作表示参与方做了什么，状态表示动作完成后业务对象处于什么阶段。
+- 字段是否必填必须与操作校验和状态流转保持一致。
+
+### 8.9 不得混淆
+
+- 业务参与方不等于技术系统或内部服务。
+- 业务阶段不等于技术处理步骤。
+- 业务来源不同不等于后续所有流程都不同。
+- 多条路径最终统一处理不等于它们此前的处理逻辑相同。
+- 发起成功不等于业务已经完成或结果已经送达。
+- 驳回或不通过不等于删除记录。
+- 当前业务记录状态不等于关联对象状态。
+- 后台配置修改不等于历史结果重新计算。
+- 结果查看或留痕页面不等于新增主流程步骤。
+- AI 认为合理不等于用户已经确认。
+
+### 8.10 待确认逻辑
+
+> 只记录与当前业务闭环有关、但现有材料和用户尚未明确的内容。  
+> 使用问题形式表达，不提前给出确定答案；确认后移入正文对应位置，并从本节删除。
+
+1. 删除后的试用小程序和正常小程序是否需要在回收站或已删除筛选中可见？
+2. 转正流程的具体步骤、所需材料和失败处理策略是什么？
+3. 备案流程的具体步骤、所需材料、审核周期和失败重试策略是什么？
+4. 认证流程的具体步骤、所需材料、审核周期和失败重试策略是什么？
+5. 试用小程序到期后是否自动变为"已过期"，还是需要系统定时任务更新？
+6. 试用小程序到期后是否仍可发起转正？
+7. 同步名称和同步头像的频率限制和失败处理策略是什么？
+8. 版本代码更新的具体内容范围和回滚策略是什么？
+9. 是否需要向商户运营人员发送试用到期、转正结果、备案结果或认证结果的通知？
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>B16 小程序管理</title>
+  <style id="css-布局">
+    *, *::before, *::after { box-sizing: border-box; }
+    :root { --侧栏间距: 28px; --左栏宽: max(420px, 22vw); --右栏宽: 300px; --标签栏高: 52px; }
+    body { margin: 0; padding: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+    .应用容器 { min-height: 100vh; }
+    .阶段区域 { display: grid; grid-template-columns: var(--左栏宽) minmax(0, 1fr) var(--右栏宽); gap: var(--侧栏间距); width: min(calc(100vw - 28px), 2400px); margin: 0 auto; align-items: start; }
+    .左侧栏 { position: sticky; top: calc(var(--标签栏高) + 16px); max-height: calc(100vh - var(--标签栏高) - 32px); overflow-y: auto; overflow-x: visible; background: #fff; border-right: 1px solid #e2e8f0; padding: 16px 0 0 0; }
+    .内容摘要 { margin: 0 10px 16px 10px; }
+    .内容摘要内 { min-width: 0; border: 1px solid #d9e2ec; border-left: 4px solid #0f6b8f; border-radius: 6px; background: #fff; padding: 7px 12px; box-shadow: 0 4px 14px rgba(15, 35, 52, 0.05); }
+    .内容摘要内 h1 { font-size: 18px; line-height: 1.3; margin: 0 0 6px 0; color: #172033; }
+    .业务简介 { min-width: 0; margin: 0; }
+    .业务简介 blockquote { margin: 0; border: 0; border-radius: 0; background: transparent; padding: 0; color: #344054; font-size: 13px; line-height: 1.6; }
+    .业务简介 blockquote p { margin: 4px 0; }
+    .阶段导航区 { margin: 0 10px 16px 10px; }
+    .全局泳道 { margin: 0 10px 16px 10px; background: #fff; border: 1px solid #d9e2ec; border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 35, 52, 0.08); padding: 10px; }
+    .主舞台 { padding: 24px 32px 48px; min-width: 0; background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(15, 35, 52, 0.04); }
+    .右侧栏 { position: sticky; top: calc(var(--标签栏高) + 30px); max-height: calc(100vh - var(--标签栏高) - 32px); overflow-y: auto; background: #fff; border-left: 1px solid #e2e8f0; padding: 24px 16px 16px 16px; min-width: 0; }
+    .标签包裹 { position: sticky; top: 0; z-index: 100; background: rgba(246, 248, 251, 0.96); border-bottom: 1px solid #e2e8f0; backdrop-filter: blur(8px); }
+    .标签包裹内 { display: flex; gap: 8px; overflow-x: auto; width: min(calc(100vw - 28px), 2400px); margin: 0 auto; padding: 12px 0; padding-left: calc(var(--左栏宽) + var(--侧栏间距)); }
+    .标签面板 { display: none; } .标签面板.激活 { display: block; }
+    .面板布局 { display: grid; grid-template-columns: 1fr 220px; gap: 32px; align-items: start; }
+    .面板布局 .节目录 { position: sticky; top: calc(var(--标签栏高) + 72px); }
+    @media (max-width: 1200px) { .阶段区域 { grid-template-columns: 1fr; } .左侧栏, .右侧栏 { display: none; } .标签包裹内 { padding-left: 0; } .面板布局 { grid-template-columns: 1fr; } .面板布局 .节目录 { display: none; } }
+  </style>
+  <style id="css-组件">
+    /* ═══ 大 tab 标签按钮 ═══ */
+    .标签按钮 { flex: 0 0 auto; display: flex; align-items: center; border: 1px solid #bcccdc; background: #fff; color: #344054; border-radius: 8px; padding: 9px 12px; font: inherit; font-size: 14px; line-height: 1.25; cursor: pointer; white-space: nowrap; }
+    .标签按钮:hover { border-color: #0f6b8f; } .标签按钮.激活 { border-color: #0f6b8f; background: #0f6b8f; color: #fff; }
+    .标签编号 { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; margin-right: 7px; border-radius: 999px; background: #edf2f7; color: #475467; font-size: 12px; font-weight: 700; }
+    .标签按钮.激活 .标签编号 { background: rgba(255,255,255,0.18); color: #fff; }
+
+    /* ═══ 小 tab 阶段导航 ═══ */
+    .阶段页面导航 { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-top: 1px solid #e2e8f0; }
+    .阶段链接 { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; text-decoration: none; color: #475569; font-size: 13px; transition: all 0.15s; }
+    .阶段链接:hover { background: #f1f5f9; color: #1e293b; } .阶段链接.激活 { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+    .页面编号 { font-size: 11px; color: #94a3b8; font-family: monospace; min-width: 24px; } .页面类型图标 { font-size: 14px; } .阶段链接.激活 .页面编号 { color: #3b82f6; }
+
+    /* ═══ 右侧栏注释卡片 ═══ */
+    .注释卡片组 { display: flex; flex-direction: column; gap: 14px; }
+    .注释卡片 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+    .注释卡片头 { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .注释图标 { font-size: 16px; } .注释标题 { font-size: 14px; font-weight: 600; color: #334155; }
+    .注释卡片正文 { padding: 12px 16px; font-size: 13px; line-height: 1.7; color: #475569; }
+    .注释卡片正文 p { margin: 0 0 8px 0; } .注释卡片正文 p:last-child { margin-bottom: 0; }
+    .注释卡片正文 ul { margin: 4px 0; padding-left: 20px; } .注释卡片正文 li { margin: 3px 0; } .注释卡片正文 strong { color: #1e293b; }
+
+    /* ═══ 内容页面：阅读文档 ═══ */
+    .文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+    .阅读节标题 { margin: 30px 0 12px; font-size: 21px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; scroll-margin-top: 68px; }
+    .阅读标题 { scroll-margin-top: 68px; line-height: 1.35; color: #172033; }
+    .文档正文 h3 { font-size: 21px; margin: 30px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+    .文档正文 h4 { font-size: 17px; margin: 24px 0 8px; } .文档正文 h5 { font-size: 15px; margin: 20px 0 6px; color: #344054; }
+    .文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+    .文档正文 strong { font-weight: 750; }
+    .文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+    .行内代码 { font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 0.92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+    .表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+    .阅读表格 { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 14px; }
+    .阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+    .阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+    .代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+    .代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; font-weight: 500; }
+    .代码块 pre { margin: 0; padding: 16px; background: #ffffff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; border: 0; }
+    .代码块 code { display: block; padding: 0; border: 0; background: transparent; color: inherit; font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 13px; white-space: pre; }
+
+    /* ═══ 节目录 ═══ */
+    .节目录列表 { list-style: none; padding: 0; margin: 0; } .节目录列表 ul { list-style: none; padding-left: 16px; }
+    .目录项 { margin: 2px 0; line-height: 1.6; }
+    .目录项 a { display: block; padding: 4px 10px; border-radius: 4px; color: #475569; text-decoration: none; font-size: 13px; border-left: 2px solid transparent; transition: all 0.15s; }
+    .目录项 a:hover { background: #f1f5f9; color: #1e293b; border-left-color: #3b82f6; } .目录层级3 a { font-weight: 600; font-size: 14px; } .目录层级4 a { padding-left: 20px; } .目录层级5 a { padding-left: 30px; font-size: 12px; color: #64748b; }
+
+    /* ═══ 演示壳 ═══ */
+    .演示壳 { display: grid; grid-template-columns: 180px 1fr; gap: 0; min-height: 480px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0; }
+    .演示侧标 { background: linear-gradient(160deg, #1e293b 0%, #334155 100%); padding: 28px 20px; display: flex; flex-direction: column; gap: 10px; color: #e2e8f0; user-select: none; }
+    .角色标签 { display: inline-block; padding: 4px 12px; background: rgba(59, 130, 246, 0.25); border: 1px solid rgba(96, 165, 250, 0.4); border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; align-self: flex-start; }
+    .模块标签 { font-size: 18px; font-weight: 700; margin-top: 8px; line-height: 1.4; }
+    .范围标签 { font-size: 11px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-top: auto; }
+    .演示主体 { background: #f8fafc; display: flex; flex-direction: column; }
+    .演示顶栏 { display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; }
+    .浏览器按钮 { display: flex; gap: 6px; flex-shrink: 0; } .浏览器圆点 { width: 10px; height: 10px; border-radius: 50%; }
+    .浏览器圆点.红 { background: #ef4444; } .浏览器圆点.黄 { background: #f59e0b; } .浏览器圆点.绿 { background: #10b981; }
+    .地址栏 { flex: 1; padding: 5px 12px; background: #f1f5f9; border-radius: 6px; font-size: 12px; }
+    .地址文本 { color: #64748b; font-family: "Sarasa Mono SC", "Cascadia Code", "Consolas", monospace; }
+    .演示内容区 { flex: 1; padding: 24px; overflow-y: auto; }
+
+    /* ═══ 列表页 ═══ */
+    .工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+    .搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+    .搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+    .筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+    .筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+    .数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    .列表表头.操作列 { text-align: center; width: 130px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+    .列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .列表单元格.操作列 { text-align: center; }
+    .数据行:hover { background: #f8fafc; }
+    .详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+    .列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+    .信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+    .信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+    /* ═══ 页面编辑：控制下拉区 ═══ */
+    .控制下拉区 { display: flex; align-items: center; gap: 10px; padding: 0 0 16px 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 16px; }
+    .控制下拉标签 { font-size: 13px; font-weight: 600; color: #475569; } .控制说明 { font-size: 12px; color: #94a3b8; }
+
+    /* ═══ 页面编辑：字段卡片 ═══ */
+    .编辑卡片区 { display: flex; flex-direction: column; gap: 24px; }
+    .field-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; transition: opacity 0.25s; }
+    .field-card.muted { opacity: 0.35; pointer-events: none; }
+    .field-card-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; } .field-card-path { font-size: 12px; color: #94a3b8; font-family: monospace; }
+    .field-card-body { padding: 12px 16px; }
+    .field-row { display: grid; grid-template-columns: 140px 1fr 32px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+    .field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+    .field-control { display: flex; align-items: center; gap: 8px; } .field-display { font-size: 13px; color: #1e293b; }
+    .field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 120px; }
+    .field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+    .field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+    .field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+    .field-info-btn:hover, .field-info-btn.is-open { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+    .field-detail-panel { display: none; margin: 4px 0 8px 140px; padding: 10px 14px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
+    .field-detail-panel.show { display: block; } .field-detail-panel dl { display: grid; grid-template-columns: 80px 1fr; gap: 4px 10px; margin: 0; font-size: 12px; }
+    .field-detail-panel dt { color: #94a3b8; } .field-detail-panel dd { color: #475569; margin: 0; }
+
+    /* ═══ 详情抽屉 ═══ */
+    .overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+    .drawer { position: fixed; top: 0; right: 0; width: 560px; height: 100vh; background: #fff; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+    .drawer.show { transform: translateX(0); }
+    .panel-head { height: 64px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; }
+    .panel-title { font-size: 18px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+    .panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+    .panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+    .detail-item { min-height: 58px; padding: 10px 14px; border-bottom: 1px solid #d9e2ec; } .detail-item:nth-child(odd) { border-right: 1px solid #d9e2ec; }
+    .detail-item:last-child { border-bottom: 0; } .detail-label { color: #8a93a3; font-size: 12px; margin-bottom: 4px; }
+    .detail-value { color: #303744; font-size: 13px; font-weight: 550; word-break: break-word; }
+    .type-tag { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; vertical-align: middle; }
+    .btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+    /* ═══ 字段弹窗 ═══ */
+    .字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+    .字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+    .弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+    .弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+    .弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+    .弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+    .弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+    .弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+    .弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+    /* ═══ 泳道图 ═══ */
+    .泳道原始 { margin: 0; padding: 10px 6px; font-family: "Sarasa Mono SC", "Cascadia Code", "Consolas", "Courier New", monospace; font-size: 13px; line-height: 1.55; color: #1e293b; white-space: pre; overflow-x: visible; background: transparent; }
+
+    /* ═══ 提示消息 ═══ */
+    .提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+    .提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+    .提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+    .提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+
+    /* ═══ 类型标签全局 ═══ */
+    .类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+    .类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+    .类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+    .类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+    .类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+    .空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+  </style>
+  <style id="css-状态">
+    .标签按钮.激活 { border-color: #0f6b8f; background: #0f6b8f; color: #fff; }
+    .标签面板.激活 { display: block; }
+    .阶段链接.激活 { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+    .drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+    .字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+    .提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+    .field-card.muted { opacity: 0.35; pointer-events: none; }
+    .字段行.禁用 { opacity: 0.4; pointer-events: none; } .字段行.隐藏 { display: none; }
+  </style>
+</head>
+
+<body>
+<div class="应用容器">
+
+  <!-- 大 tab -->
+  <div id="标签导航" class="标签包裹">
+    <div class="标签包裹内">
+      <button class="标签按钮 激活" data-stage="1" onclick="切换标签(1)"><span class="标签编号">1</span>需求背景与目标</button>
+      <button class="标签按钮" data-stage="2" onclick="切换标签(2)"><span class="标签编号">2</span>业务流程</button>
+      <button class="标签按钮" data-stage="3" onclick="切换标签(3)"><span class="标签编号">3</span>第一阶段：小程序管理入口</button>
+      <button class="标签按钮" data-stage="4" onclick="切换标签(4)"><span class="标签编号">4</span>第二阶段：试用小程序管理</button>
+      <button class="标签按钮" data-stage="5" onclick="切换标签(5)"><span class="标签编号">5</span>第三阶段：正常小程序管理</button>
+      <button class="标签按钮" data-stage="6" onclick="切换标签(6)"><span class="标签编号">6</span>关键业务规则</button>
+      <button class="标签按钮" data-stage="7" onclick="切换标签(7)"><span class="标签编号">7</span>权限说明</button>
+    </div>
+  </div>
+
+  <div class="阶段区域">
+
+    <!-- 左侧栏 -->
+    <aside class="左侧栏">
+      <!-- 块1：业务摘要卡片 -->
+      <div class="内容摘要">
+        <div class="内容摘要内">
+          <h1>B16 小程序管理</h1>
+          <div class="业务简介"><blockquote><p>客户端后台的小程序管理页通过顶部两个 tab 区分"试用"和"正常"小程序 → 试用小程序通过扫码快速生成并在 14 天后过期 → 试用小程序可调用转正流程成为正常小程序 → 正常小程序完成备案和认证后获得版本代码更新资格。</p></blockquote></div>
+        </div>
+      </div>
+
+      <!-- 块2：小 tab 导航 -->
+      <div class="阶段导航区" id="阶段导航区">
+        <nav id="阶段03导航" class="阶段页面导航" style="display:none;">
+          <a class="阶段链接 激活" href="javascript:切换页面('3.1','列表页')" data-page="3.1" data-page-type="列表页">
+            <span class="页面编号">3.1</span><span class="页面类型图标">📋</span>
+            <span class="页面标题">小程序管理页</span>
+          </a>
+        </nav>
+        <nav id="阶段04导航" class="阶段页面导航" style="display:none;">
+          <a class="阶段链接 激活" href="javascript:切换页面('4.1','列表页')" data-page="4.1" data-page-type="列表页">
+            <span class="页面编号">4.1</span><span class="页面类型图标">📋</span>
+            <span class="页面标题">试用小程序列表与详情</span>
+          </a>
+        </nav>
+        <nav id="阶段05导航" class="阶段页面导航" style="display:none;">
+          <a class="阶段链接 激活" href="javascript:切换页面('5.1','列表页')" data-page="5.1" data-page-type="列表页">
+            <span class="页面编号">5.1</span><span class="页面类型图标">📋</span>
+            <span class="页面标题">正常小程序列表与详情</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- 块3：泳道图 -->
+      <div class="全局泳道">
+        <h3>多方业务泳道图</h3>
+        <div id="全局泳道代码" class="泳道代码">
+          <pre class="泳道原始">┌──────────────────────────────┬──────────────────────────────────────────────────────┐
+│ 外部小程序平台               │ 客户端后台（商户运营人员）                            │
+├──────────────────────────────┼──────────────────────────────────────────────────────┤
+│                              │ ① 进入小程序管理页                                  │
+│                              │        │                                             │
+│                              │ ② 展示试用小程序 tab                                 │
+│                              │ 【小程序：试用中】                                   │
+│                              │        │                                             │
+│ ③ 生成试用小程序信息         │ ←── ④ 扫码生成试用小程序                            │
+│        │                     │        │                                             │
+│                              │ ⑤ 维护试用期和到期状态                              │
+│                              │ 【小程序：试用中 / 已过期】                          │
+│                              │        │                                             │
+│                              │ ⑦ 发起转正                                          │
+│                              │        ↓                                             │
+│                              │ ⑥ 转正为正常小程序                                  │
+│                              │ 【小程序：已转正】                                   │
+│                              │        │                                             │
+│                              │ ⑧ 展示正常小程序 tab                                 │
+│                              │ 【小程序：待备案待认证】                             │
+│                              │        │                                             │
+│                              │ ⑪ 处理备案和认证                                    │
+│                              │        ↓                                             │
+│                              │ ⑩ 发起备案和认证                                    │
+│                              │        │                                             │
+│ ⑨ 返回备案、认证结果         │ ←──────┘                                            │
+│        │                     │        │                                             │
+│                              │ ⑫ 更新版本代码                                      │
+│                              │ 【小程序：可更新版本代码】                           │
+└──────────────────────────────┴──────────────────────────────────────────────────────┘</pre>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主舞台 -->
+    <main class="主舞台">
+
+      <!-- ═══ 阶段1：需求背景与目标 ═══ -->
+      <section class="标签面板 激活" data-stage="1">
+        <div class="面板布局">
+          <div id="节1正文" class="文档正文">
+
+            <h3 id="1.1">1.1 为什么要做</h3>
+            <p>客户端后台需要同时管理两类小程序。一类是通过扫码快速生成的<strong>试用小程序</strong>，用于让客户快速体验，但试用小程序只有 14 天有效期，需要转正后才能继续作为正式业务小程序使用。另一类是<strong>正常小程序</strong>，可以进入备案和认证流程。</p>
+            <p>如果不区分试用和正常小程序，商户运营人员很难快速判断当前小程序处于体验、转正、备案还是认证阶段，也容易在小程序未满足条件时误操作。</p>
+            <p>本功能在客户端后台通过"小程序管理"页面集中管理两类小程序，并使用顶部 tab 将试用和正常数据拆开展示。试用 tab 聚焦试用期、到期和转正；正常 tab 聚焦备案和认证。</p>
+
+            <div class="代码块">
+              <div class="代码头">改造前后对比</div>
+              <pre><code>改造前
+
+试用小程序和正常小程序混在同一列表中，商户运营人员无法快速区分当前小程序所处阶段。
+
+
+改造后
+
+小程序管理页
+        ↓
+试用 tab（试用期 + 到期 + 转正）
+        +
+正常 tab（备案 + 认证 + 版本代码更新）
+        ↓
+商户运营人员按 tab 分别管理</code></pre>
+            </div>
+
+            <h3 id="1.2">1.2 一句话业务模型</h3>
+            <div class="代码块">
+              <pre><code>试用小程序（扫码生成，14 天有效期）
+        ↓
+发起转正
+        ↓
+正常小程序
+        ↓
+备案 + 认证
+        ↓
+获得版本代码更新资格</code></pre>
+            </div>
+            <p>正常小程序也可以不是由试用转正而来（快速注册或接入已有小程序）。无论来源如何，只要进入正常小程序管理范围，都需要完成备案和认证；只有备案通过且认证通过后，才允许更新版本代码。</p>
+
+            <h3 id="1.3">1.3 最终目标</h3>
+            <ul>
+              <li><strong>分层管理：</strong>让商户运营人员在同一页面内通过 tab 分别管理试用小程序和正常小程序，清楚识别当前小程序所处阶段。</li>
+              <li><strong>状态追踪：</strong>追踪试用小程序的试用期限和转正状态，以及正常小程序的备案状态、认证状态和版本代码更新资格。</li>
+            </ul>
+
+          </div>
+          <nav id="节1目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#1.1">1.1 为什么要做</a></li>
+              <li class="目录项 目录层级3"><a href="#1.2">1.2 一句话业务模型</a></li>
+              <li class="目录项 目录层级3"><a href="#1.3">1.3 最终目标</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+      <!-- ═══ 阶段2：业务流程 ═══ -->
+      <section class="标签面板" data-stage="2">
+        <div class="面板布局">
+          <div id="节2正文" class="文档正文">
+
+            <h3 id="2.1">2.1 多方业务泳道图</h3>
+            <p>泳道图中的状态标注以"小程序"为核心业务对象，表示当前小程序所处管理阶段。状态标注不占用独立流程序号。</p>
+            <p>后续所有页面/功能小节的 <span class="行内代码">#### 业务背景</span> 中"当前环节"均引用以下 ①～⑫ 节点编号和动作名称。</p>
+
+            <h3 id="2.2">2.2 阶段划分与阅读说明</h3>
+            <p>后续正文按照业务实际发生顺序划分为三个阶段：</p>
+            <ol>
+              <li><strong>第一阶段：小程序管理入口（主要参与方：商户运营人员、客户端后台）：</strong>商户运营人员进入小程序管理页，页面默认展示"试用"tab，并可切换到"正常"tab。</li>
+              <li><strong>第二阶段：试用小程序管理（主要参与方：商户运营人员、客户端后台、外部小程序平台）：</strong>试用小程序通过扫码生成，系统维护 14 天试用期和到期状态；商户运营人员可将其转正为正常小程序。</li>
+              <li><strong>第三阶段：正常小程序管理（主要参与方：商户运营人员、客户端后台、外部小程序平台）：</strong>正常小程序可以进行备案和认证，商户运营人员通过列表和详情追踪备案状态和认证状态。</li>
+            </ol>
+
+            <div class="代码块">
+              <div class="代码头">阶段流程概览</div>
+              <pre><code>第一阶段：小程序管理入口
+① 进入小程序管理页 → ② 展示试用小程序 tab
+                    ↓
+第二阶段：试用小程序管理
+③ 生成试用小程序信息 → ④ 扫码生成试用小程序 → ⑤ 维护试用期和到期状态 → ⑥ 转正为正常小程序 → ⑦ 发起转正
+                    ↓
+第三阶段：正常小程序管理
+⑧ 展示正常小程序 tab → ⑨ 返回备案、认证结果 → ⑩ 发起备案和认证 → ⑪ 处理备案和认证 → ⑫ 更新版本代码</code></pre>
+            </div>
+
+            <h3 id="2.3">2.3 业务路径与真实汇合点</h3>
+            <p>小程序管理存在两条业务路径：</p>
+
+            <div class="代码块">
+              <div class="代码头">两条业务路径</div>
+              <pre><code>路径一：试用小程序
+
+扫码生成
+→ 进入试用 tab
+→ 14 天试用期
+→ 发起转正
+                              ┐
+                              ├→ 正常小程序 tab
+路径二：正常小程序             │   → 备案
+                              │   → 认证
+                              │   → 更新版本代码
+正常小程序接入                │
+→ 进入正常 tab                ┘</code></pre>
+            </div>
+
+            <p>两条路径在"正常小程序 tab"汇合。试用转正后形成的正常小程序，与原本就是正常小程序的记录使用同一套备案和认证规则。</p>
+
+          </div>
+          <nav id="节2目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#2.1">2.1 多方业务泳道图</a></li>
+              <li class="目录项 目录层级3"><a href="#2.2">2.2 阶段划分与阅读说明</a></li>
+              <li class="目录项 目录层级3"><a href="#2.3">2.3 业务路径与真实汇合点</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+      <!-- ═══ 阶段3：第一阶段——小程序管理入口 ═══ -->
+      <section class="标签面板" data-stage="3">
+        <div class="面板布局">
+          <div id="节3正文" class="文档正文">
+
+            <h3 id="3.1">3.1 小程序管理页（改造页面）</h3>
+            <p>小程序管理页用于在客户端后台集中查看和维护当前商户的小程序记录。页面顶部提供"试用"和"正常"两个 tab，默认进入"试用"。</p>
+
+            <h4>业务背景</h4>
+            <p>当前环节：① 进入小程序管理页、② 展示试用小程序 tab<br>
+            页面路径：客户端后台 / 小程序管理<br>
+            对下游影响：选中试用 tab 时进入试用小程序列表，可进一步处理试用期、到期和转正；选中正常 tab 时进入正常小程序列表，可进一步处理备案、认证和版本代码更新<br>
+            表格类型：列表页</p>
+
+            <h4>字段说明</h4>
+            <p>本页面只提供 tab 容器和列表入口，具体字段分别在 <a href="javascript:切换标签(4)">4.1 试用小程序列表与详情</a> 和 <a href="javascript:切换标签(5)">5.1 正常小程序列表与详情</a> 中说明。</p>
+
+            <h4>列表交互</h4>
+            <p><strong>交互：切换到试用 tab</strong><br>
+            业务用途：查看通过扫码生成的试用小程序，重点处理试用期、到期和转正。</p>
+            <p><strong>交互：切换到正常 tab</strong><br>
+            业务用途：查看正常小程序，重点处理备案和认证。</p>
+
+            <h4>业务逻辑</h4>
+            <p><strong>默认 tab 规则：</strong>进入小程序管理页时默认展示"试用"tab。商户运营人员需要查看正常小程序时，再手动切换到"正常"tab。</p>
+            <p><strong>两类数据隔离规则：</strong>试用小程序和正常小程序分别展示在不同 tab 中。试用小程序转正成功后，不再作为可转正试用记录处理，而是进入正常小程序管理范围。</p>
+
+          </div>
+          <nav id="节3目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#3.1">3.1 小程序管理页</a></li>
+              <li class="目录项 目录层级4"><a href="#3.1">业务背景</a></li>
+              <li class="目录项 目录层级4"><a href="#3.1">字段说明</a></li>
+              <li class="目录项 目录层级4"><a href="#3.1">列表交互</a></li>
+              <li class="目录项 目录层级4"><a href="#3.1">业务逻辑</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+      <!-- ═══ 阶段4：第二阶段——试用小程序管理 ═══ -->
+      <section class="标签面板" data-stage="4">
+        <!-- 业务背景说明 -->
+        <div class="文档正文" style="margin-bottom:24px;">
+          <h3>4.1 试用小程序列表与详情（改造页面）</h3>
+          <p>试用小程序列表与详情用于管理通过扫码生成的试用小程序。商户运营人员可以查看试用状态、到期时间和转正状态，并发起转正流程。试用小程序支持详情、预览、同步名称、同步头像、转正和删除，其中删除为软删除。</p>
+          <blockquote><p><strong>当前环节：</strong>③ 生成试用小程序信息、④ 扫码生成试用小程序、⑤ 维护试用期和到期状态、⑥ 转正为正常小程序、⑦ 发起转正<br><strong>页面路径：</strong>客户端后台 / 小程序管理 / 试用</p></blockquote>
+        </div>
+        <!-- 列表演示区 -->
+        <div id="阶段04列表区">
+          <div class="演示壳" data-page="4.1">
+            <div class="演示侧标">
+              <span class="角色标签">商户运营人员</span>
+              <div class="模块标签">试用小程序<br>列表与详情</div>
+              <span class="范围标签">试用 tab</span>
+            </div>
+            <div class="演示主体">
+              <div class="演示顶栏">
+                <div class="浏览器按钮">
+                  <span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span>
+                </div>
+                <div class="地址栏"><span class="地址文本">客户端后台 / 小程序管理 / 试用</span></div>
+              </div>
+              <div class="演示内容区">
+                <!-- 工具栏 -->
+                <div class="工具栏">
+                  <div class="搜索框">
+                    <span class="搜索图标">🔍</span>
+                    <input class="搜索输入" type="text" placeholder="搜索小程序名称或 APPID…" />
+                  </div>
+                  <div class="筛选区">
+                    <span class="筛选标签">试用状态：</span>
+                    <select class="筛选下拉"><option value="">全部</option><option value="试用中">试用中</option><option value="已过期">已过期</option><option value="已转正">已转正</option></select>
+                    <span class="筛选标签">转正状态：</span>
+                    <select class="筛选下拉"><option value="">全部</option><option value="未转正">未转正</option><option value="转正中">转正中</option><option value="已转正">已转正</option></select>
+                  </div>
+                </div>
+                <!-- 表格 -->
+                <div class="表格容器">
+                  <table class="数据表格">
+                    <thead>
+                      <tr>
+                        <th class="列表表头"><span class="表头字段名">小程序</span><span class="类型标签 组合字段">组合字段</span><button class="信息按钮" onclick="显示字段弹窗('小程序', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头"><span class="表头字段名">APPID</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('APPID', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头"><span class="表头字段名">试用到期时间</span><span class="类型标签 date">datetime</span><button class="信息按钮" onclick="显示字段弹窗('试用到期时间', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头"><span class="表头字段名">剩余天数</span><span class="类型标签 number">number</span><button class="信息按钮" onclick="显示字段弹窗('剩余天数', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头"><span class="表头字段名">试用状态</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('试用状态', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头"><span class="表头字段名">转正状态</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('转正状态', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头 操作列">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="数据行">
+                        <td class="列表单元格">🖼 茶颜悦色点单<br><span style="font-size:11px;color:#94a3b8;">2026-06-01 10:30 生成</span></td>
+                        <td class="列表单元格"><span class="行内代码">wx123abc</span></td>
+                        <td class="列表单元格">2026-06-15 10:30</td>
+                        <td class="列表单元格">13 天</td>
+                        <td class="列表单元格"><span class="类型标签 enum">试用中</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">未转正</span></td>
+                        <td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({小程序:'茶颜悦色点单 2026-06-01',APPID:'wx123abc',试用到期时间:'2026-06-15 10:30',剩余天数:'13 天',试用状态:'试用中',转正状态:'未转正',_壳节编号:'4.1'}, '试用小程序详情')">详情</button><button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td>
+                      </tr>
+                      <tr class="数据行">
+                        <td class="列表单元格">🖼 果茶乐园<br><span style="font-size:11px;color:#94a3b8;">2026-05-20 14:00 生成</span></td>
+                        <td class="列表单元格"><span class="行内代码">wx456def</span></td>
+                        <td class="列表单元格">2026-06-03 14:00</td>
+                        <td class="列表单元格"><span style="color:#ef4444;">已过期</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">已过期</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">转正中</span></td>
+                        <td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({小程序:'果茶乐园 2026-05-20',APPID:'wx456def',试用到期时间:'2026-06-03 14:00',剩余天数:'已过期',试用状态:'已过期',转正状态:'转正中',_壳节编号:'4.1'}, '试用小程序详情')">详情</button><button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td>
+                      </tr>
+                      <tr class="数据行">
+                        <td class="列表单元格">🖼 甜品小屋<br><span style="font-size:11px;color:#94a3b8;">2026-06-10 09:00 生成</span></td>
+                        <td class="列表单元格"><span class="行内代码">wx789ghi</span></td>
+                        <td class="列表单元格">2026-06-24 09:00</td>
+                        <td class="列表单元格"><span style="color:#f59e0b;">4 天</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">试用中</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">未转正</span></td>
+                        <td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({小程序:'甜品小屋 2026-06-10',APPID:'wx789ghi',试用到期时间:'2026-06-24 09:00',剩余天数:'4 天',试用状态:'试用中',转正状态:'未转正',_壳节编号:'4.1'}, '试用小程序详情')">详情</button><button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td>
+                      </tr>
+                      <tr class="数据行">
+                        <td class="列表单元格">🖼 烘焙工坊<br><span style="font-size:11px;color:#94a3b8;">2026-05-01 16:00 生成</span></td>
+                        <td class="列表单元格"><span class="行内代码">wxjkl012</span></td>
+                        <td class="列表单元格">2026-05-15 16:00</td>
+                        <td class="列表单元格"><span style="color:#ef4444;">已过期</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">已转正</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">已转正</span></td>
+                        <td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({小程序:'烘焙工坊 2026-05-01',APPID:'wxjkl012',试用到期时间:'2026-05-15 16:00',剩余天数:'已过期',试用状态:'已转正',转正状态:'已转正',_壳节编号:'4.1'}, '试用小程序详情')">详情</button><button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="列表脚注">共 4 条记录 · 支持详情、预览、同步名称、同步头像、转正、删除操作</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ 阶段5：第三阶段——正常小程序管理 ═══ -->
+      <section class="标签面板" data-stage="5">
+        <!-- 业务背景说明 -->
+        <div class="文档正文" style="margin-bottom:24px;">
+          <h3>5.1 正常小程序列表与详情（新增页面）</h3>
+          <p>正常小程序列表与详情用于管理可进入正式业务流程的小程序。商户运营人员可以查看小程序来源、备案状态和认证状态，并按状态发起备案、认证或版本代码更新。正常小程序同样支持详情、预览、备案、认证、同步名称、同步头像和删除，其中删除为软删除。</p>
+          <blockquote><p><strong>当前环节：</strong>⑧ 展示正常小程序 tab、⑨ 返回备案、认证结果、⑩ 发起备案和认证、⑪ 处理备案和认证、⑫ 更新版本代码<br><strong>页面路径：</strong>客户端后台 / 小程序管理 / 正常<br><strong>对下游影响：</strong>备案通过且认证通过后，正常小程序获得版本代码更新资格，允许执行更新版本代码操作</p></blockquote>
+          <p>正常小程序可能来自试用转正、快速注册或接入已有小程序。</p>
+        </div>
+        <!-- 列表演示区 -->
+        <div id="阶段05列表区">
+          <div class="演示壳" data-page="5.1">
+            <div class="演示侧标">
+              <span class="角色标签">商户运营人员</span>
+              <div class="模块标签">正常小程序<br>列表与详情</div>
+              <span class="范围标签">正常 tab</span>
+            </div>
+            <div class="演示主体">
+              <div class="演示顶栏">
+                <div class="浏览器按钮">
+                  <span class="浏览器圆点 红"></span><span class="浏览器圆点 黄"></span><span class="浏览器圆点 绿"></span>
+                </div>
+                <div class="地址栏"><span class="地址文本">客户端后台 / 小程序管理 / 正常</span></div>
+              </div>
+              <div class="演示内容区">
+                <!-- 工具栏 -->
+                <div class="工具栏">
+                  <div class="搜索框">
+                    <span class="搜索图标">🔍</span>
+                    <input class="搜索输入" type="text" placeholder="搜索小程序名称或 APPID…" />
+                  </div>
+                  <div class="筛选区">
+                    <span class="筛选标签">来源：</span>
+                    <select class="筛选下拉"><option value="">全部</option><option value="试用转正">试用转正</option><option value="快速注册">快速注册</option><option value="接入已有小程序">接入已有小程序</option></select>
+                    <span class="筛选标签">备案状态：</span>
+                    <select class="筛选下拉"><option value="">全部</option><option value="备案通过">备案通过</option><option value="备案中">备案中</option><option value="未备案">未备案</option><option value="备案失败">备案失败</option></select>
+                    <span class="筛选标签">认证状态：</span>
+                    <select class="筛选下拉"><option value="">全部</option><option value="认证通过">认证通过</option><option value="认证中">认证中</option><option value="未认证">未认证</option><option value="认证失败">认证失败</option></select>
+                  </div>
+                </div>
+                <!-- 表格 -->
+                <div class="表格容器">
+                  <table class="数据表格">
+                    <thead>
+                      <tr>
+                        <th class="列表表头"><span class="表头字段名">小程序</span><span class="类型标签 组合字段">组合字段</span><button class="信息按钮" onclick="显示字段弹窗('小程序', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头"><span class="表头字段名">APPID</span><span class="类型标签 string">string</span><button class="信息按钮" onclick="显示字段弹窗('APPID', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头"><span class="表头字段名">来源</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('来源', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头"><span class="表头字段名">备案状态</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('备案状态', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头"><span class="表头字段名">认证状态</span><span class="类型标签 enum">enum</span><button class="信息按钮" onclick="显示字段弹窗('认证状态', event)" title="字段详情">ⓘ</button></th>
+                        <th class="列表表头 操作列">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="数据行">
+                        <td class="列表单元格">🖼 茶颜悦色点单<br><span style="font-size:11px;color:#94a3b8;">2026-05-01 08:00 生成</span></td>
+                        <td class="列表单元格"><span class="行内代码">wx123abc</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">试用转正</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">备案通过</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">认证通过</span></td>
+                        <td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({小程序:'茶颜悦色点单 2026-05-01',APPID:'wx123abc',来源:'试用转正',备案状态:'备案通过',认证状态:'认证通过',_壳节编号:'5.1'}, '正常小程序详情')">详情</button><button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td>
+                      </tr>
+                      <tr class="数据行">
+                        <td class="列表单元格">🖼 星选咖啡<br><span style="font-size:11px;color:#94a3b8;">2026-04-15 11:00 生成</span></td>
+                        <td class="列表单元格"><span class="行内代码">wx456def</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">快速注册</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">备案中</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">未认证</span></td>
+                        <td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({小程序:'星选咖啡 2026-04-15',APPID:'wx456def',来源:'快速注册',备案状态:'备案中',认证状态:'未认证',_壳节编号:'5.1'}, '正常小程序详情')">详情</button><button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td>
+                      </tr>
+                      <tr class="数据行">
+                        <td class="列表单元格">🖼 时光烘焙坊<br><span style="font-size:11px;color:#94a3b8;">2026-03-20 14:30 生成</span></td>
+                        <td class="列表单元格"><span class="行内代码">wx789ghi</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">接入已有小程序</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">备案失败</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">认证失败</span></td>
+                        <td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({小程序:'时光烘焙坊 2026-03-20',APPID:'wx789ghi',来源:'接入已有小程序',备案状态:'备案失败',认证状态:'认证失败',_壳节编号:'5.1'}, '正常小程序详情')">详情</button><button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td>
+                      </tr>
+                      <tr class="数据行">
+                        <td class="列表单元格">🖼 鲜果乐园<br><span style="font-size:11px;color:#94a3b8;">2026-06-20 09:00 生成</span></td>
+                        <td class="列表单元格"><span class="行内代码">wxjkl012</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">试用转正</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">未备案</span></td>
+                        <td class="列表单元格"><span class="类型标签 enum">未认证</span></td>
+                        <td class="列表单元格 操作列"><button class="详情按钮" onclick="打开抽屉({小程序:'鲜果乐园 2026-06-20',APPID:'wxjkl012',来源:'试用转正',备案状态:'未备案',认证状态:'未认证',_壳节编号:'5.1'}, '正常小程序详情')">详情</button><button class="详情按钮" style="border-color:#94a3b8;color:#64748b;" onclick="显示提示('请查看右侧栏「列表交互」卡片', '信息')">其他交互</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="列表脚注">共 4 条记录 · 支持详情、预览、备案、认证、同步名称、同步头像、更新版本代码、删除操作</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ 阶段6：关键业务规则 ═══ -->
+      <section class="标签面板" data-stage="6">
+        <div class="面板布局">
+          <div id="节6正文" class="文档正文">
+
+            <blockquote><p>本章只汇总跨页面、跨阶段或特别容易误解的已确认规则。已在单一页面小节"业务逻辑"中讲清且不会产生歧义的内容，不在此重复。</p></blockquote>
+
+            <h3 id="6.1">6.1 状态流转规则</h3>
+            <p>试用状态、转正状态、备案状态和认证状态分别属于不同业务维度，不得合并成一个宽泛状态。</p>
+            <div class="代码块">
+              <pre><code>试用小程序
+        ↓ 14 天后到期
+试用状态显示"已过期"
+        ↓ 调用转正流程
+正常小程序
+        ↓ 备案 + 认证
+获得版本代码更新资格</code></pre>
+            </div>
+
+            <h3 id="6.2">6.2 通用操作规则</h3>
+            <p>详情、预览、同步名称、同步头像和删除适用于试用小程序和正常小程序。删除统一为系统软删除；同步操作只同步外部小程序平台已经存在的名称或头像。</p>
+
+            <h3 id="6.3">6.3 名称和头像修改边界</h3>
+            <p>小程序名称和头像修改需要审核。为了避免本期功能复杂化，本功能不提供名称和头像的手动修改，只提供同步能力。同步操作只更新客户端后台展示的名称和头像，不代表客户端后台发起名称或头像修改审核。</p>
+
+          </div>
+          <nav id="节6目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#6.1">6.1 状态流转规则</a></li>
+              <li class="目录项 目录层级3"><a href="#6.2">6.2 通用操作规则</a></li>
+              <li class="目录项 目录层级3"><a href="#6.3">6.3 名称和头像修改边界</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+      <!-- ═══ 阶段7：权限说明 ═══ -->
+      <section class="标签面板" data-stage="7">
+        <div class="面板布局">
+          <div id="节7正文" class="文档正文">
+
+            <blockquote><p>以下权限基于当前已确认的角色分工。未确认的角色拆分、数据权限和审批权限不在此展开。</p></blockquote>
+
+            <div class="表格容器">
+              <table class="阅读表格">
+                <thead>
+                  <tr>
+                    <th>功能或操作</th>
+                    <th>外部小程序平台</th>
+                    <th>SaaS 总后台</th>
+                    <th>客户端后台（商户运营人员）</th>
+                    <th>C 端用户</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>查看小程序管理页</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                  <tr><td>查看试用小程序列表与详情</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                  <tr><td>查看正常小程序列表与详情</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                  <tr><td>扫码生成试用小程序</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                  <tr><td>发起转正</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                  <tr><td>发起备案</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                  <tr><td>发起认证</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                  <tr><td>更新版本代码</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                  <tr><td>同步名称 / 同步头像</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                  <tr><td>删除小程序（软删除）</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                  <tr><td>预览小程序</td><td>—</td><td>—</td><td>是</td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+          <nav id="节7目录" class="节目录">
+            <ul class="节目录列表">
+              <li class="目录项 目录层级3"><a href="#7">权限说明</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 右侧栏 -->
+    <aside class="右侧栏" id="右侧栏" style="display:none;">
+
+      <!-- 阶段3右侧栏 -->
+      <div id="阶段03右侧栏" class="阶段右侧栏组" style="display:none;">
+        <div class="注释卡片组" data-page="3.1">
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">📋</span><span class="注释标题">业务背景</span></div>
+            <div class="注释卡片正文">
+              <p>小程序管理页用于在客户端后台集中查看和维护当前商户的小程序记录。页面顶部提供"试用"和"正常"两个 tab，默认进入"试用"。</p>
+              <p><strong>页面路径：</strong>客户端后台 / 小程序管理</p>
+            </div>
+          </div>
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">🖱</span><span class="注释标题">列表交互</span></div>
+            <div class="注释卡片正文">
+              <p><strong>切换到试用 tab：</strong>查看通过扫码生成的试用小程序，重点处理试用期、到期和转正。</p>
+              <p><strong>切换到正常 tab：</strong>查看正常小程序，重点处理备案和认证。</p>
+            </div>
+          </div>
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">⚙</span><span class="注释标题">业务逻辑</span></div>
+            <div class="注释卡片正文">
+              <p><strong>默认 tab 规则：</strong>进入小程序管理页时默认展示"试用"tab。</p>
+              <p><strong>两类数据隔离规则：</strong>试用小程序和正常小程序分别展示在不同 tab 中。试用小程序转正成功后进入正常小程序管理范围。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 阶段4右侧栏 -->
+      <div id="阶段04右侧栏" class="阶段右侧栏组" style="display:none;">
+        <div class="注释卡片组" data-page="4.1">
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">📋</span><span class="注释标题">业务背景</span></div>
+            <div class="注释卡片正文">
+              <p>试用小程序由扫码生成，客户端后台不提供手动新增表单。</p>
+              <p><strong>当前环节：</strong>③ 生成试用小程序信息、④ 扫码生成试用小程序、⑤ 维护试用期和到期状态、⑥ 转正为正常小程序、⑦ 发起转正</p>
+              <p><strong>页面路径：</strong>客户端后台 / 小程序管理 / 试用</p>
+            </div>
+          </div>
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">🖱</span><span class="注释标题">列表交互</span></div>
+            <div class="注释卡片正文">
+              <ul>
+                <li><strong>详情：</strong>打开当前试用小程序的详情页</li>
+                <li><strong>预览：</strong>打开小程序二维码扫码预览</li>
+                <li><strong>同步名称：</strong>从外部平台同步小程序名称</li>
+                <li><strong>同步头像：</strong>从外部平台同步小程序头像</li>
+                <li><strong>转正：</strong>调用转正逻辑，进入转正流程</li>
+                <li><strong>删除：</strong>系统软删除，不物理删除历史记录</li>
+              </ul>
+            </div>
+          </div>
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">⚙</span><span class="注释标题">业务逻辑</span></div>
+            <div class="注释卡片正文">
+              <p><strong>试用有效期规则：</strong>扫码生成后有效期 14 天，系统根据生成时间计算到期时间。</p>
+              <p><strong>试用状态优先级规则：</strong>"已转正"优先级最高，一旦转正覆盖显示"试用中"或"已过期"。</p>
+              <p><strong>转正流程规则：</strong>点击"转正"后状态变为"转正中"；成功后变为"已转正"并进入正常 tab。</p>
+              <p><strong>名称和头像同步规则：</strong>本功能暂不提供本地修改入口，只能通过同步矫正展示信息。</p>
+              <p><strong>删除规则：</strong>删除为系统软删除，保留历史记录。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 阶段5右侧栏 -->
+      <div id="阶段05右侧栏" class="阶段右侧栏组" style="display:none;">
+        <div class="注释卡片组" data-page="5.1">
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">📋</span><span class="注释标题">业务背景</span></div>
+            <div class="注释卡片正文">
+              <p>正常小程序可以直接接入，也可以由试用小程序转正而来。正常小程序需要完成备案和认证。</p>
+              <p><strong>当前环节：</strong>⑧ 展示正常小程序 tab、⑨ 返回备案、认证结果、⑩ 发起备案和认证、⑪ 处理备案和认证、⑫ 更新版本代码</p>
+              <p><strong>页面路径：</strong>客户端后台 / 小程序管理 / 正常</p>
+            </div>
+          </div>
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">🖱</span><span class="注释标题">列表交互</span></div>
+            <div class="注释卡片正文">
+              <ul>
+                <li><strong>详情：</strong>打开当前正常小程序的详情页</li>
+                <li><strong>预览：</strong>打开小程序二维码扫码预览</li>
+                <li><strong>备案：</strong>对未备案或备案失败的小程序发起备案</li>
+                <li><strong>认证：</strong>对未认证或认证失败的小程序发起认证</li>
+                <li><strong>同步名称 / 同步头像：</strong>从外部平台同步</li>
+                <li><strong>更新版本代码：</strong>备案通过且认证通过时允许更新</li>
+                <li><strong>删除：</strong>系统软删除，保留历史记录</li>
+              </ul>
+            </div>
+          </div>
+          <div class="注释卡片">
+            <div class="注释卡片头"><span class="注释图标">⚙</span><span class="注释标题">业务逻辑</span></div>
+            <div class="注释卡片正文">
+              <p><strong>来源统一规则：</strong>三类来源进入正常 tab 后使用同一套备案和认证规则。</p>
+              <p><strong>备案与认证独立规则：</strong>备案状态和认证状态分别维护，不能用其中一个替代另一个。</p>
+              <p><strong>版本代码更新准入规则：</strong>只有当备案通过且认证通过时，才允许执行版本代码更新。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- 浮层 -->
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭抽屉()"></div>
+<aside id="detailDrawer" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="detailDrawerTitle">详情</div>
+    <button class="btn-close" onclick="关闭抽屉()">×</button>
+  </div>
+  <div id="detailBody" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭抽屉()">关闭</button>
+  </div>
+</aside>
+
+<!-- JS -->
+<script id="js-标签切换">
+function 切换标签(n) {
+  document.querySelectorAll('.标签按钮').forEach(function(b) { b.classList.remove('激活'); });
+  var btn = document.querySelector('.标签按钮[data-stage="' + n + '"]'); if (btn) btn.classList.add('激活');
+  document.querySelectorAll('.标签面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.querySelector('.标签面板[data-stage="' + n + '"]'); if (panel) panel.classList.add('激活');
+  var 所有导航 = document.querySelectorAll('.阶段页面导航');
+  for (var i = 0; i < 所有导航.length; i++) { 所有导航[i].style.display = 'none'; }
+  if (n >= 3) {
+    var N = n.toString().padStart(2, '0');
+    var 当前导航 = document.getElementById('阶段' + N + '导航');
+    if (当前导航) { 当前导航.style.display = ''; var 首个 = 当前导航.querySelector('.阶段链接'); if (首个) { var 页码 = 首个.getAttribute('data-page'); var 类型 = 首个.getAttribute('data-page-type'); if (页码) 切换页面(页码, 类型); } }
+  }
+  var 右侧栏 = document.getElementById('右侧栏');
+  var 所有右侧栏组 = document.querySelectorAll('.阶段右侧栏组');
+  for (var i = 0; i < 所有右侧栏组.length; i++) { 所有右侧栏组[i].style.display = 'none'; }
+  if (n >= 3) {
+    if (右侧栏) 右侧栏.style.display = '';
+    var N = n.toString().padStart(2, '0');
+    var 当前右侧栏 = document.getElementById('阶段' + N + '右侧栏');
+    if (当前右侧栏) { 当前右侧栏.style.display = ''; var 首个卡片 = 当前右侧栏.querySelector('.注释卡片组'); if (首个卡片) 首个卡片.style.display = ''; }
+  } else { if (右侧栏) 右侧栏.style.display = 'none'; }
+}
+(function() { var 右侧栏 = document.getElementById('右侧栏'); if (右侧栏) 右侧栏.style.display = 'none'; })();
+</script>
+
+<script id="js-阶段切换">
+function 切换页面(页码, 页面类型) {
+  var N = 页码.toString().split('.')[0]; var N填充 = N.padStart(2, '0');
+  document.querySelectorAll('.阶段链接').forEach(function(l) { l.classList.remove('激活'); });
+  var link = document.querySelector('.阶段链接[data-page="' + 页码 + '"]'); if (link) link.classList.add('激活');
+  var 编辑区 = document.getElementById('阶段' + N填充 + '编辑区');
+  var 列表区 = document.getElementById('阶段' + N填充 + '列表区');
+  if (页面类型 === '列表页') { if (列表区) 列表区.style.display = ''; if (编辑区) 编辑区.style.display = 'none'; [列表区].forEach(function(c) { if (!c) return; var ss = c.querySelectorAll('.演示壳'); for (var i = 0; i < ss.length; i++) { ss[i].style.display = (ss[i].getAttribute('data-page') === 页码) ? '' : 'none'; } }); }
+  else { if (编辑区) 编辑区.style.display = ''; if (列表区) 列表区.style.display = 'none'; if (编辑区) { var ss = 编辑区.querySelectorAll('.演示壳'); for (var i = 0; i < ss.length; i++) { ss[i].style.display = (ss[i].getAttribute('data-page') === 页码) ? '' : 'none'; } } }
+  var 右侧栏容器 = document.getElementById('阶段' + N填充 + '右侧栏');
+  if (右侧栏容器) { var 所有卡片组 = 右侧栏容器.querySelectorAll('.注释卡片组'); for (var i = 0; i < 所有卡片组.length; i++) { 所有卡片组[i].style.display = 'none'; } var 目标 = 右侧栏容器.querySelector('.注释卡片组[data-page="' + 页码 + '"]'); if (目标) 目标.style.display = ''; }
+}
+</script>
+
+<script id="js-字段联动">
+function 应用字段状态() {}
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); if (按钮) 按钮.classList.toggle('is-open'); }
+}
+</script>
+
+<script id="js-抽屉">
+window._详情字段按节 = window._详情字段按节 || {};
+function 打开抽屉(行数据, 标题) {
+  var drawer = document.getElementById('detailDrawer'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('detailBody'); var titleEl = document.getElementById('detailDrawerTitle');
+  if (!drawer || !body) return; titleEl.textContent = 标题 || '详情';
+  var 当前节 = (行数据 && 行数据._壳节编号) || '';
+  var 详情字段 = (当前节 && window._详情字段按节[当前节]) ? window._详情字段按节[当前节] : [];
+  if (详情字段.length === 0) { var 已见 = {}; var keys = Object.keys(window._详情字段按节); for (var k = 0; k < keys.length; k++) { var fl = window._详情字段按节[keys[k]]; for (var i = 0; i < fl.length; i++) { if (!已见[fl[i].名称]) { 已见[fl[i].名称] = true; 详情字段.push(fl[i]); } } } }
+  var html = '<div class="编辑卡片区">';
+  function 渲染详情字段行(f, 值) {
+    var row = '';
+    row += '<div class="field-row">';
+    row += '<span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">';
+    row += '<span class="field-display">' + 值 + '</span>';
+    row += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button>';
+    row += '</span></div>';
+    return row;
+  }
+  var 分组配置 = (当前节 && window._详情字段分组 && window._详情字段分组[当前节]) ? window._详情字段分组[当前节]
+              : (当前节 && window._新增字段分组 && window._新增字段分组[当前节]) ? window._新增字段分组[当前节]
+              : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 详情字段.length; k++) {
+          if (详情字段[k].名称 === 组.字段[j]) {
+            var val = (行数据 && 行数据[组.字段[j]] !== undefined) ? String(行数据[组.字段[j]]) : '—';
+            html += 渲染详情字段行(详情字段[k], val);
+            break;
+          }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="detail-grid">';
+    if (详情字段.length > 0) { for (var i = 0; i < 详情字段.length; i++) { var f = 详情字段[i]; var val = (行数据 && 行数据[f.名称] !== undefined) ? String(行数据[f.名称]) : '—'; html += '<div class="detail-item"><div class="detail-label">' + f.名称 + '<button class="信息按钮" onclick="显示字段弹窗(\'' + f.名称 + '\', event)" title="字段详情" style="margin-left:4px;">ⓘ</button><span class="type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span></div><div class="detail-value">' + val + '</div></div>'; } }
+    else if (行数据) { var ks = Object.keys(行数据).filter(function(k) { return k.indexOf('_') !== 0; }); for (var i = 0; i < ks.length; i++) { html += '<div class="detail-item"><div class="detail-label">' + ks[i] + '</div><div class="detail-value">' + String(行数据[ks[i]] || '—') + '</div></div>'; } }
+    else { html += '<div class="detail-item"><div class="detail-value">暂无数据</div></div>'; }
+    html += '</div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭抽屉() { var d = document.getElementById('detailDrawer'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+</script>
+
+<!-- ═══ 数据注册：字段总库 ═══ -->
+<script id="js-注册字段库">
+window._字段总库 = window._字段总库 || [];
+window._字段总库.push(
+  // ═══ 4.1 试用小程序字段 ═══
+  {名称:'小程序',类型原文:'组合字段',基础类型:'组合字段',枚举值:'',数据来源:'名称和头像由外部小程序平台返回，生成时间由系统在扫码生成成功时记录。',逻辑:'组合展示"小程序名称 + 头像 + 生成时间"；客户端后台只展示和同步，不提供手动修改入口。',用途:'帮助商户运营人员快速识别当前试用小程序。',节编号:'4.1'},
+  {名称:'APPID',类型原文:'string',基础类型:'string',枚举值:'',数据来源:'系统返回。',逻辑:'作为试用小程序唯一标识。',用途:'用于识别、预览、转正和后续正常小程序管理。',节编号:'4.1'},
+  {名称:'试用到期时间',类型原文:'datetime',基础类型:'date',枚举值:'',数据来源:'系统根据生成时间计算。',逻辑:'生成时间 + 14 天。',用途:'判断试用小程序是否仍在试用期内。',节编号:'4.1'},
+  {名称:'剩余天数',类型原文:'number',基础类型:'number',枚举值:'',数据来源:'系统根据试用到期时间和当前时间计算。',逻辑:'试用到期时间 − 当前时间；小于 0 时显示"已过期"。',用途:'帮助商户运营人员快速识别即将到期或已到期的试用小程序。',节编号:'4.1'},
+  {名称:'试用状态',类型原文:'enum（试用中、已过期、已转正）',基础类型:'enum',枚举值:'试用中,已过期,已转正',数据来源:'系统根据剩余天数和转正结果判断。',逻辑:'"已转正"优先级最高，一旦转正则覆盖显示，不再展示"试用中"或"已过期"。',用途:'表示试用小程序当前所处阶段。',节编号:'4.1'},
+  {名称:'转正状态',类型原文:'enum（未转正、转正中、已转正）',基础类型:'enum',枚举值:'未转正,转正中,已转正',数据来源:'系统返回。',逻辑:'点击"转正"后进入"转正中"，转正成功后更新为"已转正"。',用途:'判断当前转正流程所处阶段。',节编号:'4.1'},
+  // ═══ 5.1 正常小程序字段 ═══
+  {名称:'来源',类型原文:'enum（试用转正、快速注册、接入已有小程序）',基础类型:'enum',枚举值:'试用转正,快速注册,接入已有小程序',数据来源:'系统根据记录形成路径判断。',逻辑:'区分正常小程序的来源渠道。',用途:'帮助商户运营人员了解当前正常小程序的来源。',节编号:'5.1'},
+  {名称:'备案状态',类型原文:'enum（备案通过、备案中、未备案、备案失败）',基础类型:'enum',枚举值:'备案通过,备案中,未备案,备案失败',数据来源:'外部小程序平台或备案流程结果。',逻辑:'与认证状态独立维护，不能用其中一个状态代替另一个状态。',用途:'判断是否需要发起备案以及当前备案进展。',节编号:'5.1'},
+  {名称:'认证状态',类型原文:'enum（认证中、未认证、认证通过、认证失败）',基础类型:'enum',枚举值:'认证中,未认证,认证通过,认证失败',数据来源:'外部小程序平台或认证流程结果。',逻辑:'与备案状态独立维护。',用途:'判断是否需要发起认证以及当前认证进展。',节编号:'5.1'}
+);
+</script>
+
+<!-- ═══ 数据注册：抽屉字段 ═══ -->
+<script id="js-注册抽屉字段">
+window._详情字段按节 = window._详情字段按节 || {};
+// 4.1 试用小程序详情字段
+window._详情字段按节['4.1'] = [
+  {名称:'小程序',类型原文:'组合字段',基础类型:'组合字段',在详情:true},
+  {名称:'APPID',类型原文:'string',基础类型:'string',在详情:true},
+  {名称:'试用到期时间',类型原文:'datetime',基础类型:'date',在详情:true},
+  {名称:'剩余天数',类型原文:'number',基础类型:'number',在详情:true},
+  {名称:'试用状态',类型原文:'enum（试用中、已过期、已转正）',基础类型:'enum',在详情:true},
+  {名称:'转正状态',类型原文:'enum（未转正、转正中、已转正）',基础类型:'enum',在详情:true}
+];
+// 5.1 正常小程序详情字段
+window._详情字段按节['5.1'] = [
+  {名称:'小程序',类型原文:'组合字段',基础类型:'组合字段',在详情:true},
+  {名称:'APPID',类型原文:'string',基础类型:'string',在详情:true},
+  {名称:'来源',类型原文:'enum（试用转正、快速注册、接入已有小程序）',基础类型:'enum',在详情:true},
+  {名称:'备案状态',类型原文:'enum（备案通过、备案中、未备案、备案失败）',基础类型:'enum',在详情:true},
+  {名称:'认证状态',类型原文:'enum（认证中、未认证、认证通过、认证失败）',基础类型:'enum',在详情:true},
+];
+</script>
+
+<script id="reg-详情字段分组">
+// 详情抽屉中的字段分组（按组名+字段名列表顺序渲染）
+window._详情字段分组 = window._详情字段分组 || {};
+window._详情字段分组['4.1'] = [
+  {组名:'基本信息', 字段:['小程序', 'APPID']},
+  {组名:'试用信息', 字段:['试用到期时间', '剩余天数', '试用状态', '转正状态']}
+];
+window._详情字段分组['5.1'] = [
+  {组名:'基本信息', 字段:['小程序', 'APPID', '来源']},
+  {组名:'认证信息', 字段:['备案状态', '认证状态']}
+];
+</script>
+
+</body>
+</html>
+
+

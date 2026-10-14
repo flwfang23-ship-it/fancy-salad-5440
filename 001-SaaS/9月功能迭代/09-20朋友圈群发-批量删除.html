@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>朋友圈群发 · 批量删除交互原型</title>
+<style>
+:root{
+  --brand:#1aad19;
+  --brand-dark:#128c12;
+  --red:#e54545;
+  --red-hover:#d63434;
+  --text:#191919;
+  --text-2:#616161;
+  --text-3:#9a9a9a;
+  --line:#e5e5e5;
+  --bg:#f5f5f5;
+  --blue:#2f80ed;
+  --blue-bg:#eaf3ff;
+  --orange:#e8833a;
+  --orange-bg:#fff4e8;
+  --grey-bg:#f2f2f2;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","WenQuanYi Micro Hei",sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;
+  padding:32px 16px 80px;
+}
+.wrap{max-width:1120px;margin:0 auto}
+
+/* ============ 顶部说明 ============ */
+.notice{
+  background:#fff;border:1px solid var(--line);border-left:4px solid var(--brand);
+  border-radius:6px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:var(--text-2)
+}
+.notice b{color:var(--text)}
+.notice ul{margin:8px 0 0 18px}
+.notice li{margin-bottom:4px}
+.kbd{display:inline-block;padding:0 6px;border:1px solid #d8d8d8;border-bottom-width:2px;border-radius:4px;
+  background:#fafafa;font-size:12px;color:var(--text-2);margin:0 2px}
+
+/* ============ 页面容器 ============ */
+.page{
+  background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,.04)
+}
+.crumb{padding:14px 20px;color:var(--text-3);font-size:13px;border-bottom:1px solid var(--line)}
+.crumb b{color:var(--text);font-weight:600}
+
+/* ============ Tab ============ */
+.tabs{display:flex;padding:0 20px;border-bottom:1px solid var(--line);background:#fafafa}
+.tab{padding:12px 16px;color:var(--text-2);cursor:pointer;position:relative;font-size:14px;user-select:none}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--brand);font-weight:600}
+.tab.on::after{content:"";position:absolute;left:16px;right:16px;bottom:-1px;height:2px;background:var(--brand)}
+
+/* ============ 筛选区 ============ */
+.filter{padding:16px 20px 0}
+.frow{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end}
+.fitem{display:flex;flex-direction:column;gap:6px}
+.fitem label{font-size:12px;color:var(--text-3)}
+select,.search{f-height:34px;height:34px;padding:0 10px;border:1px solid #dcdfe6;border-radius:6px;
+  font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit}
+select:focus,.search:focus{border-color:var(--brand)}
+.search{width:200px}
+.fbtn{height:34px;padding:0 16px;border:1px solid #dcdfe6;background:#fff;border-radius:6px;cursor:pointer;
+  font-size:13px;color:var(--text-2);font-family:inherit}
+.fbtn:hover{color:var(--text);border-color:#c0c4cc}
+.fbtn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.fbtn.primary:hover{background:var(--brand-dark);border-color:var(--brand-dark)}
+
+/* ============ 操作栏 ============ */
+.toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 20px;border-bottom:1px solid var(--line);min-height:58px
+}
+.left-btns{display:flex;gap:12px;align-items:center}
+.tip{font-size:13px;color:var(--text-2)}
+.tip b{color:var(--text);font-weight:600}
+.badge-unsent{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+  padding:0 5px;margin-left:4px;border-radius:9px;background:var(--orange);color:#fff;font-size:11px;font-weight:600}
+
+/* ============ 按钮 ============ */
+.btn{height:34px;padding:0 16px;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;justify-content:center;transition:.15s;white-space:nowrap}
+.btn-default{border:1px solid #dcdfe6;background:#fff;color:var(--text-2)}
+.btn-default:hover{border-color:var(--brand);color:var(--brand)}
+.btn-brand{background:var(--brand);border:1px solid var(--brand);color:#fff}
+.btn-brand:hover{background:var(--brand-dark);border-color:var(--brand-dark)}
+.btn-red{background:#fff;border:1px solid var(--red);color:var(--red)}
+.btn-red:hover{background:var(--red);color:#fff}
+.btn-ghost-red{background:transparent;border:1px solid transparent;color:var(--red)}
+.btn-ghost-red:hover{background:#fef0f0}
+.btn[disabled]{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+/* ============ 批量操作条 ============ */
+.batchbar{
+  display:none;align-items:center;gap:14px;padding:10px 20px;background:var(--blue-bg);
+  border-bottom:1px solid #d6e6fd;font-size:13px;color:#1b4f9c
+}
+.batchbar.show{display:flex}
+.batchbar .chk{width:16px;height:16px;cursor:pointer;accent-color:var(--brand)}
+.batchbar .acts{display:flex;gap:8px;margin-left:auto}
+
+/* ============ 表格 ============ */
+.tablebox{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}
+thead th{
+  background:#fafafa;text-align:left;padding:11px 12px;font-weight:600;color:var(--text-2);
+  border-bottom:1px solid var(--line);white-space:nowrap;font-size:13px
+}
+thead th.c{text-align:center}
+tbody td{padding:12px;border-bottom:1px solid #f2f2f2;color:var(--text-2)}
+tbody tr:hover{background:#fafdf8}
+tbody tr.selected{background:#f0f9f0}
+td.c{text-align:center}
+.rowchk{width:16px;height:16px;cursor:pointer;accent-color:var(--brand)}
+.name{color:var(--text);font-weight:500}
+.name .sub{display:block;color:var(--text-3);font-weight:400;font-size:12px;margin-top:2px}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:1px}
+
+/* 状态标签 */
+.tag{display:inline-flex;align-items:center;padding:1px 8px;border-radius:10px;font-size:12px;line-height:18px}
+.tag-blue{background:var(--blue-bg);color:var(--blue)}
+.tag-orange{background:var(--orange-bg);color:var(--orange)}
+.tag-grey{background:var(--grey-bg);color:#8a8a8a}
+.tag-green{background:#e8f7e8;color:var(--brand-dark)}
+
+.ops{display:flex;gap:10px;flex-wrap:wrap}
+.op{color:var(--blue);cursor:pointer;font-size:13px;user-select:none}
+.op:hover{color:#1a6fd4}
+.op.del{color:var(--red)}
+.op.del:hover{color:var(--red-hover)}
+.op.off{color:var(--text-3);cursor:not-allowed}
+.empty{padding:48px;text-align:center;color:var(--text-3);font-size:13px}
+
+/* ============ 弹窗 ============ */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100}
+.mask.show{display:flex}
+.dlg{background:#fff;border-radius:10px;width:520px;max-width:calc(100% - 40px);max-height:calc(100% - 60px);
+  display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.18);overflow:hidden}
+.dlg-head{padding:18px 20px 0;font-size:16px;font-weight:600;color:var(--text)}
+.dlg-sub{padding:6px 20px 0;font-size:12px;color:var(--text-3)}
+.dlg-body{padding:16px 20px;overflow-y:auto}
+.dlg-foot{padding:12px 20px 16px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #f2f2f2}
+
+/* 清单弹窗 */
+.list-tools{display:flex;align-items:center;gap:10px;padding-bottom:10px;margin-bottom:6px;
+  border-bottom:1px solid var(--line);font-size:12px;color:var(--text-2)}
+.list-tools .count b{color:var(--text)}
+.list-tools .switches{display:flex;gap:6px;margin-left:auto}
+.mini{height:26px;padding:0 10px;border:1px solid #dcdfe6;background:#fff;border-radius:5px;font-size:12px;
+  color:var(--text-2);cursor:pointer;font-family:inherit}
+.mini:hover{border-color:var(--brand);color:var(--brand)}
+.mini.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.list-scroll{max-height:300px;overflow-y:auto;border:1px solid var(--line);border-top:none;border-radius:0 0 6px 6px}
+.list-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-bottom:1px solid #f2f2f2;cursor:pointer}
+.list-item:last-child{border-bottom:none}
+.list-item:hover{background:#fafdf8}
+.list-item input{margin-top:4px;width:15px;height:15px;cursor:pointer;accent-color:var(--brand);flex-shrink:0}
+.li-main{flex:1;min-width:0}
+.li-title{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-meta{font-size:12px;color:var(--text-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-tag{margin-left:8px;flex-shrink:0}
+.list-head{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--grey-bg);
+  border:1px solid var(--line);border-bottom:none;border-radius:6px 6px 0 0;font-size:12px;color:var(--text-2)}
+.list-head .lh{flex:1;min-width:0}
+.list-head .lh:last-child{flex:0 0 auto;width:66px}
+.list-legend{display:flex;align-items:center;gap:10px;padding:9px 12px 0;font-size:12px;color:var(--text-3)}
+.list-legend .ll{flex:1;min-width:0}
+.list-legend .ll:last-child{flex:0 0 auto;width:66px;text-align:right}
+.list-item.selected{background:#f0f9f0}
+
+/* 二次确认 */
+.warn{font-size:14px;color:var(--text);margin-bottom:10px}
+.warn-sub{font-size:13px;color:var(--text-2);line-height:1.7}
+.warn-extra{margin-top:12px;padding:10px 12px;background:#fef0f0;border-radius:6px;color:var(--red);font-size:12.5px;line-height:1.7}
+.warn-extra b{font-weight:600}
+
+/* Toast */
+.toast{position:fixed;left:50%;top:32px;transform:translateX(-50%) translateY(-20px);
+  background:rgba(25,25,25,.92);color:#fff;padding:10px 20px;border-radius:6px;font-size:13px;
+  opacity:0;pointer-events:none;transition:.25s;z-index:200;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 标注 */
+.annot{position:relative}
+
+/* ============ 右侧吸顶：本次更新范围提示 ============ */
+.scope-tip{
+  position:fixed; right:16px; top:16px; z-index:50;
+  width:248px; max-width:calc(100vw - 32px);
+  background:#fff4e8; border:1px solid #ffd9a8; border-left:4px solid var(--orange);
+  border-radius:8px; padding:12px 14px; font-size:12.5px; line-height:1.7; color:#8a4a1a;
+  box-shadow:0 2px 10px rgba(232,131,58,.18);
+}
+.scope-tip .st-hd{display:flex;align-items:center;gap:4px;font-weight:700;color:#7a3a12;margin-bottom:4px}
+.scope-tip .st-bd b{color:#7a3a12}
+.scope-tip .st-bd .kw{color:var(--orange);font-weight:600}
+@media(max-width:1200px){
+  .scope-tip{width:220px;font-size:12px}
+}
+@media(max-width:768px){
+  .scope-tip{position:static;width:auto;max-width:none;margin:0 auto 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- 右侧吸顶：本次更新范围 -->
+<aside class="scope-tip">
+  <div class="st-hd">📌 本次更新范围</div>
+  <div class="st-bd">仅含 <span class="kw">「批量删除」</span>与<span class="kw">「删除待发送」</span>两项功能，<b>具体交互详见本文档</b>。</div>
+</aside>
+
+<div class="wrap">
+
+  <div class="page">
+    <div class="crumb">群发管理 / <b>朋友圈群发</b></div>
+
+    <div class="tabs">
+      <div class="tab on">全部</div>
+      <div class="tab">每周群发</div>
+      <div class="tab">其它</div>
+      <div class="tab">推送模板</div>
+    </div>
+
+    <div class="filter">
+      <div class="frow">
+        <div class="fitem"><label>企微主体</label>
+          <select><option>全部主体</option><option>广州分公司</option><option>深圳分公司</option></select></div>
+        <div class="fitem"><label>任务状态</label>
+          <select id="fStatus"><option value="all">全部</option><option value="unsent">待发送</option><option value="sent">已发送</option><option value="sending">发送中</option><option value="fail">发送失败</option></select></div>
+        <div class="fitem"><label>启用状态</label>
+          <select><option>全部</option><option>启用</option><option>停用</option></select></div>
+        <div class="fitem"><label>推送模板</label>
+          <select><option>全部模板</option><option>新品推荐</option><option>活动促销</option></select></div>
+        <div class="fitem"><label>关键词</label>
+          <input class="search" type="text" placeholder="搜索任务名称"></div>
+        <button class="fbtn">查询</button>
+        <button class="fbtn">重置</button>
+      </div>
+      <div class="frow" style="padding:14px 0 16px">
+        <button class="fbtn primary">+ 新建朋友圈</button>
+        <button class="fbtn">图片组</button>
+        <button class="fbtn">外部链接库</button>
+      </div>
+    </div>
+
+    <!-- 新增操作栏 -->
+    <div class="toolbar">
+      <div class="left-btns">
+        <button class="btn btn-red" id="btnUnsent">删除待发送<span class="badge-unsent" id="unsentCount">0</span></button>
+        <button class="btn btn-red" id="btnDelete" disabled>删除</button>
+      </div>
+      <div class="tip" id="toolbarTip">当天发送任务数：<b id="tSent">0</b>　失败任务数：<b id="tFail">0</b></div>
+    </div>
+
+    <!-- 手动勾选出现的批量条 -->
+    <div class="batchbar" id="batchbar">
+      <input type="checkbox" class="chk" id="barCheckAll">
+      <span id="barText">已选 0 条</span>
+      <div class="acts">
+        <button class="mini" id="barUnsentOnly">仅看待发送</button>
+        <button class="mini" id="barReset">清空勾选</button>
+      </div>
+    </div>
+
+    <div class="tablebox">
+      <table>
+        <thead>
+          <tr>
+            <th class="c" style="width:44px"><input type="checkbox" class="rowchk" id="checkAll"></th>
+            <th style="width:60px" class="c">序号</th>
+            <th style="width:280px">任务名称</th>
+            <th>企微主体</th>
+            <th style="width:120px">任务状态</th>
+            <th style="width:100px">启用状态</th>
+            <th style="width:150px">计划发送时间</th>
+            <th style="width:170px">操作</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 弹窗一：待发送清单 ===== -->
+<div class="mask" id="maskList">
+  <div class="dlg" style="width:560px">
+    <div class="dlg-head">删除待发送（<span id="dlgListCount">0</span>）</div>
+    <div class="dlg-sub">以下为当前筛选条件下待发送的任务，可取消勾选保留不想删除的任务。</div>
+    <div class="dlg-body">
+      <div class="list-tools">
+        <span class="count">已选 <b id="listChecked">0</b> / 共 <b id="listTotal">0</b> 条</span>
+        <div class="switches">
+          <button class="mini" id="listAll">全选</button>
+          <button class="mini" id="listReverse">反选</button>
+          <button class="mini" id="listReset">重置为待发送</button>
+        </div>
+      </div>
+      <div class="list-head">
+        <span class="lh" style="width:16px"></span>
+        <span class="lh">任务名称</span>
+        <span class="lh">计划时间</span>
+        <span class="lh" style="text-align:right">状态</span>
+      </div>
+      <div class="list-scroll" id="listScroll"></div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn btn-default" id="listCancel">取消</button>
+      <button class="btn btn-red" id="listDelete" disabled>删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 弹窗二：二次确认 ===== -->
+<div class="mask" id="maskConfirm">
+  <div class="dlg" style="width:440px">
+    <div class="dlg-head" id="cfTitle">删除任务</div>
+    <div class="dlg-body">
+      <div class="warn" id="cfWarn">确定删除选中的任务吗？</div>
+      <div class="warn-sub">删除后将从推送列表中移除，相关的发送记录和统计数据也将一并清除，<b>无法恢复</b>。</div>
+      <div class="warn-extra" id="cfExtra" style="display:none"></div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn btn-default" id="cfCancel">取消</button>
+      <button class="btn btn-red" id="cfConfirm">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= 模拟数据 ================= */
+const STATUS = {
+  unsent:  {t:'待发送',  cls:'tag-orange',dot:'orange'},
+  sending: {t:'发送中',  cls:'tag-blue',  dot:'blue'},
+  sent:    {t:'已发送',  cls:'tag-green', dot:'green'},
+  fail:    {t:'发送失败',cls:'tag-grey',  dot:'grey'}
+};
+const data = [
+  {n:'国庆活动预热-朋友圈第3波', s:'unsent', ent:'广州分公司', t:'2026-10-01 09:00'},
+  {n:'新品上新·秋季限定款介绍', s:'unsent', ent:'广州分公司', t:'2026-10-02 10:00'},
+  {n:'客户案例合集·第12期',     s:'sending',ent:'深圳分公司', t:'2026-09-20 14:00'},
+  {n:'周末福利·限时优惠券发放', s:'sent',   ent:'广州分公司', t:'2026-09-18 20:00'},
+  {n:'企业周年庆邀请函',        s:'sent',   ent:'深圳分公司', t:'2026-09-15 18:00'},
+  {n:'行业白皮书解读（图文）',  s:'sent',   ent:'广州分公司', t:'2026-09-12 09:30'},
+  {n:'中秋返场·尾货清仓',       s:'fail',   ent:'深圳分公司', t:'2026-09-10 12:00'},
+  {n:'双十一预热-种草内容A',    s:'unsent', ent:'广州分公司', t:'2026-10-08 19:00'},
+  {n:'双十一预热-种草内容B',    s:'unsent', ent:'广州分公司', t:'2026-10-08 19:00'},
+  {n:'门店开业探店邀约',        s:'sent',   ent:'深圳分公司', t:'2026-09-08 15:00'},
+  {n:'会员日专属权益推送',      s:'sent',   ent:'广州分公司', t:'2026-09-05 11:00'},
+  {n:'年底冲量-清仓第2轮',      s:'unsent', ent:'深圳分公司', t:'2026-10-12 20:00'}
+];
+
+/* ================= 状态 ================= */
+const state = {
+  rows: [],              // 当前筛选后的行
+  checked: new Set(),    // 手动勾选的 id
+  list: [],              // 清单弹窗内的行快照
+  listChecked: new Set(),// 清单弹窗内的勾选
+  pending: [],           // 待确认的删除清单
+  pendingLabel: ''       // 'unsent' | 'manual'
+};
+
+const $ = id => document.getElementById(id);
+const esc = (s) => s;
+
+function renderTable(){
+  const f = $('fStatus').value;
+  state.rows = data.map((d,i)=>({...d,__key:i})).filter(d => f==='all' || d.s===f);
+  const tb = $('tbody');
+  if(!state.rows.length){
+    tb.innerHTML = `<tr><td colspan="8" class="empty">当前筛选条件下没有数据</td></tr>`;
+  }else{
+    tb.innerHTML = state.rows.map(d => {
+      const c = STATUS[d.s];
+      return `<tr data-id="${d.id}" class="${state.checked.has(d.id)?'selected':''}">
+        <td class="c"><input type="checkbox" class="rowchk trchk" data-k="${d.__key}" ${state.checked.has(d.__key)?'checked':''}></td>
+        <td class="c">${d.id+1}</td>
+        <td><span class="name">${esc(d.n)}<span class="sub">朋友圈图文 · 1 条</span></span></td>
+        <td>${esc(d.ent)}</td>
+        <td><span class="tag ${c.cls}"><i class="dot" style="background:${c.dot}"></i>${c.t}</span></td>
+        <td>${d.s==='sent'||d.s==='sending'?'<span class="tag tag-green">启用</span>':'<span class="tag tag-grey">未启用</span>'}</td>
+        <td>${esc(d.t)}</td>
+        <td><div class="ops"><span class="op">详情</span><span class="op">编辑</span><span class="op">复制</span><span class="op del">删除</span></div></td>
+      </tr>`;
+    }).join('');
+  }
+  bindRowChecks();
+  refreshToolbar();
+}
+
+function bindRowChecks(){
+  document.querySelectorAll('.trchk').forEach(cb => {
+    cb.onclick = e => {
+      const k = +cb.dataset.k;
+      console.log('[rowclick] k=', k, 'checked=', cb.checked);
+      if(cb.checked) state.checked.add(k); else state.checked.delete(k);
+      console.log('[rowclick] size=', state.checked.size);
+      renderTable();
+    };
+  });
+}
+
+/* ================= 顶部信息 ================= */
+function refreshToolbar(){
+  const unsent = data.filter(d=>d.s==='unsent').length;
+  const fail   = data.filter(d=>d.s==='fail').length;
+  $('unsentCount').textContent = unsent;
+  $('tSent').textContent = data.length;
+  $('tFail').textContent = fail;
+  $('btnDelete').disabled = state.checked.size === 0;
+  // 批量条
+  if(state.checked.size > 0){
+    $('batchbar').classList.add('show');
+    $('barText').innerHTML = `已选 <b>${state.checked.size}</b> 条，可自由勾选，不受状态限制`;
+    $('checkAll').checked = state.checked.size === state.rows.length && state.rows.length>0;
+    $('barCheckAll').checked = $('checkAll').checked;
+  }else{
+    $('batchbar').classList.remove('show');
+    $('checkAll').checked = false;
+  }
+}
+
+/* ================= 流程一：删除待发送 ================= */
+$('btnUnsent').onclick = () => {
+  const f = $('fStatus').value;
+  // 按当前筛选条件过滤待发送
+  state.list = data.filter(d => (f==='all'||d.s===f) && d.s==='unsent').map((d,i)=>({...d,id:data.indexOf(d)}));
+  if(!state.list.length){
+    toast('当前筛选条件下没有待发送的任务'); return;
+  }
+  // 默认全选
+  state.listChecked = new Set(state.list.map(d=>d.id));
+  renderList();
+  $('maskList').classList.add('show');
+};
+
+function renderList(){
+  $('dlgListCount').textContent = state.list.length;
+  $('listTotal').textContent = state.list.length;
+  $('listChecked').textContent = state.listChecked.size;
+  $('listScroll').innerHTML = state.list.map(d => {
+    const c = STATUS[d.s];
+    return `<div class="list-item ${state.listChecked.has(d.id)?'selected':''}">
+      <input type="checkbox" data-k="${d.id}" ${state.listChecked.has(d.id)?'checked':''}>
+      <span class="li-main">
+        <span class="li-title">${esc(d.n)}</span>
+        <span class="li-meta">${esc(d.t)}</span>
+      </span>
+      <span class="li-tag tag ${c.cls}">${c.t}</span>
+    </div>`;
+  }).join('');
+  $('listScroll').querySelectorAll('input').forEach(cb => {
+    if(cb.dataset.bound) return;
+    cb.dataset.bound = '1';
+    // 用 change 而非 click，避免 label 默认行为与本处理叠加导致状态翻转两次
+    cb.addEventListener('change', e => {
+      e.stopPropagation();
+      const k = +cb.dataset.k;
+      if(Number.isNaN(k)) return;
+      if(cb.checked) state.listChecked.add(k); else state.listChecked.delete(k);
+      syncListUI();
+    });
+  });
+  $('listScroll').querySelectorAll('.list-item').forEach(el => {
+    el.onclick = e => {
+      if(e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
+      const cb = el.querySelector('input');
+      const k = +cb.dataset.k;
+      if(state.listChecked.has(k)) state.listChecked.delete(k); else state.listChecked.add(k);
+      syncListUI();
+    };
+  });
+  $('listDelete').disabled = state.listChecked.size === 0;
+}
+
+/* 仅同步勾选态与计数，不重建 DOM（避免 checkbox 失焦、label 双击翻转） */
+function syncListUI(){
+  $('listChecked').textContent = state.listChecked.size;
+  $('listScroll').querySelectorAll('.list-item').forEach(el => {
+    const cb = el.querySelector('input');
+    const k = +cb.dataset.k;
+    const on = state.listChecked.has(k);
+    if(cb.checked !== on) cb.checked = on;
+    el.classList.toggle('selected', on);
+  });
+  $('listDelete').disabled = state.listChecked.size === 0;
+}
+
+$('listAll').onclick    = () => { state.listChecked = new Set(state.list.map(d=>d.id)); renderList(); };
+$('listReverse').onclick = () => {
+  const next = new Set();
+  state.list.forEach(d => { if(!state.listChecked.has(d.id)) next.add(d.id); });
+  state.listChecked = next; renderList();
+};
+$('listReset').onclick  = () => { state.listChecked = new Set(state.list.map(d=>d.id)); renderList(); };
+$('listCancel').onclick = () => closeAll();
+
+/* 清单弹窗 → 二次确认 */
+$('listDelete').onclick = () => {
+  state.pending = data.filter(d => state.listChecked.has(d.__key));
+  state.pendingLabel = 'unsent';
+  console.log('[DEBUG] pending=', state.pending.length, 'listChecked=', [...state.listChecked]);
+  buildConfirm();
+  $('maskList').classList.remove('show');
+  $('maskConfirm').classList.add('show');
+};
+
+/* ================= 流程二：手动删除 ================= */
+$('btnDelete').onclick = () => {
+  if(!state.checked.size) return;
+  state.pending = data.filter(d => state.checked.has(d.__key));
+  state.pendingLabel = 'manual';
+  console.log('[DEBUG] pending=', state.pending.length, 'checked=', [...state.checked]);
+  buildConfirm();
+  $('maskConfirm').classList.add('show');
+};
+
+function buildConfirm(){
+  const n = state.pending.length;
+  const sent = state.pending.filter(d=>d.s==='sent').length;
+  $('cfTitle').textContent = `删除 ${n} 条任务`;
+  $('cfWarn').innerHTML = `确定删除选中的 <b>${n}</b> 条${state.pendingLabel==='unsent'?'待发送':''}任务吗？`;
+  const ext = $('cfExtra');
+  if(sent > 0){
+    ext.style.display = 'block';
+    ext.innerHTML = `其中 <b>${sent}</b> 条已发送任务删除后，客户微信中已收到的朋友圈仍可正常显示，仅后台记录被清除且无法恢复。`;
+  }else{
+    ext.style.display = 'none';
+  }
+}
+
+/* 二次确认 → 执行删除 */
+$('cfConfirm').onclick = () => {
+  console.log('[DEBUG] confirm n=', state.pending.length);
+  const n = state.pending.length;
+  // 从数据源移除
+  state.pending.forEach(d => { const i = data.indexOf(d); if(i>-1) data.splice(i,1); });
+  state.checked.clear();
+  closeAll();
+  renderTable();
+  toast(`已删除 ${n} 条任务`);
+};
+$('cfCancel').onclick = () => {
+  // 回到清单弹窗（若来自流程一），保留勾选
+  $('maskConfirm').classList.remove('show');
+  if(state.pendingLabel === 'unsent' && state.list.length){
+    $('maskList').classList.add('show');
+  }
+};
+
+/* ================= 通用 ================= */
+function closeAll(){
+  $('maskList').classList.remove('show');
+  $('maskConfirm').classList.remove('show');
+}
+document.querySelectorAll('.mask').forEach(m => {
+  m.onclick = e => { if(e.target === m) closeAll(); };
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeAll();
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a'){
+    const tag = document.activeElement && document.activeElement.tagName;
+    if(tag !== 'INPUT' && tag !== 'TEXTAREA'){
+      e.preventDefault();
+      state.checked = new Set(state.rows.map(d=>d.id));
+      renderTable();
+    }
+  }
+});
+
+/* 表头全选 */
+$('checkAll').onclick = () => {
+  if($('checkAll').checked) state.checked = new Set(state.rows.map(d=>d.__key));
+  else state.checked.clear();
+  renderTable();
+};
+$('barCheckAll').onclick = () => { $('checkAll').checked = !$('checkAll').checked; $('checkAll').onclick(); };
+$('barReset').onclick = () => { state.checked.clear(); renderTable(); };
+$('barUnsentOnly').onclick = () => { $('fStatus').value = 'unsent'; renderTable(); };
+$('fStatus').onchange = () => { state.checked.clear(); renderTable(); };
+
+let toastTimer;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* 行内删除 */
+document.addEventListener('click', e => {
+  if(e.target.classList.contains('del') && e.target.parentElement.classList.contains('ops')){
+    const tr = e.target.closest('tr');
+    const id = +tr.dataset.id;
+    const d = data[id];
+    if(!d) return;
+    state.pending = [d];
+    state.pendingLabel = 'manual';
+    buildConfirm();
+    $('maskConfirm').classList.add('show');
+  }
+});
+
+renderTable();
+</script>
+</body>
+</html>

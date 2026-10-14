@@ -1,0 +1,1419 @@
+<script type="text/plain" data-ai-only>
+# 版本发布流程
+
+> 产出日期：2026-09-22
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+- **文档类型**：版本发布流程指引手册——把整条发布闭环拆成 10 个整数步骤的标准操作流程。
+- **适用场景**：每次版本发布前后，从需求确认到上线通知的全流程操作与对齐。
+- **解决问题**：发布信息只在少数人手里、测试用例临场补、运营/UI 验收滞后、发版通知遗漏，导致方向性返工与上线后才知道。
+- **核心目标**：让需求透明化，所有人都知道发布了什么，并保障发布质量；每个节点都有单一负责人。
+- **主要角色**：产品（含UI）、开发人员（含东武）、运营（含利珠），其他角色为被通知方。
+
+当前版本发布的痛点：每次发布前只有少数人知道要发什么、什么时候发、谁负责验收；测试人员接到任务时常常不知道测试用例在哪里；运营和UI在发布前才发现交互方向不对，临时返工；上线后通知遗漏，导致有人第二天才知道版本已经更新。本指引把整条发布闭环拆成 10 个整数步骤，每个步骤都有明确负责人，让所有人都能在任何时点查到"现在在等谁、下一步该谁动、卡在哪个环节"，并保障发布质量不依赖个人记忆。
+
+```text
+改造前
+
+发布信息只在少数人手里
+        ↓
+交互验收滞后、测试用例临场补、发版通知遗漏
+   导致方向性返工 / 测试覆盖不全 / 上线后才知道
+
+
+改造后
+
+产品+东武定版本 → 产品出方案 → 运营先验收 → 开发自测
+        ↓
+提交前6小时通知 → 利珠组织测试 → 开发返工循环 → 产品终验 → 上线全员通知
+```
+
+### 1.2 一句话业务模型
+
+```text
+产品 + 东武 定版本范围与发布时间
+        +
+产品 分解需求、产出产品方案 + 交互方案
+        +
+运营 在开发动手前先验收交互（避免方向性返工）
+        +
+开发人员 + UI 并行启动（开发进入开发 / UI 进入绘图，UI 产出回流给产品/运营验收后交付开发使用）
+        +
+开发人员 写测试用例 + 自测
+        ↓
+提交版本前 6 小时 由产品 发版通知
+        +
+利珠 拿测试用例 组织人员测试
+        +
+开发人员 返工修改 → 利珠复测（循环直到通过）
+        +
+产品 最终验收 → 上线 → 通知所有人
+```
+
+### 1.3 最终目标
+
+- **过程透明化**：任何角色在任何时点都能查到当前环节、负责人、上下游依赖，避免"不知道卡在谁"。
+- **质量前置**：交互方向在开发动手前由运营验收；测试用例由开发自测后产出，再交测试人员，避免临场补漏。
+- **发布可追责**：每个节点都有单一负责人；提交前 6 小时发通知；产品做最终验收关卡；上线后通知全员。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌────────────────────────┬────────────────────────┬────────────────────────┐
+│ 产品（含UI）            │ 开发人员（含东武）       │ 运营（含利珠）          │
+├────────────────────────┼────────────────────────┼────────────────────────┤
+│ ① 确认版本需求          │                        │                        │
+│ 及发布时间              │                        │                        │
+│  ├─ 东武共同确认        │                        │                        │
+│ 【版本：已确认】        │                        │ 【已收到发布信息】      │
+│ 【时间：已定】          │                        │                        │
+│ ② 分解需求              │                        │                        │
+│ 产出产品方案及          │                        │                        │
+│ 交互方案                │                        │                        │
+│ 【方案：已产出】        │                        │                        │
+│                        │                        │ ③ 运营验收交互          │
+│                        │                        │ 【验收：通过】          │
+│                        │                        │  ├─ 不通过→回②          │
+│                        │ ④ 启动开发与绘图        │                        │
+│                        │  ├─ UI同步绘图（产品侧）│                        │
+│                        │ 【开发：进行中】        │                        │
+│                        │ ⑤ 写测试用例并自测      │                        │
+│                        │ 【用例：已产出】        │                        │
+│                        │ 【自测：通过】          │                        │
+│ ⑥ 发版通知              │                        │                        │
+│ 【通知：已发出】        │                        │                        │
+│                        │                        │ ⑦ 安排人员测试          │
+│                        │                        │  ├─ 利珠组织测试        │
+│                        │                        │ 【测试：通过】          │
+│                        │                        │  ├─ 不通过→返工         │
+│                        │ ⑧ 返工修改与循环测试    │                        │
+│                        │ 【修复：已修复】        │                        │
+│                        │  ├─ →回⑦由利珠复测      │                        │
+│ ⑨ 产品最终验收          │                        │                        │
+│ 【终验：通过】          │                        │                        │
+│ ⑩ 上线并通知            │                        │                        │
+│  ├─ 上线操作由开发执行  │                        │                        │
+│ 【已上线】              │                        │                        │
+│ 【已通知全员】          │                        │                        │
+└────────────────────────┴────────────────────────┴────────────────────────┘
+```
+
+泳道图需要同时表达状态时，采用以下原则：
+
+- 编号节点只写参与方实际执行的业务动作。
+- 状态标注写在触发该状态的动作之后，不占用新的流程序号。
+- 一张泳道图只展示核心状态主线。本指引核心业务对象为**版本发布记录**（状态：版本范围已确认 → 产品方案已产出 → 交互验收已通过 → UI已交付 → 测试用例已产出 → 提交前6小时通知已发出 → 测试已通过 → 终验已通过 → 已上线 → 已通知全员）。
+- 不得使用动作名称代替中间状态。
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序线性展开，不按角色分别集中介绍。根据当前发布闭环，可划分为：
+
+1. **第一阶段：需求与方案（主要参与方：产品）**：产品与东武（属开发侧，本步骤共同确认）共同确认版本范围与发布时间并将结论同步利珠（属运营侧，本步骤接收同步）；产品分解需求产出产品方案与交互方案；运营在开发动手前先验收交互，不通过则回到产品调整方案。
+2. **第二阶段：开发与测试准备（主要参与方：开发人员）**：开发人员与UI（属产品侧，本步骤同步绘图）并行启动；开发人员写测试用例并完成自测；提交版本前6小时由产品发出发版通知。
+3. **第三阶段：测试与返工（主要参与方：运营）**：利珠（属运营侧，本步骤组织测试）拿到测试用例后组织人员测试；测试不通过则开发人员返工修改，由利珠复测，循环直到测试通过。
+4. **第四阶段：发布上线（主要参与方：产品）**：产品进行最终验收，验收通过后由产品/开发人员完成上线，并通知所有人（含"其他"角色）。
+
+```text
+第一阶段：需求与方案
+① 确认版本需求及发布时间 → ② 分解需求 → ③ 运营验收交互
+            ↓
+第二阶段：开发与测试准备
+④ 启动开发与绘图 → ⑤ 写测试用例并自测 → ⑥ 发版通知
+            ↓
+第三阶段：测试与返工
+⑦ 安排人员测试 → ⑧ 返工修改（不通过则回 ⑦）
+            ↓
+第四阶段：发布上线
+⑨ 产品最终验收 → ⑩ 上线并通知
+```
+
+每个步骤小节的 `#### 业务背景` 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。
+
+### 2.3 页面类型说明
+
+本指引为版本发布流程操作指引文档，所有阶段小节统一使用「内容页」类型——纯文本指引，无字段表、无页面骨架、无列表交互弹窗。正文承载操作步骤、注意事项、关键产出物和负责人。
+
+---
+
+## 3. 第一阶段：需求与方案
+
+> 本阶段由产品主导，包括版本需求确认、需求分解与交互方案产出、运营验收交互三步。本阶段产出的产品方案与交互方案将作为第二阶段开发与UI并行启动的前置条件；运营验收在开发动手前完成，避免方向性返工。
+
+### 3.1 确认版本需求 — 内容页
+
+#### 业务背景
+
+当前环节：① 确认版本需求及发布时间<br>
+页面路径：线下沟通 / 项目周会<br>
+对下游影响：本步骤产出的版本范围与发布时间将作为后续所有步骤的节奏锚点；产品据此分解需求，开发据此排期，利珠据此安排测试人员，发版通知据此发出。<br>
+
+#### 负责人与参与方
+
+- **负责人**：产品
+- **共同决策**：东武
+- **被同步方**：利珠
+
+#### 操作步骤
+
+1. 产品与东武共同确认本次发布的版本范围（含哪些需求项、不含哪些）。
+2. 双方共同确认发布时间（精确到日期，必要时精确到小时）。
+3. 产品将最终信息（版本范围 + 发布时间 + 关联需求清单）同步给利珠。
+4. 利珠收到后回复确认，记入测试排期。
+
+#### 关键产出物
+
+- **版本范围清单**：本次发布包含的需求项列表。
+- **发布时间**：精确到日期/小时。
+- **同步记录**：产品同步给利珠的凭证（聊天截图/邮件/周会纪要）。
+
+#### 注意事项与坑点
+
+- **版本范围必须双方书面确认**：口头沟通无效，必须有可追溯的同步记录。
+- **发布时间一旦确认，不轻易变更**：变更需走重新同步流程，并通知所有已排期人员。
+- **同步利珠不能晚于步骤 6 发版通知**：利珠需要时间安排测试人员，至少留出 6 小时通知窗口。
+
+#### 业务逻辑
+
+**产品+东武共同决策**：产品提出建议范围，东武确认；任一方有异议必须当场解决，不进入下一步。本步骤产出的版本范围将逐字进入步骤 6 的发版通知内容，避免发版时口径与最初确认不一致。
+
+---
+
+### 3.2 分解需求 — 内容页
+
+#### 业务背景
+
+当前环节：② 分解需求<br>
+页面路径：产品工作台 / 需求文档系统<br>
+对下游影响：本步骤产出的《产品方案》与《交互方案》将作为第二阶段开发与UI并行启动的输入；UI据此绘图，开发据此排期；运营在下一步据此验收交互。<br>
+
+#### 负责人与参与方
+
+- **负责人**：产品
+
+#### 操作步骤
+
+1. 将版本范围清单中的每个需求项拆解为可执行的产品方案（功能边界、关键流程、字段定义）。
+2. 为每个需求项产出对应的交互方案（页面跳转、关键交互、状态流转）。
+3. 整理为《产品方案》与《交互方案》两份文档，标注版本号与发布日期。
+4. 完成后通知运营进入下一步验收。
+
+#### 关键产出物
+
+- **《产品方案》**：功能边界、关键流程、字段定义。
+- **《交互方案》**：页面跳转、关键交互、状态流转。
+
+#### 注意事项与坑点
+
+- **交互方案必须画出状态流转**：不只是页面跳转，还要标注每个状态的进入/退出条件。
+- **不要在产品方案里直接定 UI 细节**：UI 细节由步骤 4 的 UI 负责，产品方案只描述"做什么"不描述"怎么画"。
+- **完成后必须通知运营**：不通知就卡住下一步，运营不知道要验收。
+
+#### 业务逻辑
+
+**产品独立完成**：分解需求是产品的职责，不依赖其他角色。产出物的完整度直接决定步骤 3 运营验收能否发现方向性问题，也决定步骤 4 开发与UI能否并行启动。产出物不达标，会在步骤 3 被运营打回。
+
+---
+
+### 3.3 运营验收交互 — 内容页
+
+#### 业务背景
+
+当前环节：③ 运营验收交互<br>
+页面路径：交互评审会 / 线上评审<br>
+对下游影响：本步骤是开发动手前的方向性关卡，验收通过后开发与UI才能进入步骤 4 启动；验收不通过则回到步骤 2 由产品调整方案，避免开发到一半才发现方向错误。<br>
+
+#### 负责人与参与方
+
+- **负责人**：运营
+
+#### 操作步骤
+
+1. 运营收到产品通知后，组织交互评审（线上或线下）。
+2. 对照《交互方案》逐项验收：交互是否符合业务场景、状态流转是否完整、关键路径是否顺畅。
+3. 验收通过 → 进入步骤 4。
+4. 验收不通过 → 回到步骤 2，产品根据运营反馈调整方案，重新提交运营验收。
+
+#### 关键产出物
+
+- **验收结论**：通过 / 不通过。
+- **不通过时的反馈清单**：逐条列出需调整的点。
+
+#### 注意事项与坑点
+
+- **验收必须在开发动手前完成**：本步骤的核心价值就是前置拦截方向性错误，开发后再验收就失去意义。
+- **不通过必须给出可操作反馈**：不能只说"不对"，必须逐条说明哪里不对、期望怎样。
+- **不通过只能回到步骤 2**：不能跳过产品直接让开发改，否则产品方案与最终发布物不一致。
+
+#### 业务逻辑
+
+**运营单向关卡**：运营只在本步骤出现，作为方向性验收的关卡。通过则退出流程直到步骤 4 内的UI回流验收再次出现；不通过则触发回流到步骤 2。本步骤的存在使得方向性返工成本被压到最低（开发尚未启动）。
+
+---
+
+## 4. 第二阶段：开发与测试准备
+
+> 本阶段由开发人员主导，包括开发与UI并行启动、开发写测试用例并自测、提交版本前6小时发版通知三步。本阶段产出的测试用例将作为第三阶段利珠组织测试的输入。
+
+### 4.1 启动开发与绘图 — 内容页
+
+#### 业务背景
+
+当前环节：④ 启动开发与绘图<br>
+页面路径：开发环境 / 设计交付工具<br>
+对下游影响：本步骤开发与UI并行启动；UI产出物需回流给产品/运营验收后才能交付开发使用，避免UI方向错误导致开发返工；开发完成后进入步骤 5 写测试用例与自测。<br>
+
+#### 负责人与参与方
+
+- **负责人（开发侧）**：开发人员
+- **负责人（UI侧）**：UI
+- **UI回流验收**：产品 / 运营
+
+#### 操作步骤
+
+1. 开发人员根据《产品方案》《交互方案》进入开发，搭建页面骨架与业务逻辑。
+2. UI 同步进入绘图，按交互方案产出设计稿。
+3. UI 产出后回流给产品/运营验收：
+   - 验收通过 → 交付开发使用，开发按设计稿调整UI细节。
+   - 验收不通过 → UI 返工重绘，再次回流验收。
+4. 开发完成初步功能后，进入步骤 5。
+
+#### 关键产出物
+
+- **设计稿**：UI 产出，经产品/运营回流验收通过。
+- **可运行的开发版本**：开发人员产出，覆盖《产品方案》全部功能点。
+
+#### 注意事项与坑点
+
+- **UI 产出物未经回流验收不得直接交付开发使用**：否则UI方向错误会传导到开发，造成更大返工。
+- **开发与UI必须并行**：不能等UI全部画完再开发，会拖慢节奏；但UI的回流验收是必要关卡。
+- **回流验收不通过只能UI返工**：不能让开发按错误方向继续，必须等UI修正后再交付。
+
+#### 业务逻辑
+
+**双线并行 + 单点验收**：开发与UI并行启动以提速，但UI产出物必须经过产品/运营回流验收才能交付开发使用，这是本步骤内的方向性关卡。本步骤的设计使得UI错误被限制在UI侧，不会扩散到开发侧。
+
+---
+
+### 4.2 写测试用例并自测 — 内容页
+
+#### 业务背景
+
+当前环节：⑤ 写测试用例并自测<br>
+页面路径：开发环境 / 测试用例文档<br>
+对下游影响：本步骤产出的测试用例将作为步骤 7 利珠组织测试的输入；开发自测通过后才能进入步骤 6 发版通知，避免发版后才发现基础bug。<br>
+
+#### 负责人与参与方
+
+- **负责人**：开发人员
+
+#### 操作步骤
+
+1. 开发人员根据《产品方案》《交互方案》编写测试用例（覆盖功能点、边界、异常）。
+2. 开发人员按测试用例逐条自测。
+3. 自测通过 → 进入步骤 6。
+4. 自测不通过 → 修复后重新自测，循环直到通过。
+
+#### 关键产出物
+
+- **测试用例文档**：覆盖功能点、边界、异常，可交付测试人员直接使用。
+
+#### 注意事项与坑点
+
+- **测试用例必须覆盖异常路径**：只测happy path无法发现真实问题，必须覆盖异常输入、空状态、并发场景。
+- **开发自测必须按测试用例执行**：不能凭感觉测，必须按用例逐条勾选，确保覆盖。
+- **测试用例产出后必须可移交**：步骤 7 利珠拿到测试用例要能直接组织测试，不能需要开发额外解释。
+
+#### 业务逻辑
+
+**开发人员独立完成**：写测试用例与自测都是开发人员的职责。测试用例的完整度直接决定步骤 7 利珠测试的覆盖度；自测不通过则不能发版通知，避免给测试人员增加无效返工。
+
+---
+
+### 4.3 发版通知 — 内容页
+
+#### 业务背景
+
+当前环节：⑥ 发版通知<br>
+页面路径：群通知 / 邮件 / 项目协同工具<br>
+对下游影响：本步骤在提交版本前 6 小时发出通知，给测试与相关方留出准备窗口；通知发出后利珠据此安排人员测试。<br>
+
+#### 负责人与参与方
+
+- **负责人**：产品
+
+#### 操作步骤
+
+1. 产品在提交版本前 6 小时发出发版通知。
+2. 通知内容包含：版本范围、发布时间、关联需求清单、测试用例位置、负责人联系方式。
+3. 通知渠道：项目群 + 邮件（至少两个渠道，避免遗漏）。
+4. 利珠收到通知后安排人员进入步骤 7 测试。
+
+#### 关键产出物
+
+- **发版通知**：含版本范围、发布时间、关联需求、测试用例位置。
+
+#### 注意事项与坑点
+
+- **必须提前 6 小时**：不足 6 小时会导致测试人员来不及准备，影响发布质量。
+- **通知内容必须与步骤 1 确认的版本范围逐字一致**：不能在通知时擅自增减需求项，否则与最初确认口径不一致。
+- **必须多渠道通知**：单一渠道容易遗漏，至少项目群+邮件。
+
+#### 业务逻辑
+
+**产品单向关卡**：产品在本步骤作为发版通知的发布方，通知内容必须与步骤 1 双方确认的版本范围逐字一致。6 小时窗口是给测试人员的最低准备时间，不足则不允许提交。
+
+---
+
+## 5. 第三阶段：测试与返工
+
+> 本阶段由利珠主导，包括安排人员测试、开发返工修改与循环测试两步。本阶段是发布质量的核心保障环节，循环直到测试全部通过才进入第四阶段。
+
+### 5.1 安排人员测试 — 内容页
+
+#### 业务背景
+
+当前环节：⑦ 安排人员测试<br>
+页面路径：测试管理工具 / 测试执行环境<br>
+对下游影响：本步骤由利珠拿到测试用例后组织人员测试；测试结果决定是否进入步骤 8 返工循环，或直接进入步骤 9 产品终验。<br>
+
+#### 负责人与参与方
+
+- **负责人**：利珠
+- **测试执行人**：由利珠安排（不固定为某个角色）
+
+#### 操作步骤
+
+1. 利珠收到产品发版通知后，根据测试用例范围安排测试人员。
+2. 测试人员按测试用例逐条执行，记录通过/不通过。
+3. 测试结果汇总给利珠。
+4. 全部通过 → 进入步骤 9 产品终验。
+5. 存在不通过项 → 进入步骤 8 返工修改。
+
+#### 关键产出物
+
+- **测试报告**：每条用例的执行结果（通过/不通过 + 不通过原因）。
+
+#### 注意事项与坑点
+
+- **测试人员由利珠安排**：测试人员不固定为某个角色，由利珠根据范围与人力调度决定。
+- **必须按测试用例执行**：不能凭经验测，必须按开发产出的测试用例逐条勾选。
+- **不通过项必须记录原因**：不能只说"不通过"，必须说明哪条用例、什么现象、期望结果。
+
+#### 业务逻辑
+
+**利珠单向关卡**：利珠只在本阶段出现，作为测试组织的负责人。测试人员由利珠调度，不固定为某个角色，但责任由利珠承担。测试结果不通过则触发步骤 8 返工循环。
+
+---
+
+### 5.2 返工修改与循环测试 — 内容页
+
+#### 业务背景
+
+当前环节：⑧ 返工修改与循环测试<br>
+页面路径：开发环境 / 测试管理工具<br>
+对下游影响：本步骤由开发人员根据测试报告修复问题，修复后回到步骤 7 由利珠安排复测，循环直到全部通过才进入步骤 9。<br>
+
+#### 负责人与参与方
+
+- **负责人（修复侧）**：开发人员
+- **负责人（复测侧）**：利珠
+
+#### 操作步骤
+
+1. 开发人员拿到测试报告后逐条修复问题。
+2. 修复完成后通知利珠安排复测。
+3. 利珠组织人员复测（按原测试用例 + 修复涉及范围）。
+4. 复测通过 → 进入步骤 9。
+5. 复测仍不通过 → 回到本步骤继续修复，循环直到通过。
+
+#### 关键产出物
+
+- **修复记录**：每条不通过项的修复方式与修复人。
+- **复测报告**：复测结果（通过/不通过 + 不通过原因）。
+
+#### 注意事项与坑点
+
+- **修复不能引入新问题**：每次修复必须验证不破坏其他用例，不能只修当前bug。
+- **复测不能省略**：修复后必须回到步骤 7 由利珠组织复测，不能由开发自测代替。
+- **循环无上限但要及时升级**：若同一问题循环超过 3 次仍未解决，应升级到产品/东武评估是否需要从版本范围中剔除。
+
+#### 业务逻辑
+
+**双负责人循环**：修复由开发人员负责，复测由利珠负责，两者形成闭环。循环直到全部测试用例通过才允许进入步骤 9，确保发布质量不依赖个人保证。同一问题循环超 3 次需升级，避免无限返工。
+
+---
+
+## 6. 第四阶段：发布上线
+
+> 本阶段由产品主导，包括产品最终验收、上线并通知两步。产品终验是发布前的最后一道关卡，通过后才正式上线并通知全员。
+
+### 6.1 产品最终验收 — 内容页
+
+#### 业务背景
+
+当前环节：⑨ 产品最终验收<br>
+页面路径：体验环境 / 产品验收会<br>
+对下游影响：本步骤是发布前的最后一道关卡，产品从产品视角（非测试视角）确认发布物符合产品预期；通过后才进入步骤 10 上线。<br>
+
+#### 负责人与参与方
+
+- **负责人**：产品
+
+#### 操作步骤
+
+1. 产品在体验环境对发布物进行最终验收。
+2. 验收维度：是否符合《产品方案》、是否符合《交互方案》、是否覆盖版本范围全部需求项。
+3. 验收通过 → 进入步骤 10 上线。
+4. 验收不通过 → 回到步骤 8 由开发人员修复，重新走步骤 7 → 步骤 8 → 步骤 9。
+
+#### 关键产出物
+
+- **终验结论**：通过 / 不通过 + 不通过清单。
+
+#### 注意事项与坑点
+
+- **产品视角验收，非测试视角**：本步骤不重复测试人员的功能测试，而是从产品预期视角确认整体符合度。
+- **不通过必须回到步骤 8**：不能跳过测试流程直接让开发改，必须经过利珠组织的复测。
+- **终验是关卡非形式**：产品必须真实体验发布物，不能只看测试报告就放行。
+
+#### 业务逻辑
+
+**产品单向关卡**：产品在本步骤作为发布前的最终决策方。终验通过则授权上线，不通过则触发回到步骤 8 的修复循环。本步骤使得发布权最终落在产品手里，避免测试通过但产品预期不符的发布物被发布。
+
+---
+
+### 6.2 上线并通知 — 内容页
+
+#### 业务背景
+
+当前环节：⑩ 上线并通知<br>
+页面路径：生产环境 / 通知渠道<br>
+对下游影响：本步骤完成版本正式上线，并通知所有人（含"其他"角色）发布完成；通知后整个版本发布流程闭环。<br>
+
+#### 负责人与参与方
+
+- **负责人（上线操作）**：开发人员
+- **负责人（通知发出）**：产品
+
+#### 操作步骤
+
+1. 开发人员执行上线操作（部署到生产环境）。
+2. 上线完成后产品验证关键路径可用。
+3. 产品发出上线通知：含版本范围、上线时间、变更说明、负责人联系方式。
+4. 通知渠道：项目群 + 邮件 + 全员通知（覆盖"其他"角色）。
+5. 通知发出后整个流程闭环。
+
+#### 关键产出物
+
+- **上线记录**：上线时间、操作人、上线版本号。
+- **全员通知**：含版本范围、变更说明、负责人。
+
+#### 注意事项与坑点
+
+- **上线后必须产品验证关键路径**：不能上线完就通知，必须先验证核心功能可用。
+- **通知必须覆盖"其他"角色**：不能只通知核心团队，要让所有相关方都知道发布了什么。
+- **通知内容必须包含变更说明**：不能只说"已上线"，必须说明本次变更了什么，方便其他角色评估影响。
+
+#### 业务逻辑
+
+**双负责人收尾**：上线操作由开发人员执行，通知由产品发出。本步骤是整个流程的闭环点，发布后通知全员确保信息透明，使整个发布流程的产出对所有人可见——这也是本指引的核心目标"让需求透明化，所有人都知道发布了什么"的最终落点。
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>版本发布流程</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用壳 { display: grid; grid-template-columns: var(--泳道宽) var(--菜单宽) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+
+/* ── 中：后台菜单（白底黑字，全铺开，父节点不可点） ── */
+.菜单区 { background: #fff; color: #334155; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+.菜单品牌 { padding: 18px 18px 14px; border-bottom: 1px solid #eef2f7; }
+.菜单品牌名 { font-size: 16px; font-weight: 700; color: #172033; line-height: 1.4; }
+.菜单品牌小 { font-size: 11px; color: #94a3b8; margin-top: 3px; letter-spacing: .5px; }
+.菜单父 { padding: 16px 18px 4px; font-size: 12px; color: #0f6b8f; font-weight: 700; letter-spacing: .5px; }
+.菜单文档, .菜单叶子 { display: flex; align-items: center; gap: 8px; color: #334155; font-size: 13.5px; cursor: pointer; user-select: none; border-left: 3px solid transparent; }
+.菜单文档 { padding: 9px 18px; }
+.菜单叶子 { padding: 8px 18px 8px 30px; font-size: 13px; }
+.菜单文档.子级 { padding: 9px 18px 9px 30px; font-size: 13px; }
+.菜单文档:hover, .菜单叶子:hover { background: #f1f5f9; color: #0f172a; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.菜单号 { font-family: Consolas, monospace; font-size: 11px; color: #94a3b8; min-width: 26px; }
+.菜单文档.激活 .菜单号, .菜单叶子.激活 .菜单号 { color: #0f6b8f; }
+.菜单图标 { font-size: 13px; }
+
+/* ── 中：内容工作区 ── */
+.内容区 { overflow-y: auto; background: #f1f5f9; }
+.页面面板 { display: none; padding: 22px 26px 48px; }
+.页面面板.激活 { display: block; }
+.页面卡 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(15,35,52,.04); margin-bottom: 18px; }
+.页面头 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.页面头 h2 { margin: 0; font-size: 19px; color: #172033; }
+.主按钮 { padding: 7px 16px; border: 1px solid #0f6b8f; border-radius: 6px; background: #0f6b8f; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.主按钮:hover { background: #0c5673; }
+
+/* ── 左：常驻泳道栏 ── */
+.泳道区 { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 14px 12px 28px; }
+.泳道区 > h3 { margin: 2px 4px 10px; font-size: 14px; color: #334155; }
+.泳道简介 { margin: 0 4px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.75; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道区 .泳道图 { font-size: 13px; }
+</style>
+<style id="css-组件">
+/* ── 文档页排版 ── */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 26px 0 12px; font-size: 20px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.阅读标题 { line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 20px; margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 16px; margin: 22px 0 8px; } .文档正文 h5 { font-size: 14px; margin: 18px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.行内代码 { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; }
+.代码块 pre { margin: 0; padding: 16px; background: #fff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; }
+.代码块 code { display: block; font-family: Consolas, Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ── 流程信息卡 ── */
+.流程信息卡 { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; background: linear-gradient(180deg,#f8fbff,#f1f7ff); margin-bottom: 16px; overflow: hidden; }
+.流程信息卡-头部 { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #dbeafe; }
+.流程步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.流程信息卡-环节名 { font-size: 13.5px; font-weight: 600; color: #1e3a8a; }
+.流程信息卡-正文 { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+.流程信息卡-行 { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.流程信息卡-标签 { flex-shrink: 0; display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+
+/* ── 列表页 ── */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 150px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 150px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; white-space: nowrap; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; margin-right: 6px; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.删除按钮 { padding: 4px 12px; border: 1px solid #ef4444; border-radius: 4px; background: #fff; color: #ef4444; font-size: 12px; cursor: pointer; } .删除按钮:hover { background: #ef4444; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+
+/* ── 字段卡（弹窗表单与详情抽屉共用） ── */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 20px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius:  10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 120px 1fr 28px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 140px; }
+.field-input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; width: 100%; max-width: 360px; font-family: inherit; }
+textarea.field-input { max-width: 100%; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; }
+.field-info-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ── 详情抽屉 / 表单弹窗（右侧滑出） ── */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; max-width: 94vw; height: 100vh; background: #f8fafc; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 60px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: #fff; }
+.panel-title { font-size: 17px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ── 字段弹窗 ── */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ── 泳道图组件（2026 蓝圈号标准版） ── */
+.泳道图 { margin: 0; font-size: 13px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道圆圈 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支说明 { font-size: 12px; color: #b45309; padding: 2px 0 0 26px; line-height: 1.6; }
+.泳道行 { transition: opacity .25s ease; }
+.泳道图[class*="高亮阶段"] .泳道行[data-node-phase] { opacity: .35; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"], .泳道图.高亮阶段2 .泳道行[data-node-phase="2"],
+.泳道图.高亮阶段3 .泳道行[data-node-phase="3"], .泳道图.高亮阶段4 .泳道行[data-node-phase="4"],
+.泳道图.高亮阶段5 .泳道行[data-node-phase="5"], .泳道图.高亮阶段6 .泳道行[data-node-phase="6"],
+.泳道图.高亮阶段7 .泳道行[data-node-phase="7"], .泳道图.高亮阶段8 .泳道行[data-node-phase="8"],
+.泳道图.高亮阶段9 .泳道行[data-node-phase="9"], .泳道图.高亮阶段10 .泳道行[data-node-phase="10"] { opacity: 1; }
+.泳道行.置灰 { opacity: .25 !important; pointer-events: none; }
+.泳道行.当前 { opacity: 1 !important; }
+
+/* ── 提示消息 / 灯箱 / 杂项 ── */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+</style>
+<style id="css-状态">
+.页面面板.激活 { display: block; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.图片灯箱.可见 { display: flex; }
+</style>
+<style id="css-项目覆盖">/* 项目级覆盖：泳道宽加宽一半 400→600px + 简介分点样式 */
+:root { --泳道宽: 600px; }
+.泳道简介-分点 { list-style: none; padding: 0; margin: 0 0 12px 0; }
+.泳道简介-分点 li { padding: 4px 0; font-size: 13px; line-height: 1.65; color: #555; border-bottom: 1px dashed #e2e8f0; }
+.泳道简介-分点 li:last-child { border-bottom: none; }
+.泳道简介-分点 li strong { color: #2b6cb0; margin-right: 4px; }
+</style>
+</head>
+<body>
+<div class="应用壳">
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<ul class="泳道简介-分点"><li><strong>文档类型</strong>：版本发布流程指引手册——把整条发布闭环拆成 10 个整数步骤的标准操作流程。</li><li><strong>适用场景</strong>：每次版本发布前后，从需求确认到上线通知的全流程操作与对齐。</li><li><strong>解决问题</strong>：发布信息只在少数人手里、测试用例临场补、运营/UI 验收滞后、发版通知遗漏，导致方向性返工与上线后才知道。</li><li><strong>核心目标</strong>：让需求透明化，所有人都知道发布了什么，并保障发布质量；每个节点都有单一负责人。</li><li><strong>主要角色</strong>：产品（含UI）、开发人员（含东武）、运营（含利珠），其他角色为被通知方。</li></ul>
+<div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;">
+<div class="泳道图-头" style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid #e2e8f0;">
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">产品（含UI）</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">开发人员（含东武）</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">运营（含利珠）</div>
+</div><div class="泳道图-体">
+<div class="泳道行" data-swimlane-node="1" data-node-phase="1" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">①</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">确认版本需求</span></div><span class="泳道状态徽章 信息色">版本：已确认</span><span class="泳道状态徽章 信息色">时间：已定</span><div class="泳道分支说明">东武共同确认</div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="2" data-node-phase="1" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">②</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">分解需求</span></div><span class="泳道状态徽章 信息色">方案：已产出</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="3" data-node-phase="1" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">③</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">运营验收交互</span></div><span class="泳道状态徽章 通过色">验收：通过</span></div>
+</div>
+<div class="泳道行" data-swimlane-node="4" data-node-phase="2" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">④</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">启动开发与绘图</span></div><span class="泳道状态徽章 待处理色">开发：进行中</span><div class="泳道分支说明">UI同步绘图（产品侧）</div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="5" data-node-phase="2" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑤</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">写测试用例并自测</span></div><span class="泳道状态徽章 信息色">用例：已产出</span><span class="泳道状态徽章 通过色">自测：通过</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="6" data-node-phase="2" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑥</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">发版通知</span></div><span class="泳道状态徽章 信息色">通知：已发出</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="7" data-node-phase="3" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑦</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">安排人员测试</span></div><span class="泳道状态徽章 通过色">测试：通过</span><div class="泳道分支说明">利珠组织测试；不通过→返工</div></div>
+</div>
+<div class="泳道行" data-swimlane-node="8" data-node-phase="3" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑧</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">返工修改与循环测试</span></div><span class="泳道状态徽章 信息色">修复：已修复</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="9" data-node-phase="4" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑨</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">产品最终验收</span></div><span class="泳道状态徽章 通过色">终验：通过</span></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+<div class="泳道行" data-swimlane-node="10" data-node-phase="4" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"><div style="display:flex;align-items:flex-start;gap:6px;"><span class="泳道圆圈">⑩</span><span style="font-size:14px;color:#1e293b;line-height:1.5;">上线并通知</span></div><span class="泳道状态徽章 信息色">已上线</span><span class="泳道状态徽章 信息色">已通知全员</span><div class="泳道分支说明">上线操作由开发执行</div></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+<div class="泳道格" style="min-height:34px;padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;"></div>
+</div>
+</div></div>
+</aside>
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">版本发布流程</div><div class="菜单品牌小">B 端业务原型 · 2026-09-22</div></div>
+<div class="菜单父"><span>需求与流程</span></div>
+<div class="菜单文档 子级 激活" data-menu-page="1" onclick="切换页面('1')"><span class="菜单号">001</span><span>需求背景与目标</span></div>
+<div class="菜单文档 子级" data-menu-page="2" onclick="切换页面('2')"><span class="菜单号">002</span><span>业务流程</span></div>
+<div class="菜单父"><span>第一阶段：需求与方案</span></div>
+<div class="菜单叶子" data-menu-page="3.1" onclick="切换页面('3.1')"><span class="菜单号">3.1</span><span class="菜单图标">📋</span><span>确认版本需求</span></div>
+<div class="菜单叶子" data-menu-page="3.2" onclick="切换页面('3.2')"><span class="菜单号">3.2</span><span class="菜单图标">📋</span><span>分解需求</span></div>
+<div class="菜单叶子" data-menu-page="3.3" onclick="切换页面('3.3')"><span class="菜单号">3.3</span><span class="菜单图标">📋</span><span>运营验收交互</span></div>
+<div class="菜单父"><span>第二阶段：开发与测试准备</span></div>
+<div class="菜单叶子" data-menu-page="4.1" onclick="切换页面('4.1')"><span class="菜单号">4.1</span><span class="菜单图标">📋</span><span>启动开发与绘图</span></div>
+<div class="菜单叶子" data-menu-page="4.2" onclick="切换页面('4.2')"><span class="菜单号">4.2</span><span class="菜单图标">📋</span><span>写测试用例并自测</span></div>
+<div class="菜单叶子" data-menu-page="4.3" onclick="切换页面('4.3')"><span class="菜单号">4.3</span><span class="菜单图标">📋</span><span>发版通知</span></div>
+<div class="菜单父"><span>第三阶段：测试与返工</span></div>
+<div class="菜单叶子" data-menu-page="5.1" onclick="切换页面('5.1')"><span class="菜单号">5.1</span><span class="菜单图标">📋</span><span>安排人员测试</span></div>
+<div class="菜单叶子" data-menu-page="5.2" onclick="切换页面('5.2')"><span class="菜单号">5.2</span><span class="菜单图标">📋</span><span>返工修改与循环测试</span></div>
+<div class="菜单父"><span>第四阶段：发布上线</span></div>
+<div class="菜单叶子" data-menu-page="6.1" onclick="切换页面('6.1')"><span class="菜单号">6.1</span><span class="菜单图标">📋</span><span>产品最终验收</span></div>
+<div class="菜单叶子" data-menu-page="6.2" onclick="切换页面('6.2')"><span class="菜单号">6.2</span><span class="菜单图标">📋</span><span>上线并通知</span></div>
+</nav>
+<main class="内容区" id="内容区">
+<section class="页面面板 激活" id="面_1" data-page="1"><div class="页面卡"><div class="页面头"><h2>需求背景与目标</h2></div><div class="文档正文"><h3 class="阅读节标题">1.1 为什么要做</h3>
+<ul>
+<li><strong>文档类型</strong>：版本发布流程指引手册——把整条发布闭环拆成 10 个整数步骤的标准操作流程。</li>
+<li><strong>适用场景</strong>：每次版本发布前后，从需求确认到上线通知的全流程操作与对齐。</li>
+<li><strong>解决问题</strong>：发布信息只在少数人手里、测试用例临场补、运营/UI 验收滞后、发版通知遗漏，导致方向性返工与上线后才知道。</li>
+<li><strong>核心目标</strong>：让需求透明化，所有人都知道发布了什么，并保障发布质量；每个节点都有单一负责人。</li>
+<li><strong>主要角色</strong>：产品（含UI）、开发人员（含东武）、运营（含利珠），其他角色为被通知方。</li>
+</ul>
+
+<p>当前版本发布的痛点：每次发布前只有少数人知道要发什么、什么时候发、谁负责验收；测试人员接到任务时常常不知道测试用例在哪里；运营和UI在发布前才发现交互方向不对，临时返工；上线后通知遗漏，导致有人第二天才知道版本已经更新。本指引把整条发布闭环拆成 10 个整数步骤，每个步骤都有明确负责人，让所有人都能在任何时点查到"现在在等谁、下一步该谁动、卡在哪个环节"，并保障发布质量不依赖个人记忆。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>改造前
+
+发布信息只在少数人手里
+        ↓
+交互验收滞后、测试用例临场补、发版通知遗漏
+   导致方向性返工 / 测试覆盖不全 / 上线后才知道
+
+
+改造后
+
+产品+东武定版本 → 产品出方案 → 运营先验收 → 开发自测
+        ↓
+提交前6小时通知 → 利珠组织测试 → 开发返工循环 → 产品终验 → 上线全员通知</code></pre></div>
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>产品 + 东武 定版本范围与发布时间
+        +
+产品 分解需求、产出产品方案 + 交互方案
+        +
+运营 在开发动手前先验收交互（避免方向性返工）
+        +
+开发人员 + UI 并行启动（开发进入开发 / UI 进入绘图，UI 产出回流给产品/运营验收后交付开发使用）
+        +
+开发人员 写测试用例 + 自测
+        ↓
+提交版本前 6 小时 由产品 发版通知
+        +
+利珠 拿测试用例 组织人员测试
+        +
+开发人员 返工修改 → 利珠复测（循环直到通过）
+        +
+产品 最终验收 → 上线 → 通知所有人</code></pre></div>
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>过程透明化</strong>：任何角色在任何时点都能查到当前环节、负责人、上下游依赖，避免"不知道卡在谁"。</li>
+<li><strong>质量前置</strong>：交互方向在开发动手前由运营验收；测试用例由开发自测后产出，再交测试人员，避免临场补漏。</li>
+<li><strong>发布可追责</strong>：每个节点都有单一负责人；提交前 6 小时发通知；产品做最终验收关卡；上线后通知全员。</li>
+</ul>
+</div></div></section>
+<section class="页面面板" id="面_2" data-page="2"><div class="页面卡"><div class="页面头"><h2>业务流程</h2></div><div class="文档正文"><h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<p>泳道图需要同时表达状态时，采用以下原则：</p>
+<ul>
+<li>编号节点只写参与方实际执行的业务动作。</li>
+<li>状态标注写在触发该状态的动作之后，不占用新的流程序号。</li>
+<li>一张泳道图只展示核心状态主线。本指引核心业务对象为<strong>版本发布记录</strong>（状态：版本范围已确认 → 产品方案已产出 → 交互验收已通过 → UI已交付 → 测试用例已产出 → 提交前6小时通知已发出 → 测试已通过 → 终验已通过 → 已上线 → 已通知全员）。</li>
+<li>不得使用动作名称代替中间状态。</li>
+</ul>
+
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>后续正文按照业务实际发生顺序线性展开，不按角色分别集中介绍。根据当前发布闭环，可划分为：</p>
+<p>1. <strong>第一阶段：需求与方案（主要参与方：产品）</strong>：产品与东武（属开发侧，本步骤共同确认）共同确认版本范围与发布时间并将结论同步利珠（属运营侧，本步骤接收同步）；产品分解需求产出产品方案与交互方案；运营在开发动手前先验收交互，不通过则回到产品调整方案。</p>
+<p>2. <strong>第二阶段：开发与测试准备（主要参与方：开发人员）</strong>：开发人员与UI（属产品侧，本步骤同步绘图）并行启动；开发人员写测试用例并完成自测；提交版本前6小时由产品发出发版通知。</p>
+<p>3. <strong>第三阶段：测试与返工（主要参与方：运营）</strong>：利珠（属运营侧，本步骤组织测试）拿到测试用例后组织人员测试；测试不通过则开发人员返工修改，由利珠复测，循环直到测试通过。</p>
+<p>4. <strong>第四阶段：发布上线（主要参与方：产品）</strong>：产品进行最终验收，验收通过后由产品/开发人员完成上线，并通知所有人（含"其他"角色）。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：需求与方案
+① 确认版本需求及发布时间 → ② 分解需求 → ③ 运营验收交互
+            ↓
+第二阶段：开发与测试准备
+④ 启动开发与绘图 → ⑤ 写测试用例并自测 → ⑥ 发版通知
+            ↓
+第三阶段：测试与返工
+⑦ 安排人员测试 → ⑧ 返工修改（不通过则回 ⑦）
+            ↓
+第四阶段：发布上线
+⑨ 产品最终验收 → ⑩ 上线并通知</code></pre></div>
+<p>每个步骤小节的 <code class="行内代码">#### 业务背景</code> 必须提供"当前环节"，引用 2.1 泳道图中的节点编号和动作名称。</p>
+<h3 class="阅读节标题">2.3 页面类型说明</h3>
+<p>本指引为版本发布流程操作指引文档，所有阶段小节统一使用「内容页」类型——纯文本指引，无字段表、无页面骨架、无列表交互弹窗。正文承载操作步骤、注意事项、关键产出物和负责人。</p>
+<hr></div></div></section>
+<section class="页面面板" id="面_3_1" data-page="3.1"><div class="页面卡"><div class="页面头"><h2>确认版本需求</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 确认版本需求及发布时间</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">线下沟通 / 项目周会</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本步骤产出的版本范围与发布时间将作为后续所有步骤的节奏锚点；产品据此分解需求，开发据此排期，利珠据此安排测试人员，发版通知据此发出。</span></div></div></div>
+<h4 class="阅读标题">负责人与参与方</h4>
+<ul>
+<li><strong>负责人</strong>：产品</li>
+<li><strong>共同决策</strong>：东武</li>
+<li><strong>被同步方</strong>：利珠</li>
+</ul>
+
+<h4 class="阅读标题">操作步骤</h4>
+<p>1. 产品与东武共同确认本次发布的版本范围（含哪些需求项、不含哪些）。</p>
+<p>2. 双方共同确认发布时间（精确到日期，必要时精确到小时）。</p>
+<p>3. 产品将最终信息（版本范围 + 发布时间 + 关联需求清单）同步给利珠。</p>
+<p>4. 利珠收到后回复确认，记入测试排期。</p>
+<h4 class="阅读标题">关键产出物</h4>
+<ul>
+<li><strong>版本范围清单</strong>：本次发布包含的需求项列表。</li>
+<li><strong>发布时间</strong>：精确到日期/小时。</li>
+<li><strong>同步记录</strong>：产品同步给利珠的凭证（聊天截图/邮件/周会纪要）。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>版本范围必须双方书面确认</strong>：口头沟通无效，必须有可追溯的同步记录。</li>
+<li><strong>发布时间一旦确认，不轻易变更</strong>：变更需走重新同步流程，并通知所有已排期人员。</li>
+<li><strong>同步利珠不能晚于步骤 6 发版通知</strong>：利珠需要时间安排测试人员，至少留出 6 小时通知窗口。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>产品+东武共同决策</strong>：产品提出建议范围，东武确认；任一方有异议必须当场解决，不进入下一步。本步骤产出的版本范围将逐字进入步骤 6 的发版通知内容，避免发版时口径与最初确认不一致。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'3.1'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_3_2" data-page="3.2"><div class="页面卡"><div class="页面头"><h2>分解需求</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">②</span><span class="流程信息卡-环节名">当前环节：② 分解需求</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">产品工作台 / 需求文档系统</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本步骤产出的《产品方案》与《交互方案》将作为第二阶段开发与UI并行启动的输入；UI据此绘图，开发据此排期；运营在下一步据此验收交互。</span></div></div></div>
+<h4 class="阅读标题">负责人与参与方</h4>
+<ul>
+<li><strong>负责人</strong>：产品</li>
+</ul>
+
+<h4 class="阅读标题">操作步骤</h4>
+<p>1. 将版本范围清单中的每个需求项拆解为可执行的产品方案（功能边界、关键流程、字段定义）。</p>
+<p>2. 为每个需求项产出对应的交互方案（页面跳转、关键交互、状态流转）。</p>
+<p>3. 整理为《产品方案》与《交互方案》两份文档，标注版本号与发布日期。</p>
+<p>4. 完成后通知运营进入下一步验收。</p>
+<h4 class="阅读标题">关键产出物</h4>
+<ul>
+<li><strong>《产品方案》</strong>：功能边界、关键流程、字段定义。</li>
+<li><strong>《交互方案》</strong>：页面跳转、关键交互、状态流转。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>交互方案必须画出状态流转</strong>：不只是页面跳转，还要标注每个状态的进入/退出条件。</li>
+<li><strong>不要在产品方案里直接定 UI 细节</strong>：UI 细节由步骤 4 的 UI 负责，产品方案只描述"做什么"不描述"怎么画"。</li>
+<li><strong>完成后必须通知运营</strong>：不通知就卡住下一步，运营不知道要验收。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>产品独立完成</strong>：分解需求是产品的职责，不依赖其他角色。产出物的完整度直接决定步骤 3 运营验收能否发现方向性问题，也决定步骤 4 开发与UI能否并行启动。产出物不达标，会在步骤 3 被运营打回。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'3.2'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_3_3" data-page="3.3"><div class="页面卡"><div class="页面头"><h2>运营验收交互</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">③</span><span class="流程信息卡-环节名">当前环节：③ 运营验收交互</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">交互评审会 / 线上评审</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本步骤是开发动手前的方向性关卡，验收通过后开发与UI才能进入步骤 4 启动；验收不通过则回到步骤 2 由产品调整方案，避免开发到一半才发现方向错误。</span></div></div></div>
+<h4 class="阅读标题">负责人与参与方</h4>
+<ul>
+<li><strong>负责人</strong>：运营</li>
+</ul>
+
+<h4 class="阅读标题">操作步骤</h4>
+<p>1. 运营收到产品通知后，组织交互评审（线上或线下）。</p>
+<p>2. 对照《交互方案》逐项验收：交互是否符合业务场景、状态流转是否完整、关键路径是否顺畅。</p>
+<p>3. 验收通过 → 进入步骤 4。</p>
+<p>4. 验收不通过 → 回到步骤 2，产品根据运营反馈调整方案，重新提交运营验收。</p>
+<h4 class="阅读标题">关键产出物</h4>
+<ul>
+<li><strong>验收结论</strong>：通过 / 不通过。</li>
+<li><strong>不通过时的反馈清单</strong>：逐条列出需调整的点。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>验收必须在开发动手前完成</strong>：本步骤的核心价值就是前置拦截方向性错误，开发后再验收就失去意义。</li>
+<li><strong>不通过必须给出可操作反馈</strong>：不能只说"不对"，必须逐条说明哪里不对、期望怎样。</li>
+<li><strong>不通过只能回到步骤 2</strong>：不能跳过产品直接让开发改，否则产品方案与最终发布物不一致。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>运营单向关卡</strong>：运营只在本步骤出现，作为方向性验收的关卡。通过则退出流程直到步骤 4 内的UI回流验收再次出现；不通过则触发回流到步骤 2。本步骤的存在使得方向性返工成本被压到最低（开发尚未启动）。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'3.3'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_4_1" data-page="4.1"><div class="页面卡"><div class="页面头"><h2>启动开发与绘图</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">④</span><span class="流程信息卡-环节名">当前环节：④ 启动开发与绘图</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">开发环境 / 设计交付工具</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本步骤开发与UI并行启动；UI产出物需回流给产品/运营验收后才能交付开发使用，避免UI方向错误导致开发返工；开发完成后进入步骤 5 写测试用例与自测。</span></div></div></div>
+<h4 class="阅读标题">负责人与参与方</h4>
+<ul>
+<li><strong>负责人（开发侧）</strong>：开发人员</li>
+<li><strong>负责人（UI侧）</strong>：UI</li>
+<li><strong>UI回流验收</strong>：产品 / 运营</li>
+</ul>
+
+<h4 class="阅读标题">操作步骤</h4>
+<p>1. 开发人员根据《产品方案》《交互方案》进入开发，搭建页面骨架与业务逻辑。</p>
+<p>2. UI 同步进入绘图，按交互方案产出设计稿。</p>
+<p>3. UI 产出后回流给产品/运营验收：</p>
+<ul>
+<li>验收通过 → 交付开发使用，开发按设计稿调整UI细节。</li>
+<li>验收不通过 → UI 返工重绘，再次回流验收。</li>
+</ul>
+
+<p>4. 开发完成初步功能后，进入步骤 5。</p>
+<h4 class="阅读标题">关键产出物</h4>
+<ul>
+<li><strong>设计稿</strong>：UI 产出，经产品/运营回流验收通过。</li>
+<li><strong>可运行的开发版本</strong>：开发人员产出，覆盖《产品方案》全部功能点。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>UI 产出物未经回流验收不得直接交付开发使用</strong>：否则UI方向错误会传导到开发，造成更大返工。</li>
+<li><strong>开发与UI必须并行</strong>：不能等UI全部画完再开发，会拖慢节奏；但UI的回流验收是必要关卡。</li>
+<li><strong>回流验收不通过只能UI返工</strong>：不能让开发按错误方向继续，必须等UI修正后再交付。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>双线并行 + 单点验收</strong>：开发与UI并行启动以提速，但UI产出物必须经过产品/运营回流验收才能交付开发使用，这是本步骤内的方向性关卡。本步骤的设计使得UI错误被限制在UI侧，不会扩散到开发侧。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'4.1'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_4_2" data-page="4.2"><div class="页面卡"><div class="页面头"><h2>写测试用例并自测</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑤</span><span class="流程信息卡-环节名">当前环节：⑤ 写测试用例并自测</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">开发环境 / 测试用例文档</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本步骤产出的测试用例将作为步骤 7 利珠组织测试的输入；开发自测通过后才能进入步骤 6 发版通知，避免发版后才发现基础bug。</span></div></div></div>
+<h4 class="阅读标题">负责人与参与方</h4>
+<ul>
+<li><strong>负责人</strong>：开发人员</li>
+</ul>
+
+<h4 class="阅读标题">操作步骤</h4>
+<p>1. 开发人员根据《产品方案》《交互方案》编写测试用例（覆盖功能点、边界、异常）。</p>
+<p>2. 开发人员按测试用例逐条自测。</p>
+<p>3. 自测通过 → 进入步骤 6。</p>
+<p>4. 自测不通过 → 修复后重新自测，循环直到通过。</p>
+<h4 class="阅读标题">关键产出物</h4>
+<ul>
+<li><strong>测试用例文档</strong>：覆盖功能点、边界、异常，可交付测试人员直接使用。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>测试用例必须覆盖异常路径</strong>：只测happy path无法发现真实问题，必须覆盖异常输入、空状态、并发场景。</li>
+<li><strong>开发自测必须按测试用例执行</strong>：不能凭感觉测，必须按用例逐条勾选，确保覆盖。</li>
+<li><strong>测试用例产出后必须可移交</strong>：步骤 7 利珠拿到测试用例要能直接组织测试，不能需要开发额外解释。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>开发人员独立完成</strong>：写测试用例与自测都是开发人员的职责。测试用例的完整度直接决定步骤 7 利珠测试的覆盖度；自测不通过则不能发版通知，避免给测试人员增加无效返工。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'4.2'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_4_3" data-page="4.3"><div class="页面卡"><div class="页面头"><h2>发版通知</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑥</span><span class="流程信息卡-环节名">当前环节：⑥ 发版通知</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">群通知 / 邮件 / 项目协同工具</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本步骤在提交版本前 6 小时发出通知，给测试与相关方留出准备窗口；通知发出后利珠据此安排人员测试。</span></div></div></div>
+<h4 class="阅读标题">负责人与参与方</h4>
+<ul>
+<li><strong>负责人</strong>：产品</li>
+</ul>
+
+<h4 class="阅读标题">操作步骤</h4>
+<p>1. 产品在提交版本前 6 小时发出发版通知。</p>
+<p>2. 通知内容包含：版本范围、发布时间、关联需求清单、测试用例位置、负责人联系方式。</p>
+<p>3. 通知渠道：项目群 + 邮件（至少两个渠道，避免遗漏）。</p>
+<p>4. 利珠收到通知后安排人员进入步骤 7 测试。</p>
+<h4 class="阅读标题">关键产出物</h4>
+<ul>
+<li><strong>发版通知</strong>：含版本范围、发布时间、关联需求、测试用例位置。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>必须提前 6 小时</strong>：不足 6 小时会导致测试人员来不及准备，影响发布质量。</li>
+<li><strong>通知内容必须与步骤 1 确认的版本范围逐字一致</strong>：不能在通知时擅自增减需求项，否则与最初确认口径不一致。</li>
+<li><strong>必须多渠道通知</strong>：单一渠道容易遗漏，至少项目群+邮件。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>产品单向关卡</strong>：产品在本步骤作为发版通知的发布方，通知内容必须与步骤 1 双方确认的版本范围逐字一致。6 小时窗口是给测试人员的最低准备时间，不足则不允许提交。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'4.3'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_5_1" data-page="5.1"><div class="页面卡"><div class="页面头"><h2>安排人员测试</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑦</span><span class="流程信息卡-环节名">当前环节：⑦ 安排人员测试</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">测试管理工具 / 测试执行环境</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本步骤由利珠拿到测试用例后组织人员测试；测试结果决定是否进入步骤 8 返工循环，或直接进入步骤 9 产品终验。</span></div></div></div>
+<h4 class="阅读标题">负责人与参与方</h4>
+<ul>
+<li><strong>负责人</strong>：利珠</li>
+<li><strong>测试执行人</strong>：由利珠安排（不固定为某个角色）</li>
+</ul>
+
+<h4 class="阅读标题">操作步骤</h4>
+<p>1. 利珠收到产品发版通知后，根据测试用例范围安排测试人员。</p>
+<p>2. 测试人员按测试用例逐条执行，记录通过/不通过。</p>
+<p>3. 测试结果汇总给利珠。</p>
+<p>4. 全部通过 → 进入步骤 9 产品终验。</p>
+<p>5. 存在不通过项 → 进入步骤 8 返工修改。</p>
+<h4 class="阅读标题">关键产出物</h4>
+<ul>
+<li><strong>测试报告</strong>：每条用例的执行结果（通过/不通过 + 不通过原因）。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>测试人员由利珠安排</strong>：测试人员不固定为某个角色，由利珠根据范围与人力调度决定。</li>
+<li><strong>必须按测试用例执行</strong>：不能凭经验测，必须按开发产出的测试用例逐条勾选。</li>
+<li><strong>不通过项必须记录原因</strong>：不能只说"不通过"，必须说明哪条用例、什么现象、期望结果。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>利珠单向关卡</strong>：利珠只在本阶段出现，作为测试组织的负责人。测试人员由利珠调度，不固定为某个角色，但责任由利珠承担。测试结果不通过则触发步骤 8 返工循环。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'5.1'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_5_2" data-page="5.2"><div class="页面卡"><div class="页面头"><h2>返工修改与循环测试</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑧</span><span class="流程信息卡-环节名">当前环节：⑧ 返工修改与循环测试</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">开发环境 / 测试管理工具</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本步骤由开发人员根据测试报告修复问题，修复后回到步骤 7 由利珠安排复测，循环直到全部通过才进入步骤 9。</span></div></div></div>
+<h4 class="阅读标题">负责人与参与方</h4>
+<ul>
+<li><strong>负责人（修复侧）</strong>：开发人员</li>
+<li><strong>负责人（复测侧）</strong>：利珠</li>
+</ul>
+
+<h4 class="阅读标题">操作步骤</h4>
+<p>1. 开发人员拿到测试报告后逐条修复问题。</p>
+<p>2. 修复完成后通知利珠安排复测。</p>
+<p>3. 利珠组织人员复测（按原测试用例 + 修复涉及范围）。</p>
+<p>4. 复测通过 → 进入步骤 9。</p>
+<p>5. 复测仍不通过 → 回到本步骤继续修复，循环直到通过。</p>
+<h4 class="阅读标题">关键产出物</h4>
+<ul>
+<li><strong>修复记录</strong>：每条不通过项的修复方式与修复人。</li>
+<li><strong>复测报告</strong>：复测结果（通过/不通过 + 不通过原因）。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>修复不能引入新问题</strong>：每次修复必须验证不破坏其他用例，不能只修当前bug。</li>
+<li><strong>复测不能省略</strong>：修复后必须回到步骤 7 由利珠组织复测，不能由开发自测代替。</li>
+<li><strong>循环无上限但要及时升级</strong>：若同一问题循环超过 3 次仍未解决，应升级到产品/东武评估是否需要从版本范围中剔除。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>双负责人循环</strong>：修复由开发人员负责，复测由利珠负责，两者形成闭环。循环直到全部测试用例通过才允许进入步骤 9，确保发布质量不依赖个人保证。同一问题循环超 3 次需升级，避免无限返工。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'5.2'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_6_1" data-page="6.1"><div class="页面卡"><div class="页面头"><h2>产品最终验收</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑨</span><span class="流程信息卡-环节名">当前环节：⑨ 产品最终验收</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">体验环境 / 产品验收会</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本步骤是发布前的最后一道关卡，产品从产品视角（非测试视角）确认发布物符合产品预期；通过后才进入步骤 10 上线。</span></div></div></div>
+<h4 class="阅读标题">负责人与参与方</h4>
+<ul>
+<li><strong>负责人</strong>：产品</li>
+</ul>
+
+<h4 class="阅读标题">操作步骤</h4>
+<p>1. 产品在体验环境对发布物进行最终验收。</p>
+<p>2. 验收维度：是否符合《产品方案》、是否符合《交互方案》、是否覆盖版本范围全部需求项。</p>
+<p>3. 验收通过 → 进入步骤 10 上线。</p>
+<p>4. 验收不通过 → 回到步骤 8 由开发人员修复，重新走步骤 7 → 步骤 8 → 步骤 9。</p>
+<h4 class="阅读标题">关键产出物</h4>
+<ul>
+<li><strong>终验结论</strong>：通过 / 不通过 + 不通过清单。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>产品视角验收，非测试视角</strong>：本步骤不重复测试人员的功能测试，而是从产品预期视角确认整体符合度。</li>
+<li><strong>不通过必须回到步骤 8</strong>：不能跳过测试流程直接让开发改，必须经过利珠组织的复测。</li>
+<li><strong>终验是关卡非形式</strong>：产品必须真实体验发布物，不能只看测试报告就放行。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>产品单向关卡</strong>：产品在本步骤作为发布前的最终决策方。终验通过则授权上线，不通过则触发回到步骤 8 的修复循环。本步骤使得发布权最终落在产品手里，避免测试通过但产品预期不符的发布物被发布。</p>
+<hr>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'6.1'}, '指引详情')">详情</button></div>
+</div></section>
+<section class="页面面板" id="面_6_2" data-page="6.2"><div class="页面卡"><div class="页面头"><h2>上线并通知</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑩</span><span class="流程信息卡-环节名">当前环节：⑩ 上线并通知</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径末段">生产环境 / 通知渠道</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本步骤完成版本正式上线，并通知所有人（含"其他"角色）发布完成；通知后整个版本发布流程闭环。</span></div></div></div>
+<h4 class="阅读标题">负责人与参与方</h4>
+<ul>
+<li><strong>负责人（上线操作）</strong>：开发人员</li>
+<li><strong>负责人（通知发出）</strong>：产品</li>
+</ul>
+
+<h4 class="阅读标题">操作步骤</h4>
+<p>1. 开发人员执行上线操作（部署到生产环境）。</p>
+<p>2. 上线完成后产品验证关键路径可用。</p>
+<p>3. 产品发出上线通知：含版本范围、上线时间、变更说明、负责人联系方式。</p>
+<p>4. 通知渠道：项目群 + 邮件 + 全员通知（覆盖"其他"角色）。</p>
+<p>5. 通知发出后整个流程闭环。</p>
+<h4 class="阅读标题">关键产出物</h4>
+<ul>
+<li><strong>上线记录</strong>：上线时间、操作人、上线版本号。</li>
+<li><strong>全员通知</strong>：含版本范围、变更说明、负责人。</li>
+</ul>
+
+<h4 class="阅读标题">注意事项与坑点</h4>
+<ul>
+<li><strong>上线后必须产品验证关键路径</strong>：不能上线完就通知，必须先验证核心功能可用。</li>
+<li><strong>通知必须覆盖"其他"角色</strong>：不能只通知核心团队，要让所有相关方都知道发布了什么。</li>
+<li><strong>通知内容必须包含变更说明</strong>：不能只说"已上线"，必须说明本次变更了什么，方便其他角色评估影响。</li>
+</ul>
+
+<h4 class="阅读标题">业务逻辑</h4>
+<p><strong>双负责人收尾</strong>：上线操作由开发人员执行，通知由产品发出。本步骤是整个流程的闭环点，发布后通知全员确保信息透明，使整个发布流程的产出对所有人可见——这也是本指引的核心目标"让需求透明化，所有人都知道发布了什么"的最终落点。</p>
+<div style="display:none;"><button class="详情按钮" onclick="打开抽屉({_壳节编号:'6.2'}, '指引详情')">详情</button></div>
+</div></section>
+</main>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭表单弹窗()"></div>
+<aside id="表单弹窗面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="表单弹窗标题">新增</div>
+    <button class="btn-close" onclick="关闭表单弹窗()">×</button>
+  </div>
+  <div id="表单弹窗正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭表单弹窗()">取消</button>
+    <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-泳道映射">
+window._泳道节点映射 = {"3.1": [1], "3.2": [2], "3.3": [3], "4.1": [4], "4.2": [5], "4.3": [6], "5.1": [7], "5.2": [8], "6.1": [9], "6.2": [10]};
+window._阶段泳道映射 = {"3": 1, "4": 2, "5": 3, "6": 4};
+</script>
+<script id="js-页面切换">
+// 唯一导航函数：叶子菜单 onclick="切换页面('4.1')"。父节点不可点，无展开收起逻辑。
+function 切换页面(页码) {
+  document.querySelectorAll('.页面面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(页码).replace('.', '_'));
+  if (panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单文档,.菜单叶子').forEach(function(a) { a.classList.remove('激活'); });
+  var link = document.querySelector('[data-menu-page="' + 页码 + '"]');
+  if (link) link.classList.add('激活');
+  var c = document.getElementById('内容区'); if (c) c.scrollTop = 0;
+  更新泳道高亮(页码);
+}
+// 泳道两级高亮合并：阶段减弱（第一级）+ 本页节点置灰（第二级）；文档页(1/2)自动清空
+function 更新泳道高亮(页码) {
+  var 图 = document.getElementById('全局泳道图'); if (!图) return;
+  图.className = 图.className.replace(/ ?高亮阶段\d+/g, '');
+  var 阶段号 = String(页码).split('.')[0];
+  var k = (window._阶段泳道映射 || {})[阶段号];
+  if (k) 图.classList.add('高亮阶段' + k);
+  var nums = (window._泳道节点映射 || {})[页码];
+  图.querySelectorAll('.泳道行').forEach(function(r) {
+    if (!nums) { r.classList.remove('置灰'); r.classList.remove('当前'); return; }
+    var on = nums.indexOf(parseInt(r.getAttribute('data-swimlane-node'), 10)) >= 0;
+    r.classList.toggle('当前', on);
+    r.classList.toggle('置灰', !on);
+  });
+}
+</script>
+<script id="js-字段联动">
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); }
+}
+// 枚举置灰通用函数：受控分组在「启用值」命中时正常，否则整组变淡且不可点。
+// 用法：置灰切换_模板('grp_退货设置', this.value, ['是'])；多组受控就在适配函数里多调几次。
+function 置灰切换_模板(组id, val, 启用值列表) {
+  var on = 启用值列表.indexOf(val) >= 0;
+  var el = document.getElementById(组id);
+  if (el) { el.style.opacity = on ? '1' : '0.35'; el.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+</script>
+<script id="js-抽屉">
+window._详情字段按节 = window._详情字段按节 || {};
+function 打开抽屉(行数据, 标题) {
+  var drawer = document.getElementById('detailDrawer'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('detailBody'); var titleEl = document.getElementById('detailDrawerTitle');
+  if (!drawer || !body) return; titleEl.textContent = 标题 || '详情';
+  var 当前节 = (行数据 && 行数据._壳节编号) || '';
+  var 详情字段 = (当前节 && window._详情字段按节[当前节]) ? window._详情字段按节[当前节] : [];
+  var html = '<div class="编辑卡片区">';
+  function 渲染详情字段行(f, 值) {
+    var row = '';
+    row += '<div class="field-row" style="grid-template-columns:120px 1fr 28px;">';
+    row += '<span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control"><span class="field-display">' + 值 + '</span>';
+    row += '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (当前节 && window._详情字段分组 && window._详情字段分组[当前节]) ? window._详情字段分组[当前节] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 详情字段.length; k++) {
+          if (详情字段[k].名称 === 组.字段[j]) {
+            var val = (行数据 && 行数据[组.字段[j]] !== undefined) ? String(行数据[组.字段[j]]) : '—';
+            html += 渲染详情字段行(详情字段[k], val);
+            break;
+          }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="空状态">该列表未注册详情字段分组（_详情字段分组）</div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+}
+function 关闭抽屉() { var d = document.getElementById('detailDrawer'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o && !document.getElementById('表单弹窗面板').classList.contains('show')) o.classList.remove('show'); }
+</script>
+<script id="js-表单弹窗">
+// 数据驱动的新增/编辑弹窗：window._表单字段按节['4.1'] + window._新增字段分组['4.1']
+// 三个可选扩展（枚举置灰场景三件套）：
+//   window._新增控制逻辑['4.1'] = 规则摘要框 HTML（弹窗顶部说明）
+//   字段对象加 联动:'置灰切换_xx(this.value)'（enum 下拉 onchange，串内只用单引号）
+//   分组对象加 id:'grp_xx'；window._弹窗初始化['4.1'] = function(){...}（弹窗打开后执行一次初始置灰）
+function 打开表单弹窗(节编号, 模式, 行数据) {
+  var drawer = document.getElementById('表单弹窗面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('表单弹窗正文'); var titleEl = document.getElementById('表单弹窗标题');
+  if (!drawer || !body) return;
+  模式 = 模式 || '新增';
+  行数据 = 行数据 || null;
+  var 字段列表 = (window._表单字段按节 && window._表单字段按节[节编号]) ? window._表单字段按节[节编号] : [];
+  titleEl.textContent = 模式 + ' · ' + 节编号;
+  var html = '<div class="编辑卡片区">';
+  var 控制逻辑块 = (window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  function 取值(f) { return (行数据 && 行数据[f.名称] !== undefined && 行数据[f.名称] !== '') ? 行数据[f.名称] : (f.示例值 || ''); }
+  function 控件(f) {
+    if (f.编辑性 === '只读') return '<span class="field-readonly">' + (取值(f) || '系统自动生成') + '</span>';
+    if (f.基础类型 === 'enum') {
+      var opts = (f.枚举值 || '').split(/[、,，]/).filter(Boolean);
+      var ev = f.联动 ? ' onchange="' + f.联动 + '"' : '';
+      var cur = String(取值(f));
+      var o = '<select class="field-select"' + ev + '>';
+      for (var i = 0; i < opts.length; i++) o += '<option' + (opts[i] === cur ? ' selected' : '') + '>' + opts[i] + '</option>';
+      return o + '</select>';
+    }
+    if (f.基础类型 === '富文本') return '<textarea class="field-input" rows="3" placeholder="请输入">' + 取值(f) + '</textarea>';
+    return '<input class="field-input" value="' + 取值(f) + '" placeholder="请输入">';
+  }
+  function 渲染字段行(f) {
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">' + 控件(f) + '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  var 分组配置 = (window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      if (模式 === '新增' && 组.组名 === '系统生成信息') continue;
+      html += '<div class="field-card"' + (组.id ? ' id="' + 组.id + '"' : '') + '><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 字段列表.length; k++) {
+          if (字段列表[k].名称 === 组.字段[j]) { html += 渲染字段行(字段列表[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>' + 模式 + '</h4></div><div class="field-card-body">';
+    if (字段列表.length === 0) html += '<div class="空状态">未注册弹窗字段（_表单字段按节 / _新增字段分组）</div>';
+    else for (var i = 0; i < 字段列表.length; i++) html += 渲染字段行(字段列表[i]);
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+  if (window._弹窗初始化 && window._弹窗初始化[节编号]) { try { window._弹窗初始化[节编号](); } catch (e) {} }
+}
+function 关闭表单弹窗() { var d = document.getElementById('表单弹窗面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+// 行内「删除」按钮入口：二次确认后提示（演示环境不落库）。
+function 确认删除(节编号, 行数据) {
+  if (!confirm('确定删除该记录？删除后不可恢复。')) return;
+  显示提示('已删除（演示环境，不落库）', '成功', 2200);
+}
+</script>
+<script id="js-单元格截断">
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script>
+window._详情字段按节=window._详情字段按节||{};
+window._详情字段分组=window._详情字段分组||{};
+window._详情字段按节["3.1"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"3.1"}];
+window._详情字段分组["3.1"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["3.2"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"3.2"}];
+window._详情字段分组["3.2"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["3.3"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"3.3"}];
+window._详情字段分组["3.3"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["4.1"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"4.1"}];
+window._详情字段分组["4.1"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["4.2"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"4.2"}];
+window._详情字段分组["4.2"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["4.3"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"4.3"}];
+window._详情字段分组["4.3"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["5.1"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"5.1"}];
+window._详情字段分组["5.1"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["5.2"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"5.2"}];
+window._详情字段分组["5.2"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["6.1"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"6.1"}];
+window._详情字段分组["6.1"]=[{组名:"指引说明",字段:["指引说明"]}];
+window._详情字段按节["6.2"]=[{名称:"指引说明",类型原文:"string",基础类型:"string",数据来源:"MD文档正文",用途:"本步骤完整指引内容",节编号:"6.2"}];
+window._详情字段分组["6.2"]=[{组名:"指引说明",字段:["指引说明"]}];
+</script>
+</body>
+</html>
