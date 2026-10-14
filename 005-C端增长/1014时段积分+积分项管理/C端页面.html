@@ -290,7 +290,8 @@ body.bf-mode .bf-ctrl{display:block}
       <!-- 业务流程拆 3 个子集：主流程 / 订阅 / 其他（纯分组标签，不是功能目标文件夹） -->
       <div class="bf-subset">主流程</div>
       <div class="tree-children bf-subset-body">
-        <div class="tree-item t3 last" data-nav="bf-new" onclick="nav('bf-new')">🆕 新用户-首单流程</div>
+        <!-- 已隐藏：新用户-首单流程（非本次迭代范围），如需恢复去掉 display:none -->
+        <div class="tree-item t3 last" data-nav="bf-new" style="display:none" onclick="nav('bf-new')">🆕 新用户-首单流程</div>
         <!-- 已隐藏：老用户下单流程（非本次迭代范围），如需恢复去掉 display:none -->
         <div class="tree-item t3" data-nav="bf-old" style="display:none" onclick="nav('bf-old')">🔁 老用户-下单流程</div>
         <div class="tree-item t3 last" data-nav="bf-pop" onclick="nav('bf-pop')">⑥ 弹窗触发·时段加码</div>
@@ -300,8 +301,9 @@ body.bf-mode .bf-ctrl{display:block}
       <div class="tree-children bf-subset-body" style="display:none">
         <div class="tree-item t3 last" data-nav="bf-xhs" onclick="nav('bf-xhs')">📕 小红书-用户流程</div>
       </div>
-      <div class="bf-subset">其他</div>
-      <div class="tree-children bf-subset-body">
+      <!-- 已隐藏：签到·每天召回 / 每天召回策略（非本次迭代范围），如需恢复去掉两个 display:none -->
+      <div class="bf-subset" style="display:none">其他</div>
+      <div class="tree-children bf-subset-body" style="display:none">
         <div class="tree-item t3" data-nav="bf-sign" onclick="nav('bf-sign')">📅 签到 · 每天召回</div>
         <div class="tree-item t3 last" data-nav="bf-recall" onclick="nav('bf-recall')">📢 每天召回策略</div>
       </div>
@@ -325,8 +327,9 @@ body.bf-mode .bf-ctrl{display:block}
       </div>
       <div class="tree-item t2 last" data-nav="points" onclick="goPage('points')">📊 积分明细</div>
     </div>
-    <div class="tree-item grp" onclick="toggleGroup(this)">🔧 其他页面 <span class="tg">▾</span></div>
-    <div class="tree-children grp-body">
+    <!-- 已隐藏：其他页面组（分享卡片页/订阅通知，非本次迭代范围），如需恢复去掉两个 display:none -->
+    <div class="tree-item grp" style="display:none" onclick="toggleGroup(this)">🔧 其他页面 <span class="tg">▾</span></div>
+    <div class="tree-children grp-body" style="display:none">
       <!-- 已隐藏：分享卡片页（非本次迭代范围），如需恢复去掉 display:none -->
       <div class="tree-item t2" data-nav="share" style="display:none" onclick="nav('share')">🔗 分享卡片页</div>
       <div style="padding:10px 14px 2px;font-size:11px;color:#999;font-weight:700;letter-spacing:1px">🔔 订阅通知</div>
