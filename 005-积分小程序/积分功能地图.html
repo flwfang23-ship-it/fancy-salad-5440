@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>外卖积分 · 功能地图</title>
+<!--
+  积分功能地图 / 索引页
+  说明：本页为独立说明页，不走 B端 / C端 工作流（不套 9 节说明卡骨架、不画泳道、不跑 SELF_CHECK）。
+  用途：一张图看清「积分怎么攒、怎么花、走到了哪一版」，并索引 005-积分小程序 下的各版本文档。
+  维护：每完成一次迭代，在「迭代地图」追加一个节点，在「后续迭代」摘掉对应占位。
+-->
+<style>
+  :root{
+    --ink:#0f172a; --ink2:#334155; --ink3:#64748b; --ink4:#94a3b8;
+    --line:#e2e8f0; --bg:#f6f8fb; --card:#ffffff;
+    --pri:#1d4ed8; --pri-soft:#eff6ff; --warn:#b45309;
+    --orange:#ea580c; --green:#047857; --green-soft:#ecfdf5;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+       background:var(--bg); color:var(--ink); line-height:1.75; font-size:14px}
+  .wrap{max-width:1000px; margin:0 auto; padding:36px 26px 90px}
+
+  /* ── 头部 ── */
+  .hero{background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 55%,#3b82f6 100%); color:#fff;
+        border-radius:16px; padding:30px 32px; box-shadow:0 10px 30px rgba(29,78,216,.18)}
+  .hero h1{font-size:27px; font-weight:750; letter-spacing:.5px}
+  .hero .sub{font-size:13.5px; opacity:.9; margin-top:8px}
+  .hero .tags{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px}
+  .hero .tag{background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28);
+             border-radius:999px; padding:4px 13px; font-size:12px}
+
+  /* ── 通用板块 ── */
+  section{margin-top:34px}
+  .sec-h{display:flex; align-items:center; gap:10px; margin-bottom:14px}
+  .sec-n{flex:none; width:26px; height:26px; border-radius:8px; background:var(--pri); color:#fff;
+         font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center}
+  .sec-t{font-size:19px; font-weight:730}
+  .sec-d{font-size:12.5px; color:var(--ink3); margin-left:auto}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 22px;
+        box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .card + .card{margin-top:14px}
+  .card h3{font-size:14.5px; font-weight:700; margin-bottom:10px; color:var(--ink2)}
+  .card p{font-size:13px; color:var(--ink2)}
+  .muted{color:var(--ink3); font-size:12.5px}
+
+  /* ── ASCII 图 ── */
+  pre.ascii{background:#0f172a; color:#cbd5e1; border-radius:10px; padding:18px 20px;
+            font-family:Consolas,"Courier New",monospace; font-size:12.5px; line-height:1.65;
+            overflow-x:auto; white-space:pre; tab-size:2}
+  pre.ascii .y{color:#fbbf24}
+  pre.ascii .g{color:#6ee7b7}
+  pre.ascii .b{color:#93c5fd}
+
+  /* ── 表格 ── */
+  table{width:100%; border-collapse:collapse; font-size:12.8px}
+  th{background:#f8fafc; color:var(--ink2); text-align:left; font-weight:650;
+     padding:9px 11px; border-bottom:1px solid var(--line); font-size:12.5px}
+  td{padding:9px 11px; border-bottom:1px solid #f1f5f9; color:var(--ink2); vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .pill{display:inline-block; padding:1px 8px; border-radius:999px; font-size:11.5px;
+        background:var(--pri-soft); color:var(--pri); font-weight:600}
+  .pill.new{background:var(--green-soft); color:var(--green)}
+  .pill.old{background:#f1f5f9; color:var(--ink3)}
+
+  /* ── 迭代地图 ── */
+  .road{position:relative; padding-left:30px}
+  .road::before{content:""; position:absolute; left:9px; top:6px; bottom:6px; width:2px; background:#dbeafe}
+  .node{position:relative; margin-bottom:16px}
+  .node:last-child{margin-bottom:0}
+  .node::before{content:""; position:absolute; left:-26px; top:20px; width:12px; height:12px;
+                border-radius:50%; background:var(--pri); border:3px solid #dbeafe; box-sizing:content-box}
+  .node.todo::before{background:#fff; border:3px solid #cbd5e1}
+  .node .v{display:inline-block; font-size:11.5px; font-weight:700; color:var(--pri);
+           background:var(--pri-soft); border-radius:5px; padding:2px 9px; margin-bottom:8px}
+  .node.todo .v{color:var(--ink3); background:#f1f5f9}
+  .node .box{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 19px}
+  .node.todo .box{border-style:dashed; background:#fbfcfe}
+  .node .t{font-size:15px; font-weight:700}
+  .node .t small{font-weight:500; color:var(--ink4); font-size:12px; margin-left:8px}
+  .node ul{margin:9px 0 0 18px; font-size:13px; color:var(--ink2)}
+  .node li{margin-bottom:3px}
+  .node .foot{margin-top:12px; display:flex; gap:8px; flex-wrap:wrap}
+  a.entry{display:inline-flex; align-items:center; gap:5px; text-decoration:none; font-size:12.5px;
+          color:var(--pri); background:var(--pri-soft); border:1px solid #dbeafe;
+          border-radius:7px; padding:4px 12px; transition:.15s}
+  a.entry:hover{background:#dbeafe}
+
+  /* ── 索引卡 ── */
+  .idx{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .idx .card{display:flex; flex-direction:column}
+  .idx .hd{display:flex; align-items:center; gap:8px; margin-bottom:6px}
+  .idx .hd .no{font-family:Consolas,monospace; font-size:12px; color:var(--ink4)}
+  .idx .hd b{font-size:14.5px}
+  .idx .tagline{font-size:12px; color:var(--ink3); margin-bottom:10px}
+  .idx .links{margin-top:auto; padding-top:12px; display:flex; flex-wrap:wrap; gap:8px}
+  @media(max-width:820px){ .idx{grid-template-columns:1fr} }
+
+  /* ── 提示条 ── */
+  .note{border-radius:10px; padding:12px 16px; font-size:12.5px; line-height:1.8; margin-top:14px}
+  .note.blue{background:var(--pri-soft); border:1px solid #bfdbfe; color:#1e40af}
+  .note.warn{background:#fffbeb; border:1px solid #fde68a; color:var(--warn)}
+  .note.gray{background:#f8fafc; border:1px dashed #cbd5e1; color:var(--ink3)}
+
+  footer{margin-top:44px; text-align:center; font-size:12px; color:var(--ink4); line-height:2}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ══════════ 头部 ══════════ -->
+  <header class="hero">
+    <h1>外卖积分 · 功能地图</h1>
+    <div class="sub">一张图看清：积分怎么攒、怎么花、现在走到哪一版了</div>
+    <div class="tags">
+      <span class="tag">📌 索引 / 地图页</span>
+      <span class="tag">🚫 不走 B端 / C端 工作流</span>
+      <span class="tag">🕒 更新于 2026-10-15</span>
+      <span class="tag">📁 005-积分小程序</span>
+    </div>
+  </header>
+
+  <!-- ══════════ ① 功能逻辑 ══════════ -->
+  <section id="logic">
+    <div class="sec-h">
+      <span class="sec-n">1</span>
+      <span class="sec-t">功能逻辑</span>
+      <span class="sec-d">一条主链：攒积分 → 花积分 → 打款到账</span>
+    </div>
+
+    <div class="card">
+      <h3>主线流程</h3>
+<pre class="ascii">用户从<span class="b">微信分享卡片</span>进入小程序
+        │
+        ├─ <span class="y">每日签到</span> ──────────────┐
+        ├─ <span class="y">领首页红包</span>（6 卡，每卡 +5）─┤
+        └─ <span class="y">跳饿了么 / 美团下单</span> ──────┤
+                                    ↓
+                        外卖订单「<span class="b">已付款</span>」→ 平台回传佣金
+                                    ↓
+                        积分到账 = <span class="g">佣金 × 50% × 2000</span>
+                        （叠加：小票积分 / 新人积分 / 下午茶·夜宵时段加码）
+                                    ↓
+                          积分商城 → 兑换现金任务
+                    ┌───────────────┴───────────────┐
+              <span class="b">主动兑换</span>（用户随时）          <span class="b">自动兑换</span>（每周一 11:00 系统）
+                    └───────────────┬───────────────┘
+                                    ↓
+                            微信零钱打款
+                    ┌───────────────┴───────────────┐
+              成功：推送<span class="g">到账通知</span>            失败：记录原因 → 运营<span class="g">补发</span></pre>
+      <div class="note blue">
+        两条兑换路径共用同一积分池、同一套扣减逻辑，在「微信零钱打款」环节真实汇合。
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>攒积分 · 7 类流水类型（与 B端积分明细口径一致）</h3>
+      <table>
+        <thead>
+          <tr><th style="width:34px">#</th><th style="width:120px">流水类型</th><th style="width:190px">触发场景</th><th>备注</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>签到积分</td><td>每日签到任务完成</td><td>7 档：5 / 10 / 15 / 20 / 25 / 35 / 35</td></tr>
+          <tr><td>2</td><td>红包领取</td><td>领取饿了么 / 美团红包卡</td><td>每卡 +5 积分，每日 6 张</td></tr>
+          <tr><td>3</td><td>订单到账</td><td>外卖订单「已付款」</td><td>基础积分 = 佣金 × 50% × 2000</td></tr>
+          <tr><td>4</td><td>小票积分</td><td>上传小票 OCR 识别成功</td><td>每客户仅一次，默认 +200</td></tr>
+          <tr><td>5</td><td>新人积分</td><td>新用户首次进入小程序</td><td>—</td></tr>
+          <tr><td>6</td><td><span class="pill new">新增</span> 下午茶</td><td>15:00–17:00 下单时段加码</td><td>额外 +100，叠加在基础积分之上</td></tr>
+          <tr><td>7</td><td><span class="pill new">新增</span> 夜宵积分</td><td>20:00–24:00 下单时段加码</td><td>额外 +200，叠加在基础积分之上</td></tr>
+        </tbody>
+      </table>
+      <div class="note gray">时段内只要命中对应时段的订单即发放额外积分，与用户从哪个入口进入无关。</div>
+    </div>
+
+    <div class="card">
+      <h3>花积分 · 兑换与打款</h3>
+      <table>
+        <thead>
+          <tr><th style="width:130px">环节</th><th>规则</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>积分定价</td><td>1 元 = 2000 积分；最低档 600 积分 ≈ 0.3 元</td></tr>
+          <tr><td>主动兑换</td><td>用户随时在积分商城选档位兑换，实时生成一笔提现</td></tr>
+          <tr><td>自动兑换</td><td>每周一 11:00，系统为已开启自动兑换的用户逐档兑换</td></tr>
+          <tr><td>打款</td><td>统一打款到微信零钱；成功推送到账通知，失败记录原因并可运营补发</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════ ② 弹窗三层逻辑 ══════════ -->
+  <section id="pop">
+    <div class="sec-h">
+      <span class="sec-n">2</span>
+      <span class="sec-t">弹窗管理逻辑</span>
+      <span class="sec-d">1014 版核心 · 三层完全解耦</span>
+    </div>
+
+    <div class="card">
+<pre class="ascii">每个积分项 ──┬── <span class="y">逻辑 1 · 弹窗顺序</span>   多弹窗同时触发时，按顺序号由小到大依次弹
+             │
+             ├── <span class="y">逻辑 2 · 弹窗是否显示</span> 每个弹窗独立控制「显示 / 不显示」
+             │
+             └── <span class="y">逻辑 3 · 开关</span>         控制积分是否发放（关 = 不产生积分）
+
+<span class="g">弹窗展示（逻辑 1 + 2）　与　积分发放（逻辑 3）　完全解耦、互不影响</span></pre>
+      <div class="note warn">
+        弹窗种类与触发逻辑写死在 C 端代码，B 端只配开关 / 弹窗顺序 / 弹窗是否显示 / 跳转参数。
+        每次用户打开小程序，都会重新执行一次弹窗触发判断。
+      </div>
+      <div class="note gray">
+        时段命中：下午茶 15:00–17:00、夜宵 20:00–24:00。
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ ③ 迭代地图 ══════════ -->
+  <section id="roadmap">
+    <div class="sec-h">
+      <span class="sec-n">3</span>
+      <span class="sec-t">迭代地图</span>
+      <span class="sec-d">按时间线看演进 · 每完成一版追加一个节点</span>
+    </div>
+
+    <div class="road">
+
+      <div class="node">
+        <span class="v">第 1 版 · 0928</span>
+        <div class="box">
+          <div class="t">最简方案 <small>搭建全闭环</small></div>
+          <ul>
+            <li>打通「签到 / 领券 → 下单 → 积分到账 → 兑换 → 微信零钱打款 → 失败补发」整条闭环。</li>
+            <li>B 端落地 9 个后台叶子页：3.1 全局参数、3.2 首页活动、3.3 签到规则、7.1 现金任务、11.1 客户订单、11.2 积分明细、11.3 兑换记录、11.5 提现记录、11.8 用户资产。</li>
+            <li>C 端落地全套小程序页面（首页 / 积分商城 / 我的 + 签到、订单、积分明细、提现记录、兑换记录 + 分享卡片、订阅通知）。</li>
+            <li>确立积分公式口径：<b>下单积分 = 平台回传佣金 × 折算比例 × 2000</b>。</li>
+          </ul>
+          <div class="foot">
+            <a class="entry" href="0928最简方案/C端页面.html">🧩 C端页面</a>
+            <a class="entry" href="0928最简方案/B端后台.html">⚙️ B端后台</a>
+            <a class="entry" href="0928最简方案/总览_业务闭环图.jpg">🖼 业务闭环图</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="node">
+        <span class="v">第 2 版 · 1013</span>
+        <div class="box">
+          <div class="t">小票积分迭代 <small>新增一条攒积分支线</small></div>
+          <ul>
+            <li>新增「上传小票」：用户拍照上传外卖订单截图，系统 OCR 自动识别审核（无人审），识别成功发放小票积分（默认 +200）。</li>
+            <li>小票积分每个客户仅可获得一次。</li>
+            <li>B 端收敛为可读范围：3.0 改动清单、3.1 全局参数（新增小票上传分组）、4.1 小票记录、11.2 积分明细（流水类型 +1）。</li>
+          </ul>
+          <div class="foot">
+            <a class="entry" href="1013小票积分迭代/C端页面.html">🧩 C端页面</a>
+            <a class="entry" href="1013小票积分迭代/B端后台.html">⚙️ B端后台</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="node">
+        <span class="v">第 3 版 · 1014（当前）</span>
+        <div class="box">
+          <div class="t">时段积分 + 积分项管理 <small>让弹窗与积分可运营</small></div>
+          <ul>
+            <li>新增「积分项管理」（B 端 3.4）：管理 7 个积分项，每个积分项对应一批弹窗，三层逻辑（弹窗顺序 / 弹窗是否显示 / 开关）完全解耦。</li>
+            <li>新增「时段加码激励」（B 端 3.1）：下午茶 15–17 点下单额外 +100、夜宵 20–24 点下单额外 +200。</li>
+            <li>积分明细（11.2）流水类型与积分项统一口径，扩充为 7 类。</li>
+            <li>C 端新增「弹窗触发 · 时段加码」流程：从微信分享卡片进入 → 命中时段 → 弹引导 → 下单 → 基础积分 + 时段额外积分到账。</li>
+          </ul>
+          <div class="foot">
+            <a class="entry" href="1014时段积分+积分项管理/C端页面.html">🧩 C端页面</a>
+            <a class="entry" href="1014时段积分+积分项管理/B端后台.html">⚙️ B端后台</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="node todo">
+        <span class="v">第 4 版 · 待排期</span>
+        <div class="box">
+          <div class="t">⬜ 待补充 <small>口述后填入</small></div>
+          <ul>
+            <li>本节点为占位：后续迭代内容确定后，在此补充「版本号 + 功能名 + 改动点 + 文档入口」。</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════ ④ 文档索引 ══════════ -->
+  <section id="index">
+    <div class="sec-h">
+      <span class="sec-n">4</span>
+      <span class="sec-t">文档索引</span>
+      <span class="sec-d">005-积分小程序 · 3 个版本文件夹</span>
+    </div>
+
+    <div class="idx">
+      <div class="card">
+        <div class="hd"><span class="no">0928</span><b>最简方案</b></div>
+        <div class="tagline">全闭环基线版</div>
+        <p class="muted">覆盖从规则配置到打款补发的完整链路，是后续所有迭代的底座。</p>
+        <div class="links">
+          <a class="entry" href="0928最简方案/C端页面.html">C端页面</a>
+          <a class="entry" href="0928最简方案/B端后台.html">B端后台</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><span class="no">1013</span><b>小票积分迭代</b></div>
+        <div class="tagline">增量：小票积分</div>
+        <p class="muted">在基线上加一条「上传小票」攒积分支线，B 端收敛为改动清单 + 受影响页。</p>
+        <div class="links">
+          <a class="entry" href="1013小票积分迭代/C端页面.html">C端页面</a>
+          <a class="entry" href="1013小票积分迭代/B端后台.html">B端后台</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><span class="no">1014</span><b>时段积分+积分项管理</b></div>
+        <div class="tagline">增量：弹窗可运营 + 时段加码</div>
+        <p class="muted">积分项管理三层逻辑上线，新增下午茶 / 夜宵时段加码，流水类型扩至 7 类。</p>
+        <div class="links">
+          <a class="entry" href="1014时段积分+积分项管理/C端页面.html">C端页面</a>
+          <a class="entry" href="1014时段积分+积分项管理/B端后台.html">B端后台</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ ⑤ 后续迭代 ══════════ -->
+  <section id="todo">
+    <div class="sec-h">
+      <span class="sec-n">5</span>
+      <span class="sec-t">后续迭代</span>
+      <span class="sec-d">待口述补充</span>
+    </div>
+    <div class="card">
+      <div class="note gray" style="margin:0">
+        ⬜ 本区为占位。下一次迭代确定后，在此补充：<b>功能名 / 一句话目标 / 改动点 / 涉及端 / 文档入口</b>，
+        并在上方「迭代地图」追加对应节点。
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    外卖积分 · 功能地图 ｜ 索引页，随迭代更新<br>
+    本页仅作逻辑说明与导航，具体字段、弹窗、跳转以各版本文档为准
+  </footer>
+
+</div>
+</body>
+</html>
