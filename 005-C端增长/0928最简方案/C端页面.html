@@ -316,7 +316,7 @@ body.bf-mode .bf-ctrl{display:block}
       <div class="tree-item t2" data-nav="share" onclick="nav('share')">🔗 分享卡片页</div>
       <div style="padding:10px 14px 2px;font-size:11px;color:#999;font-weight:700;letter-spacing:1px">🔔 订阅通知</div>
       <div class="tree-children" style="margin-left:14px">
-        <div class="tree-item t3 last" data-nav="wxmsgD" onclick="nav('wxmsgD')">每天召回</div>
+        <div class="tree-item t3 last" data-nav="wxmsgD" onclick="nav('wxmsgD')">签到提醒</div>
       </div>
     </div>
     <div class="tree-note">💡 点击节点跳转对应页面<br>▾/▸ 收起或展开分组<br>« 收起整个树状图<br>URL 加 ?selfcheck=1 跑交付自检</div>
@@ -485,8 +485,8 @@ body.bf-mode .bf-ctrl{display:block}
     <div style="margin-top:10px;padding:10px 12px;background:#E8F5E9;border-radius:10px;display:flex;align-items:center;gap:8px">
       <div style="font-size:18px">🔔</div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:#2E7D32">已订阅 · 每天召回</div>
-        <div style="font-size:11px;color:#666;margin-top:2px">系统每天推送一次召回通知，引导回首页领红包下单</div>
+        <div style="font-size:13px;font-weight:700;color:#2E7D32">已订阅 · 签到提醒</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">每天 11:00 推送签到提醒，点卡片回首页签到领积分</div>
       </div>
     </div>
   </div>
@@ -547,19 +547,17 @@ body.bf-mode .bf-ctrl{display:block}
   </div>
 </div>
 
-<!-- 其他页面 · 订阅通知D：每天召回（签到时订阅；每天推送一次，引导回首页） -->
+<!-- 其他页面 · 订阅通知D：签到提醒（签到时订阅；每天11:00推送，引导回首页） -->
 <div class="page" id="p-wxmsgD">
   <div class="wx-bar">🔔 服务通知</div>
-  <div class="wx-date">9月27日 09:00</div>
+  <div class="wx-date">10月15日 11:00</div>
   <div class="wx-card" onclick="landFromSubscribe('home')">
     <div class="wx-brand"><span class="wx-ava">🥡</span><span class="wx-name">外卖积分</span></div>
-    <div class="wx-tt">每天召回 <span class="wx-bell">🔔</span></div>
-    <div class="wx-f"><span>召回提示</span><b>今天还没领红包哦</b></div>
-    <div class="wx-f"><span>可用红包</span><b>饿了么/美团 多张可领</b></div>
-    <div class="wx-f"><span>积分进度</span><b>已攒 12,000 积分</b></div>
-    <div class="wx-f"><span>行动建议</span><b>点卡片进首页领红包下单</b></div>
+    <div class="wx-tt">签到提醒 <span class="wx-bell">🔔</span></div>
+    <div class="wx-f"><span>活动名称</span><b>每日签到</b></div>
+    <div class="wx-f"><span>温馨提示</span><b>今天签到可获取35积分</b></div>
     <div class="wx-sep"></div>
-    <div class="wx-foot"><span class="wx-ava-s">🥡</span><span class="wx-kw">每天召回 · 通知</span><span class="wx-go">小程序 ›</span></div>
+    <div class="wx-foot"><span class="wx-ava-s">🥡</span><span class="wx-kw">签到提醒 · 通知</span><span class="wx-go">小程序 ›</span></div>
   </div>
 </div>
 
@@ -593,7 +591,7 @@ body.bf-mode .bf-ctrl{display:block}
 ================================================================ */
 const APP={ava:'🥡',name:'外卖积分'};
 const SHARE={title:'领外卖红包，下单攒积分换现金',land:'home'};   // 分享卡片配置（封面用纯视觉占位块，无文字）
-const WXMSG={title:'每天召回通知',kw:'订阅模板 TM1004（每天召回）'};
+const WXMSG={title:'签到提醒',kw:'订阅模板 10969（签到提醒）'};
 
 const D = {
   "rate": 2000,
@@ -628,7 +626,7 @@ const D = {
     "remind": "连续签到 5 天 · 今日 +35",
     "tip": "今日签到 +35 积分 · 明日 +35",
     "tip2": "签到得积分，连续越久档位越高",
-    "subText": "已订阅 · 每天召回"
+    "subText": "已订阅 · 签到提醒"
   },
 
   "mallEntrySub": "积分换现金 · 直接打到微信零钱",
@@ -688,10 +686,12 @@ const D = {
   },
 
   "wxmsg": {
-    "dDate": "9月27日 12:30",
-    "dTitle": "每天召回",
-    "dTip": "今日还没签到 · 领红包攒积分",
-    "dBtn": "立即回来看"
+    "dDate": "10月15日 11:00",
+    "dTitle": "签到提醒",
+    "f1k": "活动名称",
+    "f1v": "每日签到",
+    "f2k": "温馨提示",
+    "f2v": ""
   },
 
   "share": {
@@ -705,10 +705,10 @@ const D = {
   },
 
   "msgs": {
-    "d": "每天召回",
-    "kwD": "每天召回 · 服务通知"
+    "d": "签到提醒",
+    "kwD": "签到提醒 · 服务通知"
   },
-  "tm": {"d": "TM1004"},
+  "tm": {"no": "10969", "name": "签到提醒", "id": "2m7SoYxxXGGhpeYs4OW_wnxAfbAVrrccLqE7oMS7W_U"},
 
   "jumpText": "美团丨外卖团购特价<br>美食酒店电影",
 
@@ -730,6 +730,8 @@ const D = {
   },
   "bfPtsInit": 4005
 };
+/* 签到提醒字段2：X=用户今天签到可获取的积分数（读当天签到档位） */
+D.wxmsg.f2v='今天签到可获取'+D.sign.today+'积分';
 
 /* ================================================================
    ② 导航骨架（固定模式，不要改）
@@ -1234,7 +1236,7 @@ function drawerMaskHook(){
   return false;
 }
 
-const titles={overview:'总说明 · 总览',home:'首页',mall:'积分商城',mine:'我的',sign:'签到',orders:'订单列表',points:'积分明细',cash:'提现记录',exchange:'兑换记录',share:'分享卡片页',wxmsgD:'订阅通知 · 每天召回','bf-new':'🆕 新用户-首单流程','bf-old':'🔁 老用户-下单流程','bf-sign':'📅 签到 · 每天召回','bf-recall':'📢 订阅每天召回策略'};
+const titles={overview:'总说明 · 总览',home:'首页',mall:'积分商城',mine:'我的',sign:'签到',orders:'订单列表',points:'积分明细',cash:'提现记录',exchange:'兑换记录',share:'分享卡片页',wxmsgD:'订阅通知 · 签到提醒','bf-new':'🆕 新用户-首单流程','bf-old':'🔁 老用户-下单流程','bf-sign':'📅 签到 · 每天召回','bf-recall':'📢 订阅每天召回策略'};
 const tabPages=['mall','home','mine'];
 const bfPages=['bf-new','bf-old','bf-sign','bf-recall'];
 const noPhonePages=['overview'];
@@ -1525,7 +1527,7 @@ overview:()=>overviewDoc({
     {t:'功能简介',items:['外卖 CPS 激励小程序','领红包跳转外卖平台下单，确认收货得积分','积分兑换现金任务，打款到微信零钱']},
     {t:'获取积分',items:['下单回传佣金折算入账','每日签到得积分']},
     {t:'积分消耗',items:['用户主动兑换现金任务']},
-    {t:'订阅通知',items:['积分到账：确认收货后积分实际入账','主动兑换到账：用户主动兑换打款结果','每天召回：签到订阅后每日推送召回卡片']},
+    {t:'订阅通知',items:['签到提醒：签到订阅后每天11:00推送提醒卡片']},
     {t:'后台配置项',items:['全局参数：积分汇率、折算比例、双平台拉单凭证','首页活动：红包卡面额、跳转方式、排序与上下架','签到规则：7档积分','现金任务：兑换档位与任务性质']}
   ],
   users:'面向外卖返利小程序的 C 端用户，无角色/权限差异',
@@ -1536,23 +1538,23 @@ overview:()=>overviewDoc({
     ['积分消耗','积分商城任务兑换（现金任务 + 实物任务）'],
     ['现金到账',D.wxWay+'；现金任务最低档 '+D.tasks[0].name.slice(1)+' 元（'+D.tasks[0].ptsText+'），约 20 元/周'],
     ['签到口径','服务器时间（东八区）自然日，每日 00:00 切换「今日」；同一自然日限签 1 次'],
-    ['订阅召回','签到时订阅「每天召回」（'+D.tm.d+'），系统每日推送召回卡片，点卡直接进首页；同一自然日最多 1 条']
+    ['订阅召回','签到时订阅「签到提醒」（模板编号 '+D.tm.no+'），系统每天 11:00 推送提醒卡片，点卡直接进首页；同一自然日最多 1 条']
   ],
   branches:[
     {name:'🆕 新用户-首单流程',nav:'bf-new',cond:'首次进入小程序并领券下单',result:'积分到账 → 商城兑换闭环'},
     {name:'🔁 老用户-下单流程',nav:'bf-old',cond:'老用户再次领券下单',result:'积分到账即止（不含兑换）'},
-    {name:'📅 签到 · 每天召回',nav:'bf-sign',cond:'用户进入签到页',result:'订阅每天召回 → 立即签到 → 签到成功'},
-    {name:'📢 订阅每天召回策略',nav:'bf-recall',cond:'签到时已订阅「每天召回」（TM1004）',result:'系统每日推送召回卡片 → 点卡直接进首页'}
+    {name:'📅 签到 · 每天召回',nav:'bf-sign',cond:'用户进入签到页',result:'订阅「签到提醒」→ 立即签到 → 签到成功'},
+    {name:'📢 订阅每天召回策略',nav:'bf-recall',cond:'签到时已订阅「签到提醒」（10969）',result:'系统每天11:00推送提醒卡片 → 点卡直接进首页'}
   ],
-  ascii:{cap:'积分整体闭环（来源 → 余额 → 兑换 → 零钱 → 召回）',txt:'领券 +5/张·6张/天   签到 5/10/15/20/25/35/35   下单收货 实付×2000\n      └──────────────┴──────→  积分余额  ←──────┘\n                                  │\n                    积分商城任务（主动兑换）\n                                  │\n        主动兑换（现金/实物）→ 微信零钱到账\n                                  │\n                    订阅每天召回（TM1004）'},
+  ascii:{cap:'积分整体闭环（来源 → 余额 → 兑换 → 零钱 → 召回）',txt:'领券 +5/张·6张/天   签到 5/10/15/20/25/35/35   下单收货 实付×2000\n      └──────────────┴──────→  积分余额  ←──────┘\n                                  │\n                    积分商城任务（主动兑换）\n                                  │\n        主动兑换（现金/实物）→ 微信零钱到账\n                                  │\n                    订阅签到提醒（10969）· 每天11:00推送'},
   image:{src:'总览_业务闭环图.jpg',cap:'业务闭环总览图 · 点击放大'},
-  guides:[{t:'🏠 首页',nav:'home'},{t:'🏪 积分商城',nav:'mall'},{t:'👤 我的',nav:'mine'},{t:'📅 签到',nav:'sign'},{t:'📦 订单列表',nav:'orders'},{t:'📊 积分明细',nav:'points'},{t:'💸 提现记录',nav:'cash'},{t:'🧾 兑换记录',nav:'exchange'},{t:'🔗 分享卡片页',nav:'share'},{t:'🔔 订阅·每天召回',nav:'wxmsgD'},{t:'🆕 新用户-首单',nav:'bf-new'},{t:'🔁 老用户-下单',nav:'bf-old'},{t:'📅 签到·每天召回',nav:'bf-sign'},{t:'📢 订阅每天召回',nav:'bf-recall'}]
+  guides:[{t:'🏠 首页',nav:'home'},{t:'🏪 积分商城',nav:'mall'},{t:'👤 我的',nav:'mine'},{t:'📅 签到',nav:'sign'},{t:'📦 订单列表',nav:'orders'},{t:'📊 积分明细',nav:'points'},{t:'💸 提现记录',nav:'cash'},{t:'🧾 兑换记录',nav:'exchange'},{t:'🔗 分享卡片页',nav:'share'},{t:'🔔 订阅·签到提醒',nav:'wxmsgD'},{t:'🆕 新用户-首单',nav:'bf-new'},{t:'🔁 老用户-下单',nav:'bf-old'},{t:'📅 签到·每天召回',nav:'bf-sign'},{t:'📢 订阅每天召回',nav:'bf-recall'}]
 }),
 home:()=>docCard('P1','首页（Tab · 领券中心）',
  ['页面说明：小程序 Landing 页，领券中心；展示积分总览与每日红包，是攒积分的主入口',
   '承接流程：3 个 —— 🆕新用户-首单流程（环节①②③④、⑤到账弹窗）、🔁老用户-下单流程（环节①②③④、⑤到账弹窗）、📢订阅每天召回策略（环节③点通知卡片直接进首页）'],
  ['操作链路：点未领红包卡「领取 +5」→ 用户积分 +5 → 顶部积分余额与「约合金额」同步刷新 → 该卡按钮变绿色「去下单」',
-  '通知回链：每天召回卡片（wxmsgD · TM1004）→ 点卡直接进首页，不弹抽屉'],
+  '通知回链：签到提醒卡片（wxmsgD · 10969）→ 点卡直接进首页，不弹抽屉'],
  [['积分总览（顶部渐变 hero）',[
    ['积分余额',D.userPtsText,'来源：用户积分账户<br>限制：整数千分位<br>更新：实时','无'],
    ['约合金额',D.userMoney,'来源：积分÷2000<br>限制：保留 2 位小数<br>更新：随积分同步','无']
@@ -1618,13 +1620,13 @@ mine:()=>docCard('P3','我的（Tab）',
  '',
  ['加载态：资料区骨架占位']),
 sign:()=>docCard('P4','签到（二级页 · 首页下）',
- ['页面说明：每日签到攒积分页，连续越久档位越高；签到前先订阅「每天召回」模板',
+ ['页面说明：每日签到攒积分页，连续越久档位越高；签到前先订阅「签到提醒」模板',
   '承接流程：1 个 —— 📅签到·每天召回流程（订阅 → 立即签到 → 签到成功）'],
- ['主链路：进入签到页 → 微信订阅弹窗（每天召回 TM1004）→ 允许后点「立即签到」→【签到成功】抽屉 → D6 变已签、按钮置灰「今日已签到」'],
+ ['主链路：进入签到页 → 微信订阅弹窗（签到提醒 10969）→ 允许后点「立即签到」→【签到成功】抽屉 → D6 变已签、按钮置灰「今日已签到」'],
  [['顶部信息',[
    ['连续签到天数','已连续签到 '+D.sign.days+' 天','来源：签到系统统计<br>限制：断签从 D1 重计<br>更新：签到后','无'],
    ['今日签到提示',D.sign.tip,'来源：档位表按连续天数取值<br>限制：档位 '+D.sign.tiersText+'（第 6 档封顶）<br>更新：跨天 0 点重置','无'],
-   ['已订阅·每天召回','已订阅 / 未订阅','来源：订阅状态<br>限制：未订阅时不允许签到<br>更新：订阅授权后','无']
+   ['已订阅·签到提醒','已订阅 / 未订阅','来源：订阅状态<br>限制：未订阅时不允许签到<br>更新：订阅授权后','无']
  ]],['7 日档位横条',[
    ['D1-D5 已签档','D1 +'+D.sign.t1+' / D2 +'+D.sign.t2+' / D3 +'+D.sign.t3+' / D4 +'+D.sign.t4+' / D5 +'+D.sign.t5+'（橙色底「已签」）','来源：档位配置+签到记录<br>限制：已签橙色底<br>更新：不更新','无'],
    ['D6 今日档','D6 +'+D.sign.t6+'（渐变橙底「今日」，签到后变已签）','来源：档位配置+签到记录<br>限制：今日橙色底，签到后变已签<br>更新：签到后','无'],
@@ -1632,14 +1634,14 @@ sign:()=>docCard('P4','签到（二级页 · 首页下）',
  ]],['操作区',[
    ['立即签到按钮','立即签到 +'+D.sign.today+'（已签置灰「今日已签到」）','来源：前端固定<br>限制：同一自然日限 1 次，已签置灰；未订阅时置灰<br>更新：签到后','点击 →【签到成功】；未订阅时点击 →【订阅授权】']
  ]]],
- ['【订阅授权】：未订阅时点「立即签到」自动弹；微信原生订阅弹窗：每天召回（TM1004）；「取消」/「允许」（bf-sign②）',
+ ['【订阅授权】：未订阅时点「立即签到」自动弹；微信原生订阅弹窗：签到提醒（10969）；「取消」/「允许」（bf-sign②）',
   '【签到成功】：点「立即签到」；+'+D.sign.today+' 积分 / 连续 N 天；「好的」'],
  ['左上返回：goBack → 首页'],
- '签到 · 每天召回流程\n\n  进入签到页\n      │\n      ↓\n  订阅授权（每天召回 TM1004）\n      │\n      ↓\n  立即签到\n      │\n      ↓\n  签到成功',
+ '签到 · 每天召回流程\n\n  进入签到页\n      │\n      ↓\n  订阅授权（签到提醒 10969）\n      │\n      ↓\n  立即签到\n      │\n      ↓\n  签到成功',
  ['空态（新用户）：连续 0 天，按钮显示「签到 +'+D.sign.t1+' 积分」','加载态：档位横条骨架占位'])
 });
 /* ================================================================
-   36 文档 C：orders/points/cash/exchange + 订阅通知文档（每天召回 wxmsgD）
+   36 文档 C：orders/points/cash/exchange + 订阅通知文档（签到提醒 wxmsgD）
    订单/积分类目文档中的流水为代表性记录（与列表同源），保留记录字面量
 ================================================================ */
 Object.assign(DOCS,{
@@ -1731,16 +1733,16 @@ share:()=>shareDoc({
   ]
 }),
 wxmsgD:()=>subscribeDoc({
-  badge:'S5',name:'订阅通知 · 每天召回（'+D.tm.d+'）',
-  scenes:[['功能简介','用户签到时订阅「每天召回」模板（TM1004），系统每日定时推送召回卡片；点卡片直接进入首页，形成「签到 → 每日召回 → 领券下单」的每日召回闭环'],
+  badge:'S5',name:'订阅通知 · 签到提醒（'+D.tm.no+'）',
+  scenes:[['功能简介','用户签到时订阅「签到提醒」模板（模板编号 10969），系统每天 11:00 定时推送提醒卡片；点卡片直接进入首页，形成「签到 → 每日召回 → 领券下单」的每日召回闭环'],
     ['订阅入口','bf-sign ② 环节「订阅授权」：进入签到页后弹微信订阅弹窗请求订阅本模板，允许后才能签到'],
-    ['通知节点','订阅后系统每日定时触发，每用户推送 1 条'],
+    ['通知节点','每天 11:00 定时推送（订阅后生效），每用户每天 1 条'],
     ['通知限制','未订阅 / 订阅次数已用尽不推送；点卡片不弹抽屉，直接落首页；同一自然日每用户最多 1 条'],
     ['落地页面','点通知卡片 → 直接进入首页（签到提醒条 + 红包网格一起可见）']],
-  tmpl:{name:D.wxmsg.dTitle,id:D.tm.d+'（以微信公众平台申请结果为准）'},
-  fields:[['提醒内容',D.wxmsg.dTip,'来源：运营配置<br>限制：—<br>更新：消息生成时写入','无'],
-    ['按钮文案',D.wxmsg.dBtn,'来源：业务规则静态文案<br>限制：—<br>更新：消息生成时写入','点击卡片 → 直接进入首页']],
-  fixed:'品牌行（头像+名称）/ 通知标题+🔔 / 关键词底栏+「小程序 ›」均为微信订阅消息标准部件，系统写死，不进字段表'
+  tmpl:{name:D.tm.name,id:D.tm.id+'（模板编号 '+D.tm.no+'）'},
+  fields:[['字段1 · 活动名称',D.wxmsg.f1v,'来源：写死<br>限制：固定为「每日签到」，不随运营变化<br>更新：不更新','无'],
+    ['字段2 · 温馨提示',D.wxmsg.f2v,'来源：拼接文案，X=用户今天签到可获取的积分数（读签到档位配置）<br>限制：X 按用户连续天数取当天档位<br>更新：消息生成时写入','点击卡片 → 直接进入首页']],
+  fixed:'品牌行（头像+名称）/ 通知标题+🔔 / 关键词底栏+「小程序 ›」均为微信订阅消息标准部件，系统写死，不进字段表；本模板固定 2 个字段（活动名称 / 温馨提示）'
 })
 });
 /* ================================================================
@@ -1813,12 +1815,12 @@ const BF_FLOWS={
 Object.assign(BF_FLOWS,{
 'bf-sign':{
   no:'B3',icon:'③',title:'签到 · 每天召回',
-  def:'目标：用户进入签到页，先订阅「每天召回」模板（TM1004），系统每日推送召回卡片到首页；订阅后立即签到得积分（按档位递增）。无月卡补签/无断签转化。',
+  def:'目标：用户进入签到页，先订阅「签到提醒」模板（10969），系统每天 11:00 推送提醒卡片到微信；订阅后立即签到得积分（按档位递增）。无月卡补签/无断签转化。',
   init:{view:'cont'},
-  cond:['签到前先订阅 1 条「每天召回」模板（TM1004），允许后才能签到','连续签到档位 '+D.sign.t1+'→'+D.sign.t6+' 递增，断签从 +'+D.sign.t1+' 重计（仅演示，无补签）'],
+  cond:['签到前先订阅 1 条「签到提醒」模板（10969），允许后才能签到','连续签到档位 '+D.sign.t1+'→'+D.sign.t6+' 递增，断签从 +'+D.sign.t1+' 重计（仅演示，无补签）'],
   steps:[
     {no:'①',nm:'进入签到页',end:'签到',drw:'否',interact:'首页提醒条进入',imp:'无',act:'查看连续天数与 7 日档位',r:'signHome',brs:[]},
-    {no:'②',nm:'订阅「每天召回」',end:'签到',drw:'【订阅授权】',interact:'点「允许」',imp:'订阅 TM1004，系统每天推送召回卡片',act:'微信原生订阅弹窗：每天召回（TM1004）',branch:'取消则不能签到，停留本步',r:'signSub',auto:'d-sign-sub',brs:[]},
+    {no:'②',nm:'订阅「签到提醒」',end:'签到',drw:'【订阅授权】',interact:'点「允许」',imp:'订阅 10969，系统每天 11:00 推送提醒卡片',act:'微信原生订阅弹窗：签到提醒（10969）',branch:'取消则不能签到，停留本步',r:'signSub',auto:'d-sign-sub',brs:[]},
     {no:'③',nm:'点「立即签到 +'+D.sign.today+'」',end:'签到',drw:'否',interact:'点立即签到',imp:'触发签到',act:'发起签到',r:'signTap',brs:[]},
     {no:'④',nm:'签到成功 +'+D.sign.today,end:'签到',drw:'【签到成功】',interact:'-',imp:'按档位发放',act:'弹【签到成功】，档位 '+D.sign.t1+'→'+D.sign.t6+' 递增',r:'signOkA',auto:'d-sign-ok',brs:[]},
     {no:'✅',nm:'流程结束',end:'签到',drw:'否',interact:'无',imp:'无',act:'签到完成 ✅（系统每日推召回卡）',r:'signEnd',brs:[]}
@@ -1826,11 +1828,11 @@ Object.assign(BF_FLOWS,{
   flow:`📅 签到 · 每天召回
 │
 ├─ ① 进入签到页（小程序-签到）
-├─ ② 订阅「每天召回」：微信订阅弹窗（TM1004）→ 允许
+├─ ② 订阅「签到提醒」：微信订阅弹窗（10969）→ 允许
 ├─ ③ 点「立即签到 +${D.sign.today}」
 ├─ ④ 签到成功 +${D.sign.today}【签到成功】按档位发放
 │
-└─ ✅ 流程结束：系统每日推召回卡片到首页`}
+└─ ✅ 流程结束：系统每天11:00推签到提醒卡片`}
 });
 /* ================================================================
    39 BF_R 快照 A：bfNHome 首页快照工厂 + BF_R 新建（newHome…newEnd）
@@ -1931,27 +1933,27 @@ Object.assign(BF_R,{
 });
 /* ================================================================
    39c 流程数据 D + BF_R 快照 D：bf-recall 订阅每天召回策略（B6）
-   签到时订阅 TM1004（每天召回），系统每天推送召回卡片 → 用户点卡进入首页
+   签到时订阅 10969（签到提醒），系统每天11:00推送提醒卡片 → 用户点卡进入首页
    数据：Object.assign 续挂 BF_FLOWS（37 定义）；渲染器复用 newOrder（39）/bfNHome（39）
 ================================================================ */
 Object.assign(BF_FLOWS,{
 'bf-recall':{
   no:'B6',icon:'⑤',title:'订阅每天召回策略',
-  def:'目标：系统每天推送召回卡片，用户点卡片直接进入首页，形成「签到 → 每日召回 → 领券下单」的闭环。前置：用户在签到场景已订阅「每天召回」（TM1004）。<span style="color:#C62828;font-weight:700">🔴 红字注：产品需出订阅观测数据观测方案（送达 / 点击 / 回访转化），用于后续迭代订阅逻辑。</span>',
+  def:'目标：系统每天 11:00 推送「签到提醒」（10969）卡片，用户点卡片直接进入首页，形成「签到 → 每日召回 → 领券下单」的闭环。前置：用户在签到场景已订阅「签到提醒」（10969）。<span style="color:#C62828;font-weight:700">🔴 红字注：产品需出订阅观测数据观测方案（送达 / 点击 / 回访转化），用于后续迭代订阅逻辑。</span>',
   init:{view:'ok'},
   cond:[
-    '用户已在签到场景订阅「每天召回」模板（TM1004，承接 bf-sign ②）',
-    '召回模板「每天召回」（'+D.tm.d+'）订阅后系统每日定时推送 1 条召回卡片',
+    '用户已在签到场景订阅「签到提醒」模板（10969，承接 bf-sign ②）',
+    '推送模板「签到提醒」（'+D.tm.no+'）订阅后每天 11:00 定时推送 1 条提醒卡片',
     '未订阅 / 订阅次数已用尽则对该用户停发；同一自然日每用户最多推送 1 条'
   ],
   steps:[
-    {no:'①',nm:'系统每天推送召回卡片',end:'-',drw:'否',interact:'无',imp:'每日定时推送',act:'系统每天定时推送「每天召回」卡片到微信服务通知，用户在微信聊天列表可见',r:'recallNotify',brs:[]},
+    {no:'①',nm:'系统每天推送提醒卡片',end:'-',drw:'否',interact:'无',imp:'每天11:00定时推送',act:'系统每天 11:00 定时推送「签到提醒」卡片到微信服务通知，用户在微信聊天列表可见',r:'recallNotify',brs:[]},
     {no:'②',nm:'用户点卡片 → 进入首页',end:'首页',drw:'否',interact:'点微信服务通知卡片',imp:'直接落首页，不弹抽屉',act:'点卡片直接进入首页（签到提醒条 + 红包网格一起可见），形成每日召回闭环',r:'recallLand',brs:[{t:'📱 打开真实首页',fn:'nav',arg:'home'}]},
     {no:'✅',nm:'流程结束',end:'首页',drw:'否',interact:'无',imp:'无',act:'召回完成 ✅',r:'recallEnd',brs:[{t:'🆕 看新用户-首单流程',fn:'nav',arg:'bf-new'},{t:'🔄 再走一遍',fn:'bfReset'}]}
   ],
   flow:`📢 订阅每天召回策略
 │
-├─ ① 系统每天推送召回卡片到微信服务通知（每日 1 条）
+├─ ① 系统每天11:00推送「签到提醒」卡片到微信服务通知（每日 1 条）
 ├─ ② 用户点通知卡片 → 直接进入首页
 │
 └─ ✅ 流程结束：召回完成（同一自然日最多 1 条）`}
@@ -1963,8 +1965,8 @@ Object.assign(BF_R,{
     +'<div class="wx-date">'+D.wxmsg.dDate+'</div>'
     +'<div class="wx-card" onclick="bfNext()"><div class="wx-brand"><span class="wx-ava">'+APP.ava+'</span><span class="wx-name">'+APP.name+'</span></div>'
     +'<div class="wx-tt">'+D.wxmsg.dTitle+' <span class="wx-bell">🔔</span></div>'
-    +'<div class="wx-f"><span>提醒内容</span><b>'+D.wxmsg.dTip+'</b></div>'
-    +'<div class="wx-f"><span>到账方式</span><b>'+D.wxmsg.dBtn+'</b></div>'
+    +'<div class="wx-f"><span>'+D.wxmsg.f1k+'</span><b>'+D.wxmsg.f1v+'</b></div>'
+    +'<div class="wx-f"><span>'+D.wxmsg.f2k+'</span><b>'+D.wxmsg.f2v+'</b></div>'
     +'<div class="wx-sep"></div><div class="wx-foot"><span class="wx-ava-s">'+APP.ava+'</span><span class="wx-kw">'+D.msgs.kwD+'</span><span class="wx-go">小程序 ›</span></div>'
     +'</div></div>';
   },
@@ -1973,7 +1975,7 @@ Object.assign(BF_R,{
   recallEnd(){
     return '<div class="card" style="text-align:center;padding:40px 16px"><div style="font-size:48px">✅</div>'
     +'<div style="font-size:16px;font-weight:700;margin-top:12px">召回完成</div>'
-    +'<div style="font-size:12px;color:#999;margin-top:6px">每天召回通知已把用户带回首页</div></div>';
+    +'<div style="font-size:12px;color:#999;margin-top:6px">签到提醒通知已把用户带回首页</div></div>';
   }
 });
 /* ================================================================
@@ -1999,7 +2001,7 @@ Object.assign(BF_R,{
     +'<div style="font-size:16px;font-weight:700;margin-top:12px">积分到账即止</div>'
     +'<div style="font-size:12px;color:#999;margin-top:6px">老用户下单流程已完成</div></div>';
   },
-  /* ③ 签到流程：签到即订阅·每天召回 */
+  /* ③ 签到流程：签到即订阅·签到提醒（10969） */
   signHome(){return signHomeSnap()},
   signSub(){return signHomeSnap()},
   signTap(){return signHomeSnap()},
@@ -2007,7 +2009,7 @@ Object.assign(BF_R,{
   signEnd(){
     return '<div class="card" style="text-align:center;padding:40px 16px"><div style="font-size:48px">✅</div>'
     +'<div style="font-size:16px;font-weight:700;margin-top:12px">签到完成</div>'
-    +'<div style="font-size:12px;color:#999;margin-top:6px">已订阅每天召回 · 系统每日推送</div></div>';
+    +'<div style="font-size:12px;color:#999;margin-top:6px">已订阅签到提醒 · 每天11:00推送</div></div>';
   }
 
 });
@@ -2030,7 +2032,7 @@ function signHomeSnap(){
   +'<div style="flex:1;text-align:center;padding:8px 0;background:#F5F5F7;border-radius:8px;font-size:11px;color:#999">D7<br>+'+D.sign.t7+'<br>明日</div>'
   +'</div></div>'
   +'<div style="padding:12px 16px 0"><button class="btn btn-primary" onclick="bfNext()">立即签到 +'+D.sign.today+'</button></div>'
-  +'<div style="padding:8px 16px 0;text-align:center;font-size:11px;color:#999">已订阅每天召回 · 系统每日推送召回卡片</div>';
+  +'<div style="padding:8px 16px 0;text-align:center;font-size:11px;color:#999">已订阅签到提醒 · 每天11:00推送提醒卡片</div>';
 }
 /* 签到成功后的档位快照：D6 已签、D7 明日 */
 function signHomeSnapAfter(){

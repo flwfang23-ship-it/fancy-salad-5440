@@ -1569,7 +1569,7 @@ function landFromSubscribe(page,drw){
 /* —— 小红书引流抽屉：上传引导 / 识别中 / 识别成功 / 首单完成 / 隐藏任务确认 / 兑换成功 —— */
 function dXhsUpload(){
   return TPL.convertDrawer({
-    title:'上传订单截图领积分',icon:'📸',
+    title:'拍照小票领积分',icon:'📸',
     desc:'上传你的外卖订单截图，系统自动识别<br>识别成功积分立即到账',
     rows:[['小票积分','识别成功领 '+D.xhs.invoicePts+' 积分','color:#388E3C;font-weight:700'],
       ['再下一单','可领 '+D.xhs.bagMin+'~'+D.xhs.bagMax+' 元 红包','color:#FF3B30;font-weight:700']],
@@ -1939,7 +1939,7 @@ const BF_FLOWS={
   flow:`🆕 新用户-首单流程（②③④ 承接小红书引流）
 │
 ├─ ① 进入首页领红包（小程序-首页 · 无弹窗）
-├─ ② 小红书路径进入 · 自动弹【上传订单截图领积分】（${D.xhs.invoicePts} 积分 · 弹窗×1）
+├─ ② 小红书路径进入 · 自动弹【拍照小票领积分】（${D.xhs.invoicePts} 积分 · 弹窗×1）
 ├─ ③ 点「上传订单截图」→【识别中】倒计时 ${D.xhs.ocrSecs} 秒（弹窗×2：识别中→识别成功）
 ├─ <span style="color:#e11d48;font-weight:700">③-A 识别失败（异常分支·红字）：【识别失败】「重新传图 / 继续识别」都回③（弹窗×1 · 主链自动跳过，仅上一步/下一步手动进入）</span>
 ├─ ④【识别成功】+${D.xhs.invoicePts} 到账 →「🔥 领券下单 · 开积分包」（弹窗×1）
@@ -2029,7 +2029,7 @@ Object.assign(BF_FLOWS,{
   ],
   flow:`📕 小红书-用户流程（特定路径 + 新用户）
 │
-├─ ① 进入首页自动弹【上传订单截图领积分】（${D.xhs.invoicePts} 积分 · 弹窗×1）
+├─ ① 进入首页自动弹【拍照小票领积分】（${D.xhs.invoicePts} 积分 · 弹窗×1）
 ├─ ② 点「上传订单截图」→【识别中】倒计时 ${D.xhs.ocrSecs} 秒（弹窗×2：识别中→识别成功）
 ├─ ③【识别成功】+${D.xhs.invoicePts} 到账 →「🔥 领券下单 · 开积分包」（弹窗×1）
 ├─ ⇄ 生态转化：跳转饿了么/美团完成首单（无弹窗）

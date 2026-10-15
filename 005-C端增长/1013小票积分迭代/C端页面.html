@@ -120,6 +120,20 @@ body.no-phone .phone{display:none}
 .hero{background:linear-gradient(135deg,var(--brand),var(--brand2));padding:20px 16px 24px;color:#fff;border-radius:0 0 24px 24px}
 .hero .t{font-size:19px;font-weight:700}
 .hero .s{font-size:12px;opacity:.88;margin-top:6px;line-height:1.7}
+/* 我的页 · 小票积分公告条（独立悬浮于菜单上方，不影响菜单交互） */
+.mine-notice{margin:12px 12px 0;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:10px}
+.mine-notice .mn-ico{font-size:22px;flex-shrink:0}
+.mine-notice .mn-txt{flex:1;min-width:0}
+.mine-notice .mn-t{font-size:13px;font-weight:700;line-height:1.4}
+.mine-notice .mn-s{font-size:11px;line-height:1.5;margin-top:3px}
+.mine-notice .mn-btn{flex-shrink:0;border:none;border-radius:14px;font-size:12px;font-weight:700;padding:7px 16px;cursor:pointer}
+.mine-notice.wait{background:#FFF7E8;border:1px solid #F7D79F}
+.mine-notice.wait .mn-t{color:#B86E00}
+.mine-notice.wait .mn-s{color:#C9953F}
+.mine-notice.arrived{background:#E9F7EE;border:1px solid #A8DCBD}
+.mine-notice.arrived .mn-t{color:#1F8A4C}
+.mine-notice.arrived .mn-s{color:#5AA77B}
+.mine-notice.arrived .mn-btn{background:#22A05B;color:#fff}
 .menu{margin:12px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .menu .mi{display:flex;align-items:center;padding:15px 16px;border-bottom:1px solid #f6f6f6;cursor:pointer}
 .menu .mi:last-child{border-bottom:none}
@@ -471,6 +485,8 @@ body.bf-mode .bf-ctrl{display:block}
       <div class="s" style="margin-top:6px;font-size:11px;opacity:.85">累计获取 <b id="mineGain">19,200</b> · 已消耗 <b id="mineUsed">7,200</b> · 累计兑换 <b id="mineCash">¥3.60</b></div>
     </div>
   </div>
+  <!-- 小票积分公告：wait=上传小票后待首单 / arrived=首单后已到账（点确认消失）；初始为空，由 renderMineNotice 注入 -->
+  <div id="mineNotice"></div>
   <div class="menu" id="mineMenuHook"></div>
 </div>
 
@@ -729,14 +745,15 @@ const D = {
   "jumpText": "美团丨外卖团购特价<br>美食酒店电影",
 
   "snap": {
-    "newPts": {"fresh": "0", "got500": "200", "got": "205", "paid": "4,205", "arrived": "4,205"},
+    "newPts": {"fresh": "0", "got500": "200", "got": "205", "paid": "4,205", "arrived": "4,205", "invoice": "4,405"},
     "oldPts": {"fresh": "12,000", "got": "12,005", "paid": "19,705", "arrived": "19,705"},
     "newSub": {
       "fresh": "新用户专享 · 首单立减 10 元",
       "got500": "刚刚 +200 · 截图识别成功到账",
       "got": "刚刚 +205 · 截图 200 + 红包 5 已到账",
       "paid": "订单已付款 · +4,000 已到账",
-      "arrived": "累计 4,205 · 订单 +4,000 已到账"
+      "arrived": "累计 4,205 · 订单 +4,000 已到账",
+      "invoice": "累计 4,405 · 下单小票 +200 已到账"
     },
     "oldSub": {
       "fresh": "老客账户 · 本周红包已刷新",
@@ -767,7 +784,7 @@ function highlightTree(p){
 }
 function toggleGroup(el){const b=el.nextElementSibling;b.classList.toggle('collapsed');el.querySelector('.tg').textContent=b.classList.contains('collapsed')?'▸':'▾'}
 function toggleSidebar(){const s=document.getElementById('sidebar');s.classList.toggle('min');document.getElementById('sbFold').textContent=s.classList.contains('min')?'»':'«'}
-function goTab(p){showPage(p);document.getElementById('tabbar').classList.remove('hide');document.getElementById('navBack').style.visibility='hidden';setTitle(titles[p]);setTab(p)}
+function goTab(p){showPage(p);document.getElementById('tabbar').classList.remove('hide');document.getElementById('navBack').style.visibility='hidden';setTitle(titles[p]);setTab(p);if(p==='mine')renderMineNotice()}
 function goPage(p){showPage(p);document.getElementById('tabbar').classList.add('hide');document.getElementById('navBack').style.visibility='visible';setTitle(titles[p])}
 function goBack(){goTab(PAGE_META[curPage].tab)}
 function showPage(p){
@@ -1528,6 +1545,14 @@ function dBfArrive(){
   +'<div style="text-align:center;font-size:12px;color:#999;margin-top:6px">订单已付款，按预估佣金×50%×2000 折算</div>'
   +'<div class="btns">'+btn+'</div></div>';
 }
+/* —— bf-new ⑨：下单小票叠加积分（订单积分到账后再弹一笔 +200） —— */
+function dBfInvoice(){
+  return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3 style="text-align:center">🧾 小票叠加积分</h3>'
+  +'<div style="text-align:center;font-size:46px;margin:10px 0">🧾</div>'
+  +'<div style="text-align:center;font-size:22px;color:#388E3C;font-weight:800">+'+D.xhs.invoicePts+' 积分已到账</div>'
+  +'<div style="text-align:center;font-size:12px;color:#999;margin-top:6px;line-height:1.8">下单小票识别成功 · 小票积分叠加在订单积分之上<br>累计 4,405 积分（截图 200 + 红包 5 + 订单 4,000 + 小票 200）</div>'
+  +'<div class="btns"><button class="btn btn-primary" onclick="bfNInvoiceOk()">我知道了</button></div></div>';
+}
 function dBfGuide(){
   return TPL.okDrawer({
     title:'积分兑换提示',icon:'💰',main:'积分可换现金',
@@ -1554,7 +1579,7 @@ function landFromSubscribe(page,drw){
 /* —— 小红书引流抽屉：上传引导 / 识别中 / 识别成功 / 首单完成 / 隐藏任务确认 / 兑换成功 —— */
 function dXhsUpload(){
   return TPL.convertDrawer({
-    title:'上传订单截图领积分',icon:'📸',
+    title:'拍照小票领积分',icon:'📸',
     desc:'上传你的外卖订单截图，系统自动识别<br>识别成功积分立即到账',
     rows:[['小票积分','识别成功领 '+D.xhs.invoicePts+' 积分','color:#388E3C;font-weight:700'],
       ['再下一单','可领 '+D.xhs.bagMin+'~'+D.xhs.bagMax+' 元 红包','color:#FF3B30;font-weight:700']],
@@ -1562,7 +1587,7 @@ function dXhsUpload(){
   });
 }
 function dXhsOcr(){
-  return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3>识别中</h3>'
+  return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3>识别小票中</h3>'
   +'<div style="text-align:center;font-size:46px;margin:6px 0">⏳</div>'
   +'<div style="text-align:center;font-size:34px;font-weight:800;color:var(--brand)"><span id="xhsOcrN">'+D.xhs.ocrSecs+'</span> s</div>'
   +'<div style="height:6px;background:#f0f0f2;border-radius:3px;margin:14px 20px 8px;overflow:hidden"><div id="xhsOcrBar" style="height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand2));border-radius:3px;transition:width 1s linear"></div></div>'
@@ -1584,7 +1609,9 @@ function dXhsOk(){
   +'<div style="font-size:15px;font-weight:800;color:#FF3B30">🔥 再下一单 · 开积分包（大额）</div>'
   +'<div style="font-size:12px;color:#666;line-height:2.1;margin-top:6px">'
   +'✅ 领券下单：得 '+D.xhs.bagMin+'~'+D.xhs.bagMax+' 元 红包<br>'
+  /* 【已暂停 · 待审核「下单小票叠加积分」赠送点；恢复时放开下一行】
   +'✅ 下单小票：再领 '+D.xhs.invoicePts+' 积分<br>'
+  */
   +'✅ 积分额外兑现金 → '+D.wxWay+'</div>'
   +'<div style="margin-top:8px;font-size:12px;color:#FF3B30;font-weight:700">积分包进度 ●○○ 已开 1/3 档</div>'
   +'</div>'
@@ -1629,7 +1656,7 @@ function xhsOcrRun(){
   paint();
   xhsOcrTimer=setInterval(()=>{n--;
     if(n<=0){clearInterval(xhsOcrTimer);
-      if(document.getElementById('xhsOcrN')&&document.getElementById('overlay').classList.contains('show')){swapDrawer('d-xhs-ok');var mi=document.getElementById('mineInvoice');if(mi)mi.style.display='none'}}
+      if(document.getElementById('xhsOcrN')&&document.getElementById('overlay').classList.contains('show')){swapDrawer('d-xhs-ok');var mi=document.getElementById('mineInvoice');if(mi)mi.style.display='none';mineNotice='wait';renderMineNotice()}}
     else paint();
   },1000);
 }
@@ -1638,8 +1665,26 @@ function xhsGoMall(){hideDrawer();if(bfPages.includes(curPage)&&bfCur==='bf-xhs'
 function xhsDoEx(){swapDrawer('d-xhs-exok')}
 function xhsExDone(){hideDrawer();if(bfPages.includes(curPage)&&bfCur==='bf-xhs'){bfGo(BF_FLOWS['bf-xhs'].steps.length-1)}else nav('mall')}
 function xhsFailBack(){hideDrawer();if(bfPages.includes(curPage)&&bfCur==='bf-new'){const st=BF_FLOWS['bf-new'].steps;const i=st.findIndex(s=>s.no==='③');bfGo(i>=0?i:2)}}  /* 识别失败两个按钮都回环节③重走识别 */
+/* —— 我的页·小票积分公告状态机：'' 不展示 / wait 已上传小票待首单 / arrived 首单后积分已到账 ——
+   单向流转：识别成功→wait；首单后小票叠加积分到账（bf-new⑨）→arrived；点「确认」→'' 消失。
+   公告独立于菜单，展示/消失不改写任何菜单入口与其他交互。 */
+let mineNotice='';
+function renderMineNotice(){
+  const el=document.getElementById('mineNotice');if(!el)return;
+  if(mineNotice==='wait'){
+    el.innerHTML='<div class="mine-notice wait"><div class="mn-ico">🧾</div><div class="mn-txt">'
+    +'<div class="mn-t">首单后解锁小票积分</div>'
+    +'<div class="mn-s">小票已识别成功，完成首单支付后 +'+D.xhs.invoicePts+' 小票积分自动到账</div></div></div>';
+  }else if(mineNotice==='arrived'){
+    el.innerHTML='<div class="mine-notice arrived"><div class="mn-ico">🎉</div><div class="mn-txt">'
+    +'<div class="mn-t">小票积分已到账</div>'
+    +'<div class="mn-s">+'+D.xhs.invoicePts+' 小票积分已发放，可在「积分明细」查看流水</div></div>'
+    +'<button class="mn-btn" onclick="mineNoticeConfirm()">确认</button></div>';
+  }else el.innerHTML='';
+}
+function mineNoticeConfirm(){mineNotice='';renderMineNotice();notice('已知晓')}
 /* —— 抽屉注册表：新抽屉必须在此登记 —— */
-const DRAWERS={'d-get':dGet,'d-confirm':dConfirm,'d-ok':dOk,'d-addr':dAddr,'d-ship':dShip,'d-sign-ok':dSignOk,'d-sign-sub':dSignSub,'d-detail':dDetail,'d-cash-detail':dCashDetail,'d-jump':dJump,'d-bf-arrive':dBfArrive,'d-bf-guide':dBfGuide,'d-bf-confirm':dBfConfirm,'d-xhs-upload':dXhsUpload,'d-xhs-ocr':dXhsOcrLive,'d-xhs-ok':dXhsOk,'d-xhs-fail':dXhsFail,'d-xhs-first':dXhsFirst,'d-xhs-confirm':dXhsConfirm,'d-xhs-exok':dXhsExOk};
+const DRAWERS={'d-get':dGet,'d-confirm':dConfirm,'d-ok':dOk,'d-addr':dAddr,'d-ship':dShip,'d-sign-ok':dSignOk,'d-sign-sub':dSignSub,'d-detail':dDetail,'d-cash-detail':dCashDetail,'d-jump':dJump,'d-bf-arrive':dBfArrive,'d-bf-invoice':dBfInvoice,'d-bf-guide':dBfGuide,'d-bf-confirm':dBfConfirm,'d-xhs-upload':dXhsUpload,'d-xhs-ocr':dXhsOcrLive,'d-xhs-ok':dXhsOk,'d-xhs-fail':dXhsFail,'d-xhs-first':dXhsFirst,'d-xhs-confirm':dXhsConfirm,'d-xhs-exok':dXhsExOk};
 /* ================================================================
    34 文档 A：DOCS 建对象（overview + home）；35/36 以 Object.assign 续挂
 ================================================================ */
@@ -1668,7 +1713,7 @@ overview:()=>overviewDoc({
     ['渠道归因（备注）','小红书推广路径携带渠道参数；「特定路径 + 新用户」两个条件同时满足才弹上传引导']
   ],
   branches:[
-    {name:'🆕 新用户-首单流程',nav:'bf-new',cond:'小红书路径进入的新用户（先传截图得积分）+ 首次领券下单',result:'上传截图 +200 → 已付款到账 → 商城兑换闭环'},
+    {name:'🆕 新用户-首单流程',nav:'bf-new',cond:'小红书路径进入的新用户（先传截图得积分）+ 首次领券下单',result:'上传截图 +200 → 订单积分到账 → 商城兑换闭环（下单小票叠加积分暂停待审核）'},
     {name:'🔁 老用户-下单流程',nav:'bf-old',cond:'老用户再次领券下单',result:'积分到账即止（不含兑换）'},
     {name:'📅 签到 · 每天召回',nav:'bf-sign',cond:'用户进入签到页',result:'订阅每天召回 → 立即签到 → 签到成功'},
     {name:'📢 订阅每天召回策略',nav:'bf-recall',cond:'签到时已订阅「每天召回」（TM1004）',result:'系统<b style="color:#C62828;font-weight:700">每日11:00</b>推送召回卡片 → 点卡直接进首页'}
@@ -1679,7 +1724,8 @@ overview:()=>overviewDoc({
 }),
 home:()=>docCard('P1','首页（Tab · 领券中心）',
  ['页面说明：小程序 Landing 页，领券中心；展示积分总览与每日红包，是攒积分的主入口',
-  '承接流程：3 个 —— 🆕新用户-首单流程（环节①浏览、②③④小红书上传引导/识别/到账、⑤⑥领红包/跳端、⑧到账弹窗）、🔁老用户-下单流程（环节①②③④、⑤到账弹窗）、📢订阅每天召回策略（环节③点通知卡片直接进首页）'],
+  '承接流程：3 个 —— 🆕新用户-首单流程（环节①浏览、②③④拍照小票引导/识别/到账、⑤⑥领红包/跳端、⑧已付款积分到账3连弹）、🔁老用户-下单流程（环节①②③④、⑤到账弹窗）、📢订阅每天召回策略（环节③点通知卡片直接进首页）',
+  '🟡 暂停（待领导审核赠送点）：原⑨「下单小票叠加积分 +200」已从流程注释，恢复后插在⑧与商城兑换之间'],
  ['操作链路：点未领红包卡「领取 +5」→ 用户积分 +5 → 顶部积分余额与「约合金额」同步刷新 → 该卡按钮变绿色「去下单」',
   '通知回链：每天召回卡片（wxmsgD · TM1004）→ 点卡直接进首页，不弹抽屉'],
  [['积分总览（顶部渐变 hero）',[
@@ -1700,7 +1746,9 @@ home:()=>docCard('P1','首页（Tab · 领券中心）',
  ]]],
  ['【领取成功】：点未领红包卡「领取 +5」；+5 积分；「好的」关闭',
   '【跳端确认】：点「去下单」自动弹；即将打开"美团丨外卖团购特价美食酒店电影"小程序；「取消」/「允许」（bf-new⑥/bf-old③）',
-  '【积分到账通知】：支付成功后自动弹；积分已到账+折算规则；新客「好的」/「去兑换」，老客「我知道了」（bf-new⑧/bf-old⑤）'],
+  '【积分到账通知】：支付成功后自动弹；积分已到账+折算规则；新客「去兑换」，老客「我知道了」（bf-new⑧/bf-old⑤）'
+  // 【已暂停 · 待审核，恢复 bf-new⑨ 时放开】'【小票叠加积分】：⑧点「去兑换」后自动弹；下单小票识别成功 +200 积分，叠加在订单积分之上；「我知道了」接续引导兑换链（bf-new⑨）'
+  ],
  ['左上返回：无（首页为 tabBar 主页面）'],
  '',
  ['空态（新用户）：无签到记录时连续 0 天，签到按钮显示「签到 +5 积分」','加载态：进入页面数据拉取中，余额区显示骨架占位','错误态：拉取失败提示点击重试'])
@@ -1711,7 +1759,7 @@ home:()=>docCard('P1','首页（Tab · 领券中心）',
 Object.assign(DOCS,{
 mall:()=>docCard('P2','积分商城（Tab · 核心消耗页）',
  ['页面说明：积分消耗的唯一系统，任务制兑换现金/实物',
-  '承接流程：1 个 —— 🆕新用户-首单流程（环节⑨ 商城兑换·首次打款）'],
+  '承接流程：1 个 —— 🆕新用户-首单流程（环节⑨ 商城兑换·首次打款；下单小票叠加积分暂停待审核期间由⑧3连弹直接承接）'],
  ['操作链路：点 ok 卡「兑换」→【兑换确认】抽屉 → 扣积分 →【兑换成功】抽屉'],
  [['顶部积分',[
    ['积分余额',D.userPtsText,'来源：用户积分账户<br>限制：整数千分位<br>更新：兑换扣减/获取增加时实时','无']
@@ -1733,14 +1781,31 @@ mall:()=>docCard('P2','积分商城（Tab · 核心消耗页）',
  '现金任务卡 · 2 态变动\n\n✅ 可兑换 [兑换] ──兑换完成→ 🎉 兑换成功\n      │\n      │ 积分不足\n      ↓\n⚠️ 积分不足 [置灰] ──积分足够→ ✅ 可兑换',
  ['空态：无现金任务时列表显示空态','加载态：任务卡区骨架占位','错误态：兑换接口失败时弹窗不关闭、本次不扣积分']),
 mine:()=>docCard('P3','我的（Tab）',
- ['页面说明：个人中心，聚合订单/积分明细/上传小票/提现记录入口',
-  '承接流程：0 个 —— 无（仅作入口页，无流程环节落在本页）'],
- [],
- [],
- [],
- [],
- '<h4>📝 更新内容</h4><ul class="doc-pts"><li><b style="color:var(--brand)">新增 ·</b> 菜单「📸 上传小票」入口：点击 → 半屏抽屉【上传订单截图】→ 上传外卖订单截图 → 系统 OCR 自动识别 → 识别成功得 <b>小票积分 '+D.xhs.invoicePts+'</b>（绿色到账）→ 流水记录进「积分明细」类型「小票积分」<b style="color:var(--brand)">→ 识别成功后本入口自动消失</b></li><li style="color:#aaa"><b>不变更 ·</b> 我的订单 / 积分明细 / 兑换记录 / 提现记录 / 签到（置灰，本次不改）</li><li><b style="color:#C62828">交互细节：</b>识别失败可在抽屉内点「重新上传」重走识别链路；识别成功后「上传小票」入口自动消失（本次小票积分已领取）；积分到账后顶部积分余额实时刷新</li></ul>',
-  [],{dim:['intro']}),
+ ['页面说明：个人中心，聚合订单/积分明细/上传小票/提现记录入口；头像卡与功能菜单之间内嵌一条「小票积分公告」',
+  '承接流程：1 个 —— 🆕新用户-首单流程（公告不在环节节点内，由②③④「拍照小票→识别小票中→识别成功」与首单状态<b>旁路驱动</b>：识别成功即亮公告，不打断流程）',
+  '<b style="color:#B86E00">🟡 暂停说明：「下单小票叠加积分 +'+D.xhs.invoicePts+'」赠送点待领导审核（bf-new 原⑨已注释）。当前公告仅上线「待解锁」态；「已到账·确认」态代码保留但无触发源，审核通过恢复⑨后自动接通。</b>'],
+ ['公告链路（wait 态 · 当前生效）：用户在首页走完拍照小票 → OCR 识别成功（+'+D.xhs.invoicePts+' 到账、上传入口消失）→ 进入「我的」→ 头像卡下方出现橙色公告「首单后解锁小票积分」→ 用户尚未首单期间持续展示，不随页面切换丢失',
+  '公告链路（arrived 态 · 暂停待审核）：首单付款、下单小票叠加积分到账后 → 公告变绿色「小票积分已到账 +'+D.xhs.invoicePts+'」并出现【确认】按钮 → 点【确认】公告永久消失（当前因⑨暂停不会触发）',
+  '重置链路：在业务流程内点「🔄 再走一遍」/ 切换流程 → 公告清空回到不展示',
+  '隔离原则：公告渲染在独立容器 #mineNotice，只做插入/清空，不改写菜单 DOM；展示期间「我的订单/积分明细/上传小票/提现记录」等所有菜单项照常点击，互不影响'],
+ [['小票积分公告（#mineNotice 内嵌条）',[
+   ['公告状态','空 / wait（橙色·待解锁）/ arrived（绿色·已到账）','来源：前端状态机 mineNotice<br>限制：三态单向流转，不回退<br>更新：识别成功 / 小票到账 / 点确认','无（整条不可点，仅 arrived 态有按钮）'],
+   ['wait 态标题','首单后解锁小票积分','来源：前端固定文案<br>限制：识别成功且未首单时展示<br>更新：进入页面时 renderMineNotice 重绘','无'],
+   ['wait 态副文案','小票已识别成功，完成首单支付后 +'+D.xhs.invoicePts+' 小票积分自动到账','来源：固定文案 + 后台配置小票积分 D.xhs.invoicePts<br>限制：数值随配置同步<br>更新：进入页面时重绘','无'],
+   ['arrived 态标题','小票积分已到账','来源：前端固定文案<br>限制：<b style="color:#B86E00">随 bf-new⑨ 暂停，当前不触发</b><br>更新：小票叠加积分到账后','无'],
+   ['arrived 态副文案','+'+D.xhs.invoicePts+' 小票积分已发放，可在「积分明细」查看流水','来源：固定文案 + D.xhs.invoicePts<br>限制：同 arrived 态暂停<br>更新：到账后','无'],
+   ['确认按钮','确认（绿色胶囊按钮，仅 arrived 态出现）','来源：前端固定<br>限制：wait 态无按钮、不可关闭<br>更新：点击后状态置空，公告消失','点【确认】→ 公告消失（mineNoticeConfirm）'],
+   ['展示位置','头像信息卡与功能菜单之间，独立一条','来源：前端固定布局<br>限制：独立容器，不占用/不替换任何菜单项<br>更新：仅自身显隐','无']
+ ]]],
+ ['本页无弹窗。小票积分公告为<b>页面内嵌条</b>（非底部半屏抽屉）；「📸 上传小票」入口点击后的【拍照小票领积分】【识别小票中】【识别成功】抽屉归属首页 P1'],
+ ['左上返回：无（我的为 tabBar 主页面）；公告不提供关闭入口（wait 态），不影响 goTab 切换'],
+ asc('我的页 · 小票积分公告状态机\n\n（不展示）\n   │\n   │ 拍照小票 OCR 识别成功（bf-new④）\n   ↓\n🟠 wait 首单后解锁小票积分\n   │  （无按钮 · 未首单期间常驻）\n   │\n   │ ── 🟡 暂停：下单小票叠加积分赠送点待审核（bf-new⑨ 已注释）\n   │\n   │ 审核通过后：首单·小票叠加积分到账\n   ↓\n🟢 arrived 小票积分已到账  [确认]\n   │\n   │ 点【确认】\n   ↓\n（公告消失）','小票积分公告 · 状态机（wait 态当前生效，arrived 态随⑨暂停）')
+ +'<h4>📝 更新内容</h4><ul class="doc-pts">'
+ +'<li><b style="color:var(--brand)">新增 ·</b> 菜单「📸 上传小票」入口：点击 → 半屏抽屉【拍照小票领积分】→ 上传外卖小票截图 → 系统 OCR 自动识别 → 识别成功得 <b>小票积分 '+D.xhs.invoicePts+'</b>（绿色到账）→ 流水记录进「积分明细」类型「小票积分」<b style="color:var(--brand)">→ 识别成功后本入口自动消失</b></li>'
+ +'<li><b style="color:var(--brand)">新增 ·</b> 小票积分公告：识别成功后「我的」页头像卡下出现橙色「首单后解锁小票积分」提示；独立容器渲染，不影响任何菜单与其他交互</li>'
+ +'<li><b style="color:#B86E00">暂停 ·</b> 绿色「小票积分已到账 +【确认】」态对应「下单小票叠加积分」赠送点，待领导审核，随 bf-new⑨ 一并恢复</li>'
+ +'<li style="color:#aaa"><b>不变更 ·</b> 我的订单 / 积分明细 / 兑换记录 / 提现记录 / 签到（置灰，本次不改）</li>'
+ +'<li><b style="color:#C62828">交互细节：</b>识别失败可在抽屉内点「重新上传」重走识别链路；wait 态公告无关闭按钮、未首单常驻；流程重置公告同步清空；积分到账后顶部余额实时刷新</li></ul>'),
 sign:()=>docCard('P4','签到（二级页 · 首页下）',
  ['页面说明：每日签到攒积分页，连续越久档位越高；签到前先订阅「每天召回」模板',
   '承接流程：1 个 —— 📅签到·每天召回流程（订阅 → 立即签到 → 签到成功）'],
@@ -1864,7 +1929,7 @@ wxmsgD:()=>subscribeDoc({
    bf-sign/bf-back 由 38 以 Object.assign 续挂
 ================================================================ */
 /* —— bf-new 流程演示状态：兑换结果/卡片阶段（仅服务新用户首单流程，与全局 userPts 隔离） —— */
-let bfNExDone=false,bfNPhase='',bfMask=null,bfNPts=D.bfPtsInit,bfNDone={},bfNTask=null;
+let bfNExDone=false,bfNPhase='',bfMask=null,bfNPts=D.bfPtsInit,bfNDone={},bfNTask=null,bfNInvDone=false;
 /* —— 功能目标总览（链路级）：一个功能目标一个 GOALS 条目；
    steps=全局主线关键动作（g 连续 1-N，分歧不占步只写 fork 标注）；
    flow/step 指向 bf 流程环节，须与 BF_FLOWS 里的 g 双向对齐 —— */
@@ -1872,38 +1937,42 @@ const GOALS={};
 const BF_FLOWS={
 'bf-new':{
   no:'B1',icon:'①',title:'新用户-首单流程',
-  def:'目标：新用户从进入小程序到完成「上传截图得积分 → 领券 → 下单 → 已付款积分到账 → 商城兑换打款」完整闭环，建立积分价值认知。环节②③④承接小红书引流：特定推广路径 + 新用户进入首页自动弹【上传订单截图】，识别成功 +'+D.xhs.invoicePts+' 后领券下单；③-A 为识别失败异常分支（红色标注，不影响主流程，仅上一步/下一步手动进入）；已付款即积分到账（无订阅授权/无积分预告/无微信卡片）；到账抽屉【好的】停首页即结束，【去兑换】连续完成首次兑换。',
+  def:'目标：新用户从进入小程序到完成「上传截图得积分 → 领券 → 下单 → 已付款积分到账 → 商城兑换打款」完整闭环，建立积分价值认知。环节②③④承接小红书引流：特定推广路径 + 新用户进入首页自动弹【拍照小票领积分】，识别成功 +'+D.xhs.invoicePts+' 后领券下单；③-A 为识别失败异常分支（红色标注，不影响主流程，仅上一步/下一步手动进入）；已付款即积分到账（无订阅授权/无积分预告/无微信卡片）；到账抽屉【去兑换】连续完成首次兑换。<span style="color:#B86E00;font-weight:700">🟡 暂停项：「下单小票叠加积分 +'+D.xhs.invoicePts+'」赠送点待领导审核，原第⑨步已注释，审核通过后在⑧与商城兑换之间恢复（步骤/渲染器/抽屉均已保留，见代码「已暂停」标记）。</span>',
   init:{view:'go'},
   cond:['新用户首次进入','小红书推广路径进入时，进入首页自动弹【上传订单截图】（独立演示流程已隐藏，链路并入本流程）','已付款即积分到账，无需订阅授权'],
   steps:[
     {no:'①',nm:'进入首页领红包',end:'首页',drw:'否',dw:0,interact:'浏览红包网格',imp:'入口可见性是首单转化前提',act:'新人进入首页看到 '+D.hb.daily+' 张红包（饿 '+D.hb.elm+' + 美 '+D.hb.mt+'）',r:'newHome',brs:[]},
     {no:'②',nm:'小红书路径进入 · 弹上传引导',end:'首页',drw:'【上传订单截图】自动弹',dw:1,interact:'点「上传订单截图」',imp:'触发 OCR 识别流程',act:'小红书推广路径进入的新用户，首页自动弹上传引导抽屉',r:'newHome',auto:'d-xhs-upload',brs:[{t:'👤 看我的页',fn:'nav',arg:'mine'}]},
-    {no:'③',nm:'上传订单截图 · 识别中',end:'首页',drw:'【识别中】倒计时自动切【识别成功】',dw:2,interact:'等待倒计时 '+D.xhs.ocrSecs+' 秒',imp:'OCR 识别订单信息',act:'识别中倒计时 '+D.xhs.ocrSecs+' 秒自动切【识别成功】；识别失败走③-A异常分支（两个按钮都回本环节，不影响主流程）',r:'newHome',auto:'d-xhs-ocr',brs:[{t:'重看上传引导',fn:'showDrawer',arg:'d-xhs-upload'},{t:'▶ 重放识别倒计时',fn:'showDrawer',arg:'d-xhs-ocr'}]},
+    {no:'③',nm:'识别小票中',end:'首页',drw:'【识别小票中】倒计时自动切【识别成功】',dw:2,interact:'等待倒计时 '+D.xhs.ocrSecs+' 秒',imp:'OCR 识别小票信息',act:'识别小票中倒计时 '+D.xhs.ocrSecs+' 秒自动切【识别成功】；识别失败走③-A异常分支（两个按钮都回本环节，不影响主流程）',r:'newHome',auto:'d-xhs-ocr',brs:[{t:'重看上传引导',fn:'showDrawer',arg:'d-xhs-upload'},{t:'▶ 重放识别倒计时',fn:'showDrawer',arg:'d-xhs-ocr'}]},
     {no:'③-A',nm:'识别失败（异常分支）',end:'首页',drw:'【识别失败】',dw:1,ex:1,interact:'点「重新传图」或「继续识别」（都回③）',imp:'异常演示，不影响主流程；主链自动跳过本环节',act:'OCR 识别失败提示（红色异常抽屉）：可重新上传截图或继续识别，两个按钮都回到环节③重走识别',r:'newHome',auto:'d-xhs-fail',brs:[]},
-    {no:'④',nm:'识别成功 +'+D.xhs.invoicePts+' · 引导领券下单',end:'首页',drw:'【识别成功】',dw:1,interact:'点「🔥 领券下单 · 开积分包」',imp:'+'+D.xhs.invoicePts+' 到账，强引导再下一单开积分包',act:'到账提示「再下一单·开积分包：领券下单得 '+D.xhs.bagMin+'~'+D.xhs.bagMax+' 元红包 + 下单小票再领 '+D.xhs.invoicePts+' 积分 + 积分可兑现金」→ 首页领取红包开始攒积分',r:'xhsHomeGotB',brs:[{t:'再看到账提示',fn:'showDrawer',arg:'d-xhs-ok'}]},
+    {no:'④',nm:'识别成功 +'+D.xhs.invoicePts+' · 引导领券下单',end:'首页',drw:'【识别成功】',dw:1,interact:'点「🔥 领券下单 · 开积分包」',imp:'+'+D.xhs.invoicePts+' 到账，强引导再下一单开积分包',act:'到账提示「再下一单·开积分包：领券下单得 '+D.xhs.bagMin+'~'+D.xhs.bagMax+' 元红包 + 积分可兑现金」→ 首页领取红包开始攒积分（「下单小票再领」宣传点已随第⑨步暂停待审核）',r:'xhsHomeGotB',brs:[{t:'再看到账提示',fn:'showDrawer',arg:'d-xhs-ok'}]},
     {no:'⑤',nm:'领取红包 +'+D.hb.gain,end:'首页',drw:'【领取成功】',dw:1,interact:'点「领取 +5」',imp:'积分 +'+D.hb.gain+'，按钮变「去下单」',act:'领红包得积分',branch:'弹【领取成功】',r:'newGet',auto:'d-get',brs:[]},
     {no:'⑥',nm:'跳转外卖平台',end:'首页',drw:'【即将打开"美团"小程序】',dw:1,interact:'点「允许」',imp:'跳端确认后携带 CPS 归因',act:'点「去下单」弹微信跳端确认，允许后进入美团/饿了么下单页',branch:'取消则停留首页',r:'newJump',auto:'d-jump',brs:[]},
     {no:'⇄',nm:'生态转化：小程序 → 第三方平台',end:'-',drw:'否',dw:0,interact:'无（系统跳转）',imp:'CPS 归因跳出，订单/付款状态后续回传积分体系',act:'自家小程序跳转到第三方小程序（饿了么/美团）完成下单',r:'ecoOut',brs:[]},
     {no:'⑦',nm:'首次下单·支付成功',end:'-',drw:'否',dw:0,interact:'点「立即支付 '+D.new.payYuan+'」',imp:'生成平台订单',act:'下单并付款 '+D.new.payYuan+'（'+D.new.platform+' · 肯德基）',r:'newOrder',brs:[]},
     {no:'⑧',nm:'已付款·积分到账',end:'首页',drw:'【积分到账通知】→【引导兑换】→【确认兑换】',dw:3,interact:'点【去兑换】→【引导兑换】→【确认兑换】',imp:'已付款即入账 佣金×50%×2000，3 连弹引导首次兑换',act:'支付成功 → 自动弹到账通知（'+D.new.ptsText+' 入池）→ 点【去兑换】连续3连弹完成首次兑换',branch:'3 连弹：到账→引导→确认兑换',r:'newArrive',brs:[{t:'再看到账弹窗',fn:'showDrawer',arg:'d-bf-arrive'}]},
-    {no:'⑨',nm:'商城兑换·首次打款',end:'积分商城',drw:'【确认兑换】',dw:1,interact:'看打款成功悬浮 → 点【结束】',imp:'积分够即可直接兑换，扣积分',act:'承接⑧3连弹：扣 '+D.tasks[0].ptsText+' → 顶部悬浮打款成功 → 停回商城点【结束】',r:'newExch',brs:[{t:'📱 打开真实积分商城',fn:'nav',arg:'mall'}]},
+    /* 【已暂停 · 待领导审核「下单小票叠加积分」赠送点，审核通过后恢复本环节（编号⑨，商城顺延⑩）】
+    {no:'⑨',nm:'下单小票叠加积分 +'+D.xhs.invoicePts,end:'首页',drw:'【小票叠加积分】→【引导兑换】→【确认兑换】',dw:3,interact:'点【我知道了】→【引导兑换】→【确认兑换】',imp:'下单小票识别成功再发一笔小票积分，叠加在订单积分之上，兑现④「下单小票再领」',act:'⑧后自动弹【小票叠加积分】（下单小票 +'+D.xhs.invoicePts+'，累计 4,405）→ 点【我知道了】接续【引导兑换】→【确认兑换】',branch:'3 连弹：小票到账→引导→确认兑换',r:'newInvoice',brs:[{t:'再看小票到账弹窗',fn:'showDrawer',arg:'d-bf-invoice'}]},
+    恢复时同步放开：BF_R.newInvoice 渲染器（含我的页公告 arrived 触发）、ASCII ⑨行、DOCS 首页弹窗项、总说明分支结果 */
+    {no:'⑨',nm:'商城兑换·首次打款',end:'积分商城',drw:'否（顶部悬浮打款成功通知）',dw:0,interact:'看打款成功悬浮 → 点【结束】',imp:'积分够即可直接兑换，扣积分',act:'承接⑧3连弹确认兑换：扣 '+D.tasks[0].ptsText+' → 顶部悬浮打款成功 → 停回商城点【结束】',r:'newExch',brs:[{t:'📱 打开真实积分商城',fn:'nav',arg:'mall'}]},
     {no:'✅',nm:'流程结束',end:'-',drw:'否',dw:0,interact:'点商城【结束】进完成页',imp:'完成页标注兑换结果',act:'现金到账微信零钱，完成页闭环',r:'newEnd',brs:[]}
   ],
   flow:`🆕 新用户-首单流程（②③④ 承接小红书引流）
 │
 ├─ ① 进入首页领红包（小程序-首页 · 无弹窗）
-├─ ② 小红书路径进入 · 自动弹【上传订单截图领积分】（${D.xhs.invoicePts} 积分 · 弹窗×1）
-├─ ③ 点「上传订单截图」→【识别中】倒计时 ${D.xhs.ocrSecs} 秒（弹窗×2：识别中→识别成功）
+├─ ② 小红书路径进入 · 自动弹【拍照小票领积分】（${D.xhs.invoicePts} 积分 · 弹窗×1）
+├─ ③ 点「拍照小票」→【识别小票中】倒计时 ${D.xhs.ocrSecs} 秒（弹窗×2：识别小票中→识别成功）
 ├─ <span style="color:#e11d48;font-weight:700">③-A 识别失败（异常分支·红字）：【识别失败】「重新传图 / 继续识别」都回③（弹窗×1 · 主链自动跳过，仅上一步/下一步手动进入）</span>
 ├─ ④【识别成功】+${D.xhs.invoicePts} 到账 →「🔥 领券下单 · 开积分包」（弹窗×1）
 ├─ ⑤ 领取红包 +${D.hb.gain}（首页 ·【领取成功】· 弹窗×1）
 ├─ ⑥ 跳转外卖平台：【即将打开"美团"小程序】→ 允许（弹窗×1）
 ├─ ⇄ 生态转化：小程序 → 第三方平台（CPS 归因跳出下单 · 无弹窗）
 ├─ ⑦ 首次下单·支付成功 ${D.new.payYuan}（外部-饿了么 · 无弹窗）
-├─ ⑧ 已付款·积分到账 ${D.new.ptsText}：自动弹【积分到账通知】→ 点【去兑换】连续3连弹（弹窗×3）
-│        【积分到账通知】→【引导兑换】→【确认兑换】扣 ${D.tasks[0].ptsText}
+├─ ⑧ 已付款·积分到账 ${D.new.ptsText}：自动弹【积分到账通知】→【引导兑换】→【确认兑换】（3连弹）
 │
-├─ ⑨ 商城兑换·首次打款：扣积分 → 悬浮打款成功 → 停回商城点【结束】（弹窗×1）
+├─ <span style="color:#B86E00;font-weight:700">🟡 暂停：下单小票叠加积分 +${D.xhs.invoicePts}（赠送点待领导审核，原第⑨步已注释；审核通过后在⑧与⑨之间恢复，弹窗链：小票叠加积分→引导兑换→确认兑换）</span>
+│
+├─ ⑨ 商城兑换·首次打款：扣积分 → 顶部悬浮打款成功 → 停回商城点【结束】（无弹窗）
 │
 └─ ✅ 流程结束：现金到微信零钱，完成页闭环（无弹窗）`},
 'bf-old':{
@@ -1973,8 +2042,8 @@ Object.assign(BF_FLOWS,{
   ],
   steps:[
     {no:'①',nm:'小红书路径进入',end:'首页',drw:'【上传订单截图】自动弹',dw:1,interact:'点「上传订单截图」',imp:'触发 OCR 识别流程',act:'特定推广路径 + 新用户进入首页，自动弹上传引导抽屉',r:'xhsHome',auto:'d-xhs-upload',brs:[{t:'📱 打开真实首页',fn:'nav',arg:'home'},{t:'👤 看我的页',fn:'nav',arg:'mine'}]},
-    {no:'②',nm:'上传订单截图 · 识别中',end:'首页',drw:'【识别中】倒计时自动切【识别成功】',dw:2,interact:'等待倒计时 '+D.xhs.ocrSecs+' 秒',imp:'OCR 识别订单信息',act:'识别中倒计时 '+D.xhs.ocrSecs+' 秒自动切【识别成功】；失败可重新上传（点我的→上传小票）（本演示为成功路径）',r:'xhsHome',auto:'d-xhs-ocr',brs:[{t:'重看上传引导',fn:'showDrawer',arg:'d-xhs-upload'},{t:'▶ 重放识别倒计时',fn:'showDrawer',arg:'d-xhs-ocr'}]},
-    {no:'③',nm:'识别成功 +'+D.xhs.invoicePts+' · 引导领券下单',end:'首页',drw:'【识别成功】',dw:1,interact:'点「🔥 领券下单 · 开积分包」',imp:'+'+D.xhs.invoicePts+' 到账，强引导再下一单开积分包',act:'到账提示「再下一单·开积分包：领券下单得 '+D.xhs.bagMin+'~'+D.xhs.bagMax+' 元红包 + 下单小票再领 '+D.xhs.invoicePts+' 积分 + 积分可兑现金」→ 首页领 1 张红包解锁「去下单」',r:'xhsHomeGot',brs:[{t:'再看到账提示',fn:'showDrawer',arg:'d-xhs-ok'}]},
+    {no:'②',nm:'识别小票中',end:'首页',drw:'【识别小票中】倒计时自动切【识别成功】',dw:2,interact:'等待倒计时 '+D.xhs.ocrSecs+' 秒',imp:'OCR 识别小票信息',act:'识别小票中倒计时 '+D.xhs.ocrSecs+' 秒自动切【识别成功】；失败可重新上传（点我的→上传小票）（本演示为成功路径）',r:'xhsHome',auto:'d-xhs-ocr',brs:[{t:'重看上传引导',fn:'showDrawer',arg:'d-xhs-upload'},{t:'▶ 重放识别倒计时',fn:'showDrawer',arg:'d-xhs-ocr'}]},
+    {no:'③',nm:'识别成功 +'+D.xhs.invoicePts+' · 引导领券下单',end:'首页',drw:'【识别成功】',dw:1,interact:'点「🔥 领券下单 · 开积分包」',imp:'+'+D.xhs.invoicePts+' 到账，强引导再下一单开积分包',act:'到账提示「再下一单·开积分包：领券下单得 '+D.xhs.bagMin+'~'+D.xhs.bagMax+' 元红包 + 积分可兑现金」→ 首页领 1 张红包解锁「去下单」（「下单小票再领」宣传点已暂停待审核）',r:'xhsHomeGot',brs:[{t:'再看到账提示',fn:'showDrawer',arg:'d-xhs-ok'}]},
     {no:'⇄',nm:'生态转化：小程序 → 第三方平台',end:'-',drw:'否',dw:0,interact:'无（系统跳转）',imp:'CPS 归因跳出，首单付款状态回传',act:'跳转饿了么/美团完成首单',r:'ecoOut',brs:[]},
     {no:'④',nm:'首单付款 · 恭喜任务完成',end:'-',drw:'【恭喜完成首单任务】',dw:1,interact:'点「去积分商城」',imp:'首单奖励 +'+D.xhs.firstOrderPts+' 到账，隐藏任务解锁',act:'支付成功自动弹恭喜抽屉：首单任务 +'+D.xhs.firstOrderPts+' 到账、隐藏任务已解锁 → 引导去商城兑换',r:'xhsPaid',auto:'d-xhs-first',brs:[{t:'再看恭喜弹窗',fn:'showDrawer',arg:'d-xhs-first'}]},
     {no:'⑤',nm:'积分商城 · 兑换隐藏任务',end:'积分商城',drw:'【兑换确认】→【兑换成功】',dw:2,interact:'点「兑换」→「确认兑换」',imp:'扣 1,000 积分，现金打微信零钱',act:'商城出现「隐藏任务 ¥0.5」专享卡 → 确认兑换 → 兑换成功即提现成功',r:'xhsMall',brs:[{t:'📱 打开真实积分商城',fn:'nav',arg:'mall'},{t:'再看兑换成功',fn:'showDrawer',arg:'d-xhs-exok'}]},
@@ -1982,8 +2051,8 @@ Object.assign(BF_FLOWS,{
   ],
   flow:`📕 小红书-用户流程（特定路径 + 新用户）
 │
-├─ ① 进入首页自动弹【上传订单截图领积分】（${D.xhs.invoicePts} 积分 · 弹窗×1）
-├─ ② 点「上传订单截图」→【识别中】倒计时 ${D.xhs.ocrSecs} 秒（弹窗×2：识别中→识别成功）
+├─ ① 进入首页自动弹【拍照小票领积分】（${D.xhs.invoicePts} 积分 · 弹窗×1）
+├─ ② 点「上传订单截图」→【识别小票中】倒计时 ${D.xhs.ocrSecs} 秒（弹窗×2：识别小票中→识别成功）
 ├─ ③【识别成功】+${D.xhs.invoicePts} 到账 →「🔥 领券下单 · 开积分包」（弹窗×1）
 ├─ ⇄ 生态转化：跳转饿了么/美团完成首单（无弹窗）
 ├─ ④ 首单付款自动弹【恭喜完成首单任务】+${D.xhs.firstOrderPts} · 隐藏任务解锁（弹窗×1）
@@ -2052,6 +2121,15 @@ const BF_R={
     if(bfNPhase!=='home'){bfNPhase='home';setTimeout(()=>showDrawer('d-bf-arrive'),350)}
     return bfNHome('arrived');
   },
+  /* 【已暂停 · 待领导审核「下单小票叠加积分」赠送点；审核通过后连同 steps ⑨ 一起放开】
+  ⑨ 下单小票叠加积分：hero 累计 4,405，自动弹【小票叠加积分】；bfNPts 只加一次（bfNInvDone 守卫）；我的页公告转 arrived 态
+  newInvoice(){
+    if(!bfNInvDone){bfNInvDone=true;bfNPts+=D.xhs.invoicePts}
+    mineNotice='arrived';renderMineNotice();
+    if(bfNPhase!=='invoice'){bfNPhase='invoice';setTimeout(()=>showDrawer('d-bf-invoice'),350)}
+    return bfNHome('invoice');
+  },
+  */
   newExch(){
     const tasks=D.tasks.map(t=>[t.name,t.pts]);
     const grid=tasks.map(t=>{
@@ -2249,12 +2327,19 @@ function bfNext(){const F=BF_FLOWS[bfCur];let i=bfStep+1;while(i<F.steps.length&
 function bfNextManual(){const F=BF_FLOWS[bfCur];if(bfStep<F.steps.length-1)bfGo(bfStep+1)}  /* 阅读器手动下一步：可进入异常步骤 */
 function bfReset(){bfStep=0;bfStateReset();bfRender();notice('已重置本流程')}
 function bfStateReset(){hideDrawer();clearInterval(xhsOcrTimer);bfView=BF_FLOWS[bfCur].init.view;
-  if(bfCur==='bf-new'||bfCur==='bf-old'){bfNExDone=false;bfNPhase='';bfMask=null;bfNPts=D.bfPtsInit;bfNDone={};bfNTask=null}}
+  mineNotice='';renderMineNotice();   /* 重置流程：我的页公告同步回到不展示 */
+  if(bfCur==='bf-new'||bfCur==='bf-old'){bfNExDone=false;bfNPhase='';bfMask=null;bfNPts=D.bfPtsInit;bfNDone={};bfNTask=null;bfNInvDone=false}}
 function bfSetView(v){bfView=v;bfRender()}
 /* —— bf-new 动作函数：到账弹窗/3连弹引导/商城兑换链 —— */
 function bfNCardArrive(){bfNPhase='home';bfRender();showDrawer('d-bf-arrive')}
 function bfNArriveOk(){hideDrawer();bfGo(BF_FLOWS[bfCur].steps.length-1)}
-function bfNArriveGo(){swapDrawer('d-bf-guide')}
+function bfNArriveGo(){
+  hideDrawer();
+  const i=BF_FLOWS[bfCur].steps.findIndex(s=>s.r==='newInvoice');
+  if(i>=0)bfGo(i);else swapDrawer('d-bf-guide');   /* 有小票到账环节先进⑨，无则回退旧链 */
+}
+/* ⑨ 小票叠加积分「我知道了」→ 接续引导兑换链（引导→确认→⑩商城） */
+function bfNInvoiceOk(){swapDrawer('d-bf-guide')}
 function bfNJumpOk(){hideDrawer();bfNext()}
 function bfNGoConfirm(){
   const t=D.tasks.find(x=>bfNPts>=x.pts)||D.tasks[0];
@@ -2294,6 +2379,7 @@ function tplHydrate(){
   ]);
   /* 给「上传小票」入口打标记：识别成功后该入口消失 */
   document.querySelectorAll('.menu .mi').forEach(mi=>{var t=mi.querySelector('.t');if(t&&t.textContent==='上传小票')mi.id='mineInvoice'});
+  renderMineNotice();   /* 初始化我的页小票公告（默认不展示） */
   const cashBtns=[
     {t:'兑换',fn:"showDrawer('d-confirm')",st:'go'},
     {t:'兑换',fn:"showDrawer('d-confirm')",st:'go'},
