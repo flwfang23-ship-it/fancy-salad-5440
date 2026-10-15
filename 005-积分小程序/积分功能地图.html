@@ -5,16 +5,81 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>外卖积分 · 功能地图</title>
 <!--
-  积分功能地图 / 索引页
-  说明：本页为独立说明页，不走 B端 / C端 工作流（不套 9 节说明卡骨架、不画泳道、不跑 SELF_CHECK）。
-  用途：一张图看清「积分怎么攒、怎么花、走到了哪一版」，并索引 005-积分小程序 下的各版本文档。
-  维护：每完成一次迭代，在「迭代地图」追加一个节点，在「后续迭代」摘掉对应占位。
+================================================================================
+ 外卖积分 · 功能地图（索引页）
+--------------------------------------------------------------------------------
+ 【AI 阅读入口】要新增积分相关功能 / 改这个功能，请先把本段注释读完再动手。
+================================================================================
+
+ 一、这是什么
+   外卖积分（微信小程序）的「功能地图 / 索引页」，一张图看清：积分怎么攒、
+   怎么花、现在走到哪一版了。
+   本页是纯说明页：不走 B端 / C端 工作流（不套 9 节说明卡骨架、不画泳道、
+   不跑 SELF_CHECK、不做「新增页面三处登记」）。
+
+ 二、功能在干什么（一句话）
+   用户从微信分享卡片进入小程序 → 签到 / 领外卖红包 / 跳饿了么·美团下单 →
+   订单已付款后按佣金结算积分 → 积分在商城兑换现金 → 打到微信零钱。
+
+ 三、关键口径（以下数字均走 B 端后台可配置化，别在文案里写死）
+   · 积分公式：下单积分 = 平台回传佣金 × 折算比例(50%) × 积分汇率(2000)
+   · 积分定价：1 元 = 2000 积分；最低档 600 积分 ≈ 0.3 元
+   · 攒积分 7 类流水：签到积分 / 红包领取 / 订单到账 / 小票积分 / 新人积分 /
+     下午茶 / 夜宵积分
+   · 时段加码：下午茶 15:00-17:00 额外 +100；夜宵 20:00-24:00 额外 +200
+     （叠加在基础积分之上）
+   · 弹窗三层逻辑：①弹窗顺序 ②弹窗是否显示 ③开关（控制积分是否发放）；
+     ①②（弹窗展示）与 ③（积分发放）完全解耦
+   · 兑换方式：仅「用户主动兑换」一种。自动兑换已不在业务范围内，
+     本页任何位置都不得再出现「自动兑换 / 周一自动兑换 / 打款机会」
+   · 打款：统一打到微信零钱；失败记录原因，可运营补发
+
+ 四、页面结构（要改哪一段，按这里定位）
+   · 顶部 hero：标题区，不吸顶
+   · 吸顶 tab 条：#tabbar（白底、sticky top:0），4 个 tab 由 <script> 的
+     switchTab() 切换；新增 tab 必须三处同时登记：按钮 button[data-tab] +
+     面板 .pane[id=tab-xx] + switchTab 里的默认值
+   · #tab-basic  「基本功能」：主线 ASCII / 攒积分 7 类表 / 花积分表 / 弹窗三层逻辑
+   · #tab-log    「更新记录」：版本时间线，.road 下每个 .node 块 = 一个已发布版本
+   · #tab-docs   「文档索引」：3 张卡，.idx 下每张 .card = 一个版本文档文件夹
+   · #tab-other  「其他」：后续迭代占位 / 关键口径速查 / 本页维护说明
+
+ 五、怎么维护（以后每新增一次迭代，按这 5 步改）
+   1) 本段注释第六节：更新「当前版本」与「迭代清单」
+   2) #tab-log「更新记录」：复制一个 .node 块，改版本号 / 功能名 / 改动点 / 文档入口
+   3) #tab-docs「文档索引」：若本次新建了版本文件夹，复制一张 .card，改目录名与链接
+   4) #tab-basic「基本功能」：若本次引入新规则（新流水类型 / 新时段 / 新弹窗逻辑），
+      同步改对应表格；纯界面调整不用改这里
+   5) #tab-other「后续迭代」：把已落地的占位条目摘掉
+   注：第 2、3 步的链接都是相对路径（相对本文件所在目录 005-积分小程序/），
+       移动本文件时必须同步检查链接
+
+ 六、当前版本与迭代清单
+   当前版本：1014 时段积分 + 积分项管理
+   迭代记录：
+     0928 最简方案         打通积分全闭环（规则配置 → 攒积分 → 兑换 → 打款 → 补发）
+     1013 小票积分迭代     新增「上传小票」攒积分支线（OCR 识别成功 +200，每客户一次）
+     1014 时段积分+积分项  新增积分项管理（三层弹窗逻辑）+ 下午茶 / 夜宵时段加码；
+                           积分明细流水类型扩至 7 类
+     第 4 版               待排期（未定，见「其他」tab 占位）
+   文档索引（均在本文件同级目录下）：
+     0928最简方案/           B端后台.html · C端页面.html · 总览_业务闭环图.jpg
+     1013小票积分迭代/       B端后台.html · C端页面.html
+     1014时段积分+积分项管理/ B端后台.html · C端页面.html
+
+ 七、修改红线
+   · tab 条必须吸顶且白底（position:sticky / top:0 / background:#fff），
+     不得改成跟随页面滚动
+   · 本页只做「逻辑说明 + 导航」，不复制各版本文档的字段表、弹窗清单、
+     跳转出口；细节一律以各版本文档为准
+   · HTML 标签必须配对闭合；JS 的 () {} [] 必须一一配对
+================================================================================
 -->
 <style>
   :root{
     --ink:#0f172a; --ink2:#334155; --ink3:#64748b; --ink4:#94a3b8;
     --line:#e2e8f0; --bg:#f6f8fb; --card:#ffffff;
-    --pri:#1d4ed8; --pri-soft:#eff6ff; --warn:#b45309;
+    --pri:#1d4ed8; --pri-soft:#eff6ff;
     --orange:#ea580c; --green:#047857; --green-soft:#ecfdf5;
   }
   *{margin:0;padding:0;box-sizing:border-box}
@@ -22,7 +87,7 @@
        background:var(--bg); color:var(--ink); line-height:1.75; font-size:14px}
   .wrap{max-width:1000px; margin:0 auto; padding:36px 26px 90px}
 
-  /* ── 头部 ── */
+  /* ── 头部（不吸顶） ── */
   .hero{background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 55%,#3b82f6 100%); color:#fff;
         border-radius:16px; padding:30px 32px; box-shadow:0 10px 30px rgba(29,78,216,.18)}
   .hero h1{font-size:27px; font-weight:750; letter-spacing:.5px}
@@ -31,12 +96,24 @@
   .hero .tag{background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28);
              border-radius:999px; padding:4px 13px; font-size:12px}
 
+  /* ── 吸顶 tab 条（白底悬浮） ── */
+  .tabbar{position:sticky; top:0; z-index:30; background:#fff;
+          display:flex; flex-wrap:wrap; gap:4px; padding:9px 0;
+          margin-top:22px; border-bottom:1px solid var(--line);
+          box-shadow:0 3px 10px rgba(15,23,42,.06)}
+  .tab{border:0; background:transparent; font-family:inherit; cursor:pointer;
+       font-size:14px; font-weight:600; color:var(--ink3);
+       padding:9px 18px; border-radius:9px; transition:.15s}
+  .tab:hover{background:#f1f5f9; color:var(--ink)}
+  .tab.active{background:var(--pri); color:#fff; box-shadow:0 2px 8px rgba(29,78,216,.25)}
+
+  /* ── tab 面板 ── */
+  .pane{display:none; padding-top:22px}
+  .pane.active{display:block}
+
   /* ── 通用板块 ── */
-  section{margin-top:34px}
   .sec-h{display:flex; align-items:center; gap:10px; margin-bottom:14px}
-  .sec-n{flex:none; width:26px; height:26px; border-radius:8px; background:var(--pri); color:#fff;
-         font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center}
-  .sec-t{font-size:19px; font-weight:730}
+  .sec-t{font-size:18px; font-weight:730}
   .sec-d{font-size:12.5px; color:var(--ink3); margin-left:auto}
   .card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 22px;
         box-shadow:0 1px 2px rgba(15,23,42,.04)}
@@ -48,7 +125,7 @@
   /* ── ASCII 图 ── */
   pre.ascii{background:#0f172a; color:#cbd5e1; border-radius:10px; padding:18px 20px;
             font-family:Consolas,"Courier New",monospace; font-size:12.5px; line-height:1.65;
-            overflow-x:auto; white-space:pre; tab-size:2}
+            overflow-x:auto; white-space:pre}
   pre.ascii .y{color:#fbbf24}
   pre.ascii .g{color:#6ee7b7}
   pre.ascii .b{color:#93c5fd}
@@ -62,21 +139,17 @@
   .pill{display:inline-block; padding:1px 8px; border-radius:999px; font-size:11.5px;
         background:var(--pri-soft); color:var(--pri); font-weight:600}
   .pill.new{background:var(--green-soft); color:var(--green)}
-  .pill.old{background:#f1f5f9; color:var(--ink3)}
 
-  /* ── 迭代地图 ── */
+  /* ── 更新记录（时间线） ── */
   .road{position:relative; padding-left:30px}
-  .road::before{content:""; position:absolute; left:9px; top:6px; bottom:6px; width:2px; background:#dbeafe}
+  .road::before{content:""; position:absolute; left:9px; top:8px; bottom:8px; width:2px; background:#dbeafe}
   .node{position:relative; margin-bottom:16px}
   .node:last-child{margin-bottom:0}
-  .node::before{content:""; position:absolute; left:-26px; top:20px; width:12px; height:12px;
+  .node::before{content:""; position:absolute; left:-26px; top:22px; width:12px; height:12px;
                 border-radius:50%; background:var(--pri); border:3px solid #dbeafe; box-sizing:content-box}
-  .node.todo::before{background:#fff; border:3px solid #cbd5e1}
   .node .v{display:inline-block; font-size:11.5px; font-weight:700; color:var(--pri);
            background:var(--pri-soft); border-radius:5px; padding:2px 9px; margin-bottom:8px}
-  .node.todo .v{color:var(--ink3); background:#f1f5f9}
   .node .box{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 19px}
-  .node.todo .box{border-style:dashed; background:#fbfcfe}
   .node .t{font-size:15px; font-weight:700}
   .node .t small{font-weight:500; color:var(--ink4); font-size:12px; margin-left:8px}
   .node ul{margin:9px 0 0 18px; font-size:13px; color:var(--ink2)}
@@ -87,9 +160,9 @@
           border-radius:7px; padding:4px 12px; transition:.15s}
   a.entry:hover{background:#dbeafe}
 
-  /* ── 索引卡 ── */
+  /* ── 文档索引卡 ── */
   .idx{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
-  .idx .card{display:flex; flex-direction:column}
+  .idx .card{display:flex; flex-direction:column; margin-top:0}
   .idx .hd{display:flex; align-items:center; gap:8px; margin-bottom:6px}
   .idx .hd .no{font-family:Consolas,monospace; font-size:12px; color:var(--ink4)}
   .idx .hd b{font-size:14.5px}
@@ -100,7 +173,7 @@
   /* ── 提示条 ── */
   .note{border-radius:10px; padding:12px 16px; font-size:12.5px; line-height:1.8; margin-top:14px}
   .note.blue{background:var(--pri-soft); border:1px solid #bfdbfe; color:#1e40af}
-  .note.warn{background:#fffbeb; border:1px solid #fde68a; color:var(--warn)}
+  .note.warn{background:#fffbeb; border:1px solid #fde68a; color:#b45309}
   .note.gray{background:#f8fafc; border:1px dashed #cbd5e1; color:var(--ink3)}
 
   footer{margin-top:44px; text-align:center; font-size:12px; color:var(--ink4); line-height:2}
@@ -109,7 +182,7 @@
 <body>
 <div class="wrap">
 
-  <!-- ══════════ 头部 ══════════ -->
+  <!-- ══════════ 头部（不吸顶） ══════════ -->
   <header class="hero">
     <h1>外卖积分 · 功能地图</h1>
     <div class="sub">一张图看清：积分怎么攒、怎么花、现在走到哪一版了</div>
@@ -121,13 +194,16 @@
     </div>
   </header>
 
-  <!-- ══════════ ① 功能逻辑 ══════════ -->
-  <section id="logic">
-    <div class="sec-h">
-      <span class="sec-n">1</span>
-      <span class="sec-t">功能逻辑</span>
-      <span class="sec-d">一条主链：攒积分 → 花积分 → 打款到账</span>
-    </div>
+  <!-- ══════════ 吸顶 tab 条 ══════════ -->
+  <div class="tabbar" id="tabbar">
+    <button class="tab active" data-tab="basic" onclick="switchTab('basic')">基本功能</button>
+    <button class="tab" data-tab="log" onclick="switchTab('log')">更新记录</button>
+    <button class="tab" data-tab="docs" onclick="switchTab('docs')">文档索引</button>
+    <button class="tab" data-tab="other" onclick="switchTab('other')">其他</button>
+  </div>
+
+  <!-- ══════════ Tab 1 · 基本功能 ══════════ -->
+  <div class="pane active" id="tab-basic">
 
     <div class="card">
       <h3>主线流程</h3>
@@ -142,16 +218,13 @@
                         积分到账 = <span class="g">佣金 × 50% × 2000</span>
                         （叠加：小票积分 / 新人积分 / 下午茶·夜宵时段加码）
                                     ↓
-                          积分商城 → 兑换现金任务
-                    ┌───────────────┴───────────────┐
-              <span class="b">主动兑换</span>（用户随时）          <span class="b">自动兑换</span>（每周一 11:00 系统）
-                    └───────────────┬───────────────┘
+                          积分商城 → <span class="b">主动兑换</span>现金任务
                                     ↓
                             微信零钱打款
                     ┌───────────────┴───────────────┐
               成功：推送<span class="g">到账通知</span>            失败：记录原因 → 运营<span class="g">补发</span></pre>
       <div class="note blue">
-        两条兑换路径共用同一积分池、同一套扣减逻辑，在「微信零钱打款」环节真实汇合。
+        兑换只有一条路径：用户在积分商城主动兑换。兑换成功后统一打款到微信零钱。
       </div>
     </div>
 
@@ -182,23 +255,14 @@
         </thead>
         <tbody>
           <tr><td>积分定价</td><td>1 元 = 2000 积分；最低档 600 积分 ≈ 0.3 元</td></tr>
-          <tr><td>主动兑换</td><td>用户随时在积分商城选档位兑换，实时生成一笔提现</td></tr>
-          <tr><td>自动兑换</td><td>每周一 11:00，系统为已开启自动兑换的用户逐档兑换</td></tr>
+          <tr><td>兑换</td><td>用户在积分商城主动选择档位兑换，实时生成一笔提现</td></tr>
           <tr><td>打款</td><td>统一打款到微信零钱；成功推送到账通知，失败记录原因并可运营补发</td></tr>
         </tbody>
       </table>
     </div>
-  </section>
-
-  <!-- ══════════ ② 弹窗三层逻辑 ══════════ -->
-  <section id="pop">
-    <div class="sec-h">
-      <span class="sec-n">2</span>
-      <span class="sec-t">弹窗管理逻辑</span>
-      <span class="sec-d">1014 版核心 · 三层完全解耦</span>
-    </div>
 
     <div class="card">
+      <h3>弹窗管理逻辑（1014 版核心 · 三层完全解耦）</h3>
 <pre class="ascii">每个积分项 ──┬── <span class="y">逻辑 1 · 弹窗顺序</span>   多弹窗同时触发时，按顺序号由小到大依次弹
              │
              ├── <span class="y">逻辑 2 · 弹窗是否显示</span> 每个弹窗独立控制「显示 / 不显示」
@@ -210,17 +274,15 @@
         弹窗种类与触发逻辑写死在 C 端代码，B 端只配开关 / 弹窗顺序 / 弹窗是否显示 / 跳转参数。
         每次用户打开小程序，都会重新执行一次弹窗触发判断。
       </div>
-      <div class="note gray">
-        时段命中：下午茶 15:00–17:00、夜宵 20:00–24:00。
-      </div>
+      <div class="note gray">时段命中：下午茶 15:00–17:00、夜宵 20:00–24:00。</div>
     </div>
-  </section>
 
-  <!-- ══════════ ③ 迭代地图 ══════════ -->
-  <section id="roadmap">
+  </div>
+
+  <!-- ══════════ Tab 2 · 更新记录 ══════════ -->
+  <div class="pane" id="tab-log">
     <div class="sec-h">
-      <span class="sec-n">3</span>
-      <span class="sec-t">迭代地图</span>
+      <span class="sec-t">更新记录</span>
       <span class="sec-d">按时间线看演进 · 每完成一版追加一个节点</span>
     </div>
 
@@ -261,7 +323,7 @@
       </div>
 
       <div class="node">
-        <span class="v">第 3 版 · 1014（当前）</span>
+        <span class="v">第 3 版 · 1014（当前版本）</span>
         <div class="box">
           <div class="t">时段积分 + 积分项管理 <small>让弹窗与积分可运营</small></div>
           <ul>
@@ -277,23 +339,12 @@
         </div>
       </div>
 
-      <div class="node todo">
-        <span class="v">第 4 版 · 待排期</span>
-        <div class="box">
-          <div class="t">⬜ 待补充 <small>口述后填入</small></div>
-          <ul>
-            <li>本节点为占位：后续迭代内容确定后，在此补充「版本号 + 功能名 + 改动点 + 文档入口」。</li>
-          </ul>
-        </div>
-      </div>
-
     </div>
-  </section>
+  </div>
 
-  <!-- ══════════ ④ 文档索引 ══════════ -->
-  <section id="index">
+  <!-- ══════════ Tab 3 · 文档索引 ══════════ -->
+  <div class="pane" id="tab-docs">
     <div class="sec-h">
-      <span class="sec-n">4</span>
       <span class="sec-t">文档索引</span>
       <span class="sec-d">005-积分小程序 · 3 个版本文件夹</span>
     </div>
@@ -329,22 +380,65 @@
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- ══════════ ⑤ 后续迭代 ══════════ -->
-  <section id="todo">
+  <!-- ══════════ Tab 4 · 其他 ══════════ -->
+  <div class="pane" id="tab-other">
+
     <div class="sec-h">
-      <span class="sec-n">5</span>
       <span class="sec-t">后续迭代</span>
       <span class="sec-d">待口述补充</span>
     </div>
     <div class="card">
       <div class="note gray" style="margin:0">
         ⬜ 本区为占位。下一次迭代确定后，在此补充：<b>功能名 / 一句话目标 / 改动点 / 涉及端 / 文档入口</b>，
-        并在上方「迭代地图」追加对应节点。
+        并在「更新记录」追加对应节点、摘掉本占位。
       </div>
     </div>
-  </section>
+
+    <div class="sec-h" style="margin-top:30px">
+      <span class="sec-t">关键口径速查</span>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th style="width:150px">项目</th><th>口径</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>积分公式</td><td>下单积分 = 平台回传佣金 × 折算比例(50%) × 积分汇率(2000)</td></tr>
+          <tr><td>积分定价</td><td>1 元 = 2000 积分；最低档 600 积分 ≈ 0.3 元</td></tr>
+          <tr><td>到账时点</td><td>外卖订单「已付款」后结算积分</td></tr>
+          <tr><td>时段加码</td><td>下午茶 15:00–17:00 +100；夜宵 20:00–24:00 +200</td></tr>
+          <tr><td>兑换方式</td><td>仅用户主动兑换一种</td></tr>
+          <tr><td>打款</td><td>统一打到微信零钱；失败可运营补发</td></tr>
+        </tbody>
+      </table>
+      <div class="note gray">以上数字均走 B 端后台可配置化，本页仅记录当前口径。</div>
+    </div>
+
+    <div class="sec-h" style="margin-top:30px">
+      <span class="sec-t">本页维护说明</span>
+    </div>
+    <div class="card">
+      <p>以后每新增一次迭代，按这 5 步改本页：</p>
+      <table style="margin-top:10px">
+        <thead>
+          <tr><th style="width:34px">#</th><th style="width:150px">改哪里</th><th>怎么改</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>顶部代码注释</td><td>更新「当前版本」与「迭代清单」，让 AI 一读就知道走到哪了</td></tr>
+          <tr><td>2</td><td>更新记录</td><td>追加一个版本节点（版本号 / 功能名 / 改动点 / 文档入口）</td></tr>
+          <tr><td>3</td><td>文档索引</td><td>新建了版本文件夹就加一张卡，改目录名与链接</td></tr>
+          <tr><td>4</td><td>基本功能</td><td>引入了新规则（新流水类型 / 新时段 / 新弹窗逻辑）才改，纯界面调整不用动</td></tr>
+          <tr><td>5</td><td>其他</td><td>把已落地的「后续迭代」占位摘掉</td></tr>
+        </tbody>
+      </table>
+      <div class="note blue">
+        新增功能前，请先读本页顶部代码注释——那是本页的 AI 阅读入口。
+      </div>
+    </div>
+
+  </div>
 
   <footer>
     外卖积分 · 功能地图 ｜ 索引页，随迭代更新<br>
@@ -352,5 +446,22 @@
   </footer>
 
 </div>
+
+<script>
+  /* tab 切换：按钮 button[data-tab] ↔ 面板 .pane[id=tab-xx]，一一对应
+     新增 tab 时必须同时改：① tabbar 里加 button ② 加一个 .pane ③ 无需改本函数 */
+  function switchTab(name) {
+    var bar = document.getElementById('tabbar');
+    var y = bar.offsetTop;
+    document.querySelectorAll('.tabbar .tab').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    document.querySelectorAll('.pane').forEach(function(p) {
+      p.classList.toggle('active', p.id === 'tab-' + name);
+    });
+    // 切换后若已滚过 tab 条，把视口拉回 tab 条位置，避免内容被"吸顶条"遮住
+    if (window.pageYOffset > y) { window.scrollTo(0, y); }
+  }
+</script>
 </body>
 </html>
