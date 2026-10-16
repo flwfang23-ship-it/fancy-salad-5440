@@ -1585,12 +1585,29 @@ textarea.field-input { max-width: 100%; }
 #积分项抽屉 .panel-body{padding:16px 20px;}
 </style>
 <div class="jf-tip b"><strong>ⓘ 积分项管理说明（活动卡片统一管理）</strong><br>
-本页以<strong>活动卡片</strong>为单位统一管理 7 个积分活动；各活动的<strong>触发条件、关联页面 / 弹窗清单写死在 C 端代码</strong>，卡片上只配三件事：<strong>活动开关 · 弹窗优先级 · 引导活动</strong>。每张卡片 3 个操作按钮：<strong>编辑</strong>（开关 / 弹窗优先级 / 备注）、<strong>引导活动</strong>（可配置多个，不触发领券积分）、<strong>关联页面</strong>（只读列表，页面 + 弹窗两个维度）。框架规则详见 <a href="./积分活动框架说明.html" target="_blank">积分活动框架说明.html</a>。</div>
+本页以<strong>活动卡片</strong>为单位统一管理 7 个积分活动；各活动的<strong>触发条件、关联页面 / 弹窗清单写死在 C 端代码</strong>，卡片上只配三件事：<strong>活动开关 · 弹窗优先级 · 引导活动</strong>。每张卡片 3 个操作按钮：<strong>编辑</strong>（开关 / 弹窗优先级 / 备注）、<strong>引导活动</strong>（可配置多个，不触发领券积分）、<strong>关联页面</strong>（只读列表，页面 + 弹窗两个维度）。框架规则详见下方「三层结构」说明。</div>
 <div class="jf-tip g"><strong>ⓘ 卡片操作与开关联动</strong>
 <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:12px;margin-top:6px;">
 <div>▸ <strong>编辑</strong>（可写）：活动开关、弹窗优先级、备注<br>▸ <strong>引导活动</strong>（可写，可多个）：平台 / 活动ID / 跳转方式 / 去向 / appid；仅承接跳转，<strong>不触发领券积分</strong><br>▸ <strong>关联页面</strong>（只读）：页面、弹窗管理两个维度，随开关联动</div>
 <div><strong>活动开关 = C 端唯一总闸</strong>，关闭后三处同停：<br><span style="color:#b91c1c;font-weight:700;">A 弹窗不触发</span> · <span style="color:#b45309;font-weight:700;">B 页面入口隐藏</span><br><span style="color:#6d28d9;font-weight:700;">C 积分不赠送</span></div>
 </div></div>
+<div class="jf-tip" style="background:#f8fafc;border:1px solid #e2e8f0;color:#334155;">
+<strong>ⓘ 三层结构（功能总开关 → 入口及弹窗管理 → 弹窗优先级）</strong>
+<pre style="margin:8px 0 0;font-family:Consolas,'SFMono-Regular',Menlo,monospace;font-size:12.5px;line-height:1.85;white-space:pre;overflow-x:auto;color:#334155;">第一层 · 功能总开关
+├─ 配置项：积分赠送总开关（关闭时，订阅一同关闭且置灰不可编辑，订阅是可以功能开了但是订阅关联，但是功能关了则订阅一定关）
+├─ 字段类型：开关
+└─ 说明：关闭时，本积分项不赠送积分，且页面/入口/弹窗一并失效（置灰不可编辑）
+
+第二层 · 入口及弹窗管理（仅显示，受第一层总开关控制）
+├─ 说明：页面和入口只受总开关影响——总开关开则显示，总开关关则不显示；本层仅展示页面入口与弹窗清单，不做单独开关
+├─ 2.1 页面入口：展示本积分项关联的 C 端页面入口清单（如首页活动入口），仅显示
+└─ 2.2 弹窗：展示本积分项关联的 C 端弹窗清单（如下午茶福利抽屉），仅显示
+
+第三层 · 弹窗优先级
+├─ 配置项：弹窗优先级
+├─ 字段类型：数字（越小越优先）
+└─ 说明：同一时刻多个弹窗同时命中触发条件时，按优先级先后顺序依次弹出（非只弹一个）；仅总开关已开启的活动才会有弹窗</pre>
+</div>
 <div id="积分项卡片区" class="jf-grid"></div>
 <div class="列表脚注">共 7 张活动卡片（积分项名称 = 积分明细流水类型名称，一一对应）</div>
 </div></section>
