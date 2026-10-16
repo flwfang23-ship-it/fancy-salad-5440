@@ -64,6 +64,10 @@ body{margin:0;padding:0;font-family:"PingFang SC","Microsoft YaHei",-apple-syste
 .导航组头 .图标{font-size:15px;flex-shrink:0;}
 .导航组头 .标签{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .导航组头 .计数{font-size:11px;color:#94a3b8;flex-shrink:0;}
+.导航组头.强调{background:#fef2f2;color:#b91c1c;font-weight:900;border-left:3px solid #dc2626;}
+.导航组头.强调 .标签{color:#b91c1c;font-weight:900;letter-spacing:.5px;}
+.导航组头.强调 .箭头{color:#dc2626;}
+.导航组头.强调 .计数{color:#dc2626;background:#fee2e2;}
 .导航组.折叠 .箭头{transform:rotate(-90deg);}
 .导航组.折叠 .导航子项{display:none;}
 
@@ -331,7 +335,7 @@ var 系统数据 = [
         {名:'B端后台.html', 显示:'B端后台', 类型:'html'},
         {名:'C端页面.html', 显示:'C端页面', 类型:'html'}
       ]},
-      {类型:'文件夹', 显示:'1012自检清单', 目录名:'1012自检清单', 图标:'✅', 文件:[
+      {类型:'文件夹', 显示:'1012自检清单', 目录名:'1012自检清单', 图标:'✅', 强调:true, 文件:[
         {名:'A_总说明.html', 显示:'总说明', 类型:'html'},
         {名:'B端后台.html', 显示:'B端自检清单', 类型:'html'},
         {名:'C_C端自建清单.html', 显示:'C端自建清单', 类型:'html'}
@@ -401,7 +405,8 @@ function 渲染文件夹体(子项, 基础路径, 面包屑前缀, ID前缀) {
       var 子基础路径 = 项.目录名 ? 基础路径 + '/' + 项.目录名 : 基础路径;
       var 子面包屑前缀 = 面包屑前缀 + ' &gt; ' + 项.显示;
       html += '<div class="导航组" id="' + 夹ID + '">';
-      html += '<div class="导航组头" onclick="切换分组(\'' + 夹ID + '\')">';
+      var 强调class = 项.强调 ? ' 强调' : '';
+      html += '<div class="导航组头' + 强调class + '" onclick="切换分组(\'' + 夹ID + '\')">';
       html += '<span class="箭头">▼</span>';
       html += '<span class="图标">' + (项.图标 || '📁') + '</span>';
       html += '<span class="标签" title="' + 项.显示 + '">' + 项.显示 + '</span>';
@@ -586,7 +591,8 @@ function 构建导航() {
         var 子基础路径 = f.目录名 ? s.目录 + '/' + f.目录名 : s.目录;
         var 子面包屑前缀 = s.名称 + ' &gt; ' + f.显示;
         html += '<div class="导航组" id="' + 夹ID + '">';
-        html += '<div class="导航组头" onclick="切换分组(\'' + 夹ID + '\')">';
+        var 顶层强调class = f.强调 ? ' 强调' : '';
+        html += '<div class="导航组头' + 顶层强调class + '" onclick="切换分组(\'' + 夹ID + '\')">';
         html += '<span class="箭头">▼</span>';
         html += '<span class="图标">' + (f.图标 || '📁') + '</span>';
         html += '<span class="标签" title="' + f.显示 + '">' + f.显示 + '</span>';
