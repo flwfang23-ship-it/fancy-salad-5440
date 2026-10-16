@@ -1483,20 +1483,20 @@ textarea.field-input { max-width: 100%; }
 <div class="应用壳">
 <aside class="泳道区">
 <h3>多方业务泳道图</h3>
-<div class="泳道简介" style="line-height:1.7;"><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">功能简介：</strong><div style="padding:2px 0 0 20px;color:#475569;">① 运营在后台配置弹窗开关/优先级/跳转参数与时段加码积分</div><div style="padding:2px 0 0 20px;color:#475569;">② C端用户打开小程序，代码端判断弹窗触发条件</div><div style="padding:2px 0 0 20px;color:#475569;">③ 用户点弹窗跳转活动/下单，时段内下单额外发加码积分</div></div><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">积分获取：</strong><div style="padding:2px 0 0 20px;color:#475569;">下午茶时段(15-17点)下单 +100，夜宵时段(20-24点)下单 +200</div><div style="padding:2px 0 0 20px;color:#94a3b8;">叠加在基础积分(佣金×50%×2000)之上</div></div><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">弹窗规则：</strong><div style="padding:2px 0 0 20px;color:#475569;">配了不一定调用（触发逻辑在代码端判断）；多弹窗命中按优先级先后顺序依次弹出，仅总开关已开启的积分项参与弹窗</div></div><div style="padding:4px 0 2px;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">后台页面：</strong><div style="padding:3px 0 0 20px;color:#475569;"><div>① <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.0')">改动清单</span>：本次迭代业务功能变更</div><div>② <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.1')">全局参数</span>：时段加码激励（下午茶/夜宵额外积分）</div><div>③ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.4')">积分项管理</span>：开关/优先级/跳转参数配置</div><div>④ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('11.2')">积分明细</span>：含新增2类流水（下午茶/夜宵额外积分）</div></div></div></div>
+<div class="泳道简介" style="line-height:1.7;"><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">功能简介：</strong><div style="padding:2px 0 0 20px;color:#475569;">① 运营在后台配置 4 项：3.1 全局参数 / 3.4 积分项管理 / 3.5 订阅配置 / 11.2 积分明细</div><div style="padding:2px 0 0 20px;color:#475569;">② C端用户打开小程序，代码按活动开关判断弹窗/入口</div><div style="padding:2px 0 0 20px;color:#475569;">③ 用户点弹窗跳转活动下单，触发订阅消息推送</div></div><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">积分获取：</strong><div style="padding:2px 0 0 20px;color:#475569;">基础积分=回传佣金×折算比例×2000；下午茶时段(15-17点)下单 +100，夜宵时段(20-24点)下单 +200</div><div style="padding:2px 0 0 20px;color:#94a3b8;">时段加码叠加在基础积分之上；订阅模板停用不影响积分发放</div></div><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">弹窗规则：</strong><div style="padding:2px 0 0 20px;color:#475569;">配了不一定调用（触发逻辑在代码端判断）；多弹窗命中按优先级先后顺序依次弹出，仅总开关已开启的积分项参与弹窗；开关关闭三停：A弹窗不触发 / B入口隐藏 / C积分不赠送</div></div><div style="padding:4px 0 2px;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">后台页面：</strong><div style="padding:3px 0 0 20px;color:#475569;"><div>① <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.0')">改动清单</span>：本次迭代业务功能变更</div><div>② <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.1')">全局参数</span>：时段加码激励（下午茶/夜宵额外积分）</div><div>③ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.4')">积分项管理</span>：活动卡片统一管理（开关/优先级/引导活动）</div><div>④ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.5')">订阅配置</span>：订阅消息模板开关管理（本次新增）</div><div>⑤ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('11.2')">积分明细</span>：流水名称与活动卡片一一对应</div></div></div></div>
 <div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;"><div class="泳道图-头" style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid #e2e8f0;"><div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">SaaS 总后台（运营）</div><div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#ecfdf5;color:#065f46;">C 端用户</div><div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#f8fafc;color:#475569;">外部系统（外卖平台 / 积分系统）</div></div><div class="泳道图-体">
-<div class="泳道行 泳道收纳卡" data-card="g1" data-card-nodes="1" data-card-label="① 配置弹窗参数与时段加码" data-node-phase="1" onclick="打开泳道浮层('g1')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">① 配置弹窗参数与时段加码</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
-<div class="泳道行 泳道收纳卡" data-card="g2" data-card-nodes="2" data-card-label="② 用户打开小程序触发弹窗" data-node-phase="2" onclick="打开泳道浮层('g2')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">② 用户打开小程序触发弹窗</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
-<div class="泳道行 泳道收纳卡" data-card="g3" data-card-nodes="3" data-card-label="③ 点弹窗跳转活动下单" data-node-phase="3" onclick="打开泳道浮层('g3')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">③ 点弹窗跳转活动下单</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
-<div class="泳道行 泳道收纳卡" data-card="g4" data-card-nodes="4" data-card-label="④ 时段内下单额外发加码积分" data-node-phase="4" onclick="打开泳道浮层('g4')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">④ 时段内下单额外发加码积分</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div></div>
-<div class="泳道行 泳道收纳卡" data-card="g5" data-card-nodes="5" data-card-label="⑤ 查询积分流水" data-node-phase="5" onclick="打开泳道浮层('g5')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">⑤ 查询积分流水</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
+<div class="泳道行 泳道收纳卡" data-card="g1" data-card-nodes="1" data-card-label="① 运营配置后台 4 项" data-node-phase="1" onclick="打开泳道浮层('g1')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">① 运营配置后台 4 项</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
+<div class="泳道行 泳道收纳卡" data-card="g2" data-card-nodes="2" data-card-label="② C端打开小程序判断弹窗/入口" data-node-phase="2" onclick="打开泳道浮层('g2')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">② C端打开小程序判断弹窗/入口</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
+<div class="泳道行 泳道收纳卡" data-card="g3" data-card-nodes="3" data-card-label="③ 点弹窗跳转活动下单，触发订阅推送" data-node-phase="3" onclick="打开泳道浮层('g3')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">③ 点弹窗跳转活动下单，触发订阅推送</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
+<div class="泳道行 泳道收纳卡" data-card="g4" data-card-nodes="4" data-card-label="④ 订单回传，按全局公式发放积分" data-node-phase="4" onclick="打开泳道浮层('g4')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">④ 订单回传，按全局公式发放积分</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div></div>
+<div class="泳道行 泳道收纳卡" data-card="g5" data-card-nodes="5" data-card-label="⑤ 查询积分流水（与卡片同名）" data-node-phase="5" onclick="打开泳道浮层('g5')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">⑤ 查询积分流水（与卡片同名）</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
 </div></div>
 <style>.泳道收纳卡.收纳-已过{opacity:1 !important;}.泳道收纳卡.收纳-现在{opacity:1 !important;}.泳道收纳卡.收纳-现在 .泳道收纳卡内{outline:2px solid rgba(29,78,216,.55);outline-offset:-2px;}.泳道收纳卡.收纳-未来{opacity:.25 !important;}.泳道收纳卡:hover .泳道收纳卡内{filter:brightness(.97);}</style>
-<div id="泳道浮层体_g1" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">①</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">配置弹窗参数与时段加码<span class="泳道状态徽章 通过色" style="display:inline-block;margin:4px 4px 0 0;">3.4 积分项管理 + 3.1 全局参数</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">弹窗：开关/优先级/平台/活动ID/跳转方式/去向/appid/备注；时段加码：下午茶+100、夜宵+200</div></div></div></div>
-<div id="泳道浮层体_g2" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">②</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">用户打开小程序，代码端判断弹窗触发条件<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">触发逻辑写死在代码</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">每次打开判断一次；多弹窗命中按优先级先后顺序依次弹出，仅总开关已开启的积分项参与</div></div></div></div>
-<div id="泳道浮层体_g3" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">③</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">用户点弹窗，按跳转方式跳转<span class="泳道状态徽章 通过色" style="display:inline-block;margin:4px 4px 0 0;">小程序/H5</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">小程序=跳转外卖小程序（appid按平台自动带出）；H5=跳转H5链接（去向=淘宝APP/淘宝闪购APP）</div></div></div></div>
-<div id="泳道浮层体_g4" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">④</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">时段内下单，系统额外发加码积分<span class="泳道状态徽章 通过色" style="display:inline-block;margin:4px 4px 0 0;">积分：+时段加码值</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">下午茶(15-17点)+100、夜宵(20-24点)+200；叠加在基础积分之上；时段内有订单即发，发给下单人</div></div></div></div>
-<div id="泳道浮层体_g5" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">⑤</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">查询积分流水<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">11.2 积分明细</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">含新增2类流水：下午茶额外积分、夜宵额外积分</div></div></div></div>
+<div id="泳道浮层体_g1" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">①</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">运营配置后台 4 项<span class="泳道状态徽章 通过色" style="display:inline-block;margin:4px 4px 0 0;">3.1 全局参数 · 3.4 积分项管理 · 3.5 订阅配置 · 11.2 积分明细</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">全局参数：时段加码值（下午茶+100/夜宵+200）；积分项管理：活动卡片开关/弹窗优先级/引导活动；订阅配置（3.5 新增）：订阅模板开关（生效/停用）；积分明细：流水查询</div></div></div></div>
+<div id="泳道浮层体_g2" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">②</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">C端用户打开小程序，代码按活动开关判断弹窗/入口<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">触发逻辑写死在代码</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">每次打开判断一次；多弹窗命中按优先级先后顺序依次弹出，仅总开关已开启的积分项参与；开关关闭三停：A弹窗不触发 / B入口隐藏 / C积分不赠送</div></div></div></div>
+<div id="泳道浮层体_g3" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">③</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">用户点弹窗跳转活动下单，触发订阅消息推送<span class="泳道状态徽章 通过色" style="display:inline-block;margin:4px 4px 0 0;">小程序/H5 · 订阅消息</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">小程序=跳转外卖小程序（appid按平台自动带出）；H5=跳转H5链接（去向=淘宝APP/淘宝闪购APP）；已订阅模板在通知节点命中且状态=生效时推送</div></div></div></div>
+<div id="泳道浮层体_g4" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">④</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">订单回传，系统按全局积分公式发放积分<span class="泳道状态徽章 通过色" style="display:inline-block;margin:4px 4px 0 0;">积分：佣金×折算比例×2000</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">基础积分=回传佣金×折算比例×2000；时段加码叠加其上：下午茶(15-17点)+100、夜宵(20-24点)+200；发给下单人</div></div></div></div>
+<div id="泳道浮层体_g5" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">⑤</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">运营查询积分流水，流水名称与活动卡片同名<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">11.2 积分明细</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">共 7 类收入流水：签到积分/红包领取/订单到账/小票积分/新人积分/下午茶/夜宵积分，与 3.4 活动卡片名称一一对应</div></div></div></div>
 <div id="泳道浮层遮罩" style="display:none;position:fixed;inset:0;z-index:1600;background:rgba(15,23,42,.34);align-items:center;justify-content:center;" onclick="关闭泳道浮层()"><div onclick="event.stopPropagation()" style="background:#fff;border-radius:10px;width:330px;max-width:88vw;max-height:72vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.24);"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:#fff;z-index:1;"><b id="泳道浮层标题" style="font-size:13.5px;color:#0f172a;"></b><span onclick="关闭泳道浮层()" style="cursor:pointer;color:#94a3b8;font-size:16px;line-height:1;padding:2px 4px;">✕</span></div><div id="泳道浮层内容" style="padding:6px 14px 10px;"></div></div></div>
 </aside>
 <nav class="菜单区">
@@ -1507,17 +1507,19 @@ textarea.field-input { max-width: 100%; }
 <div class="菜单叶子" style="white-space:nowrap;text-align:left;" data-menu-page="3.1" onclick="切换页面('3.1')"><span class="菜单号">3.1</span><span class="菜单图标" style="display:inline-block;width:18px;text-align:center;flex:none;">⚙️</span><span style="text-align:left;">全局参数</span></div>
 <div class="菜单父" style="white-space:nowrap;"><span>积分项管理</span></div>
 <div class="菜单叶子" style="white-space:nowrap;text-align:left;" data-menu-page="3.4" onclick="切换页面('3.4')"><span class="菜单号">3.4</span><span class="菜单图标" style="display:inline-block;width:18px;text-align:center;flex:none;">🖥️</span><span style="text-align:left;">积分项管理</span></div>
+<div class="菜单叶子" style="white-space:nowrap;text-align:left;" data-menu-page="3.5" onclick="切换页面('3.5')"><span class="菜单号">3.5</span><span class="菜单图标" style="display:inline-block;width:18px;text-align:center;flex:none;">🔔</span><span style="text-align:left;">订阅配置</span></div>
 <div class="菜单叶子" style="white-space:nowrap;text-align:left;" data-menu-page="11.2" onclick="切换页面('11.2')"><span class="菜单号">11.2</span><span class="菜单图标" style="display:inline-block;width:18px;text-align:center;flex:none;">📒</span><span style="text-align:left;">积分明细</span></div>
 </nav>
 <main class="内容区" id="内容区">
-<section class="页面面板 激活" id="面_3_0" data-page="3.0"><div class="页面卡"><div class="页面头"><h2>改动清单</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">📋</span><span class="流程信息卡-环节名">本次迭代业务功能改动范围</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">迭代版本</span><span class="流程信息卡-值">1014 弹窗管理迭代</span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">改动概述</span><span class="流程信息卡-值">新增积分项管理后台配置页 + 时段加码激励积分规则</span></div></div></div>
+<section class="页面面板 激活" id="面_3_0" data-page="3.0"><div class="页面卡"><div class="页面头"><h2>改动清单</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">📋</span><span class="流程信息卡-环节名">本次迭代业务功能改动范围</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">迭代版本</span><span class="流程信息卡-值">1012 积分项管理 + 订阅配置</span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">改动概述</span><span class="流程信息卡-值">积分项管理框架化（活动卡片统一管理）+ 订阅消息模板配置</span></div></div></div>
 <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.8;">本页列出本次迭代新增/变更的<strong>业务功能</strong>，便于产品和开发快速了解改动范围。</div>
 <div style="color:#dc2626;font-weight:700;font-size:12.5px;margin-bottom:12px;">⚠ 当前页面所有涉及到的数字均走后台可配置化。</div>
 <table class="数据表格"><thead><tr><th class="列表表头">序号</th><th class="列表表头">功能</th><th class="列表表头">类型</th><th class="列表表头">涉及页面</th><th class="列表表头">说明</th></tr></thead><tbody>
-<tr class="数据行"><td class="列表单元格">1</td><td class="列表单元格"><strong>积分项管理</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.4</td><td class="列表单元格">本页管理 7 个积分项（签到积分/红包领取/订单到账/小票积分/新人积分/下午茶/夜宵积分），每个积分项对应一批弹窗；触发逻辑写死在 C 端代码，后台仅配开关/弹窗优先级/跳转参数；配置字段：开关(生效/不生效)、弹窗优先级、平台(饿了么/美团)、活动ID、跳转方式(小程序/H5)、去向(淘宝APP/淘宝闪购APP)、appid(按平台自动只读回填)、备注；三层逻辑：①积分赠送总开关-控制积分赠送（关=不产生积分，且页面/入口/弹窗一并失效）；②入口及弹窗管理-仅显示，页面和入口只受总开关影响（开则显示、关则不显示）；③弹窗优先级-多弹窗命中按优先级先后顺序依次弹出（非只弹一个）；积分明细（11.2）流水类型与积分项名称一一对应，扩充为 7 类</td></tr>
+<tr class="数据行"><td class="列表单元格">1</td><td class="列表单元格"><strong>积分项管理</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.4</td><td class="列表单元格">本页以活动卡片为单位管理 7 个积分项（签到积分/红包领取/订单到账/小票积分/新人积分/下午茶/夜宵积分），各活动触发逻辑与关联页面/弹窗清单写死在 C 端代码；卡片只配三件事：活动开关、弹窗优先级、引导活动；每张卡片 3 个操作按钮：①编辑-开关/弹窗优先级/备注，②引导活动-平台/活动ID/跳转方式/去向/appid（可配置多个；引导活动不触发领券积分），③关联页面-只读列表，含页面、弹窗管理两个维度；活动开关关闭后 C 端三停：A弹窗不触发、B页面入口隐藏、C积分不赠送；积分明细（11.2）流水类型与活动卡片名称一一对应，共 7 类</td></tr>
 <tr class="数据行"><td class="列表单元格">2</td><td class="列表单元格"><strong>时段加码激励</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.1</td><td class="列表单元格">下午茶时段(15-17 点)下单额外 +100 积分，夜宵时段(20-24 点)下单额外 +200 积分；叠加在基础积分(佣金×50%×2000)之上；发放条件：时段内有订单即发（不论入口），发给下单人；APPID 更新为真实值（美团 wxde8ac0a21135c07d、饿了么 wxece3a9a4c82f58c9），3.4 编辑抽屉按平台自动回填</td></tr>
+<tr class="数据行"><td class="列表单元格">3</td><td class="列表单元格"><strong>订阅配置</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.5</td><td class="列表单元格">运营管理微信订阅消息模板，含模板名称/模板ID/订阅入口/通知节点/关联功能/状态 6 个字段；模板在微信公众平台创建后回填本页，除「状态」外其余字段均不可编辑，仅支持状态开关切换（生效/停用）；停用后 C 端不再发起该模板的订阅授权、服务端不再推送该模板消息</td></tr>
 </tbody></table>
-<div class="列表脚注">共 2 项业务功能变更</div>
+<div class="列表脚注">共 3 项业务功能变更</div>
 <div style="margin-top:18px;"><h3 style="font-size:14px;font-weight:650;margin-bottom:8px;color:#334155;">流水类型清单（开发参考）</h3><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:8px;font-size:12.5px;color:#475569;line-height:1.8;">以下为积分明细（11.2）流水类型完整清单，与 3.4 积分项统一口径为 7 类（<span style="color:#027a48;font-weight:650;">绿色标注</span>为本次新增积分项）：</div>
 <table class="数据表格"><thead><tr><th class="列表表头">序号</th><th class="列表表头">流水类型</th><th class="列表表头">触发场景</th><th class="列表表头">备注</th></tr></thead><tbody>
 <tr class="数据行"><td class="列表单元格">1</td><td class="列表单元格">签到积分</td><td class="列表单元格">每日签到任务完成</td><td class="列表单元格">—</td></tr>
@@ -1536,32 +1538,72 @@ textarea.field-input { max-width: 100%; }
 <div id="页面配置_3_1" style="max-width:880px;"></div>
 <div style="max-width:880px;display:flex;justify-content:flex-end;margin:6px 0 18px;"><button class="主按钮" onclick="保存页面配置('3.1')">💾 保存配置</button></div>
 </div></section>
-<section class="页面面板" id="面_3_4" data-page="3.4"><div class="页面卡"><div class="页面头"><h2>积分项管理</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置积分项开关与跳转参数</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">积分项管理</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本页管理 7 个积分项（签到积分/红包领取/订单到账/小票积分/新人积分/下午茶/夜宵积分），每个积分项对应一批弹窗；触发逻辑写死在 C 端代码，本页仅配开关/弹窗优先级/跳转参数；三层逻辑：①积分赠送总开关-关=不产生积分，且页面/入口/弹窗一并失效；②入口及弹窗管理-仅显示，页面和入口只受总开关影响（开则显示、关则不显示）；③弹窗优先级-多弹窗命中按优先级先后顺序依次弹出（非只弹一个）</span></div></div></div>
-<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:12px 16px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.85;"><strong>ⓘ 积分项管理说明</strong><br>本页管理 <strong>7 个积分项</strong>，每个积分项对应一批弹窗（弹窗种类与触发逻辑写死在 C 端代码，本页仅配开关/弹窗优先级/跳转参数）：<div style="padding:4px 0 0 18px;"><span style="color:#1d4ed8;">签到积分</span> → 签到提醒弹窗（每日签到时段命中）<br><span style="color:#1d4ed8;">红包领取</span> → 领券引导弹窗、红包到账弹窗（领券/红包到账命中）<br><span style="color:#1d4ed8;">订单到账</span> → 订单到账弹窗（订单已付款命中）<br><span style="color:#1d4ed8;">小票积分</span> → 上传小票引导弹窗、小票识别成功弹窗（上传/识别成功命中）<br><span style="color:#1d4ed8;">新人积分</span> → 新人欢迎弹窗、新人任务引导弹窗（新用户首次进入命中）<br><span style="color:#1d4ed8;">下午茶</span> → 下午茶专属福利弹窗（每日 15-17 点命中）<br><span style="color:#1d4ed8;">夜宵积分</span> → 夜宵专属福利弹窗（每日 20-24 点命中）</div></div>
-<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:6px;padding:14px 16px;margin-bottom:12px;font-size:12.5px;color:#065f46;line-height:1.8;"><strong style="font-size:13.5px;">3.4 积分项配置 — 字段三层结构</strong><pre style="margin:8px 0 0;font-family:'Consolas','Monaco',monospace;font-size:12px;color:#064e3b;line-height:1.75;white-space:pre-wrap;background:#f0fdf4;padding:10px 12px;border-radius:4px;border:1px dashed #a7f3d0;">第一层 · 功能总开关
-├─ 配置项：积分赠送总开关
-├─ 字段类型：开关
-└─ 说明：关闭时，本积分项不赠送积分，且页面/入口/弹窗一并失效（置灰不可编辑）
-
-第二层 · 入口及弹窗管理（仅显示，受第一层总开关控制）
-├─ 说明：页面和入口只受总开关影响——总开关开则显示，总开关关则不显示；本层仅展示页面入口与弹窗清单，不做单独开关
-├─ 2.1 页面入口：展示本积分项关联的 C 端页面入口清单（如首页活动入口），仅显示
-└─ 2.2 弹窗：展示本积分项关联的 C 端弹窗清单（如下午茶福利抽屉），仅显示
-
-第三层 · 弹窗优先级
-├─ 配置项：弹窗优先级
-├─ 字段类型：数字（越小越优先）
-└─ 说明：同一时刻多个弹窗同时命中触发条件时，按优先级先后顺序依次弹出（非只弹一个）；仅总开关已开启的活动才会有弹窗</pre></div>
-<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:12px;">
-<div><div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;font-size:14px;color:#334155;">签到积分</span><button onclick="切换积分赠送(this)" data-state="生效" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:14px;font-size:12px;border:none;cursor:pointer;background:#ecfdf3;color:#027a48;transition:all .15s;">积分赠送 · 生效</button></div><div style="padding:10px 14px;font-size:12.5px;color:#475569;line-height:1.85;"><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">弹窗优先级</span>10</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">页面入口</span><span>① 首页积分入口 <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;background:#eff6ff;color:#1d4ed8">显示</span></span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">弹窗</span><span style="color:#94a3b8;">无</span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">跳转方式</span>小程序</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">平台</span>美团</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">活动ID</span>ACT-SIGN</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">appid</span>wxde8ac0a21135c07d</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">备注</span>每日签到时段命中；签到完成发签到积分</div></div><div style="padding:8px 14px;border-top:1px solid #f1f5f9;text-align:right;"><span style="display:inline-block;margin-right:8px;padding:4px 12px;border:1px solid #e2e8f0;border-radius:4px;background:#f8fafc;color:#94a3b8;font-size:12px;cursor:not-allowed;">入口及弹窗管理 · 仅显示</span><button class="详情按钮" onclick="打开表单弹窗('3.4','编辑', {'弹窗名称':'签到积分','开关':'生效','弹窗优先级':'10','平台':'美团','活动ID':'ACT-SIGN','跳转方式':'小程序','去向':'—','appid':'wxde8ac0a21135c07d','备注':'每日签到时段命中；签到完成发签到积分',_壳节编号:'3.4'})">编辑</button></div></div></div>
-<div><div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;font-size:14px;color:#334155;">红包领取</span><button onclick="切换积分赠送(this)" data-state="生效" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:14px;font-size:12px;border:none;cursor:pointer;background:#ecfdf3;color:#027a48;transition:all .15s;">积分赠送 · 生效</button></div><div style="padding:10px 14px;font-size:12.5px;color:#475569;line-height:1.85;"><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">弹窗优先级</span>20</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">页面入口</span><span style="color:#94a3b8;">无</span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">弹窗</span><span>① toast首页弹窗 <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;background:#ecfdf3;color:#027a48">显示</span></span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">跳转方式</span>小程序</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">平台</span>美团</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">活动ID</span>ACT-COUPON</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">appid</span>wxde8ac0a21135c07d</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">备注</span>领券中心命中；领券发红包领取积分</div></div><div style="padding:8px 14px;border-top:1px solid #f1f5f9;text-align:right;"><span style="display:inline-block;margin-right:8px;padding:4px 12px;border:1px solid #e2e8f0;border-radius:4px;background:#f8fafc;color:#94a3b8;font-size:12px;cursor:not-allowed;">入口及弹窗管理 · 仅显示</span><button class="详情按钮" onclick="打开表单弹窗('3.4','编辑', {'弹窗名称':'红包领取','开关':'生效','弹窗优先级':'20','平台':'美团','活动ID':'ACT-COUPON','跳转方式':'小程序','去向':'—','appid':'wxde8ac0a21135c07d','备注':'领券中心命中；领券发红包领取积分',_壳节编号:'3.4'})">编辑</button></div></div></div>
-<div><div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;font-size:14px;color:#334155;">订单到账</span><button onclick="切换积分赠送(this)" data-state="生效" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:14px;font-size:12px;border:none;cursor:pointer;background:#ecfdf3;color:#027a48;transition:all .15s;">积分赠送 · 生效</button></div><div style="padding:10px 14px;font-size:12.5px;color:#475569;line-height:1.85;"><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">弹窗优先级</span>30</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">页面入口</span><span style="color:#94a3b8;">无</span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">弹窗</span><span>① 积分到账 <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;background:#ecfdf3;color:#027a48">显示</span></span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">跳转方式</span>小程序</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">平台</span>美团</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">活动ID</span>ACT-ORDER</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">appid</span>wxde8ac0a21135c07d</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">备注</span>订单已付款命中；发订单到账积分（佣金×50%×2000）</div></div><div style="padding:8px 14px;border-top:1px solid #f1f5f9;text-align:right;"><span style="display:inline-block;margin-right:8px;padding:4px 12px;border:1px solid #e2e8f0;border-radius:4px;background:#f8fafc;color:#94a3b8;font-size:12px;cursor:not-allowed;">入口及弹窗管理 · 仅显示</span><button class="详情按钮" onclick="打开表单弹窗('3.4','编辑', {'弹窗名称':'订单到账','开关':'生效','弹窗优先级':'30','平台':'美团','活动ID':'ACT-ORDER','跳转方式':'小程序','去向':'—','appid':'wxde8ac0a21135c07d','备注':'订单已付款命中；发订单到账积分（佣金×50%×2000）',_壳节编号:'3.4'})">编辑</button></div></div></div>
-<div><div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;font-size:14px;color:#334155;">小票积分</span><button onclick="切换积分赠送(this)" data-state="生效" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:14px;font-size:12px;border:none;cursor:pointer;background:#ecfdf3;color:#027a48;transition:all .15s;">积分赠送 · 生效</button></div><div style="padding:10px 14px;font-size:12.5px;color:#475569;line-height:1.85;"><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">弹窗优先级</span>40</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">页面入口</span><span style="color:#94a3b8;">无</span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">弹窗</span><span>① A-1 上传引导抽屉 <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;background:#ecfdf3;color:#027a48">显示</span><br>② A-2 识别小票 <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;background:#ecfdf3;color:#027a48">显示</span><br>③ A-3 识别成功弹窗 <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;background:#ecfdf3;color:#027a48">显示</span></span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">跳转方式</span>小程序</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">平台</span>美团</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">活动ID</span>ACT-RECEIPT</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">appid</span>wxde8ac0a21135c07d</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">备注</span>上传小票识别成功命中；发小票积分（每个客户仅一次）</div></div><div style="padding:8px 14px;border-top:1px solid #f1f5f9;text-align:right;"><span style="display:inline-block;margin-right:8px;padding:4px 12px;border:1px solid #e2e8f0;border-radius:4px;background:#f8fafc;color:#94a3b8;font-size:12px;cursor:not-allowed;">入口及弹窗管理 · 仅显示</span><button class="详情按钮" onclick="打开表单弹窗('3.4','编辑', {'弹窗名称':'小票积分','开关':'生效','弹窗优先级':'40','平台':'美团','活动ID':'ACT-RECEIPT','跳转方式':'小程序','去向':'—','appid':'wxde8ac0a21135c07d','备注':'上传小票识别成功命中；发小票积分（每个客户仅一次）',_壳节编号:'3.4'})">编辑</button></div></div></div>
-<div><div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;font-size:14px;color:#334155;">新人积分</span><button onclick="切换积分赠送(this)" data-state="生效" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:14px;font-size:12px;border:none;cursor:pointer;background:#ecfdf3;color:#027a48;transition:all .15s;">积分赠送 · 生效</button></div><div style="padding:10px 14px;font-size:12.5px;color:#475569;line-height:1.85;"><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">弹窗优先级</span>50</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">页面入口</span><span style="color:#94a3b8;">无</span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">弹窗</span><span style="color:#94a3b8;">无</span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">跳转方式</span>小程序</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">平台</span>美团</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">活动ID</span>ACT-NEW</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">appid</span>wxde8ac0a21135c07d</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">备注</span>新用户首次进入命中；发新人积分</div></div><div style="padding:8px 14px;border-top:1px solid #f1f5f9;text-align:right;"><span style="display:inline-block;margin-right:8px;padding:4px 12px;border:1px solid #e2e8f0;border-radius:4px;background:#f8fafc;color:#94a3b8;font-size:12px;cursor:not-allowed;">入口及弹窗管理 · 仅显示</span><button class="详情按钮" onclick="打开表单弹窗('3.4','编辑', {'弹窗名称':'新人积分','开关':'生效','弹窗优先级':'50','平台':'美团','活动ID':'ACT-NEW','跳转方式':'小程序','去向':'—','appid':'wxde8ac0a21135c07d','备注':'新用户首次进入命中；发新人积分',_壳节编号:'3.4'})">编辑</button></div></div></div>
-<div><div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;font-size:14px;color:#334155;">下午茶</span><button onclick="切换积分赠送(this)" data-state="生效" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:14px;font-size:12px;border:none;cursor:pointer;background:#ecfdf3;color:#027a48;transition:all .15s;">积分赠送 · 生效</button></div><div style="padding:10px 14px;font-size:12.5px;color:#475569;line-height:1.85;"><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">弹窗优先级</span>60</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">页面入口</span><span style="color:#94a3b8;">无</span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">弹窗</span><span>① A-2 时段额外积分弹窗 <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;background:#ecfdf3;color:#027a48">显示</span></span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">跳转方式</span>小程序</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">平台</span>美团</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">活动ID</span>ACT-PM-AF</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">appid</span>wxde8ac0a21135c07d</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">备注</span>每日 15-17 点命中；时段内下单额外 +100 积分（见 3.1）</div></div><div style="padding:8px 14px;border-top:1px solid #f1f5f9;text-align:right;"><span style="display:inline-block;margin-right:8px;padding:4px 12px;border:1px solid #e2e8f0;border-radius:4px;background:#f8fafc;color:#94a3b8;font-size:12px;cursor:not-allowed;">入口及弹窗管理 · 仅显示</span><button class="详情按钮" onclick="打开表单弹窗('3.4','编辑', {'弹窗名称':'下午茶','开关':'生效','弹窗优先级':'60','平台':'美团','活动ID':'ACT-PM-AF','跳转方式':'小程序','去向':'—','appid':'wxde8ac0a21135c07d','备注':'每日 15-17 点命中；时段内下单额外 +100 积分（见 3.1）',_壳节编号:'3.4'})">编辑</button></div></div></div>
-<div><div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;font-size:14px;color:#334155;">夜宵积分</span><button onclick="切换积分赠送(this)" data-state="生效" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:14px;font-size:12px;border:none;cursor:pointer;background:#ecfdf3;color:#027a48;transition:all .15s;">积分赠送 · 生效</button></div><div style="padding:10px 14px;font-size:12.5px;color:#475569;line-height:1.85;"><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">弹窗优先级</span>70</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">页面入口</span><span style="color:#94a3b8;">无</span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;vertical-align:top;">弹窗</span><span>① A-2 时段额外积分弹窗 <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;background:#ecfdf3;color:#027a48">显示</span></span></div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">跳转方式</span>H5</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">平台</span>饿了么</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">活动ID</span>ACT-NIGHT</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">去向</span>淘宝闪购APP</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">appid</span>—</div><div><span style="color:#94a3b8;display:inline-block;min-width:72px;">备注</span>每日 20-24 点命中；时段内下单额外 +200 积分（见 3.1）</div></div><div style="padding:8px 14px;border-top:1px solid #f1f5f9;text-align:right;"><span style="display:inline-block;margin-right:8px;padding:4px 12px;border:1px solid #e2e8f0;border-radius:4px;background:#f8fafc;color:#94a3b8;font-size:12px;cursor:not-allowed;">入口及弹窗管理 · 仅显示</span><button class="详情按钮" onclick="打开表单弹窗('3.4','编辑', {'弹窗名称':'夜宵积分','开关':'生效','弹窗优先级':'70','平台':'饿了么','活动ID':'ACT-NIGHT','跳转方式':'H5','去向':'淘宝闪购APP','appid':'—','备注':'每日 20-24 点命中；时段内下单额外 +200 积分（见 3.1）',_壳节编号:'3.4'})">编辑</button></div></div></div>
-</div>
-<div class="列表脚注">共 7 个积分项</div>
+<section class="页面面板" id="面_3_4" data-page="3.4"><div class="页面卡"><div class="页面头"><h2>积分项管理</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置积分项开关与跳转参数</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">积分项管理</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本页以活动卡片管理 7 个积分项；触发逻辑、关联页面 / 弹窗清单写死在 C 端代码，卡片只配活动开关、弹窗优先级、引导活动三件事；3 个按钮：编辑（开关 / 优先级 / 备注）、引导活动（可多个，不触发领券积分）、关联页面（只读：页面 + 弹窗）；开关关闭后 C 端三停：A 弹窗不触发、B 页面入口隐藏、C 积分不赠送</span></div></div></div>
+<style id="style-3.4-jf">
+.jf-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:12px;}
+.jf-card{border:1px solid #e2e8f0;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column;}
+.jf-card.jf-off{background:#f8fafc;}
+.jf-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid #f1f5f9;}
+.jf-name{font-weight:700;font-size:14px;color:#334155;}
+.jf-off .jf-name{color:#94a3b8;}
+.jf-status{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 10px;border-radius:999px;font-weight:600;flex:none;}
+.jf-status i{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.jf-status.jf-on{background:#ecfdf3;color:#027a48;}
+.jf-status.jf-off{background:#f1f5f9;color:#94a3b8;}
+.jf-body{padding:10px 14px;font-size:12.5px;color:#475569;line-height:1.9;flex:1;}
+.jf-row{display:flex;gap:8px;}
+.jf-row+.jf-row{margin-top:1px;}
+.jf-k{color:#94a3b8;flex:none;width:72px;}
+.jf-v{flex:1;min-width:0;}
+.jf-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.jf-g-on{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11.5px;background:#ecfdf3;color:#027a48;border:1px solid #a7f3d0;}
+.jf-g-off{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11.5px;background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;}
+.jf-foot{display:flex;gap:8px;padding:9px 14px;border-top:1px solid #f1f5f9;}
+.jf-btn{flex:1;padding:6px 0;border-radius:5px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:12.5px;cursor:pointer;transition:all .15s;font-family:inherit;}
+.jf-btn:hover{border-color:#1d4ed8;color:#1d4ed8;background:#f8fbff;}
+.jf-foot .详情按钮{flex:1;padding:6px 0;text-align:center;font-size:12.5px;}
+.jf-hint{display:block;font-size:11.5px;color:#94a3b8;margin-top:3px;line-height:1.6;}
+.jf-tip{border-radius:8px;padding:10px 14px;font-size:12.5px;line-height:1.8;margin-bottom:12px;}
+.jf-tip.b{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;}
+.jf-tip.w{background:#fffbeb;border:1px solid #fcd34d;color:#92400e;}
+.jf-tip.g{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;}
+.jf-tip a{color:#1d4ed8;font-weight:700;text-decoration:underline;text-underline-offset:2px;}
+.jf-g-card{border:1px solid #e2e8f0;border-radius:9px;margin-bottom:12px;overflow:hidden;background:#fff;}
+.jf-g-head{display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:650;font-size:13px;color:#334155;}
+.jf-g-body{padding:4px 12px 8px;}
+.jf-del{border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:5px;font-size:12px;padding:3px 10px;cursor:pointer;font-family:inherit;}
+.jf-add{border:1px dashed #1d4ed8;background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:7px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;}
+.jf-empty{border:1px dashed #cbd5e1;border-radius:8px;text-align:center;padding:24px 10px;color:#94a3b8;font-size:12.5px;background:#f8fafc;line-height:2;}
+.jf-tabs{display:flex;gap:8px;margin-bottom:12px;}
+.jf-tab{padding:7px 16px;border-radius:7px;border:1px solid #e2e8f0;background:#fff;font-size:13px;color:#64748b;cursor:pointer;font-family:inherit;}
+.jf-tab.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8;font-weight:600;}
+.jf-table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;}
+.jf-table th,.jf-table td{border:1px solid #e2e8f0;padding:7px 10px;text-align:left;vertical-align:top;}
+.jf-table th{background:#f8fafc;color:#475569;font-weight:600;white-space:nowrap;}
+.jf-b-on{color:#027a48;font-weight:700;white-space:nowrap;}
+.jf-b-off{color:#94a3b8;font-weight:700;white-space:nowrap;}
+#积分项抽屉 .panel-body{padding:16px 20px;}
+</style>
+<div class="jf-tip b"><strong>ⓘ 积分项管理说明（活动卡片统一管理）</strong><br>
+本页以<strong>活动卡片</strong>为单位统一管理 7 个积分活动；各活动的<strong>触发条件、关联页面 / 弹窗清单写死在 C 端代码</strong>，卡片上只配三件事：<strong>活动开关 · 弹窗优先级 · 引导活动</strong>。每张卡片 3 个操作按钮：<strong>编辑</strong>（开关 / 弹窗优先级 / 备注）、<strong>引导活动</strong>（可配置多个，不触发领券积分）、<strong>关联页面</strong>（只读列表，页面 + 弹窗两个维度）。框架规则详见 <a href="./积分活动框架说明.html" target="_blank">积分活动框架说明.html</a>。</div>
+<div class="jf-tip g"><strong>ⓘ 卡片操作与开关联动</strong>
+<div style="display:grid;grid-template-columns:1.25fr 1fr;gap:12px;margin-top:6px;">
+<div>▸ <strong>编辑</strong>（可写）：活动开关、弹窗优先级、备注<br>▸ <strong>引导活动</strong>（可写，可多个）：平台 / 活动ID / 跳转方式 / 去向 / appid；仅承接跳转，<strong>不触发领券积分</strong><br>▸ <strong>关联页面</strong>（只读）：页面、弹窗管理两个维度，随开关联动</div>
+<div><strong>活动开关 = C 端唯一总闸</strong>，关闭后三处同停：<br><span style="color:#b91c1c;font-weight:700;">A 弹窗不触发</span> · <span style="color:#b45309;font-weight:700;">B 页面入口隐藏</span><br><span style="color:#6d28d9;font-weight:700;">C 积分不赠送</span></div>
+</div></div>
+<div id="积分项卡片区" class="jf-grid"></div>
+<div class="列表脚注">共 7 张活动卡片（积分项名称 = 积分明细流水类型名称，一一对应）</div>
+</div></section>
+<section class="页面面板" id="面_3_5" data-page="3.5"><div class="页面卡"><div class="页面头"><h2>订阅配置</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置订阅消息模板开关（运营配置后台 4 项之一）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">订阅配置</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">订阅模板由微信公众平台创建后回填本页，<strong>模板名称 / 模板ID / 订阅入口 / 通知节点 / 关联功能 5 个字段全部只读</strong>；本页仅可切换「状态」开关（生效/停用）：停用后 C 端不再发起该模板的订阅授权、服务端不再推送该模板消息；订阅开关不影响积分发放本身</span></div></div></div>
+<style>.订阅开关{display:inline-block;padding:5px 14px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.6;white-space:nowrap;border:1px solid transparent;transition:all .15s;}.订阅开关:hover{filter:brightness(.96);}.订阅徽章{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.6;}.订阅徽章.on{background:#ecfdf3;color:#027a48;}.订阅徽章.off{background:#f1f5f9;color:#94a3b8;}</style>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.8;">订阅模板由<strong>微信公众平台</strong>创建后回填到本页，本页只做<strong>开关管理</strong>，不做模板内容编辑。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">模板名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('模板名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">模板ID<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('模板ID', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">订阅入口<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('订阅入口', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">通知节点<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('通知节点', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">关联功能<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('关联功能', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('状态（订阅模板）', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格"><strong>签到提醒</strong></td><td class="列表单元格">SUB2026-SIGN-0001</td><td class="列表单元格">签到页「接收签到提醒」开关</td><td class="列表单元格">每日 0 点签到任务刷新时</td><td class="列表单元格">3.3 签到</td><td class="列表单元格" id="订阅状态_0"><span class="订阅徽章 on">生效</span></td><td class="列表单元格 操作列"><button class="订阅开关" data-idx="0" data-name="签到提醒" data-state="生效" style="background:#ecfdf3;color:#027a48;border-color:#a7f3d0;" onclick="切换订阅状态(this)">状态开关 · 生效</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>积分到账</strong></td><td class="列表单元格">SUB2026-POINT-0002</td><td class="列表单元格">积分到账弹窗（订阅引导）</td><td class="列表单元格">外卖订单积分到账时</td><td class="列表单元格">3.4 积分项（订单到账）</td><td class="列表单元格" id="订阅状态_1"><span class="订阅徽章 on">生效</span></td><td class="列表单元格 操作列"><button class="订阅开关" data-idx="1" data-name="积分到账" data-state="生效" style="background:#ecfdf3;color:#027a48;border-color:#a7f3d0;" onclick="切换订阅状态(this)">状态开关 · 生效</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>兑换到账</strong></td><td class="列表单元格">SUB2026-EXCH-0003</td><td class="列表单元格">积分商城兑换确认页</td><td class="列表单元格">现金打款到账微信零钱时</td><td class="列表单元格">11.3 兑换记录 / 11.5 提现单</td><td class="列表单元格" id="订阅状态_2"><span class="订阅徽章 on">生效</span></td><td class="列表单元格 操作列"><button class="订阅开关" data-idx="2" data-name="兑换到账" data-state="生效" style="background:#ecfdf3;color:#027a48;border-color:#a7f3d0;" onclick="切换订阅状态(this)">状态开关 · 生效</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>活动过期提醒</strong></td><td class="列表单元格">SUB2026-ACT-0004</td><td class="列表单元格">活动详情页「活动过期提醒」</td><td class="列表单元格">引导活动/红包卡过期前 24 小时</td><td class="列表单元格">3.4 积分项（引导活动）</td><td class="列表单元格" id="订阅状态_3"><span class="订阅徽章 off">停用</span></td><td class="列表单元格 操作列"><button class="订阅开关" data-idx="3" data-name="活动过期提醒" data-state="停用" style="background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0;" onclick="切换订阅状态(this)">状态开关 · 停用</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 4 条订阅模板（1 条停用）；模板由微信公众平台创建后回填，本页仅做开关管理，无编辑/删除</div>
 </div></section>
 <section class="页面面板" id="面_11_2" data-page="11.2"><div class="页面卡"><div class="页面头"><h2>积分明细</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑬</span><span class="流程信息卡-环节名">当前环节：⑬ 查询用户资产与各类记录（积分流水维度）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 数据记录 &gt;</span> <span class="路径末段">积分明细</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">该表是用户积分账户的总账本，用户资产总览（11.8）的当前积分/累计获取/已消耗全部由本表汇总</span></div></div></div>
 <div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索流水号或用户"></div><div class="筛选区"><span class="筛选标签">流水类型：</span><select class="筛选下拉"><option>全部</option><option>签到积分</option><option>红包领取</option><option>订单到账</option><option style="color:#dc2626;font-weight:700;">小票积分</option><option>新人积分</option><option>下午茶</option><option>夜宵积分</option><option>主动兑换</option><option>自动兑换</option></select><span class="筛选标签">发生时间：</span><select class="筛选下拉"><option>近 7 天</option><option>近 30 天</option><option>全部</option></select></div></div>
@@ -1593,61 +1635,18 @@ textarea.field-input { max-width: 100%; }
     <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
   </div>
 </aside>
+<div id="积分项遮罩" class="overlay" onclick="关闭积分项抽屉()" style="z-index:120;"></div>
+<aside id="积分项抽屉" class="drawer" style="width:640px;max-width:96vw;z-index:130;">
+  <div class="panel-head">
+    <div class="panel-title" id="jf标题">编辑活动卡片</div>
+    <button class="btn-close" onclick="关闭积分项抽屉()">×</button>
+  </div>
+  <div id="jf正文" class="panel-body"></div>
+  <div class="panel-foot" id="jf脚部"></div>
+</aside>
 <div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
-## 任务：复制1013小票积分迭代C端页面，修改为1014弹窗管理迭代的C端页面
-
-### 背景
-1014弹窗管理迭代的B端后台已完成（`d:\001产品模板\B-线上文档\005-C端增长\1014弹窗管理迭代\B端后台.html`），现在需要做配套的C端页面。
-
-C端页面已有1013小票积分迭代版本作为复制起点（`d:\001产品模板\B-线上文档\005-C端增长\1013小票积分迭代\C端页面.html`），复制后按本次弹窗管理迭代的业务逻辑修改。
-
-### 你的任务
-1. **复制源文件**：
-   - 源：`d:\001产品模板\B-线上文档\005-C端增长\1013小票积分迭代\C端页面.html`
-   - 目标：`d:\001产品模板\B-线上文档\005-C端增长\1014弹窗管理迭代\C端页面.html`
-   - 用 PowerShell `Copy-Item` 复制
-
-2. **阅读1014 B端后台，理解本次迭代功能点**：
-   - 文件：`d:\001产品模板\B-线上文档\005-C端增长\1014弹窗管理迭代\B端后台.html`
-   - 用 Grep 搜索关键词：`弹窗`、`下午茶`、`夜宵`、`时段加码`、`3.4`、`3.0`、`11.2`、`流水类型`
-   - 本次迭代核心功能：
-     - **弹窗管理（3.4）**：C端弹窗种类与触发逻辑写死在代码——下午茶弹窗（每日15-17点命中）、夜宵弹窗（20-24点命中）；B端只配开关/优先级/跳转参数；多弹窗命中时按优先级先后顺序依次弹出；每次打开小程序重新判断
-     - **时段加码激励（3.1）**：下午茶时段（15-17点）下单额外+100积分，夜宵时段（20-24点）下单额外+200积分，叠加在基础积分（佣金×50%×2000）之上；数值走B端可配置
-     - **流水类型扩充（11.2）**：积分明细新增"下午茶额外积分"、"夜宵额外积分"两个流水类型
-     - **小票积分置灰**：上一迭代的小票积分功能保留但置灰不可用
-     - **改动清单（3.0）**：列出本次迭代所有业务功能变更
-
-3. **按迭代范围修改C端页面**：
-   先列出改动清单与我确认，再动手改。改动方向（参考B端后台功能点）：
-   - **左侧侧边树**：隐藏上一迭代专属页面（如上传小票等），仅保留本次迭代相关页面
-   - **首页/红包下单区**：保留红包卡网格，作为弹窗跳转后的落地下单场景
-   - **弹窗触发逻辑**：在C端代码写死下午茶（15-17点）/夜宵（20-24点）弹窗触发逻辑——打开小程序时判断当前时段，命中则弹对应弹窗；多弹窗命中按优先级先后顺序依次弹出
-   - **下午茶/夜宵弹窗**：半屏抽屉形态，内容为活动引导（活动ID/跳转方式/去向由B端配置驱动），按钮跳转活动下单
-   - **积分到账**：时段内下单后，积分明细新增下午茶/夜宵额外积分流水（+100/+200）
-   - **积分明细页**：流水类型枚举补充"下午茶额外积分"、"夜宵额外积分"
-   - **小票积分相关**：置灰或移除上一迭代的小票上传等功能
-   - **泳道图/说明卡**：同步更新为弹窗管理+时段加码逻辑
-   - 改动遵循C端页面原有架构：改7处（侧边树data-nav → #p-xxx → PAGE_META/titles/DOCS → DRAWERS → 泳道图 → 说明卡 → SELF_CHECK）
-
-### 硬性约束
-- 所有弹窗为半屏抽屉（底部滑出），非居中弹窗
-- 流程用ASCII图展示，页面用实线方框、底部弹窗用双线方框
-- 说明卡按"页面定位-环节分段-字段表-弹窗清单-跳转出口-ASCII图"统一骨架
-- 临时测试文件和服务在修改完成后需清理
-- 原型修改需通过浏览器自动化断言测试
-- 处理文件写入时避免百分号编码，用中文字符直写路径
-
-### 必读文件
-1. `d:\001产品模板\B-线上文档\005-C端增长\1013小票积分迭代\C端页面.html` — 复制起点（先读开头注释了解改7处架构，再读关键结构）
-2. `d:\001产品模板\B-线上文档\005-C端增长\1014弹窗管理迭代\B端后台.html` — 本次迭代功能点（B端配置了什么，C端就要对应表现）
-3. `d:\001产品模板\A-工作流C端\工作流指南.md` — C端工作流规范（§5.5修改阶段：产物即源）
-4. `d:\001产品模板\A-工作流C端\000-MD模板\C端HTML形态规范.md` — C端形态规范
-
-### 完成后
-1. 告知我C端页面已生成，列出页面清单、弹窗清单、改动清单
-2. 本地起HTTP服务+浏览器自动化断言验证，通过后清理临时服务
-3. 暂不部署，等待我确认<script id="js-泳道映射">
-window._泳道节点映射 = {"3.0": [1], "3.1": [1], "3.4": [1], "11.2": [5]};
+<script id="js-泳道映射">
+window._泳道节点映射 = {"3.0": [1], "3.1": [1], "3.4": [1], "3.5": [1], "11.2": [5]};
 window._阶段泳道映射 = {"3": 1, "4": 4, "11": 5};
 </script>
 <script id="js-页面切换">
@@ -1767,6 +1766,18 @@ function 切换积分赠送(btn) {
     btn.style.color = '#027a48';
   }
 }
+// 3.5 订阅配置：行内「状态开关」按钮（复用 3.4 积分赠送按钮的样式与交互：生效=绿底 / 停用=灰底），无编辑/删除
+function 切换订阅状态(btn) {
+  var 生效 = btn.dataset.state !== '生效';
+  btn.dataset.state = 生效 ? '生效' : '停用';
+  btn.textContent = '状态开关 · ' + (生效 ? '生效' : '停用');
+  btn.style.background = 生效 ? '#ecfdf3' : '#f1f5f9';
+  btn.style.color = 生效 ? '#027a48' : '#94a3b8';
+  btn.style.borderColor = 生效 ? '#a7f3d0' : '#e2e8f0';
+  var 格 = document.getElementById('订阅状态_' + btn.dataset.idx);
+  if (格) 格.innerHTML = '<span class="订阅徽章 ' + (生效 ? 'on' : 'off') + '">' + (生效 ? '生效' : '停用') + '</span>';
+  显示提示('订阅模板「' + (btn.dataset.name || '') + '」已' + (生效 ? '生效' : '停用') + '（演示环境，不落库）', 生效 ? '成功' : '信息', 2200);
+}
 </script>
 <script id="js-弹窗">
 window._字段总库 = window._字段总库 || [];
@@ -1874,29 +1885,27 @@ window._弹窗初始化=window._弹窗初始化||{};
 window._弹窗初始化["3.2"]=function(){ 跳转联动_3_2(); };
 
 window._表单字段按节["3.4"]=[
-  {名称:"弹窗名称",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"下午茶弹窗",数据来源:"C 端代码写死，不可改",逻辑:"每条记录对应一个功能线，名称与触发逻辑均在 C 端代码中写死",用途:"弹窗识别",节编号:"3.4"},
-  {名称:"开关",类型原文:"enum",基础类型:"enum",枚举值:"生效、不生效",示例值:"生效",数据来源:"运营切换",逻辑:"控制积分赠送与页面/入口/弹窗显隐；生效=赠送积分且页面/入口/弹窗正常显示，不生效=不赠送积分且页面/入口/弹窗一并失效",用途:"积分项级总闸（第一层）",节编号:"3.4"},
-  {名称:"弹窗优先级",类型原文:"number",基础类型:"number",示例值:"10",数据来源:"运营填写，正整数",逻辑:"控制交互弹窗的弹出顺序；多弹窗命中时按优先级先后顺序依次弹出（非只弹一个，数字越小越先弹）",用途:"多弹窗同时触发时的先后弹出排序（第三层）",节编号:"3.4"},
-  {名称:"平台",类型原文:"enum",基础类型:"enum",枚举值:"饿了么、美团",示例值:"美团",联动:"跳转联动_3_4()",数据来源:"运营选择",逻辑:"切换平台后，小程序方式的 appid 自动只读带出 3.1 全局配置中该平台的小程序 APPID",用途:"决定跳转目标平台与 appid 来源",节编号:"3.4"},
-  {名称:"活动ID",类型原文:"string",基础类型:"string",示例值:"ACT-PM-AF",数据来源:"运营填写",逻辑:"弹窗跳转关联的活动唯一编码",用途:"活动归因",节编号:"3.4"},
-  {名称:"跳转方式",类型原文:"enum",基础类型:"enum",枚举值:"小程序、H5",示例值:"小程序",联动:"跳转联动_3_4()",数据来源:"运营选择",逻辑:"小程序=跳转平台外卖小程序，appid 只读带出；H5=跳转 H5 链接，需填去向；两组字段互斥显隐",用途:"决定用户点弹窗后的承接形态",节编号:"3.4"},
-  {名称:"去向",类型原文:"enum",基础类型:"enum",枚举值:"淘宝APP、淘宝闪购APP",示例值:"淘宝闪购APP",数据来源:"运营选择，仅跳转方式=H5 时填写",逻辑:"H5 方式下引导用户打开的目标 App",用途:"H5 承接 App 选择",节编号:"3.4"},
-  {名称:"appid",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"wxde8ac0a21135c07d",数据来源:"自动带出 3.1 全局配置中所选平台的小程序 APPID",逻辑:"只读不可手改；平台切换时自动换值；仅跳转方式=小程序时显示",用途:"小程序跳转目标 appid",节编号:"3.4"},
-  {名称:"备注",类型原文:"富文本",基础类型:"富文本",示例值:"每日 15-17 点命中；时段内下单额外 +100 积分",数据来源:"运营填写",逻辑:"运营自我提示用",用途:"运营备注",节编号:"3.4"}
+  {名称:"活动名称",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"下午茶",数据来源:"C 端代码写死，不可改",逻辑:"每张活动卡片对应一条功能线，名称与触发逻辑均在 C 端代码写死；名称同时作为积分明细流水枚举值，一一对应不允许别名",用途:"活动卡片识别；流水枚举同名",节编号:"3.4"},
+  {名称:"开关",类型原文:"enum",基础类型:"enum",枚举值:"生效、不生效",示例值:"生效",数据来源:"运营在「编辑」抽屉切换",逻辑:"活动卡片唯一总闸；生效=赠送积分且页面/入口/弹窗正常，不生效=A弹窗不触发、B页面入口隐藏、C积分不赠送，三处同停",用途:"活动级总闸（编辑抽屉）",节编号:"3.4"},
+  {名称:"弹窗优先级",类型原文:"number",基础类型:"number",示例值:"10",数据来源:"运营在「编辑」抽屉填写，正整数",逻辑:"控制弹窗弹出顺序；多弹窗命中时按优先级先后顺序依次弹出（非只弹一个，数字越小越先弹）；仅生效中的活动参与排序",用途:"多弹窗同时触发时的先后排序（编辑抽屉）",节编号:"3.4"},
+  {名称:"备注",类型原文:"富文本",基础类型:"富文本",示例值:"每日 15-17 点命中；时段内下单额外 +100 积分",数据来源:"运营在「编辑」抽屉填写",逻辑:"运营自我提示用，不展示给 C 端用户",用途:"运营备注（编辑抽屉）",节编号:"3.4"},
+  {名称:"引导活动-平台",类型原文:"enum",基础类型:"enum",枚举值:"美团、饿了么",示例值:"美团",数据来源:"运营在「引导活动」抽屉配置",逻辑:"引导活动=弹窗/入口点击后跳转承接的 CPS 活动；一张卡片可配置多个；引导活动不触发领券积分（跳转后不发红包领取积分）",用途:"引导活动目标平台",节编号:"3.4"},
+  {名称:"引导活动-活动ID",类型原文:"string",基础类型:"string",示例值:"ACT-PM-AF",数据来源:"运营在「引导活动」抽屉填写",逻辑:"跳转承接活动的唯一编码，用于 CPS 下单归因",用途:"引导活动归因",节编号:"3.4"},
+  {名称:"引导活动-跳转方式",类型原文:"enum",基础类型:"enum",枚举值:"小程序、H5",示例值:"小程序",数据来源:"运营在「引导活动」抽屉配置",逻辑:"小程序=跳转平台外卖小程序，appid 按平台只读带出；H5=跳转 H5 链接，需填去向；两种方式字段互斥显隐",用途:"引导活动承接形态",节编号:"3.4"},
+  {名称:"引导活动-去向",类型原文:"enum",基础类型:"enum",枚举值:"淘宝APP、淘宝闪购APP",示例值:"淘宝闪购APP",数据来源:"运营在「引导活动」抽屉配置，仅跳转方式=H5 时填写",逻辑:"H5 方式下引导用户打开的目标 App",用途:"H5 承接 App",节编号:"3.4"},
+  {名称:"引导活动-appid",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"wxde8ac0a21135c07d",数据来源:"按平台自动带出 3.1 全局配置的小程序 APPID",逻辑:"只读不可手改，平台切换自动换值；仅跳转方式=小程序时显示",用途:"小程序跳转目标 appid",节编号:"3.4"}
 ];
-window._新增字段分组["3.4"]=[{组名:"弹窗信息",字段:["弹窗名称","开关","弹窗优先级","备注"]},{组名:"引导活动",字段:["平台","活动ID","跳转方式","去向","appid"]}];
-function 跳转联动_3_4(){
-  var body=document.getElementById('表单弹窗正文'); if(!body) return;
-  function 找行(名){var rows=body.querySelectorAll('.field-row');for(var i=0;i<rows.length;i++){var lb=rows[i].querySelector('.field-label');if(lb&&lb.textContent.replace(/\s/g,'')===名)return rows[i];}return null;}
-  function 选值(名){var r=找行(名);var s=r?r.querySelector('select.field-select'):null;return s?s.value:'';}
-  var 方式=选值('跳转方式'), 平台=选值('平台'), isMini=('小程序'===方式);
-  function 显隐(名,显){var r=找行(名);if(r)r.style.display=显?'':'none';}
-  显隐('去向',!isMini); 显隐('appid',isMini);
-  var app字段=(window._表单字段按节['3.1']||[]).filter(function(f){return f.名称===(平台==='饿了么'?'饿了么小程序APPID':'美团小程序APPID');})[0];
-  var app值=app字段?(app字段.示例值||''):'';
-  var app行=找行('appid'); if(app行){var sp=app行.querySelector('.field-readonly');if(sp)sp.textContent=app值||'（请先在 3.1 全局配置该平台小程序APPID）';}
-}
-window._弹窗初始化["3.4"]=function(){ 跳转联动_3_4(); };
+window._新增字段分组["3.4"]=[{组名:"编辑（可写：开关/弹窗优先级/备注）",字段:["活动名称","开关","弹窗优先级","备注"]},{组名:"引导活动（可写 · 可配置多个 · 不触发领券积分）",字段:["引导活动-平台","引导活动-活动ID","引导活动-跳转方式","引导活动-去向","引导活动-appid"]}];
+window._弹窗初始化=window._弹窗初始化||{};
+
+window._表单字段按节["3.5"]=[
+  {名称:"模板名称",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"签到提醒",数据来源:"微信公众平台创建后回填",逻辑:"订阅消息模板在微信公众平台创建，名称回填本页只读展示；本页只做开关管理，不做模板内容编辑",用途:"订阅模板识别",节编号:"3.5"},
+  {名称:"模板ID",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"SUB2026-SIGN-0001",数据来源:"微信公众平台分配后回填",逻辑:"微信订阅消息模板唯一ID，回填只读；服务端推送时按本ID指定模板",用途:"推送时定位微信模板",节编号:"3.5"},
+  {名称:"订阅入口",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"签到页「接收签到提醒」开关",数据来源:"C 端代码写死的订阅授权入口",逻辑:"用户在 C 端该入口发起微信订阅授权；入口位置由 C 端写死，后台仅展示",用途:"记录用户订阅授权发生位置",节编号:"3.5"},
+  {名称:"通知节点",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"每日 0 点签到任务刷新时",数据来源:"C 端/服务端代码写死的业务事件",逻辑:"触发该订阅消息推送的业务事件；事件命中且模板状态=生效才推送",用途:"定义推送触发时机",节编号:"3.5"},
+  {名称:"关联功能",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"3.3 签到",数据来源:"系统按模板归属回填",逻辑:"该订阅模板服务的后台模块，如 3.4 积分项 / 3.3 签到 / 11.3 兑换记录",用途:"模板与后台模块的归属映射",节编号:"3.5"},
+  {名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"生效、停用",编辑性:"可编辑",示例值:"生效",数据来源:"运营在本页切换状态开关",逻辑:"本页唯一可编辑字段；生效=通知节点命中即推送；停用=C 端不再发起该模板订阅授权、服务端不再推送",用途:"订阅模板启停开关",节编号:"3.5"}
+];
 
 window._表单字段按节["3.3"]=[
   {名称:"D1 档位积分",类型原文:"number",基础类型:"number",示例值:"5",数据来源:"运营填写，非负整数",逻辑:"新用户首日签到与断签重计后首日按此值发放",用途:"签到第 1 档",节编号:"3.3"},
@@ -2099,15 +2108,21 @@ window._新增字段分组["11.8"]=[{组名:"积分资产",字段:["用户","当
 {名称:"到账积分",类型原文:"number",基础类型:"number",编辑性:"只读",数据来源:"3.1 全局参数「小票积分」",逻辑:"成功=小票积分配置值；失败/待审核=—；人工通过后按配置值补发",用途:"小票识别成功到账积分",节编号:"4.1"},
 {名称:"下午茶额外积分",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"运营填写非负整数，默认 100",逻辑:"每日 15:00-17:00 下单并收货，基础积分外额外发放本值积分；叠加在订单到账积分之上",用途:"下午茶时段加码激励",节编号:"3.1"},
 {名称:"夜宵额外积分",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"运营填写非负整数，默认 200",逻辑:"每日 20:00-24:00 下单并收货，基础积分外额外发放本值积分；叠加在订单到账积分之上",用途:"夜宵时段加码激励",节编号:"3.1"},
-{名称:"弹窗名称",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"C 端代码写死",逻辑:"每条记录对应一个功能线，名称与触发逻辑在 C 端代码写死",用途:"弹窗识别",节编号:"3.4"},
-{名称:"开关",类型原文:"enum",基础类型:"enum",枚举值:"生效、不生效",编辑性:"可编辑",数据来源:"运营切换",逻辑:"控制积分赠送与页面/入口/弹窗显隐；生效=赠送积分且页面/入口/弹窗正常显示，不生效=不赠送积分且页面/入口/弹窗一并失效",用途:"积分项级总闸（第一层）",节编号:"3.4"},
-{名称:"弹窗优先级",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"运营填写正整数",逻辑:"控制交互弹窗的弹出顺序；多弹窗命中时按优先级先后顺序依次弹出（非只弹一个，数字越小越先弹）",用途:"多弹窗同时触发时的先后弹出排序（第三层）",节编号:"3.4"},
-{名称:"平台",类型原文:"enum",基础类型:"enum",枚举值:"饿了么、美团",编辑性:"可编辑",数据来源:"运营选择",逻辑:"切换后小程序方式 appid 自动只读带出 3.1 该平台 APPID",用途:"决定跳转目标与 appid 来源",节编号:"3.4"},
-{名称:"活动ID",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营填写",逻辑:"弹窗跳转关联的活动唯一编码",用途:"活动归因",节编号:"3.4"},
-{名称:"跳转方式",类型原文:"enum",基础类型:"enum",枚举值:"小程序、H5",编辑性:"可编辑",数据来源:"运营选择",逻辑:"小程序=appid 只读带出；H5=需填去向；两组互斥显隐",用途:"决定承接形态",节编号:"3.4"},
-{名称:"去向",类型原文:"enum",基础类型:"enum",枚举值:"淘宝APP、淘宝闪购APP",编辑性:"可编辑",数据来源:"运营选择（仅 H5 方式）",逻辑:"H5 方式下引导打开的目标 App",用途:"H5 承接 App",节编号:"3.4"},
-{名称:"appid",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"自动带出 3.1 所选平台小程序 APPID",逻辑:"只读禁手改，平台切换自动换值；仅小程序方式显示",用途:"小程序跳转 appid",节编号:"3.4"},
-{名称:"备注",类型原文:"富文本",基础类型:"富文本",编辑性:"可编辑",数据来源:"运营填写",逻辑:"运营自我提示用",用途:"运营备注",节编号:"3.4"}
+{名称:"活动名称",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"C 端代码写死，不可改",逻辑:"每张活动卡片对应一条功能线，名称同时作为积分明细流水枚举值，一一对应不允许别名",用途:"活动卡片识别；流水枚举同名",节编号:"3.4"},
+{名称:"开关",类型原文:"enum",基础类型:"enum",枚举值:"生效、不生效",编辑性:"可编辑",数据来源:"运营在「编辑」抽屉切换",逻辑:"活动卡片唯一总闸；不生效=A弹窗不触发、B页面入口隐藏、C积分不赠送，三处同停",用途:"活动级总闸",节编号:"3.4"},
+{名称:"弹窗优先级",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"运营填写正整数",逻辑:"多弹窗命中时按优先级先后顺序依次弹出（数字越小越先弹）；仅生效中的活动参与排序",用途:"多弹窗命中排序",节编号:"3.4"},
+{名称:"备注",类型原文:"富文本",基础类型:"富文本",编辑性:"可编辑",数据来源:"运营在「编辑」抽屉填写",逻辑:"运营自我提示用，不展示给 C 端",用途:"运营备注",节编号:"3.4"},
+{名称:"引导活动-平台",类型原文:"enum",基础类型:"enum",枚举值:"美团、饿了么",编辑性:"可编辑",数据来源:"运营在「引导活动」抽屉配置",逻辑:"引导活动=弹窗/入口跳转承接的 CPS 活动；可配置多个；引导活动不触发领券积分",用途:"引导活动目标平台",节编号:"3.4"},
+{名称:"引导活动-活动ID",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营填写",逻辑:"跳转承接活动唯一编码，用于 CPS 归因",用途:"引导活动归因",节编号:"3.4"},
+{名称:"引导活动-跳转方式",类型原文:"enum",基础类型:"enum",枚举值:"小程序、H5",编辑性:"可编辑",数据来源:"运营选择",逻辑:"小程序=appid 按平台只读带出；H5=需填去向；字段互斥显隐",用途:"引导活动承接形态",节编号:"3.4"},
+{名称:"引导活动-去向",类型原文:"enum",基础类型:"enum",枚举值:"淘宝APP、淘宝闪购APP",编辑性:"可编辑",数据来源:"运营选择（仅 H5 方式）",逻辑:"H5 方式下引导打开的目标 App",用途:"H5 承接 App",节编号:"3.4"},
+{名称:"引导活动-appid",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"按平台自动带出 3.1 全局配置的小程序 APPID",逻辑:"只读禁手改，平台切换自动换值；仅小程序方式显示",用途:"小程序跳转 appid",节编号:"3.4"},
+{名称:"模板名称",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"微信公众平台创建后回填",逻辑:"订阅消息模板在微信公众平台创建，名称回填只读展示，本页不做模板内容编辑",用途:"订阅模板识别",节编号:"3.5"},
+{名称:"模板ID",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"微信公众平台分配后回填",逻辑:"微信订阅消息模板唯一ID，回填只读；服务端推送时按本ID指定模板",用途:"推送时定位微信模板",节编号:"3.5"},
+{名称:"订阅入口",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"C 端代码写死的订阅授权入口",逻辑:"用户在 C 端该入口发起微信订阅授权；入口位置由 C 端写死，后台仅展示",用途:"记录订阅授权发生位置",节编号:"3.5"},
+{名称:"通知节点",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"C 端/服务端代码写死的业务事件",逻辑:"触发该订阅消息推送的业务事件；事件命中且模板状态=生效才推送",用途:"定义推送触发时机",节编号:"3.5"},
+{名称:"关联功能",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"系统按模板归属回填",逻辑:"该订阅模板服务的后台模块，如 3.4 积分项 / 3.3 签到 / 11.3 兑换记录",用途:"模板与后台模块归属映射",节编号:"3.5"},
+{名称:"状态（订阅模板）",类型原文:"enum",基础类型:"enum",枚举值:"生效、停用",编辑性:"可编辑",数据来源:"运营在 3.5 订阅配置切换状态开关",逻辑:"3.5 页唯一可编辑字段；停用后 C 端不再发起该模板订阅授权、服务端不再推送",用途:"订阅模板启停开关",节编号:"3.5"}
 );
 
 // ╔═ 本项目定制（仅业务脚本内扩展，母版与 MD 未改）：3.1/3.3 配置型叶子 ═╗
@@ -2230,6 +2245,182 @@ function 保存页面配置(节编号) {
       else c.classList.add("收纳-现在");
     }
   };
+})();
+</script>
+<script id="js-3.4活动卡片">
+(function(){
+  var APPID地图={'美团':'wxde8ac0a21135c07d','饿了么':'wxece3a9a4c82f58c9'};
+  // 活动卡片数据源：名称/开关/优先级/备注 + 引导活动[] + 关联页面{页面:[],弹窗:[]}（关联页面由 C 端写死，后台只读）
+  window._积分项数据=[
+    {id:'sign',名称:'签到积分',开关:'生效',弹窗优先级:10,备注:'每日签到时段命中；签到完成发签到积分',
+     引导活动:[{平台:'美团',活动ID:'ACT-SIGN',跳转方式:'小程序',去向:'',appid:APPID地图['美团']}],
+     关联页面:{页面:[{名称:'首页积分入口',位置:'首页 · 顶部签到区',形态:'图标入口'}],弹窗:[]}},
+    {id:'coupon',名称:'红包领取',开关:'生效',弹窗优先级:20,备注:'领券中心命中；领券发红包领取积分（每卡每日限 1 次）',
+     引导活动:[],
+     关联页面:{页面:[],弹窗:[{名称:'toast首页弹窗',类型:'toast',触发:'首页红包卡当日可领时'}]}},
+    {id:'order',名称:'订单到账',开关:'生效',弹窗优先级:30,备注:'订单已付款命中；发订单到账积分（佣金×50%×2000）',
+     引导活动:[{平台:'美团',活动ID:'ACT-ORDER',跳转方式:'小程序',去向:'',appid:APPID地图['美团']}],
+     关联页面:{页面:[],弹窗:[{名称:'积分到账',类型:'半屏抽屉',触发:'外卖订单已付款回传'}]}},
+    {id:'receipt',名称:'小票积分',开关:'生效',弹窗优先级:40,备注:'上传小票 OCR 识别成功命中；发小票积分（每个客户仅一次）',
+     引导活动:[{平台:'美团',活动ID:'ACT-RECEIPT',跳转方式:'小程序',去向:'',appid:APPID地图['美团']}],
+     关联页面:{页面:[],弹窗:[
+       {名称:'A-1 上传引导抽屉',类型:'半屏抽屉',触发:'「我的 → 上传小票」点击'},
+       {名称:'A-2 识别小票',类型:'整页',触发:'拍照后 OCR 识别中（倒计时 5s）'},
+       {名称:'A-3 识别成功弹窗',类型:'半屏抽屉',触发:'OCR 识别成功'}]}},
+    {id:'newuser',名称:'新人积分',开关:'生效',弹窗优先级:50,备注:'新用户首次进入命中；发新人积分；引导活动双平台并排',
+     引导活动:[
+       {平台:'美团',活动ID:'ACT-NEW',跳转方式:'小程序',去向:'',appid:APPID地图['美团']},
+       {平台:'饿了么',活动ID:'ACT-NEW-ELE',跳转方式:'小程序',去向:'',appid:APPID地图['饿了么']}],
+     关联页面:{页面:[],弹窗:[]}},
+    {id:'pm',名称:'下午茶',开关:'生效',弹窗优先级:60,备注:'每日 15:00-17:00 命中；时段内下单额外 +100 积分（见 3.1）',
+     引导活动:[
+       {平台:'美团',活动ID:'ACT-PM-AF',跳转方式:'小程序',去向:'',appid:APPID地图['美团']},
+       {平台:'饿了么',活动ID:'ACT-PM-AF-ELE',跳转方式:'H5',去向:'淘宝闪购APP',appid:''}],
+     关联页面:{页面:[],弹窗:[{名称:'A-2 时段额外积分弹窗',类型:'半屏抽屉',触发:'每日 15:00-17:00 打开小程序时'}]}},
+    {id:'night',名称:'夜宵积分',开关:'生效',弹窗优先级:70,备注:'每日 20:00-24:00 命中；时段内下单额外 +200 积分（见 3.1）',
+     引导活动:[{平台:'饿了么',活动ID:'ACT-NIGHT',跳转方式:'H5',去向:'淘宝闪购APP',appid:''}],
+     关联页面:{页面:[],弹窗:[{名称:'A-2 时段额外积分弹窗',类型:'半屏抽屉',触发:'每日 20:00-24:00 打开小程序时'}]}}
+  ];
+
+  var 当前索引=null, 引导草稿=[];
+  function $(id){return document.getElementById(id);}
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function sel(选,值){return 选===值?' selected':'';}
+  function 开抽屉(标题){$('jf标题').textContent=标题;$('积分项遮罩').classList.add('show');$('积分项抽屉').classList.add('show');}
+  window.关闭积分项抽屉=function(){$('积分项遮罩').classList.remove('show');$('积分项抽屉').classList.remove('show');};
+
+  /* ── 卡片列表：活动名称 / 弹窗优先级 / 备注 / 是否配置引导活动 ── */
+  function 渲染卡片(){
+    var box=$('积分项卡片区'); if(!box) return;
+    var h='';
+    window._积分项数据.forEach(function(d,i){
+      var on=d.开关==='生效', n=(d.引导活动||[]).length;
+      var chip=n>0?'<span class="jf-g-on">已配置 '+n+' 个</span>':'<span class="jf-g-off">未配置</span>';
+      h+='<div class="jf-card'+(on?'':' jf-off')+'">'
+        +'<div class="jf-head"><span class="jf-name">'+esc(d.名称)+'</span>'
+        +'<span class="jf-status '+(on?'jf-on':'jf-off')+'"><i></i>'+(on?'生效中':'已停用')+'</span></div>'
+        +'<div class="jf-body">'
+        +'<div class="jf-row"><span class="jf-k">弹窗优先级</span><span class="jf-v">'+esc(d.弹窗优先级)+'</span></div>'
+        +'<div class="jf-row"><span class="jf-k">备注</span><span class="jf-v jf-clamp">'+esc(d.备注||'—')+'</span></div>'
+        +'<div class="jf-row"><span class="jf-k">引导活动</span><span class="jf-v">'+chip+'</span></div>'
+        +'</div>'
+        +'<div class="jf-foot">'
+        +'<button class="详情按钮" onclick="打开积分项编辑('+i+')">编辑</button>'
+        +'<button class="jf-btn" onclick="打开引导活动('+i+')">引导活动</button>'
+        +'<button class="jf-btn" onclick="打开关联页面('+i+')">关联页面</button>'
+        +'</div></div>';
+    });
+    box.innerHTML=h;
+  }
+  window.渲染积分项卡片=渲染卡片;
+
+  /* ── 按钮 1：编辑（开关 / 弹窗优先级 / 备注） ── */
+  window.打开积分项编辑=function(i){
+    当前索引=i; var d=window._积分项数据[i];
+    var h='<div class="jf-tip b">「编辑」仅维护 <b>3 个字段</b>：活动开关、弹窗优先级、备注；活动名称与触发逻辑写死在 C 端代码。</div>'
+      +'<div class="field-card"><div class="field-card-header"><h4>基础配置</h4></div><div class="field-card-body">'
+      +'<div class="field-row"><span class="field-label">活动名称</span><span class="field-control"><span class="field-readonly">'+esc(d.名称)+'</span><span class="jf-hint">C 端代码写死，只读 · 与积分流水枚举同名</span></span></div>'
+      +'<div class="field-row"><span class="field-label">开关</span><span class="field-control"><select id="jf-开关" class="field-select"><option value="生效"'+sel('生效',d.开关)+'>生效</option><option value="不生效"'+sel('不生效',d.开关)+'>不生效</option></select><span class="jf-hint">不生效 = A 弹窗不触发 · B 页面入口隐藏 · C 积分不赠送</span></span></div>'
+      +'<div class="field-row"><span class="field-label">弹窗优先级</span><span class="field-control"><input id="jf-优先级" class="field-input" type="number" min="1" step="1" value="'+esc(d.弹窗优先级)+'"><span class="jf-hint">正整数，数字越小越先弹出；多弹窗按先后依次弹出</span></span></div>'
+      +'<div class="field-row"><span class="field-label">备注</span><span class="field-control"><textarea id="jf-备注" class="field-input" rows="3" placeholder="运营自我提示用">'+esc(d.备注||'')+'</textarea></span></div>'
+      +'</div></div>';
+    $('jf正文').innerHTML=h;
+    $('jf脚部').innerHTML='<button class="btn-secondary" onclick="关闭积分项抽屉()">取消</button><button class="主按钮" onclick="保存积分项编辑()">保存</button>';
+    开抽屉('编辑 · '+d.名称);
+  };
+  window.保存积分项编辑=function(){
+    var d=window._积分项数据[当前索引];
+    var 状态=$('jf-开关').value, 优先级=parseInt($('jf-优先级').value,10), 备注=$('jf-备注').value.trim();
+    if(!(优先级>=1)){显示提示('弹窗优先级请填写正整数（≥1）','信息',2200);$('jf-优先级').focus();return;}
+    d.开关=状态; d.弹窗优先级=优先级; d.备注=备注;
+    关闭积分项抽屉(); 渲染卡片();
+    显示提示('已保存：'+d.名称+'（'+状态+'，优先级 '+优先级+'）· 演示环境不落库','成功',2400);
+  };
+
+  /* ── 按钮 2：引导活动（可多个；不触发领券积分） ── */
+  window.打开引导活动=function(i){
+    当前索引=i;
+    引导草稿=(window._积分项数据[i].引导活动||[]).map(function(g){return {平台:g.平台,活动ID:g.活动ID,跳转方式:g.跳转方式,去向:g.去向||'淘宝闪购APP'};});
+    渲染引导主体();
+    $('jf脚部').innerHTML='<button class="jf-add" onclick="新增引导行()">＋ 添加引导活动</button><span style="flex:1"></span><button class="btn-secondary" onclick="关闭积分项抽屉()">取消</button><button class="主按钮" onclick="保存引导活动()">保存</button>';
+    开抽屉('引导活动 · '+window._积分项数据[i].名称);
+  };
+  function 渲染引导主体(){
+    var h='<div class="jf-tip w"><b>引导活动</b>：弹窗 / 入口点击后跳转承接的 CPS 活动。<br>'
+        +'· 引导活动<b>不触发领券积分</b>（跳转承接后不发红包领取积分）<br>'
+        +'· 一张卡片<b>可配置多个</b>，按添加顺序在 C 端并排展示（如美团 + 饿了么）</div>';
+    if(!引导草稿.length){h+='<div class="jf-empty">暂未配置引导活动<br>点击左下角「＋ 添加引导活动」新增</div>';}
+    引导草稿.forEach(function(g,i){
+      h+='<div class="jf-g-card"><div class="jf-g-head"><span>引导活动 '+(i+1)+'</span><button class="jf-del" onclick="删除引导行('+i+')">删除</button></div><div class="jf-g-body">'
+        +'<div class="field-row"><span class="field-label">平台</span><span class="field-control"><select class="field-select jf-平台" onchange="引导行联动(this)"><option value="美团"'+sel('美团',g.平台)+'>美团</option><option value="饿了么"'+sel('饿了么',g.平台)+'>饿了么</option></select></span></div>'
+        +'<div class="field-row"><span class="field-label">活动ID</span><span class="field-control"><input class="field-input jf-aid" value="'+esc(g.活动ID)+'" placeholder="如 ACT-PM-AF"></span></div>'
+        +'<div class="field-row"><span class="field-label">跳转方式</span><span class="field-control"><select class="field-select jf-方式" onchange="引导行联动(this)"><option value="小程序"'+sel('小程序',g.跳转方式)+'>小程序</option><option value="H5"'+sel('H5',g.跳转方式)+'>H5</option></select></span></div>'
+        +'<div class="field-row jf-去向行"><span class="field-label">去向</span><span class="field-control"><select class="field-select jf-去向"><option value="淘宝闪购APP"'+sel('淘宝闪购APP',g.去向)+'>淘宝闪购APP</option><option value="淘宝APP"'+sel('淘宝APP',g.去向)+'>淘宝APP</option></select><span class="jf-hint">仅跳转方式 = H5 时生效</span></span></div>'
+        +'<div class="field-row jf-appid行"><span class="field-label">appid</span><span class="field-control"><span class="field-readonly jf-appid">'+esc(APPID地图[g.平台]||'—')+'</span><span class="jf-hint">按平台自动带出 3.1 全局 APPID，只读</span></span></div>'
+        +'</div></div>';
+    });
+    $('jf正文').innerHTML=h;
+    var cards=$('jf正文').querySelectorAll('.jf-g-card');
+    for(var k=0;k<cards.length;k++){引导行联动(cards[k].querySelector('.jf-平台'));}
+  }
+  window.新增引导行=function(){引导草稿.push({平台:'美团',活动ID:'',跳转方式:'小程序',去向:'淘宝闪购APP'});渲染引导主体();};
+  window.删除引导行=function(r){引导草稿.splice(r,1);渲染引导主体();};
+  window.引导行联动=function(el){
+    var card=el.closest('.jf-g-card');
+    var 平台=card.querySelector('.jf-平台').value, 方式=card.querySelector('.jf-方式').value;
+    card.querySelector('.jf-去向行').style.display=(方式==='H5'?'':'none');
+    card.querySelector('.jf-appid行').style.display=(方式==='小程序'?'':'none');
+    card.querySelector('.jf-appid').textContent=APPID地图[平台]||'—';
+  };
+  window.保存引导活动=function(){
+    var cards=$('jf正文').querySelectorAll('.jf-g-card'), out=[];
+    for(var k=0;k<cards.length;k++){
+      var c=cards[k];
+      var aid=c.querySelector('.jf-aid').value.trim();
+      if(!aid){显示提示('请填写第 '+(k+1)+' 个引导活动的活动ID','信息',2200);c.querySelector('.jf-aid').focus();return;}
+      var p=c.querySelector('.jf-平台').value, m=c.querySelector('.jf-方式').value;
+      out.push({平台:p,活动ID:aid,跳转方式:m,去向:m==='H5'?c.querySelector('.jf-去向').value:'',appid:m==='小程序'?(APPID地图[p]||''):''});
+    }
+    var d=window._积分项数据[当前索引];
+    d.引导活动=out;
+    关闭积分项抽屉(); 渲染卡片();
+    显示提示('引导活动已保存：'+d.名称+'（共 '+out.length+' 个，不触发领券积分）· 演示环境不落库','成功',2400);
+  };
+
+  /* ── 按钮 3：关联页面（只读；页面 + 弹窗两个维度） ── */
+  window.打开关联页面=function(i){
+    当前索引=i; var d=window._积分项数据[i], on=d.开关==='生效';
+    var pages=(d.关联页面&&d.关联页面.页面)||[], pops=(d.关联页面&&d.关联页面.弹窗)||[];
+    function 页表(){
+      if(!pages.length) return '<div class="jf-empty">该活动暂无关联页面入口</div>';
+      var h='<table class="jf-table"><thead><tr><th>页面名称</th><th>所在位置</th><th>入口形态</th><th>当前状态</th></tr></thead><tbody>';
+      pages.forEach(function(p){h+='<tr><td>'+esc(p.名称)+'</td><td>'+esc(p.位置)+'</td><td>'+esc(p.形态)+'</td><td>'
+        +(on?'<span class="jf-b-on">显示</span>':'<span class="jf-b-off">隐藏</span>')+'</td></tr>';});
+      return h+'</tbody></table>';
+    }
+    function 弹表(){
+      if(!pops.length) return '<div class="jf-empty">该活动暂无关联弹窗</div>';
+      var h='<table class="jf-table"><thead><tr><th>弹窗名称</th><th>形态</th><th>触发时机（C 端写死）</th><th>当前状态</th></tr></thead><tbody>';
+      pops.forEach(function(p){h+='<tr><td>'+esc(p.名称)+'</td><td>'+esc(p.类型)+'</td><td>'+esc(p.触发)+'</td><td>'
+        +(on?'<span class="jf-b-on">可触发</span>':'<span class="jf-b-off">不触发</span>')+'</td></tr>';});
+      return h+'</tbody></table>';
+    }
+    var h='<div class="jf-tip b"><b>关联页面（只读）</b>：数据来自 C 端代码写死的 JSON，分 <b>页面</b> 与 <b>弹窗管理</b> 两个维度；显隐 / 触发统一随活动开关联动，后台不可编辑。<br>当前活动开关：<b>'+(on?'生效中（入口显示 / 弹窗可触发）':'已停用（B 入口隐藏 / A 弹窗不触发 / C 积分不赠送）')+'</b></div>'
+      +'<div class="jf-tabs"><button class="jf-tab on" onclick="关联页切签(&#39;页&#39;)">页面入口（'+pages.length+'）</button><button class="jf-tab" onclick="关联页切签(&#39;弹&#39;)">弹窗管理（'+pops.length+'）</button></div>'
+      +'<div id="jf-tab-页">'+页表()+'</div><div id="jf-tab-弹" style="display:none;">'+弹表()+'</div>';
+    $('jf正文').innerHTML=h;
+    $('jf脚部').innerHTML='<span style="flex:1"></span><button class="主按钮" onclick="关闭积分项抽屉()">关 闭</button>';
+    开抽屉('关联页面 · '+d.名称);
+  };
+  window.关联页切签=function(t){
+    var 是页=t==='页';
+    $('jf-tab-页').style.display=是页?'':'none';
+    $('jf-tab-弹').style.display=是页?'none':'';
+    var tabs=$('jf正文').querySelectorAll('.jf-tab');
+    if(tabs.length===2){tabs[0].classList.toggle('on',是页);tabs[1].classList.toggle('on',!是页);}
+  };
+
+  渲染卡片();
 })();
 </script>
 </body>

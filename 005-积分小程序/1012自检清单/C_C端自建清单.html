@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<!--
+═══════════════════════════════════════════════════════════════════
+ 积分小程序 · C 端自检清单（C_C端自建清单.html）
+═══════════════════════════════════════════════════════════════════
+【本文件是什么】
+ 复制「交互稿_母版.html」骨架（绿主题 + 手机壳 + 切换帧 + 右侧说明面板），
+ 改造为 C 端上线自检页：每个积分活动上线前，C 端必须出齐 4 件物料并逐条打勾。
+
+【页面结构】
+ 左：侧边树状图（4 个一级节点）→ 中：手机壳（每个节点一帧）
+ 右：说明面板（每帧一张「必须满足」清单卡，checkbox 可点，红字「不满足不允许上线」）
+ 底部：全局说明「以上 4 项全部打勾，活动方可上线」
+
+【4 件物料 → 4 帧】
+ 0 分享图及分享文案  1 落地页  2 缺省页  3 积分流水
+ 节点点击 = go(i)，同时切换 手机壳帧 + 侧边树高亮 + 右侧清单卡
+
+【红线】
+ · 弹窗一律半屏底部抽屉；品牌色只用 var(--brand)/var(--brand2)
+ · 不引入外部图片，分享图 / 缺省图用 CSS 色块 + 文字占位
+ · 流水示例名称取自后台活动卡片名（签到积分 / 红包领取 / 订单到账 / 下午茶…）
+═══════════════════════════════════════════════════════════════════
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>积分小程序 · C 端自检清单</title>
+<style>
+:root{
+  --brand:#17A34A; --brand2:#3FB950; --ink:#16201A; --ink2:#3F4A42; --ink3:#7E8A82;
+  --line:#E5EAE6; --bg:#F2F7F3; --sheet:#FFFFFF; --ok:#17A34A; --warn:#E08A16; --danger:#E5484D;
+  --radius:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Alibaba PuHuiTi 2.0","MiSans","Noto Sans SC",sans-serif;background:var(--bg);color:var(--ink);padding:22px 26px 34px}
+.wrap{max-width:1180px;margin:0 auto}
+header.top{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+header.top h1{font-size:23px;font-weight:700;letter-spacing:.5px;color:#14532D}
+header.top .sub{font-size:12.5px;color:var(--ink3);padding-bottom:3px}
+.tag{display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:20px;background:#E7F6EC;color:#15803D;font-weight:600}
+.tag.danger{background:#FEF1F1;color:#C0392B}
+
+/* ============ 设计红线（加红表达） ============ */
+.redline{display:flex;align-items:flex-start;gap:10px;background:#FEF1F1;border:1.5px solid #F3B8BB;
+         border-left:5px solid #E5484D;border-radius:12px;padding:13px 16px;margin-bottom:18px;
+         color:#C0392B;font-size:13.5px;font-weight:700;line-height:1.75}
+.redline .ri{flex:none;font-size:16px;margin-top:1px}
+
+/* ============ 三列布局：侧边树 + 手机壳 + 说明面板 ============ */
+.layout{display:grid;grid-template-columns:236px 360px 1fr;gap:22px;align-items:start}
+@media(max-width:1120px){.layout{grid-template-columns:220px 340px 1fr}}
+@media(max-width:980px){.layout{grid-template-columns:1fr;justify-items:center}}
+
+/* ============ 侧边树状图 ============ */
+.sidebar{position:sticky;top:18px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.sb-h{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;font-weight:700;color:var(--ink3);letter-spacing:.5px;padding:2px 8px 10px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.sb-h .n{background:#E7F6EC;color:#15803D;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
+.tree-item{display:flex;align-items:center;gap:9px;padding:10px;border-radius:10px;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;transition:.15s;margin-bottom:3px;line-height:1.35}
+.tree-item:hover{background:#EFF7F1;color:var(--brand)}
+.tree-item.active{background:var(--brand);color:#fff;font-weight:700;box-shadow:0 6px 16px -8px var(--brand)}
+.tree-item .ti-no{flex:none;width:22px;height:22px;border-radius:7px;background:#EFF7F1;color:var(--brand);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.tree-item.active .ti-no{background:rgba(255,255,255,.24);color:#fff}
+.sb-note{margin-top:10px;padding:9px 10px 2px;border-top:1px dashed var(--line);font-size:11px;color:var(--ink3);line-height:1.75}
+.sb-note b{color:var(--brand)}
+
+/* ============ 手机壳 ============ */
+.phone-col{justify-self:center;position:sticky;top:18px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.phone{width:360px;height:740px;background:#16201A;border-radius:58px;padding:11px;box-shadow:0 22px 50px -18px rgba(15,30,22,.5);position:relative;flex-shrink:0;overflow:hidden}
+.phone::after{content:"";position:absolute;inset:11px;border-radius:48px;border:1.5px solid #2c3a31;pointer-events:none}
+.screen{width:100%;height:100%;background:#F7F8FA;border-radius:46px;overflow:hidden;position:relative}
+.notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:112px;height:26px;background:#16201A;border-radius:0 0 18px 18px;z-index:60}
+.stbar{position:absolute;top:0;left:0;right:0;height:44px;z-index:55;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:13px;font-weight:600;color:#16201A}
+.spacer{height:44px;flex-shrink:0}
+.app{position:absolute;inset:0;overflow:hidden}
+.frame{position:absolute;inset:0;opacity:0;transform:translateY(8px);transition:opacity .32s ease,transform .32s ease;pointer-events:none}
+.frame.on{opacity:1;transform:none;pointer-events:auto;z-index:10}
+
+/* 帧通用小标题 */
+.fw-t{display:flex;align-items:center;gap:8px;padding:12px 16px 6px;font-size:15px;font-weight:800}
+.fw-t .pill{font-size:10.5px;padding:2px 8px;border-radius:6px;background:#E7F6EC;color:#15803D;font-weight:700}
+.fw-note{margin:12px 14px 0;font-size:12px;color:var(--ink2);background:#F2FAF4;border-left:3px solid var(--brand);border-radius:0 8px 8px 0;padding:9px 11px;line-height:1.65}
+
+/* 帧 0 · 分享图及分享文案 */
+.share{margin:6px 14px 0;border-radius:16px;overflow:hidden;background:linear-gradient(160deg,#17A34A,#3FB950);color:#fff;padding:16px;position:relative;min-height:298px}
+.share .emo{font-size:38px}
+.share .nm{font-size:19px;font-weight:800;margin-top:10px}
+.share .ben{margin-top:8px;font-size:12.5px;line-height:1.5;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.42);border-radius:9px;padding:9px 10px;max-width:190px}
+.share .qrf{position:absolute;right:16px;bottom:16px;width:78px;background:#fff;border-radius:12px;padding:7px 7px 6px;text-align:center;box-shadow:0 8px 20px -10px rgba(0,0,0,.5)}
+.share .qrf .qg{width:62px;height:62px;margin:0 auto;border-radius:5px;border:1.5px solid #E3E5EC;
+  background-color:#fff;
+  background-image:linear-gradient(45deg,#16201A 25%,transparent 25%,transparent 75%,#16201A 75%),
+                   linear-gradient(45deg,#16201A 25%,transparent 25%,transparent 75%,#16201A 75%);
+  background-size:12px 12px;background-position:0 0,6px 6px}
+.share .qrf .qt{font-size:9.5px;color:var(--ink3);margin-top:4px;font-weight:600}
+.share .dual{margin-top:12px;font-size:11.5px;color:rgba(255,255,255,.92);display:flex;flex-direction:column;gap:4px}
+.share .dual span{background:rgba(255,255,255,.16);border-radius:8px;padding:6px 9px}
+
+/* 帧 1 · 落地页 */
+.lp-hero{margin:6px 14px 0;height:132px;border-radius:14px;background:linear-gradient(135deg,#1A9E54,#52C47E);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#fff}
+.lp-hero .hm{font-size:15px;font-weight:800}
+.lp-hero .hs{font-size:11.5px;opacity:.92}
+.lp-card{margin:12px 14px 0;background:#fff;border:1.5px solid #E3EAE5;border-radius:12px;padding:13px}
+.lp-card .lt{font-size:13.5px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.lp-li{font-size:12px;color:var(--ink2);line-height:1.95}
+.lp-li b{color:var(--ink)}
+.lp-btn{margin:16px 14px 0;height:50px;border-radius:14px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px -8px var(--brand)}
+
+/* 帧 2 · 缺省页 */
+.default-page{position:absolute;inset:0;padding:44px 26px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+.default-page .ic{width:80px;height:80px;border-radius:50%;background:#F2F3F6;display:flex;align-items:center;justify-content:center;font-size:34px}
+.default-page .t{font-size:18px;font-weight:800;margin-top:4px}
+.default-page .s{font-size:12px;color:var(--ink3);line-height:1.7}
+.default-page .btn{margin-top:12px;padding:12px 36px;border-radius:14px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:15px;font-weight:700;box-shadow:0 8px 18px -8px var(--brand)}
+
+/* 帧 3 · 积分流水 */
+.flow{margin:6px 14px 0;background:#fff;border:1.5px solid #E3EAE5;border-radius:14px;overflow:hidden}
+.fl-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #F2F4F6}
+.fl-row:last-child{border-bottom:0}
+.fl-row .nm{font-size:13.5px;font-weight:700}
+.fl-row .tm{font-size:11px;color:var(--ink3);margin-top:2px}
+.fl-v{font-size:14.5px;font-weight:800;color:#1C8A46;font-variant-numeric:tabular-nums}
+
+/* ============ 右侧说明面板 ============ */
+.panel{position:sticky;top:18px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 36px);overflow-y:auto;padding-right:2px}
+.doc{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;display:none;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.doc.on{display:block}
+.doc-h{display:flex;align-items:center;gap:9px}
+.doc-h .dn{flex:none;width:24px;height:24px;border-radius:8px;background:var(--brand);color:#fff;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.doc-h .dt{font-size:15px;font-weight:800}
+.doc-h .dp{margin-left:auto;font-size:10.5px;padding:2px 8px;border-radius:6px;background:#F2F3F6;color:var(--ink2);font-weight:700}
+.doc-sub{font-size:11.5px;color:var(--ink3);margin:7px 0 12px;line-height:1.65}
+.ck{display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border-radius:11px;background:#FAFBFC;border:1px solid #F0F1F5;margin-bottom:8px;cursor:pointer;font-size:13px;line-height:1.5;color:var(--ink2);transition:.15s}
+.ck:hover{background:#F2FAF4;border-color:#CBEBD6}
+.ck input{flex:none;width:17px;height:17px;margin-top:2px;accent-color:var(--brand);cursor:pointer}
+.ck input:checked + .ck-t{color:var(--ink3);text-decoration:line-through}
+.doc-warn{margin-top:4px;font-size:12px;font-weight:700;color:var(--danger);background:#FEF1F1;border:1px solid #FBD5D6;border-radius:10px;padding:9px 12px;line-height:1.6}
+.doc-global{background:#16201A;color:#E7F6EC;border-radius:14px;padding:13px 16px;font-size:12.5px;line-height:1.7;font-weight:600;display:flex;gap:9px;align-items:flex-start}
+.doc-global .gi{font-size:15px;flex:none}
+.doc-global b{color:#8CE0A8}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>积分小程序 · C 端自检清单</h1>
+    <span class="tag">C 端 4 件物料 · 逐条打勾</span>
+    <span class="tag danger">未打勾不允许上线</span>
+    <span class="sub">每个积分活动上线前，C 端必须出齐 4 件物料</span>
+  </header>
+
+  <!-- 设计红线 -->
+  <div class="redline">
+    <span class="ri">🚨</span>
+    <span>在设计之初，C 端交互需要明确控制哪些入口、弹窗、页面。前端加参控制。</span>
+  </div>
+
+  <div class="layout">
+
+    <!-- ============ 左：侧边树状图（4 个一级节点） ============ -->
+    <aside class="sidebar">
+      <div class="sb-h"><span>📑 页 面 树 状 图</span><span class="n">4 件物料</span></div>
+      <div class="tree-item active" data-i="0"><span class="ti-no">1</span>分享图及分享文案</div>
+      <div class="tree-item" data-i="1"><span class="ti-no">2</span>落地页</div>
+      <div class="tree-item" data-i="2"><span class="ti-no">3</span>缺省页</div>
+      <div class="tree-item" data-i="3"><span class="ti-no">4</span>积分流水</div>
+      <div class="sb-note">点击节点 → 切换中间手机壳与右侧清单卡<br>右侧 4 张清单<b>全部打勾</b>，活动方可上线</div>
+    </aside>
+
+    <!-- ============ 中：手机壳（4 帧） ============ -->
+    <div class="phone-col">
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="stbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+          <div class="app">
+
+            <!-- 帧 0 · 分享图及分享文案 -->
+            <div class="frame on" data-f="0">
+              <div class="spacer"></div>
+              <div class="fw-t">📤 分享图及分享文案<span class="pill">物料 1</span></div>
+              <div class="share">
+                <div class="emo">🧧</div>
+                <div class="nm">下午茶 · 积分加倍</div>
+                <div class="ben">利益点：时段下单，额外 +100 积分</div>
+                <div class="dual">
+                  <span>① 企微推广素材</span>
+                  <span>② 微信分享卡片</span>
+                </div>
+                <div class="qrf">
+                  <div class="qg"></div>
+                  <div class="qt">小程序码</div>
+                </div>
+              </div>
+              <div class="fw-note">分享图必须同时用于 ① 企微推广素材 ② 微信分享卡片，一张图两用，不允许各出一版。</div>
+            </div>
+
+            <!-- 帧 1 · 落地页 -->
+            <div class="frame" data-f="1">
+              <div class="spacer"></div>
+              <div class="fw-t">🎯 活动落地页<span class="pill">物料 2</span></div>
+              <div class="lp-hero">
+                <div class="hm">下午茶 · 积分加倍</div>
+                <div class="hs">活动主视觉 / 头图占位</div>
+              </div>
+              <div class="lp-card">
+                <div class="lt">📋 活动说明</div>
+                <div class="lp-li">· 参与方式：<b>活动时段内下单即可参与</b></div>
+                <div class="lp-li">· 奖励规则：<b>额外赠送活动积分</b></div>
+                <div class="lp-li">· 活动时间：<b>以后台配置时段为准</b></div>
+              </div>
+              <div class="lp-btn">去下单</div>
+            </div>
+
+            <!-- 帧 2 · 缺省页 -->
+            <div class="frame" data-f="2">
+              <div class="default-page">
+                <div class="ic">🕒</div>
+                <div class="t">活动已结束</div>
+                <div class="s">该活动已关闭或不在活动时段<br>请返回首页参与其他活动</div>
+                <div class="btn">返回首页</div>
+              </div>
+            </div>
+
+            <!-- 帧 3 · 积分流水 -->
+            <div class="frame" data-f="3">
+              <div class="spacer"></div>
+              <div class="fw-t">📊 积分明细<span class="pill">物料 4</span></div>
+              <div class="flow">
+                <div class="fl-row"><div><div class="nm">下午茶</div><div class="tm">10-16 15:20</div></div><div class="fl-v">+100</div></div>
+                <div class="fl-row"><div><div class="nm">订单到账</div><div class="tm">10-16 12:05</div></div><div class="fl-v">+260</div></div>
+                <div class="fl-row"><div><div class="nm">签到积分</div><div class="tm">10-16 09:12</div></div><div class="fl-v">+35</div></div>
+                <div class="fl-row"><div><div class="nm">红包领取</div><div class="tm">10-16 09:10</div></div><div class="fl-v">+5</div></div>
+                <div class="fl-row"><div><div class="nm">新人积分</div><div class="tm">10-15 21:40</div></div><div class="fl-v">+200</div></div>
+              </div>
+              <div class="fw-note">流水名称必须与后台活动卡片名称完全一致，一一对应，不允许别名。</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:#8A91A0;text-align:center;line-height:1.6">
+        画面为物料示意，非视觉定稿<br>绿色高亮 = 当前自检物料
+      </div>
+    </div>
+
+    <!-- ============ 右：说明面板（每物料一张清单卡） ============ -->
+    <div class="panel">
+
+      <!-- 物料 1 -->
+      <div class="doc on" data-d="0">
+        <div class="doc-h"><span class="dn">1</span><span class="dt">分享图及分享文案 · 必须满足</span><span class="dp">物料 1</span></div>
+        <div class="doc-sub">一张分享图 + 一段分享文案，双渠道共用。</div>
+        <label class="ck"><input type="checkbox"><span class="ck-t">活动名称正确</span></label>
+        <label class="ck"><input type="checkbox"><span class="ck-t">利益点文案准确</span></label>
+        <label class="ck"><input type="checkbox"><span class="ck-t">含小程序码 / 跳转参数</span></label>
+        <label class="ck"><input type="checkbox"><span class="ck-t">企微 + 微信卡片双用途可用</span></label>
+        <div class="doc-warn">⚠️ 以上任一条不满足，不允许上线。</div>
+      </div>
+
+      <!-- 物料 2 -->
+      <div class="doc" data-d="1">
+        <div class="doc-h"><span class="dn">2</span><span class="dt">落地页 · 必须满足</span><span class="dp">物料 2</span></div>
+        <div class="doc-sub">所有推广点击的唯一承接页，与后台活动卡片一一对应。</div>
+        <label class="ck"><input type="checkbox"><span class="ck-t">所有推广点击都跳到本落地页，不裸跳</span></label>
+        <label class="ck"><input type="checkbox"><span class="ck-t">按钮跳转引导活动（不触发领券积分）</span></label>
+        <label class="ck"><input type="checkbox"><span class="ck-t">页面加载无白屏</span></label>
+        <div class="doc-warn">⚠️ 以上任一条不满足，不允许上线。</div>
+      </div>
+
+      <!-- 物料 3 -->
+      <div class="doc" data-d="2">
+        <div class="doc-h"><span class="dn">3</span><span class="dt">缺省页 · 必须满足</span><span class="dp">物料 3</span></div>
+        <div class="doc-sub">活动未开启 / 不在时段时的统一兜底页。</div>
+        <label class="ck"><input type="checkbox"><span class="ck-t">活动关闭 / 过期展示本页</span></label>
+        <label class="ck"><input type="checkbox"><span class="ck-t">唯一出口是回首页</span></label>
+        <label class="ck"><input type="checkbox"><span class="ck-t">无残留活动入口</span></label>
+        <div class="doc-warn">⚠️ 以上任一条不满足，不允许上线。</div>
+      </div>
+
+      <!-- 物料 4 -->
+      <div class="doc" data-d="3">
+        <div class="doc-h"><span class="dn">4</span><span class="dt">积分流水 · 必须满足</span><span class="dp">物料 4</span></div>
+        <div class="doc-sub">与 B 端积分明细同口径，名称一一对应。</div>
+        <label class="ck"><input type="checkbox"><span class="ck-t">流水名称 = 后台活动卡片名称（完全一致，无别名）</span></label>
+        <label class="ck"><input type="checkbox"><span class="ck-t">开关关闭后不产生该活动积分</span></label>
+        <label class="ck"><input type="checkbox"><span class="ck-t">引导活动跳转不发领券积分</span></label>
+        <div class="doc-warn">⚠️ 以上任一条不满足，不允许上线。</div>
+      </div>
+
+      <!-- 全局说明 -->
+      <div class="doc-global"><span class="gi">✅</span><span>以上 <b>4 项</b>全部打勾，活动方可上线；任一项未打勾，一律打回补齐。</span></div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════ 引擎：切换（骨架，勿改） ═══════════════
+const frames = document.querySelectorAll('.frame');
+const nodes  = document.querySelectorAll('.tree-item[data-i]');
+const docs   = document.querySelectorAll('.doc[data-d]');
+let cur = 0;
+
+function go(i){
+  if(i < 0 || i > frames.length - 1) return;
+  cur = i;
+  frames.forEach((f, idx) => f.classList.toggle('on', idx === i));
+  nodes.forEach(n => n.classList.toggle('active', +n.dataset.i === i));
+  docs.forEach(d => d.classList.toggle('on', +d.dataset.d === i));
+}
+
+// 侧边树点击 = 切换（切帧 + 树高亮 + 右侧清单卡）
+nodes.forEach(n => { n.style.cursor = 'pointer'; n.onclick = () => go(+n.dataset.i); });
+
+// 初始化
+go(0);
+</script>
+
+</body>
+</html>
