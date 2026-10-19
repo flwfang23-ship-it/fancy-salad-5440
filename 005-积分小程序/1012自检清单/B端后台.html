@@ -1485,16 +1485,16 @@ textarea.field-input { max-width: 100%; }
 <div class="应用壳">
 <aside class="泳道区">
 <h3>多方业务泳道图</h3>
-<div class="泳道简介" style="line-height:1.7;"><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">功能简介：</strong><div style="padding:2px 0 0 20px;color:#475569;">① 运营在后台配置 5 项：3.1 全局参数 / 3.4 积分项管理 / 3.5 订阅配置 / 3.6 页面路径映射 / 11.2 积分明细</div><div style="padding:2px 0 0 20px;color:#475569;">② C端用户打开小程序，代码按活动开关判断弹窗/入口</div><div style="padding:2px 0 0 20px;color:#475569;">③ 用户点弹窗跳转活动下单，触发订阅消息推送</div></div><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">积分获取：</strong><div style="padding:2px 0 0 20px;color:#475569;">基础积分=回传佣金×折算比例×2000；下午茶时段(13:30-18:00)下单 +100，夜宵时段(18:30-次日 01:00)下单 +200</div><div style="padding:2px 0 0 20px;color:#94a3b8;">时段加码叠加在基础积分之上；订阅模板停用不影响积分发放</div></div><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">弹窗规则：</strong><div style="padding:2px 0 0 20px;color:#475569;">配了不一定调用（触发逻辑在代码端判断）；多弹窗命中按优先级先后顺序依次弹出，仅总开关已开启的积分项参与弹窗；开关关闭三停：A弹窗不触发 / B入口隐藏 / C积分不赠送</div></div><div style="padding:4px 0 2px;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">后台页面：</strong><div style="padding:3px 0 0 20px;color:#475569;"><div>① <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.0')">改动清单</span>：本次迭代业务功能变更</div><div>② <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.1')">全局参数</span>：时段加码激励（下午茶/夜宵额外积分）</div><div>③ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.4')">积分项管理</span>：活动卡片统一管理（开关/优先级/引导活动）</div><div>④ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.5')">订阅配置</span>：订阅消息模板开关管理 + 跳转页面配置（本次新增）</div><div>⑤ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.6')">页面路径映射</span>：页面名称↔路径映射表，订阅跳转下拉数据源（本次新增）</div><div>⑥ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('11.2')">积分明细</span>：流水名称与活动卡片一一对应</div></div></div></div>
+<div class="泳道简介" style="line-height:1.7;"><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">功能简介：</strong><div style="padding:2px 0 0 20px;color:#475569;">① 运营在后台配置 4 项：3.1 全局参数 / 3.4 积分项管理 / 3.5 订阅配置 / 11.2 积分明细</div><div style="padding:2px 0 0 20px;color:#475569;">② C端用户打开小程序，代码按活动开关判断弹窗/入口</div><div style="padding:2px 0 0 20px;color:#475569;">③ 用户点弹窗跳转活动下单，触发订阅消息推送</div></div><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">积分获取：</strong><div style="padding:2px 0 0 20px;color:#475569;">基础积分=回传佣金×折算比例×2000；下午茶时段(13:30-18:00)下单 +100，夜宵时段(18:30-次日 01:00)下单 +200</div><div style="padding:2px 0 0 20px;color:#94a3b8;">时段加码叠加在基础积分之上；订阅模板停用不影响积分发放</div></div><div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">弹窗规则：</strong><div style="padding:2px 0 0 20px;color:#475569;">配了不一定调用（触发逻辑在代码端判断）；多弹窗命中按优先级先后顺序依次弹出，仅总开关已开启的积分项参与弹窗；开关关闭三停：A弹窗不触发 / B入口隐藏 / C积分不赠送</div></div><div style="padding:4px 0 2px;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;white-space:nowrap;">后台页面：</strong><div style="padding:3px 0 0 20px;color:#475569;"><div>① <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.0')">改动清单</span>：本次迭代业务功能变更</div><div>② <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.1')">全局参数</span>：时段加码激励（下午茶/夜宵额外积分）</div><div>③ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.4')">积分项管理</span>：活动卡片统一管理（开关/优先级/引导活动）</div><div>④ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.5')">订阅配置</span>：订阅消息模板开关管理 + 排序/跳转页面（跳转数据源=3.4 卡片页面路径）</div><div>⑤ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('11.2')">积分明细</span>：流水名称与活动卡片一一对应</div></div></div></div>
 <div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;"><div class="泳道图-头" style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid #e2e8f0;"><div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">SaaS 总后台（运营）</div><div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#ecfdf5;color:#065f46;">C 端用户</div><div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#f8fafc;color:#475569;">外部系统（外卖平台 / 积分系统）</div></div><div class="泳道图-体">
-<div class="泳道行 泳道收纳卡" data-card="g1" data-card-nodes="1" data-card-label="① 运营配置后台 5 项" data-node-phase="1" onclick="打开泳道浮层('g1')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">① 运营配置后台 5 项</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
+<div class="泳道行 泳道收纳卡" data-card="g1" data-card-nodes="1" data-card-label="① 运营配置后台 4 项" data-node-phase="1" onclick="打开泳道浮层('g1')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">① 运营配置后台 4 项</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
 <div class="泳道行 泳道收纳卡" data-card="g2" data-card-nodes="2" data-card-label="② C端打开小程序判断弹窗/入口" data-node-phase="2" onclick="打开泳道浮层('g2')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">② C端打开小程序判断弹窗/入口</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
 <div class="泳道行 泳道收纳卡" data-card="g3" data-card-nodes="3" data-card-label="③ 点弹窗跳转活动下单，触发订阅推送" data-node-phase="3" onclick="打开泳道浮层('g3')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">③ 点弹窗跳转活动下单，触发订阅推送</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
 <div class="泳道行 泳道收纳卡" data-card="g4" data-card-nodes="4" data-card-label="④ 订单回传，按全局公式发放积分" data-node-phase="4" onclick="打开泳道浮层('g4')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">④ 订单回传，按全局公式发放积分</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div></div>
 <div class="泳道行 泳道收纳卡" data-card="g5" data-card-nodes="5" data-card-label="⑤ 查询积分流水（与卡片同名）" data-node-phase="5" onclick="打开泳道浮层('g5')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;"><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">⑤ 查询积分流水（与卡片同名）</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div><div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div></div>
 </div></div>
 <style>.泳道收纳卡.收纳-已过{opacity:1 !important;}.泳道收纳卡.收纳-现在{opacity:1 !important;}.泳道收纳卡.收纳-现在 .泳道收纳卡内{outline:2px solid rgba(29,78,216,.55);outline-offset:-2px;}.泳道收纳卡.收纳-未来{opacity:.25 !important;}.泳道收纳卡:hover .泳道收纳卡内{filter:brightness(.97);}</style>
-<div id="泳道浮层体_g1" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">①</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">运营配置后台 5 项<span class="泳道状态徽章 通过色" style="display:inline-block;margin:4px 4px 0 0;">3.1 全局参数 · 3.4 积分项管理 · 3.5 订阅配置 · 3.6 页面路径映射 · 11.2 积分明细</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">全局参数：时段加码值（下午茶+100/夜宵+200）；积分项管理：活动卡片开关/弹窗优先级/引导活动；订阅配置（3.5 新增）：订阅模板开关（生效/停用）+ 跳转页面（引用 3.6 映射，格式：页面名称（页面路径））；页面路径映射（3.6 新增）：名称↔路径↔截图预览，可增删改；积分明细：流水查询</div></div></div></div>
+<div id="泳道浮层体_g1" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">①</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">运营配置后台 4 项<span class="泳道状态徽章 通过色" style="display:inline-block;margin:4px 4px 0 0;">3.1 全局参数 · 3.4 积分项管理 · 3.5 订阅配置 · 11.2 积分明细</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">全局参数：时段加码值（下午茶+100/夜宵+200）；积分项管理：活动卡片开关/弹窗优先级/引导活动 + 页面路径/截图（订阅跳转数据源）；订阅配置：订阅模板开关（生效/停用）+ 排序 + 跳转页面（数据源=3.4 卡片页面路径，格式：活动名称（页面路径））；积分明细：流水查询</div></div></div></div>
 <div id="泳道浮层体_g2" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">②</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">C端用户打开小程序，代码按活动开关判断弹窗/入口<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">触发逻辑写死在代码</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">每次打开判断一次；多弹窗命中按优先级先后顺序依次弹出，仅总开关已开启的积分项参与；开关关闭三停：A弹窗不触发 / B入口隐藏 / C积分不赠送</div></div></div></div>
 <div id="泳道浮层体_g3" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">③</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">用户点弹窗跳转活动下单，触发订阅消息推送<span class="泳道状态徽章 通过色" style="display:inline-block;margin:4px 4px 0 0;">小程序/H5 · 订阅消息</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">小程序=跳转外卖小程序（appid按平台自动带出）；H5=跳转H5链接（去向=淘宝APP/淘宝闪购APP）；已订阅模板在通知节点命中且状态=生效时推送</div></div></div></div>
 <div id="泳道浮层体_g4" style="display:none;"><div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">④</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">订单回传，系统按全局积分公式发放积分<span class="泳道状态徽章 通过色" style="display:inline-block;margin:4px 4px 0 0;">积分：佣金×折算比例×2000</span><div style="font-size:12px;color:#b45309;line-height:1.6;padding-top:2px;">基础积分=回传佣金×折算比例×2000；时段加码叠加其上：下午茶(13:30-18:00)+100、夜宵(18:30-次日 01:00)+200；发给下单人</div></div></div></div>
@@ -1510,18 +1510,17 @@ textarea.field-input { max-width: 100%; }
 <div class="菜单父" style="white-space:nowrap;"><span>积分项管理</span></div>
 <div class="菜单叶子" style="white-space:nowrap;text-align:left;" data-menu-page="3.4" onclick="切换页面('3.4')"><span class="菜单号">3.4</span><span class="菜单图标" style="display:inline-block;width:18px;text-align:center;flex:none;">🖥️</span><span style="text-align:left;">积分项管理</span></div>
 <div class="菜单叶子" style="white-space:nowrap;text-align:left;" data-menu-page="3.5" onclick="切换页面('3.5')"><span class="菜单号">3.5</span><span class="菜单图标" style="display:inline-block;width:18px;text-align:center;flex:none;">🔔</span><span style="text-align:left;">订阅配置</span></div>
-<div class="菜单叶子" style="white-space:nowrap;text-align:left;" data-menu-page="3.6" onclick="切换页面('3.6')"><span class="菜单号">3.6</span><span class="菜单图标" style="display:inline-block;width:18px;text-align:center;flex:none;">🗺️</span><span style="text-align:left;">页面路径映射</span></div>
 <div class="菜单叶子" style="white-space:nowrap;text-align:left;" data-menu-page="11.2" onclick="切换页面('11.2')"><span class="菜单号">11.2</span><span class="菜单图标" style="display:inline-block;width:18px;text-align:center;flex:none;">📒</span><span style="text-align:left;">积分明细</span></div>
 </nav>
 <main class="内容区" id="内容区">
-<section class="页面面板 激活" id="面_3_0" data-page="3.0"><div class="页面卡"><div class="页面头"><h2>改动清单</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">📋</span><span class="流程信息卡-环节名">本次迭代业务功能改动范围</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">迭代版本</span><span class="流程信息卡-值">1012 积分项管理 + 订阅配置 + 页面路径映射</span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">改动概述</span><span class="流程信息卡-值">积分项管理框架化（活动卡片统一管理）+ 订阅消息模板配置 + 页面路径映射（订阅跳转落地页数据源）</span></div></div></div>
+<section class="页面面板 激活" id="面_3_0" data-page="3.0"><div class="页面卡"><div class="页面头"><h2>改动清单</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">📋</span><span class="流程信息卡-环节名">本次迭代业务功能改动范围</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">迭代版本</span><span class="流程信息卡-值">1012 积分项管理 + 订阅配置</span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">改动概述</span><span class="流程信息卡-值">积分项管理框架化（活动卡片统一管理，含页面路径+截图）+ 订阅消息模板配置（排序/状态/跳转，跳转数据源=积分项卡片页面路径）</span></div></div></div>
 <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.8;">本页列出本次迭代新增/变更的<strong>业务功能</strong>，便于产品和开发快速了解改动范围。</div>
 <div style="color:#dc2626;font-weight:700;font-size:12.5px;margin-bottom:12px;">⚠ 当前页面所有涉及到的数字均走后台可配置化。</div>
 <table class="数据表格"><thead><tr><th class="列表表头">序号</th><th class="列表表头">功能</th><th class="列表表头">类型</th><th class="列表表头">涉及页面</th><th class="列表表头">说明</th></tr></thead><tbody>
-<tr class="数据行"><td class="列表单元格">1</td><td class="列表单元格"><strong>积分项管理</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.4</td><td class="列表单元格">本页以活动卡片为单位管理 7 个积分项（签到积分/红包领取/订单到账/小票积分/新人积分/下午茶/夜宵积分），各活动触发逻辑与关联页面/弹窗清单写死在 C 端代码；卡片只配三件事：活动开关、弹窗优先级、引导活动；每张卡片 3 个操作按钮：①编辑-开关/弹窗优先级/备注，②引导活动-平台/活动ID/跳转方式/去向/appid（可配置多个；引导活动不触发领券积分），③关联页面-只读列表，含页面、弹窗管理两个维度；活动开关关闭后 C 端三停：A弹窗不触发、B页面入口隐藏、C积分不赠送；积分明细（11.2）流水类型与活动卡片名称一一对应，共 7 类</td></tr>
+<tr class="数据行"><td class="列表单元格">1</td><td class="列表单元格"><strong>积分项管理</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.4</td><td class="列表单元格">本页以活动卡片为单位管理 7 个积分项（签到积分/红包领取/订单到账/小票积分/新人积分/下午茶/夜宵积分），各活动触发逻辑与关联页面/弹窗清单写死在 C 端代码；卡片只配三件事：活动开关、弹窗优先级、引导活动；每张卡片 3 个操作按钮：①编辑-开关/弹窗优先级/备注/页面路径/截图，②引导活动-平台/活动ID/跳转方式/去向/appid（可配置多个；引导活动不触发领券积分），③关联页面-只读列表，含页面、弹窗管理两个维度；卡片面板上展示 活动名称/弹窗优先级/备注/页面路径/截图（截图运营上传、点击放大；不展示引导活动行，引导逻辑不变）；活动开关关闭后 C 端三停：A弹窗不触发、B页面入口隐藏、C积分不赠送；积分明细（11.2）流水类型与活动卡片名称一一对应，共 7 类</td></tr>
 <tr class="数据行"><td class="列表单元格">2</td><td class="列表单元格"><strong>时段加码激励</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.1</td><td class="列表单元格">下午茶时段(13:30-18:00)下单额外 +100 积分，夜宵时段(18:30-次日 01:00)下单额外 +200 积分；叠加在基础积分(佣金×50%×2000)之上；发放条件：时段内有订单即发（不论入口），发给下单人；APPID 更新为真实值（美团 wxde8ac0a21135c07d、饿了么 wxece3a9a4c82f58c9），3.4 编辑抽屉按平台自动回填</td></tr>
-<tr class="数据行"><td class="列表单元格">3</td><td class="列表单元格"><strong>订阅配置</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.5</td><td class="列表单元格">运营管理微信订阅消息模板，含模板名称/模板ID/订阅入口/通知节点/关联功能/跳转页面/状态 7 个字段；模板在微信公众平台创建后回填本页，前 5 个字段只读；「跳转页面」下拉可编辑，选项实时引用 3.6 页面路径映射，格式：页面名称（页面路径），默认「不跳转」，映射删除后自动回退；「状态」支持开关切换（生效/停用），停用后 C 端不再发起该模板的订阅授权、服务端不再推送该模板消息；且状态开关受 3.4 积分项「功能总开关」联动：总开关关闭时其名下订阅一同停用且置灰不可开启（功能开订阅可自行开关，功能关订阅一定关）</td></tr>
-<tr class="数据行"><td class="列表单元格">4</td><td class="列表单元格"><strong>页面路径映射</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.6</td><td class="列表单元格">维护 C 端页面名称 ↔ 页面路径的映射表，含运营上传的页面截图预览（点击可放大），支持新增/编辑/删除；页面名称全表唯一；本表是 3.5 订阅配置「跳转页面」下拉的统一数据源，删除映射后已引用的订阅模板自动回退为「不跳转」</td></tr>
+<tr class="数据行"><td class="列表单元格">3</td><td class="列表单元格"><strong>订阅配置</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.5</td><td class="列表单元格">运营管理微信订阅消息模板，含模板名称/模板ID/订阅入口/通知节点/关联功能/跳转页面/状态 7 个字段；模板在微信公众平台创建后回填本页，前 5 个字段只读；「跳转页面」下拉可编辑，选项实时引用 3.4 积分项卡片的页面路径，格式：活动名称（页面路径），默认「不跳转」，卡片清空路径后自动回退；「状态」支持开关切换（生效/停用），停用后 C 端不再发起该模板的订阅授权、服务端不再推送该模板消息；且状态开关受 3.4 积分项「功能总开关」联动：总开关关闭时其名下订阅一同停用且置灰不可开启（功能开订阅可自行开关，功能关订阅一定关）；新增「排序」字段与操作列编辑抽屉（可改 排序/状态/跳转地址），页内附订阅触达 ASCII 判断树：同节点多模板命中仅发排序值最小的 1 条</td></tr>
+<tr class="数据行"><td class="列表单元格">4</td><td class="列表单元格"><strong>页面路径+截图（卡片内嵌）</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.4</td><td class="列表单元格">每个积分项卡片内置「页面路径 + 页面截图」2 个字段：截图由运营上传，卡片缩略图点击可放大；编辑抽屉可改页面路径+截图（支持上传/重新上传/移除）；3.5 订阅配置「跳转页面」下拉以各卡片页面路径为统一数据源，格式：活动名称（页面路径），卡片清空路径后已引用的订阅模板自动回退为「不跳转」</td></tr>
 </tbody></table>
 <div class="列表脚注">共 4 项业务功能变更</div>
 <div style="margin-top:18px;"><h3 style="font-size:14px;font-weight:650;margin-bottom:8px;color:#334155;">流水类型清单（开发参考）</h3><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:8px;font-size:12.5px;color:#475569;line-height:1.8;">以下为积分明细（11.2）流水类型完整清单，与 3.4 积分项统一口径为 7 类（<span style="color:#027a48;font-weight:650;">绿色标注</span>为本次新增积分项）：</div>
@@ -1542,7 +1541,7 @@ textarea.field-input { max-width: 100%; }
 <div id="页面配置_3_1" style="max-width:880px;"></div>
 <div style="max-width:880px;display:flex;justify-content:flex-end;margin:6px 0 18px;"><button class="主按钮" onclick="保存页面配置('3.1')">💾 保存配置</button></div>
 </div></section>
-<section class="页面面板" id="面_3_4" data-page="3.4"><div class="页面卡"><div class="页面头"><h2>积分项管理</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置积分项开关与跳转参数</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">积分项管理</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本页以活动卡片管理 7 个积分项；触发逻辑、关联页面 / 弹窗清单写死在 C 端代码，卡片只配活动开关、弹窗优先级、引导活动三件事；3 个按钮：编辑（开关 / 优先级 / 备注）、引导活动（可多个，不触发领券积分）、关联页面（只读：页面 + 弹窗）；开关关闭后 C 端三停：A 弹窗不触发、B 页面入口隐藏、C 积分不赠送</span></div></div></div>
+<section class="页面面板" id="面_3_4" data-page="3.4"><div class="页面卡"><div class="页面头"><h2>积分项管理</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置积分项开关与跳转参数</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">积分项管理</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本页以活动卡片管理 7 个积分项；触发逻辑、关联页面 / 弹窗清单写死在 C 端代码，卡片只配活动开关、弹窗优先级、引导活动三件事；3 个按钮：编辑（开关 / 优先级 / 备注 / 页面路径 / 截图）、引导活动（可多个，不触发领券积分）、关联页面（只读：页面 + 弹窗）；卡片面板展示 活动名称/弹窗优先级/备注/页面路径/截图（截图点击放大，不展示引导活动行）；页面路径是 3.5 订阅配置「跳转页面」下拉的统一数据源，格式：活动名称（页面路径）；开关关闭后 C 端三停：A 弹窗不触发、B 页面入口隐藏、C 积分不赠送</span></div></div></div>
 <style id="style-3.4-jf">
 .jf-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:12px;}
 .jf-card{border:1px solid #e2e8f0;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column;}
@@ -1562,6 +1561,11 @@ textarea.field-input { max-width: 100%; }
 .jf-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .jf-g-on{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11.5px;background:#ecfdf3;color:#027a48;border:1px solid #a7f3d0;}
 .jf-g-off{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11.5px;background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;}
+.jf-thumb{width:36px;height:64px;object-fit:cover;border-radius:5px;border:1px solid #e2e8f0;cursor:zoom-in;display:block;background:#f8fafc;}
+.jf-thumb.none{display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:11px;cursor:default;}
+.jf-shot{border:1px dashed #cbd5e1;border-radius:8px;padding:10px;display:flex;align-items:center;gap:12px;background:#f8fafc;}
+.jf-shot img{width:54px;height:96px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;background:#fff;cursor:zoom-in;}
+.jf-shot-empty{width:54px;height:96px;border-radius:6px;border:1px dashed #cbd5e1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;background:#fff;text-align:center;line-height:1.5;}
 .jf-foot{display:flex;gap:8px;padding:9px 14px;border-top:1px solid #f1f5f9;}
 .jf-btn{flex:1;padding:6px 0;border-radius:5px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:12.5px;cursor:pointer;transition:all .15s;font-family:inherit;}
 .jf-btn:hover{border-color:#1d4ed8;color:#1d4ed8;background:#f8fbff;}
@@ -1621,7 +1625,7 @@ textarea.field-input { max-width: 100%; }
 <div id="积分项卡片区" class="jf-grid"></div>
 <div class="列表脚注">共 7 张活动卡片（积分项名称 = 积分明细流水类型名称，一一对应）</div>
 </div></section>
-<section class="页面面板" id="面_3_5" data-page="3.5"><div class="页面卡"><div class="页面头"><h2>订阅配置</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置订阅消息模板开关（运营配置后台 5 项之一）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">订阅配置</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">订阅模板由微信公众平台创建后回填本页，<strong>模板名称 / 模板ID / 订阅入口 / 通知节点 / 关联功能 5 个字段全部只读</strong>；本页可编辑 2 项：①「跳转页面」下拉（选项来自 3.6 页面路径映射，格式：页面名称（页面路径），用户点击订阅消息卡片后跳转该页面，默认「不跳转」）；②「状态」开关（生效/停用）：停用后 C 端不再发起该模板的订阅授权、服务端不再推送该模板消息；订阅开关不影响积分发放本身；<strong>状态开关受 3.4 积分项「功能总开关」联动</strong>：总开关关闭时，其名下订阅一同停用且置灰不可开启（功能开，订阅可自行开关；功能关，订阅一定关）——绑定关系：签到提醒→签到积分、积分到账→订单到账、活动过期提醒→下午茶/夜宵、兑换到账不送积分不受限</span></div></div></div>
+<section class="页面面板" id="面_3_5" data-page="3.5"><div class="页面卡"><div class="页面头"><h2>订阅配置</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置订阅消息模板开关（运营配置后台 4 项之一）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">订阅配置</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">订阅模板由微信公众平台创建后回填本页，<strong>模板名称 / 模板ID / 订阅入口 / 通知节点 / 关联功能 5 个字段全部只读</strong>；本页可编辑 3 项（操作列「编辑」抽屉统一配置，状态也可在行内滑块直接切换）：①「排序」：全局默认优先级，同节点多模板命中仅发排序值最小的 1 条；②「跳转地址」下拉（选项来自 3.4 积分项卡片的页面路径，格式：活动名称（页面路径），用户点击订阅消息卡片后跳转该页面，默认「不跳转」）；③「状态」开关（生效/停用）：停用后 C 端不再发起该模板的订阅授权、服务端不再推送该模板消息；订阅开关不影响积分发放本身；<strong>状态开关受 3.4 积分项「功能总开关」联动</strong>：总开关关闭时，其名下订阅一同停用且置灰不可开启（功能开，订阅可自行开关；功能关，订阅一定关）——绑定关系：签到提醒→签到积分、积分到账→订单到账、活动过期提醒→下午茶/夜宵、兑换到账不送积分不受限</span></div></div></div>
 <style>.订阅开关{display:inline-block;padding:5px 14px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.6;white-space:nowrap;border:1px solid transparent;transition:all .15s;}.订阅开关:hover{filter:brightness(.96);}.订阅徽章{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.6;}.订阅徽章.on{background:#ecfdf3;color:#027a48;}.订阅徽章.off{background:#f1f5f9;color:#94a3b8;}
 .sub-switch{display:inline-block;width:40px;height:22px;border-radius:999px;background:#cbd5e1;position:relative;cursor:pointer;vertical-align:middle;transition:background .18s;flex:none;}
 .sub-switch i{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .18s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
@@ -1629,7 +1633,7 @@ textarea.field-input { max-width: 100%; }
 .sub-switch.on i{left:21px;}
 .sub-switch-label{margin-left:8px;font-size:12.5px;font-weight:600;vertical-align:middle;}
 .sub-switch-label.on{color:#027a48;}.sub-switch-label.off{color:#94a3b8;}</style>
-<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.8;">订阅模板由<strong>微信公众平台</strong>创建后回填到本页，本页只做<strong>开关管理</strong>，不做模板内容编辑；「跳转页面」下拉实时引用 <strong>3.6 页面路径映射</strong>，格式为 <strong>页面名称（页面路径）</strong>。</div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.8;">订阅模板由<strong>微信公众平台</strong>创建后回填到本页，本页只做<strong>开关管理</strong>，不做模板内容编辑；「跳转页面」下拉实时引用 <strong>3.4 积分项卡片的页面路径</strong>，格式为 <strong>活动名称（页面路径）</strong>。</div>
 <pre style="margin:0 0 12px;font-family:Consolas,'SFMono-Regular',Menlo,monospace;font-size:12.5px;line-height:1.85;white-space:pre;overflow-x:auto;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px;">用户能否收到订阅通知？
 │
 ├── A. 活动关了（3.4 积分项「功能总开关」= 关）
@@ -1646,27 +1650,12 @@ textarea.field-input { max-width: 100%; }
              ※ 排序为全局默认优先级；不同用户订阅内容不同、命中集合不同，
                每个用户只收到自己集合内排序值最小的那条</pre>
 <table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">模板名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('模板名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">模板ID<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('模板ID', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">订阅入口<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('订阅入口', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">通知节点<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('通知节点', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">关联功能<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('关联功能', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">跳转页面<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('跳转页面', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">排序<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('排序（订阅模板）', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('状态（订阅模板）', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
-<tr class="数据行"><td class="列表单元格"><strong>签到提醒</strong></td><td class="列表单元格">SUB2026-SIGN-0001</td><td class="列表单元格">签到页「接收签到提醒」开关</td><td class="列表单元格">每日 0 点签到任务刷新时</td><td class="列表单元格">3.3 签到</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="签到页" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_0">1</td><td class="列表单元格" id="订阅状态_0"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(0)">编辑</button></td></tr>
-<tr class="数据行"><td class="列表单元格"><strong>积分到账</strong></td><td class="列表单元格">SUB2026-POINT-0002</td><td class="列表单元格">积分到账弹窗（订阅引导）</td><td class="列表单元格">外卖订单积分到账时</td><td class="列表单元格">3.4 积分项（订单到账）</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="积分商城" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_1">2</td><td class="列表单元格" id="订阅状态_1"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(1)">编辑</button></td></tr>
-<tr class="数据行"><td class="列表单元格"><strong>兑换到账</strong></td><td class="列表单元格">SUB2026-EXCH-0003</td><td class="列表单元格">积分商城兑换确认页</td><td class="列表单元格">现金打款到账微信零钱时</td><td class="列表单元格">11.3 兑换记录 / 11.5 提现单</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="积分商城" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_2">3</td><td class="列表单元格" id="订阅状态_2"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(2)">编辑</button></td></tr>
-<tr class="数据行"><td class="列表单元格"><strong>活动过期提醒</strong></td><td class="列表单元格">SUB2026-ACT-0004</td><td class="列表单元格">活动详情页「活动过期提醒」</td><td class="列表单元格">引导活动/红包卡过期前 24 小时</td><td class="列表单元格">3.4 积分项（引导活动）</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="领券中心" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_3">4</td><td class="列表单元格" id="订阅状态_3"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(3)">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>签到提醒</strong></td><td class="列表单元格">SUB2026-SIGN-0001</td><td class="列表单元格">签到页「接收签到提醒」开关</td><td class="列表单元格">每日 0 点签到任务刷新时</td><td class="列表单元格">3.3 签到</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="sign" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_0">1</td><td class="列表单元格" id="订阅状态_0"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(0)">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>积分到账</strong></td><td class="列表单元格">SUB2026-POINT-0002</td><td class="列表单元格">积分到账弹窗（订阅引导）</td><td class="列表单元格">外卖订单积分到账时</td><td class="列表单元格">3.4 积分项（订单到账）</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="order" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_1">2</td><td class="列表单元格" id="订阅状态_1"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(1)">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>兑换到账</strong></td><td class="列表单元格">SUB2026-EXCH-0003</td><td class="列表单元格">积分商城兑换确认页</td><td class="列表单元格">现金打款到账微信零钱时</td><td class="列表单元格">11.3 兑换记录 / 11.5 提现单</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="newuser" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_2">3</td><td class="列表单元格" id="订阅状态_2"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(2)">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>活动过期提醒</strong></td><td class="列表单元格">SUB2026-ACT-0004</td><td class="列表单元格">活动详情页「活动过期提醒」</td><td class="列表单元格">引导活动/红包卡过期前 24 小时</td><td class="列表单元格">3.4 积分项（引导活动）</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="pm" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_3">4</td><td class="列表单元格" id="订阅状态_3"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(3)">编辑</button></td></tr>
 </tbody></table>
-<div class="列表脚注">共 4 条订阅模板（1 条停用）；模板由微信公众平台创建后回填，无新增/删除；操作列「编辑」抽屉可改 排序 / 状态 / 跳转地址 3 项（状态也可在行内滑块直接切换，两处同步）；「跳转页面」下拉选项来自 3.6 页面路径映射，格式为 页面名称（页面路径）；排序为全局默认优先级，同节点多模板命中时仅发排序值最小的 1 条（详见页内 ASCII 判断树）</div>
-</div></section>
-<section class="页面面板" id="面_3_6" data-page="3.6"><div class="页面卡"><div class="页面头"><h2>页面路径映射</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 维护 C 端页面名称与页面路径的映射关系</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">页面路径映射</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本页维护 <strong>页面名称 ↔ 页面路径</strong> 的映射表（含运营上传的页面截图预览），支持新增 / 编辑 / 删除；订阅配置（3.5）的「跳转页面」下拉从本表取数，展示格式为 <strong>页面名称（页面路径）</strong>，如：签到页（/pages/sign/index）；映射删除后，已引用该映射的订阅模板「跳转页面」自动回退为「不跳转」</span></div></div></div>
-<style id="style-3.6-map">
-.map-thumb{width:44px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;cursor:zoom-in;display:block;background:#f8fafc;}
-.map-thumb.none{display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:11px;cursor:default;}
-.map-add{display:inline-block;padding:7px 16px;border-radius:6px;border:1px dashed #1d4ed8;background:#eff6ff;color:#1d4ed8;font-size:12.5px;cursor:pointer;font-family:inherit;margin-bottom:12px;}
-.map-add:hover{background:#dbeafe;}
-.map-shot{border:1px dashed #cbd5e1;border-radius:8px;padding:10px;display:flex;align-items:center;gap:12px;background:#f8fafc;}
-.map-shot img{width:54px;height:96px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;background:#fff;}
-.map-shot-empty{width:54px;height:96px;border-radius:6px;border:1px dashed #cbd5e1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;background:#fff;text-align:center;line-height:1.5;}
-</style>
-<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.8;">本表为 C 端页面的<strong>统一映射数据源</strong>：页面名称、页面路径、页面截图（运营上传，点击可放大）。订阅配置（3.5）「跳转页面」下拉实时引用本表，格式：<strong>页面名称（页面路径）</strong>。</div>
-<button class="map-add" onclick="打开映射编辑(-1)">＋ 新增页面映射</button>
-<table class="数据表格"><thead><tr><th class="列表表头">序号</th><th class="列表表头"><span class="表头字段名">页面名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('页面名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">页面路径<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('页面路径', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">截图预览<span class="类型标签 string">image</span></span><button class="信息按钮" onclick="显示字段弹窗('截图预览', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody id="映射表体"></tbody></table>
-<div class="列表脚注" id="映射表脚注">共 0 条页面映射</div>
+<div class="列表脚注">共 4 条订阅模板（1 条停用）；模板由微信公众平台创建后回填，无新增/删除；操作列「编辑」抽屉可改 排序 / 状态 / 跳转地址 3 项（状态也可在行内滑块直接切换，两处同步）；「跳转页面」下拉选项来自 3.4 积分项卡片的页面路径，格式为 活动名称（页面路径）；排序为全局默认优先级，同节点多模板命中时仅发排序值最小的 1 条（详见页内 ASCII 判断树）</div>
 </div></section>
 <section class="页面面板" id="面_11_2" data-page="11.2"><div class="页面卡"><div class="页面头"><h2>积分明细</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑬</span><span class="流程信息卡-环节名">当前环节：⑬ 查询用户资产与各类记录（积分流水维度）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 数据记录 &gt;</span> <span class="路径末段">积分明细</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">该表是用户积分账户的总账本，用户资产总览（11.8）的当前积分/累计获取/已消耗全部由本表汇总</span></div></div></div>
 <div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索流水号或用户"></div><div class="筛选区"><span class="筛选标签">流水类型：</span><select class="筛选下拉"><option>全部</option><option>签到积分</option><option>红包领取</option><option>订单到账</option><option style="color:#dc2626;font-weight:700;">小票积分</option><option>新人积分</option><option>下午茶</option><option>夜宵积分</option><option>主动兑换</option><option>自动兑换</option></select><span class="筛选标签">发生时间：</span><select class="筛选下拉"><option>近 7 天</option><option>近 30 天</option><option>全部</option></select></div></div>
@@ -1709,7 +1698,7 @@ textarea.field-input { max-width: 100%; }
 </aside>
 <div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
 <script id="js-泳道映射">
-window._泳道节点映射 = {"3.0": [1], "3.1": [1], "3.4": [1], "3.5": [1], "3.6": [1], "11.2": [5]};
+window._泳道节点映射 = {"3.0": [1], "3.1": [1], "3.4": [1], "3.5": [1], "11.2": [5]};
 window._阶段泳道映射 = {"3": 1, "4": 4, "11": 5};
 </script>
 <script id="js-页面切换">
@@ -1848,7 +1837,7 @@ function 切换订阅状态(i){
 渲染订阅开关();
 /* ── 排序数据 + 操作列「编辑」抽屉（可改：排序 / 状态 / 跳转地址；其余字段只读） ── */
 window._订阅排序=[1,2,3,4];
-window._订阅跳转选中=['签到页','积分商城','积分商城','领券中心'];
+window._订阅跳转选中=['sign','order','newuser','pm'];
 var _订阅编辑idx=null;
 function _$gid(id){ return document.getElementById(id); }
 window.订阅抽屉状态切换=function(){
@@ -1861,7 +1850,7 @@ window.打开订阅抽屉=function(i){
   _订阅编辑idx=i;
   var on=window._订阅状态数据[i]==='生效';
   var 选项='<option value="">不跳转</option>';
-  (window._页面映射数据||[]).forEach(function(m){ 选项+='<option value="'+m.名称+'">'+m.名称+'（'+m.路径+'）</option>'; });
+  (window._积分项数据||[]).forEach(function(d){ if(!d.页面路径) return; 选项+='<option value="'+d.id+'">'+d.名称+'（'+d.页面路径+'）</option>'; });
   _$gid('jf正文').innerHTML='<div class="jf-tip b">本抽屉仅可编辑 <b>排序 / 状态 / 跳转地址</b> 3 项，其余字段由微信公众平台回填只读；「状态」与列表行内滑块开关同步。排序为全局默认优先级：数字越小优先级越高，同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条。</div>'
     +'<div class="field-card"><div class="field-card-header"><h4>订阅模板配置</h4></div><div class="field-card-body">'
     +'<div class="field-row"><span class="field-label">模板名称</span><span class="field-control"><input class="field-input" value="'+window._订阅模板名[i]+'" disabled style="background:#f1f5f9;color:#94a3b8;"></span></div>'
@@ -2003,9 +1992,11 @@ window._表单字段按节["3.4"]=[
   {名称:"引导活动-活动ID",类型原文:"string",基础类型:"string",示例值:"ACT-PM-AF",数据来源:"运营在「引导活动」抽屉填写",逻辑:"跳转承接活动的唯一编码，用于 CPS 下单归因",用途:"引导活动归因",节编号:"3.4"},
   {名称:"引导活动-跳转方式",类型原文:"enum",基础类型:"enum",枚举值:"小程序、H5",示例值:"小程序",数据来源:"运营在「引导活动」抽屉配置",逻辑:"小程序=跳转平台外卖小程序，appid 按平台只读带出；H5=跳转 H5 链接，需填去向；两种方式字段互斥显隐",用途:"引导活动承接形态",节编号:"3.4"},
   {名称:"引导活动-去向",类型原文:"enum",基础类型:"enum",枚举值:"淘宝APP、淘宝闪购APP",示例值:"淘宝闪购APP",数据来源:"运营在「引导活动」抽屉配置，仅跳转方式=H5 时填写",逻辑:"H5 方式下引导用户打开的目标 App",用途:"H5 承接 App",节编号:"3.4"},
-  {名称:"引导活动-appid",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"wxde8ac0a21135c07d",数据来源:"按平台自动带出 3.1 全局配置的小程序 APPID",逻辑:"只读不可手改，平台切换自动换值；仅跳转方式=小程序时显示",用途:"小程序跳转目标 appid",节编号:"3.4"}
+  {名称:"引导活动-appid",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"wxde8ac0a21135c07d",数据来源:"按平台自动带出 3.1 全局配置的小程序 APPID",逻辑:"只读不可手改，平台切换自动换值；仅跳转方式=小程序时显示",用途:"小程序跳转目标 appid",节编号:"3.4"},
+  {名称:"页面路径（积分项卡片）",类型原文:"string",基础类型:"string",编辑性:"可编辑",示例值:"/pages/sign/index",数据来源:"运营在「编辑」抽屉填写",逻辑:"该积分项对应 C 端落地页路径；是 3.5 订阅配置「跳转页面」下拉的统一数据源，与活动名称拼为「活动名称（页面路径）」展示；清空后已引用该卡片的订阅模板自动回退为「不跳转」；路径错误会导致订阅消息点击后落到报错页，上线前需真机验证",用途:"订阅消息点击跳转的目标路径",节编号:"3.4"},
+  {名称:"页面截图（积分项卡片）",类型原文:"image",基础类型:"string",编辑性:"可编辑",示例值:"已上传",数据来源:"运营在「编辑」抽屉上传（支持重新上传/移除）",逻辑:"C 端页面截图，仅作运营人工核对页面用，不参与任何逻辑；卡片缩略图点击可放大查看",用途:"人工核对页面与路径是否对应",节编号:"3.4"}
 ];
-window._新增字段分组["3.4"]=[{组名:"编辑（可写：开关/弹窗优先级/备注）",字段:["活动名称","开关","弹窗优先级","备注"]},{组名:"引导活动（可写 · 可配置多个 · 不触发领券积分）",字段:["引导活动-平台","引导活动-活动ID","引导活动-跳转方式","引导活动-去向","引导活动-appid"]}];
+window._新增字段分组["3.4"]=[{组名:"编辑（可写：开关/弹窗优先级/备注/页面路径/页面截图）",字段:["活动名称","开关","弹窗优先级","备注","页面路径（积分项卡片）","页面截图（积分项卡片）"]},{组名:"引导活动（可写 · 可配置多个 · 不触发领券积分）",字段:["引导活动-平台","引导活动-活动ID","引导活动-跳转方式","引导活动-去向","引导活动-appid"]}];
 window._弹窗初始化=window._弹窗初始化||{};
 
 window._表单字段按节["3.5"]=[
@@ -2015,14 +2006,8 @@ window._表单字段按节["3.5"]=[
   {名称:"通知节点",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"每日 0 点签到任务刷新时",数据来源:"C 端/服务端代码写死的业务事件",逻辑:"触发该订阅消息推送的业务事件；事件命中且模板状态=生效才推送",用途:"定义推送触发时机",节编号:"3.5"},
   {名称:"关联功能",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"3.3 签到",数据来源:"系统按模板归属回填",逻辑:"该订阅模板服务的后台模块，如 3.4 积分项 / 3.3 签到 / 11.3 兑换记录",用途:"模板与后台模块的归属映射",节编号:"3.5"},
   {名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"生效、停用",编辑性:"可编辑",示例值:"生效",数据来源:"运营在本页切换状态开关",逻辑:"本页可编辑字段；生效=通知节点命中即推送；停用=C 端不再发起该模板订阅授权、服务端不再推送；受 3.4 积分项「功能总开关」联动：总开关关闭则订阅一同停用且置灰不可开启（功能开订阅可自行开关，功能关订阅一定关）",用途:"订阅模板启停开关",节编号:"3.5"},
-  {名称:"跳转页面",类型原文:"enum",基础类型:"enum",枚举值:"3.6 页面路径映射全表（动态）",编辑性:"可编辑",示例值:"签到页（/pages/sign/index）",数据来源:"下拉选项实时引用 3.6 页面路径映射表，格式：页面名称（页面路径）；默认「不跳转」",逻辑:"用户点击订阅消息卡片后跳转的 C 端页面；映射删除后已引用该映射的模板自动回退为「不跳转」",用途:"订阅消息点击后的落地页配置",节编号:"3.5"},
+  {名称:"跳转页面",类型原文:"enum",基础类型:"enum",枚举值:"3.4 积分项卡片页面路径（动态）",编辑性:"可编辑",示例值:"签到积分（/pages/sign/index）",数据来源:"下拉选项实时引用 3.4 各积分项卡片的页面路径，格式：活动名称（页面路径）；默认「不跳转」",逻辑:"用户点击订阅消息卡片后跳转的 C 端页面；卡片清空页面路径后已引用该卡片的模板自动回退为「不跳转」",用途:"订阅消息点击后的落地页配置",节编号:"3.5"},
   {名称:"排序（订阅模板）",类型原文:"number",基础类型:"number",编辑性:"可编辑",示例值:"1",数据来源:"运营在 3.5 订阅配置操作列「编辑」抽屉中配置",逻辑:"全局默认优先级，数字越小优先级越高；同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条",用途:"同节点多模板冲突时的发送优先级仲裁",节编号:"3.5"}
-];
-
-window._表单字段按节["3.6"]=[
-  {名称:"页面名称",类型原文:"string",基础类型:"string",编辑性:"可编辑",示例值:"签到页",数据来源:"运营在本页新增/编辑时填写",逻辑:"C 端页面的可读名称，全表唯一不允许重复；作为订阅配置（3.5）「跳转页面」下拉的选项名",用途:"页面识别与下拉展示名",节编号:"3.6"},
-  {名称:"页面路径",类型原文:"string",基础类型:"string",编辑性:"可编辑",示例值:"/pages/sign/index",数据来源:"运营在本页新增/编辑时填写",逻辑:"小程序页面路径；与页面名称拼为「页面名称（页面路径）」展示在 3.5 跳转页面下拉；路径错误会导致订阅消息点击后落到报错页，上线前需真机验证",用途:"订阅消息点击跳转的目标路径",节编号:"3.6"},
-  {名称:"截图预览",类型原文:"image",基础类型:"string",编辑性:"可编辑",示例值:"已上传",数据来源:"运营在本页新增/编辑时上传",逻辑:"C 端页面截图，仅作运营人工核对页面用，不参与任何逻辑；列表点击可放大查看，支持重新上传/移除",用途:"人工核对页面与路径是否对应",节编号:"3.6"}
 ];
 
 window._表单字段按节["3.3"]=[
@@ -2235,17 +2220,16 @@ window._新增字段分组["11.8"]=[{组名:"积分资产",字段:["用户","当
 {名称:"引导活动-跳转方式",类型原文:"enum",基础类型:"enum",枚举值:"小程序、H5",编辑性:"可编辑",数据来源:"运营选择",逻辑:"小程序=appid 按平台只读带出；H5=需填去向；字段互斥显隐",用途:"引导活动承接形态",节编号:"3.4"},
 {名称:"引导活动-去向",类型原文:"enum",基础类型:"enum",枚举值:"淘宝APP、淘宝闪购APP",编辑性:"可编辑",数据来源:"运营选择（仅 H5 方式）",逻辑:"H5 方式下引导打开的目标 App",用途:"H5 承接 App",节编号:"3.4"},
 {名称:"引导活动-appid",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"按平台自动带出 3.1 全局配置的小程序 APPID",逻辑:"只读禁手改，平台切换自动换值；仅小程序方式显示",用途:"小程序跳转 appid",节编号:"3.4"},
+{名称:"页面路径（积分项卡片）",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营在 3.4 卡片「编辑」抽屉填写",逻辑:"该积分项对应 C 端落地页路径；是 3.5 跳转页面下拉的统一数据源，与活动名称拼为「活动名称（页面路径）」；清空后已引用该卡片的订阅模板自动回退为「不跳转」；路径错误会落到报错页，需真机验证",用途:"订阅消息点击跳转目标路径",节编号:"3.4"},
+{名称:"页面截图（积分项卡片）",类型原文:"image",基础类型:"string",编辑性:"可编辑",数据来源:"运营在 3.4 卡片「编辑」抽屉上传（支持重新上传/移除）",逻辑:"C 端页面截图，仅作人工核对，不参与逻辑；卡片缩略图点击可放大",用途:"人工核对页面与路径对应",节编号:"3.4"},
 {名称:"模板名称",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"微信公众平台创建后回填",逻辑:"订阅消息模板在微信公众平台创建，名称回填只读展示，本页不做模板内容编辑",用途:"订阅模板识别",节编号:"3.5"},
 {名称:"模板ID",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"微信公众平台分配后回填",逻辑:"微信订阅消息模板唯一ID，回填只读；服务端推送时按本ID指定模板",用途:"推送时定位微信模板",节编号:"3.5"},
 {名称:"订阅入口",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"C 端代码写死的订阅授权入口",逻辑:"用户在 C 端该入口发起微信订阅授权；入口位置由 C 端写死，后台仅展示",用途:"记录订阅授权发生位置",节编号:"3.5"},
 {名称:"通知节点",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"C 端/服务端代码写死的业务事件",逻辑:"触发该订阅消息推送的业务事件；事件命中且模板状态=生效才推送",用途:"定义推送触发时机",节编号:"3.5"},
 {名称:"关联功能",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"系统按模板归属回填",逻辑:"该订阅模板服务的后台模块，如 3.4 积分项 / 3.3 签到 / 11.3 兑换记录",用途:"模板与后台模块归属映射",节编号:"3.5"},
 {名称:"状态（订阅模板）",类型原文:"enum",基础类型:"enum",枚举值:"生效、停用",编辑性:"可编辑",数据来源:"运营在 3.5 订阅配置切换状态开关",逻辑:"本页可编辑字段；停用后 C 端不再发起该模板订阅授权、服务端不再推送；受 3.4 积分项「功能总开关」联动：总开关关闭则订阅一同停用且置灰不可开启（功能关订阅一定关）",用途:"订阅模板启停开关",节编号:"3.5"},
-{名称:"跳转页面",类型原文:"enum",基础类型:"enum",枚举值:"3.6 页面路径映射全表（动态）",编辑性:"可编辑",数据来源:"下拉选项实时引用 3.6 页面路径映射表，格式：页面名称（页面路径）；默认「不跳转」",逻辑:"用户点击订阅消息卡片后跳转的 C 端页面；映射删除后已引用该映射的模板自动回退为「不跳转」",用途:"订阅消息点击后的落地页配置",节编号:"3.5"},
-{名称:"排序（订阅模板）",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"运营在 3.5 订阅配置操作列「编辑」抽屉中配置",逻辑:"全局默认优先级，数字越小优先级越高；同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条",用途:"同节点多模板冲突时的发送优先级仲裁",节编号:"3.5"},
-{名称:"页面名称",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营在 3.6 新增/编辑时填写",逻辑:"C 端页面可读名称，全表唯一；作为 3.5 跳转页面下拉选项名",用途:"页面识别与下拉展示名",节编号:"3.6"},
-{名称:"页面路径",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营在 3.6 新增/编辑时填写",逻辑:"小程序页面路径；与名称拼为「页面名称（页面路径）」展示在 3.5；路径错误会落到报错页，需真机验证",用途:"订阅消息点击跳转目标路径",节编号:"3.6"},
-{名称:"截图预览",类型原文:"image",基础类型:"string",编辑性:"可编辑",数据来源:"运营在 3.6 新增/编辑时上传",逻辑:"C 端页面截图，仅作人工核对，不参与逻辑；列表点击可放大",用途:"人工核对页面与路径对应",节编号:"3.6"}
+{名称:"跳转页面",类型原文:"enum",基础类型:"enum",枚举值:"3.4 积分项卡片页面路径（动态）",编辑性:"可编辑",数据来源:"下拉选项实时引用 3.4 各积分项卡片的页面路径，格式：活动名称（页面路径）；默认「不跳转」",逻辑:"用户点击订阅消息卡片后跳转的 C 端页面；卡片清空页面路径后已引用该卡片的模板自动回退为「不跳转」",用途:"订阅消息点击后的落地页配置",节编号:"3.5"},
+{名称:"排序（订阅模板）",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"运营在 3.5 订阅配置操作列「编辑」抽屉中配置",逻辑:"全局默认优先级，数字越小优先级越高；同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条",用途:"同节点多模板冲突时的发送优先级仲裁",节编号:"3.5"}
 );
 
 // ╔═ 本项目定制（仅业务脚本内扩展，母版与 MD 未改）：3.1/3.3 配置型叶子 ═╗
@@ -2373,32 +2357,46 @@ function 保存页面配置(节编号) {
 <script id="js-3.4活动卡片">
 (function(){
   var APPID地图={'美团':'wxde8ac0a21135c07d','饿了么':'wxece3a9a4c82f58c9'};
-  // 活动卡片数据源：名称/开关/优先级/备注 + 引导活动[] + 关联页面{页面:[],弹窗:[]}（关联页面由 C 端写死，后台只读）
+  /* 演示截图：内联 SVG 生成简易手机页示意（演示环境，正式环境为运营上传的真实截图） */
+  function 演示截图(标题,主色,辅色){
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="180" height="320" viewBox="0 0 180 320">'
+      +'<rect width="180" height="320" fill="#f8fafc"/>'
+      +'<rect width="180" height="26" fill="#fff"/><text x="90" y="17" font-size="10" fill="#64748b" text-anchor="middle">9:41</text>'
+      +'<rect y="26" width="180" height="34" fill="'+主色+'"/><text x="90" y="47" font-size="12" fill="#fff" text-anchor="middle" font-weight="bold">'+标题+'</text>'
+      +'<rect x="14" y="72" width="152" height="60" rx="8" fill="#fff" stroke="#e2e8f0"/><rect x="26" y="86" width="80" height="10" rx="5" fill="'+辅色+'"/><rect x="26" y="104" width="120" height="8" rx="4" fill="#e2e8f0"/>'
+      +'<rect x="14" y="144" width="74" height="70" rx="8" fill="#fff" stroke="#e2e8f0"/><rect x="92" y="144" width="74" height="70" rx="8" fill="#fff" stroke="#e2e8f0"/>'
+      +'<rect x="26" y="158" width="50" height="8" rx="4" fill="#e2e8f0"/><rect x="104" y="158" width="50" height="8" rx="4" fill="#e2e8f0"/>'
+      +'<rect x="14" y="226" width="152" height="34" rx="17" fill="'+主色+'" opacity=".9"/><text x="90" y="247" font-size="11" fill="#fff" text-anchor="middle">主要按钮</text>'
+      +'<rect y="286" width="180" height="34" fill="#fff" stroke="#e2e8f0"/><circle cx="45" cy="303" r="7" fill="#e2e8f0"/><circle cx="90" cy="303" r="7" fill="'+辅色+'"/><circle cx="135" cy="303" r="7" fill="#e2e8f0"/>'
+      +'</svg>';
+    return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
+  }
+  // 活动卡片数据源：名称/开关/优先级/备注/页面路径/截图 + 引导活动[] + 关联页面{页面:[],弹窗:[]}（关联页面由 C 端写死，后台只读）
   window._积分项数据=[
-    {id:'sign',名称:'签到积分',开关:'生效',弹窗优先级:10,备注:'每日签到时段命中；签到完成发签到积分',
+    {id:'sign',名称:'签到积分',开关:'生效',弹窗优先级:10,备注:'每日签到时段命中；签到完成发签到积分',页面路径:'/pages/sign/index',截图:演示截图('签到积分','#0f6b8f','#7dd3fc'),
      引导活动:[],  /* 引导活动后台写死，不可配置（仅下午茶/夜宵可配） */
      关联页面:{页面:[{名称:'首页积分入口',位置:'首页 · 顶部签到区',形态:'图标入口'}],弹窗:[]}},
-    {id:'coupon',名称:'红包领取',开关:'生效',弹窗优先级:20,备注:'领券中心命中；领券发红包领取积分（每卡每日限 1 次）',
+    {id:'coupon',名称:'红包领取',开关:'生效',弹窗优先级:20,备注:'领券中心命中；领券发红包领取积分（每卡每日限 1 次）',页面路径:'/pages/coupon/index',截图:演示截图('红包领取','#b45309','#fcd34d'),
      引导活动:[],
      关联页面:{页面:[],弹窗:[{名称:'toast首页弹窗',类型:'toast',触发:'首页红包卡当日可领时'}]}},
-    {id:'order',名称:'订单到账',开关:'生效',弹窗优先级:30,备注:'订单已付款命中；发订单到账积分（佣金×50%×2000）',
+    {id:'order',名称:'订单到账',开关:'生效',弹窗优先级:30,备注:'订单已付款命中；发订单到账积分（佣金×50%×2000）',页面路径:'/pages/points/detail',截图:演示截图('订单到账','#027a48','#6ee7b7'),
      引导活动:[],  /* 引导活动后台写死，不可配置（仅下午茶/夜宵可配） */
      关联页面:{页面:[],弹窗:[{名称:'积分到账',类型:'半屏抽屉',触发:'外卖订单已付款回传'}]}},
-    {id:'receipt',名称:'小票积分',开关:'生效',弹窗优先级:40,备注:'上传小票 OCR 识别成功命中；发小票积分（每个客户仅一次）',
+    {id:'receipt',名称:'小票积分',开关:'生效',弹窗优先级:40,备注:'上传小票 OCR 识别成功命中；发小票积分（每个客户仅一次）',页面路径:'/pages/receipt/upload',截图:演示截图('小票积分','#7c3aed','#c4b5fd'),
      引导活动:[],  /* 引导活动后台写死，不可配置（仅下午茶/夜宵可配） */
      关联页面:{页面:[],弹窗:[
        {名称:'A-1 上传引导抽屉',类型:'半屏抽屉',触发:'「我的 → 上传小票」点击'},
        {名称:'A-2 识别小票',类型:'整页',触发:'拍照后 OCR 识别中（倒计时 5s）'},
        {名称:'A-3 识别成功弹窗',类型:'半屏抽屉',触发:'OCR 识别成功'}]}},
-    {id:'newuser',名称:'新人积分',开关:'生效',弹窗优先级:50,备注:'新用户首次进入命中；发新人积分',
+    {id:'newuser',名称:'新人积分',开关:'生效',弹窗优先级:50,备注:'新用户首次进入命中；发新人积分',页面路径:'/pages/index/index',截图:演示截图('新人积分','#0369a1','#93c5fd'),
      引导活动:[],  /* 引导活动后台写死，不可配置（仅下午茶/夜宵可配） */
      关联页面:{页面:[],弹窗:[]}},
-    {id:'pm',名称:'下午茶',开关:'生效',弹窗优先级:60,备注:'每日 13:30-18:00 命中；时段内下单额外 +100 积分（见 3.1）',
+    {id:'pm',名称:'下午茶',开关:'生效',弹窗优先级:60,备注:'每日 13:30-18:00 命中；时段内下单额外 +100 积分（见 3.1）',页面路径:'/pages/activity/tea',截图:演示截图('下午茶','#c2410c','#fdba74'),
      引导活动:[
        {平台:'美团',活动ID:'ACT-PM-AF',跳转方式:'小程序',去向:'',appid:APPID地图['美团']},
        {平台:'饿了么',活动ID:'ACT-PM-AF-ELE',跳转方式:'H5',去向:'淘宝闪购APP',appid:''}],
      关联页面:{页面:[],弹窗:[{名称:'A-2 时段额外积分弹窗',类型:'半屏抽屉',触发:'每日 13:30-18:00 打开小程序时'}]}},
-    {id:'night',名称:'夜宵积分',开关:'生效',弹窗优先级:70,备注:'每日 18:30-次日 01:00 命中；时段内下单额外 +200 积分（见 3.1）',
+    {id:'night',名称:'夜宵积分',开关:'生效',弹窗优先级:70,备注:'每日 18:30-次日 01:00 命中；时段内下单额外 +200 积分（见 3.1）',页面路径:'/pages/activity/night',截图:演示截图('夜宵积分','#334155','#94a3b8'),
      引导活动:[{平台:'饿了么',活动ID:'ACT-NIGHT',跳转方式:'H5',去向:'淘宝闪购APP',appid:''}],
      关联页面:{页面:[],弹窗:[{名称:'A-2 时段额外积分弹窗',类型:'半屏抽屉',触发:'每日 18:30-次日 01:00 打开小程序时'}]}}
   ];
@@ -2410,21 +2408,22 @@ function 保存页面配置(节编号) {
   function 开抽屉(标题){$('jf标题').textContent=标题;$('积分项遮罩').classList.add('show');$('积分项抽屉').classList.add('show');}
   window.关闭积分项抽屉=function(){$('积分项遮罩').classList.remove('show');$('积分项抽屉').classList.remove('show');};
 
-  /* ── 卡片列表：活动名称 / 弹窗优先级 / 备注 / 是否配置引导活动 ── */
+  /* ── 卡片列表：活动名称 / 弹窗优先级 / 备注 / 页面路径 / 页面截图（不展示引导活动行，引导逻辑不变） ── */
   function 渲染卡片(){
     var box=$('积分项卡片区'); if(!box) return;
     var h='';
     window._积分项数据.forEach(function(d,i){
-      var on=d.开关==='生效', n=(d.引导活动||[]).length;
+      var on=d.开关==='生效';
       var 可配引导 = (d.id==='pm'||d.id==='night');  /* 后台写死：仅下午茶/夜宵可配置引导活动，其余入口置灰 */
-      var chip=n>0?'<span class="jf-g-on">已配置 '+n+' 个</span>':'<span class="jf-g-off">未配置</span>';
+      var 图=d.截图?'<img class="jf-thumb" src="'+d.截图+'" onclick="放大图片(this)" alt="">':'<span class="jf-thumb none">未上传</span>';
       h+='<div class="jf-card'+(on?'':' jf-off')+'">'
         +'<div class="jf-head"><span class="jf-name">'+esc(d.名称)+'</span>'
         +'<span class="jf-status '+(on?'jf-on':'jf-off')+'"><i></i>'+(on?'生效中':'已停用')+'</span></div>'
         +'<div class="jf-body">'
         +'<div class="jf-row"><span class="jf-k">弹窗优先级</span><span class="jf-v">'+esc(d.弹窗优先级)+'</span></div>'
         +'<div class="jf-row"><span class="jf-k">备注</span><span class="jf-v jf-clamp">'+esc(d.备注||'—')+'</span></div>'
-        +'<div class="jf-row"><span class="jf-k">引导活动</span><span class="jf-v">'+chip+'</span></div>'
+        +'<div class="jf-row"><span class="jf-k">页面路径</span><span class="jf-v">'+esc(d.页面路径||'—')+'</span></div>'
+        +'<div class="jf-row"><span class="jf-k">页面截图</span><span class="jf-v">'+图+'</span></div>'
         +'</div>'
         +'<div class="jf-foot">'
         +'<button class="详情按钮" onclick="打开积分项编辑('+i+')">编辑</button>'
@@ -2438,27 +2437,71 @@ function 保存页面配置(节编号) {
   }
   window.渲染积分项卡片=渲染卡片;
 
-  /* ── 按钮 1：编辑（开关 / 弹窗优先级 / 备注） ── */
+  /* ── 按钮 1：编辑（开关 / 弹窗优先级 / 备注 / 页面路径 / 页面截图） ── */
+  var 截图草稿='';
   window.打开积分项编辑=function(i){
     当前索引=i; var d=window._积分项数据[i];
-    var h='<div class="jf-tip b">「编辑」仅维护 <b>3 个字段</b>：活动开关、弹窗优先级、备注；活动名称与触发逻辑写死在 C 端代码。</div>'
+    截图草稿=d.截图||'';
+    var h='<div class="jf-tip b">「编辑」仅维护 <b>5 个字段</b>：活动开关、弹窗优先级、备注、页面路径、页面截图；活动名称与触发逻辑写死在 C 端代码。页面路径是 3.5 订阅配置「跳转页面」下拉的统一数据源（格式：活动名称（页面路径））。</div>'
       +'<div class="field-card"><div class="field-card-header"><h4>基础配置</h4></div><div class="field-card-body">'
       +'<div class="field-row"><span class="field-label">活动名称</span><span class="field-control"><span class="field-readonly">'+esc(d.名称)+'</span><span class="jf-hint">C 端代码写死，只读 · 与积分流水枚举同名</span></span></div>'
       +'<div class="field-row"><span class="field-label">开关</span><span class="field-control"><select id="jf-开关" class="field-select"><option value="生效"'+sel('生效',d.开关)+'>生效</option><option value="不生效"'+sel('不生效',d.开关)+'>不生效</option></select><span class="jf-hint">不生效 = A 弹窗不触发 · B 页面入口隐藏 · C 积分不赠送</span></span></div>'
       +'<div class="field-row"><span class="field-label">弹窗优先级</span><span class="field-control"><input id="jf-优先级" class="field-input" type="number" min="1" step="1" value="'+esc(d.弹窗优先级)+'"><span class="jf-hint">正整数，数字越小越先弹出；多弹窗按先后依次弹出</span></span></div>'
       +'<div class="field-row"><span class="field-label">备注</span><span class="field-control"><textarea id="jf-备注" class="field-input" rows="3" placeholder="运营自我提示用">'+esc(d.备注||'')+'</textarea></span></div>'
+      +'<div class="field-row"><span class="field-label">页面路径</span><span class="field-control"><input id="jf-路径" class="field-input" value="'+esc(d.页面路径||'')+'" placeholder="如：/pages/sign/index"><span class="jf-hint">该积分项对应 C 端落地页；3.5 订阅配置「跳转页面」下拉实时引用；清空后已引用该卡片的订阅模板自动回退为「不跳转」</span></span></div>'
+      +'<div class="field-row"><span class="field-label">页面截图</span><span class="field-control"><span id="jf-截图区"></span><span class="jf-hint">运营上传的 C 端页面截图，仅作人工核对；支持重新上传 / 移除</span></span></div>'
       +'</div></div>';
     $('jf正文').innerHTML=h;
+    渲染编辑截图区();
     $('jf脚部').innerHTML='<button class="btn-secondary" onclick="关闭积分项抽屉()">取消</button><button class="主按钮" onclick="保存积分项编辑()">保存</button>';
     开抽屉('编辑 · '+d.名称);
   };
+  function 渲染编辑截图区(){
+    var box=$('jf-截图区'); if(!box) return;
+    box.innerHTML='<span class="jf-shot">'
+      +(截图草稿?'<img src="'+截图草稿+'" onclick="放大图片(this)" alt="">':'<span class="jf-shot-empty">未上传<br>截图</span>')
+      +'<span style="display:flex;flex-direction:column;gap:6px;">'
+      +'<label class="详情按钮" style="cursor:pointer;margin:0;">'+(截图草稿?'重新上传':'上传截图')+'<input type="file" accept="image/*" style="display:none;" onchange="卡片截图上传(this)"></label>'
+      +(截图草稿?'<button class="删除按钮" onclick="卡片截图移除()">移除</button>':'')
+      +'</span></span>';
+  }
+  window.卡片截图上传=function(input){
+    var f=input.files&&input.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(e){截图草稿=e.target.result;渲染编辑截图区();};
+    rd.readAsDataURL(f);
+  };
+  window.卡片截图移除=function(){截图草稿='';渲染编辑截图区();};
   window.保存积分项编辑=function(){
     var d=window._积分项数据[当前索引];
     var 状态=$('jf-开关').value, 优先级=parseInt($('jf-优先级').value,10), 备注=$('jf-备注').value.trim();
     if(!(优先级>=1)){显示提示('弹窗优先级请填写正整数（≥1）','信息',2200);$('jf-优先级').focus();return;}
     d.开关=状态; d.弹窗优先级=优先级; d.备注=备注;
-    关闭积分项抽屉(); 渲染卡片();
+    d.页面路径=$('jf-路径').value.trim(); d.截图=截图草稿;
+    关闭积分项抽屉(); 渲染卡片(); 刷新订阅跳转下拉();
     显示提示('已保存：'+d.名称+'（'+状态+'，优先级 '+优先级+'）· 演示环境不落库','成功',2400);
+  };
+
+  /* ── 3.5 订阅配置「跳转页面」下拉数据源：实时引用各卡片页面路径，格式 活动名称（页面路径） ── */
+  function 刷新订阅跳转下拉(){
+    var sels=document.querySelectorAll('.跳转页面下拉');
+    for(var k=0;k<sels.length;k++){
+      var s=sels[k], 选中=s.getAttribute('data-选中')||'';
+      var h='<option value="">不跳转</option>', 存在=false;
+      window._积分项数据.forEach(function(d){
+        if(!d.页面路径) return;
+        if(d.id===选中) 存在=true;
+        h+='<option value="'+esc(d.id)+'"'+(d.id===选中?' selected':'')+'>'+esc(d.名称)+'（'+esc(d.页面路径)+'）</option>';
+      });
+      if(选中&&!存在){选中='';s.setAttribute('data-选中','');}
+      s.innerHTML=h; s.value=选中;
+    }
+  }
+  window.刷新订阅跳转下拉=刷新订阅跳转下拉;
+  window.订阅跳转变更=function(sel){
+    sel.setAttribute('data-选中',sel.value);
+    var t=(sel.value&&sel.options[sel.selectedIndex])?sel.options[sel.selectedIndex].text:'不跳转';
+    显示提示('跳转页面已保存：'+t+'（演示环境，不落库）','成功',2200);
   };
 
   /* ── 按钮 2：引导活动（可多个；不触发领券积分） ── */
@@ -2545,127 +2588,6 @@ function 保存页面配置(节编号) {
   };
 
   渲染卡片();
-})();
-</script>
-<script id="js-3.6页面映射">
-(function(){
-  function $(id){return document.getElementById(id);}
-  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-  /* 演示截图：内联 SVG 生成简易手机页示意（演示环境，正式环境为运营上传的真实截图） */
-  function 演示截图(标题,主色,辅色){
-    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="180" height="320" viewBox="0 0 180 320">'
-      +'<rect width="180" height="320" fill="#f8fafc"/>'
-      +'<rect width="180" height="26" fill="#fff"/><text x="90" y="17" font-size="10" fill="#64748b" text-anchor="middle">9:41</text>'
-      +'<rect y="26" width="180" height="34" fill="'+主色+'"/><text x="90" y="47" font-size="12" fill="#fff" text-anchor="middle" font-weight="bold">'+标题+'</text>'
-      +'<rect x="14" y="72" width="152" height="60" rx="8" fill="#fff" stroke="#e2e8f0"/><rect x="26" y="86" width="80" height="10" rx="5" fill="'+辅色+'"/><rect x="26" y="104" width="120" height="8" rx="4" fill="#e2e8f0"/>'
-      +'<rect x="14" y="144" width="74" height="70" rx="8" fill="#fff" stroke="#e2e8f0"/><rect x="92" y="144" width="74" height="70" rx="8" fill="#fff" stroke="#e2e8f0"/>'
-      +'<rect x="26" y="158" width="50" height="8" rx="4" fill="#e2e8f0"/><rect x="104" y="158" width="50" height="8" rx="4" fill="#e2e8f0"/>'
-      +'<rect x="14" y="226" width="152" height="34" rx="17" fill="'+主色+'" opacity=".9"/><text x="90" y="247" font-size="11" fill="#fff" text-anchor="middle">主要按钮</text>'
-      +'<rect y="286" width="180" height="34" fill="#fff" stroke="#e2e8f0"/><circle cx="45" cy="303" r="7" fill="#e2e8f0"/><circle cx="90" cy="303" r="7" fill="'+辅色+'"/><circle cx="135" cy="303" r="7" fill="#e2e8f0"/>'
-      +'</svg>';
-    return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
-  }
-  /* 映射数据源：页面名称 ↔ 页面路径 ↔ 截图预览（运营上传） */
-  window._页面映射数据=[
-    {名称:'签到页',路径:'/pages/sign/index',截图:演示截图('签到页','#0f6b8f','#7dd3fc')},
-    {名称:'积分商城',路径:'/pages/mall/index',截图:演示截图('积分商城','#027a48','#6ee7b7')},
-    {名称:'领券中心',路径:'/pages/coupon/index',截图:演示截图('领券中心','#b45309','#fcd34d')},
-    {名称:'我的',路径:'/pages/mine/index',截图:演示截图('我的','#475569','#cbd5e1')}
-  ];
-  var 当前索引=-1, 截图草稿='';
-
-  /* ── 列表渲染 ── */
-  function 渲染映射表(){
-    var box=$('映射表体'); if(!box) return;
-    var h='';
-    window._页面映射数据.forEach(function(d,i){
-      var 图=d.截图?'<img class="map-thumb" src="'+d.截图+'" onclick="放大图片(this)" alt="">'
-        :'<span class="map-thumb none">未上传</span>';
-      h+='<tr class="数据行"><td class="列表单元格">'+(i+1)+'</td>'
-        +'<td class="列表单元格"><strong>'+esc(d.名称)+'</strong></td>'
-        +'<td class="列表单元格">'+esc(d.路径)+'</td>'
-        +'<td class="列表单元格">'+图+'</td>'
-        +'<td class="列表单元格 操作列"><button class="详情按钮" onclick="打开映射编辑('+i+')">编辑</button> <button class="删除按钮" onclick="删除映射('+i+')">删除</button></td></tr>';
-    });
-    box.innerHTML=h;
-    var ft=$('映射表脚注'); if(ft) ft.textContent='共 '+window._页面映射数据.length+' 条页面映射';
-  }
-
-  /* ── 订阅配置（3.5）「跳转页面」下拉联动：选项实时引用本表，格式 页面名称（页面路径） ── */
-  function 刷新订阅跳转下拉(){
-    var sels=document.querySelectorAll('.跳转页面下拉');
-    for(var k=0;k<sels.length;k++){
-      var s=sels[k], 选中=s.getAttribute('data-选中')||'';
-      var h='<option value="">不跳转</option>';
-      var 存在=false;
-      window._页面映射数据.forEach(function(d){
-        if(d.名称===选中) 存在=true;
-        h+='<option value="'+esc(d.名称)+'"'+(d.名称===选中?' selected':'')+'>'+esc(d.名称)+'（'+esc(d.路径)+'）</option>';
-      });
-      if(选中&&!存在){选中='';s.setAttribute('data-选中','');}
-      s.innerHTML=h; s.value=选中;
-    }
-  }
-  window.订阅跳转变更=function(sel){
-    sel.setAttribute('data-选中',sel.value);
-    显示提示('跳转页面已保存：'+(sel.value||'不跳转')+'（演示环境，不落库）','成功',2200);
-  };
-
-  /* ── 新增 / 编辑（复用积分项抽屉） ── */
-  window.打开映射编辑=function(i){
-    当前索引=i;
-    var d=i>=0?window._页面映射数据[i]:{名称:'',路径:'',截图:''};
-    截图草稿=d.截图||'';
-    var h='<div class="jf-tip b">'+(i>=0?'编辑页面映射':'新增页面映射')+'：维护 <b>页面名称 ↔ 页面路径</b>，截图由运营上传（仅作预览核对用）；保存后订阅配置（3.5）「跳转页面」下拉实时生效，格式：<b>页面名称（页面路径）</b>。</div>'
-      +'<div class="field-card"><div class="field-card-header"><h4>映射信息</h4></div><div class="field-card-body">'
-      +'<div class="field-row"><span class="field-label">页面名称</span><span class="field-control"><input id="map-名称" class="field-input" value="'+esc(d.名称)+'" placeholder="如：签到页"></span></div>'
-      +'<div class="field-row"><span class="field-label">页面路径</span><span class="field-control"><input id="map-路径" class="field-input" value="'+esc(d.路径)+'" placeholder="如：/pages/sign/index"></span></div>'
-      +'<div class="field-row"><span class="field-label">截图预览</span><span class="field-control"><span id="map-截图区"></span><span class="jf-hint">运营上传的 C 端页面截图，仅作人工核对；支持重新上传 / 移除</span></span></div>'
-      +'</div></div>';
-    $('jf正文').innerHTML=h;
-    $('jf脚部').innerHTML='<button class="btn-secondary" onclick="关闭积分项抽屉()">取消</button><button class="主按钮" onclick="保存映射()">保存</button>';
-    渲染截图区();
-    $('jf标题').textContent=(i>=0?'编辑 · '+d.名称:'新增页面映射');
-    $('积分项遮罩').classList.add('show');$('积分项抽屉').classList.add('show');
-  };
-  function 渲染截图区(){
-    var box=$('map-截图区'); if(!box) return;
-    box.innerHTML='<span class="map-shot">'
-      +(截图草稿?'<img src="'+截图草稿+'" onclick="放大图片(this)" style="cursor:zoom-in;" alt="">':'<span class="map-shot-empty">未上传<br>截图</span>')
-      +'<span style="display:flex;flex-direction:column;gap:6px;">'
-      +'<label class="详情按钮" style="cursor:pointer;margin:0;">'+(截图草稿?'重新上传':'上传截图')+'<input type="file" accept="image/*" style="display:none;" onchange="映射截图上传(this)"></label>'
-      +(截图草稿?'<button class="删除按钮" onclick="映射截图移除()">移除</button>':'')
-      +'</span></span>';
-  }
-  window.映射截图上传=function(input){
-    var f=input.files&&input.files[0]; if(!f) return;
-    var rd=new FileReader();
-    rd.onload=function(e){截图草稿=e.target.result;渲染截图区();};
-    rd.readAsDataURL(f);
-  };
-  window.映射截图移除=function(){截图草稿='';渲染截图区();};
-
-  window.保存映射=function(){
-    var 名称=$('map-名称').value.trim(), 路径=$('map-路径').value.trim();
-    if(!名称){显示提示('请填写页面名称','信息',2200);$('map-名称').focus();return;}
-    if(!路径){显示提示('请填写页面路径','信息',2200);$('map-路径').focus();return;}
-    for(var k=0;k<window._页面映射数据.length;k++){
-      if(k!==当前索引&&window._页面映射数据[k].名称===名称){显示提示('页面名称「'+名称+'」已存在，请更换','信息',2400);$('map-名称').focus();return;}
-    }
-    if(当前索引>=0){var d=window._页面映射数据[当前索引];d.名称=名称;d.路径=路径;d.截图=截图草稿;}
-    else{window._页面映射数据.push({名称:名称,路径:路径,截图:截图草稿});}
-    关闭积分项抽屉(); 渲染映射表(); 刷新订阅跳转下拉();
-    显示提示('已保存：'+名称+'（'+路径+'）· 演示环境不落库','成功',2400);
-  };
-  window.删除映射=function(i){
-    var d=window._页面映射数据[i];
-    if(!confirm('确定删除页面映射「'+d.名称+'（'+d.路径+'）」？\n删除后，已引用该映射的订阅模板「跳转页面」将自动回退为「不跳转」。')) return;
-    window._页面映射数据.splice(i,1);
-    渲染映射表(); 刷新订阅跳转下拉();
-    显示提示('已删除页面映射「'+d.名称+'」（演示环境，不落库）','成功',2200);
-  };
-
-  渲染映射表();
   刷新订阅跳转下拉();
 })();
 </script>
