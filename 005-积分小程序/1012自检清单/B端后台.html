@@ -1519,7 +1519,7 @@ textarea.field-input { max-width: 100%; }
 <table class="数据表格"><thead><tr><th class="列表表头">序号</th><th class="列表表头">功能</th><th class="列表表头">类型</th><th class="列表表头">涉及页面</th><th class="列表表头">说明</th></tr></thead><tbody>
 <tr class="数据行"><td class="列表单元格">1</td><td class="列表单元格"><strong>积分项管理</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.4</td><td class="列表单元格">本页以活动卡片为单位管理 7 个积分项（签到积分/红包领取/订单到账/小票积分/新人积分/下午茶/夜宵积分），各活动触发逻辑与关联页面/弹窗清单写死在 C 端代码；卡片只配三件事：活动开关、弹窗优先级、引导活动；每张卡片 3 个操作按钮：①编辑-开关/弹窗优先级/备注/页面路径/截图，②引导活动-平台/活动ID/跳转方式/去向/appid（可配置多个；引导活动不触发领券积分），③关联页面-只读列表，含页面、弹窗管理两个维度；卡片面板上展示 活动名称/弹窗优先级/备注/页面路径/截图（截图运营上传、点击放大；不展示引导活动行，引导逻辑不变）；活动开关关闭后 C 端三停：A弹窗不触发、B页面入口隐藏、C积分不赠送；积分明细（11.2）流水类型与活动卡片名称一一对应，共 7 类</td></tr>
 <tr class="数据行"><td class="列表单元格">2</td><td class="列表单元格"><strong>时段加码激励</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.1</td><td class="列表单元格">下午茶时段(13:30-18:00)下单额外 +100 积分，夜宵时段(18:30-次日 01:00)下单额外 +200 积分；叠加在基础积分(佣金×50%×2000)之上；发放条件：时段内有订单即发（不论入口），发给下单人；APPID 更新为真实值（美团 wxde8ac0a21135c07d、饿了么 wxece3a9a4c82f58c9），3.4 编辑抽屉按平台自动回填</td></tr>
-<tr class="数据行"><td class="列表单元格">3</td><td class="列表单元格"><strong>订阅配置</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.5</td><td class="列表单元格">运营管理微信订阅消息模板，含模板名称/模板ID/订阅入口/通知节点/关联功能/跳转页面/状态 7 个字段；模板在微信公众平台创建后回填本页，前 5 个字段只读；「跳转页面」下拉可编辑，选项实时引用 3.4 积分项卡片的页面路径，格式：活动名称（页面路径），默认「不跳转」，卡片清空路径后自动回退；「状态」支持开关切换（生效/停用），停用后 C 端不再发起该模板的订阅授权、服务端不再推送该模板消息；且状态开关受 3.4 积分项「功能总开关」联动：总开关关闭时其名下订阅一同停用且置灰不可开启（功能开订阅可自行开关，功能关订阅一定关）；新增「排序」字段与操作列编辑抽屉（可改 排序/状态/跳转地址），页内附订阅触达 ASCII 判断树：同节点多模板命中仅发排序值最小的 1 条</td></tr>
+<tr class="数据行"><td class="列表单元格">3</td><td class="列表单元格"><strong>订阅配置</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.5</td><td class="列表单元格">运营管理微信订阅消息模板，含模板名称/模板ID/订阅入口/通知节点/关联功能/跳转页面/状态 7 个字段；模板在微信公众平台创建后回填本页，前 5 个字段只读；「跳转页面」下拉可编辑，分两组：「积分项」组选项实时引用 3.4 积分项卡片的页面路径，格式：活动名称（页面路径），卡片清空路径后自动回退；「通用」组为固定枚举：首页、积分商城，不受卡片影响；默认「不跳转」；「状态」支持开关切换（生效/停用），停用后 C 端不再发起该模板的订阅授权、服务端不再推送该模板消息；且状态开关受 3.4 积分项「功能总开关」联动：总开关关闭时其名下订阅一同停用且置灰不可开启（功能开订阅可自行开关，功能关订阅一定关）；新增「排序」字段与操作列编辑抽屉（可改 排序/状态/跳转地址），页内附订阅触达 ASCII 判断树：同节点多模板命中仅发排序值最小的 1 条</td></tr>
 <tr class="数据行"><td class="列表单元格">4</td><td class="列表单元格"><strong>页面路径+截图（卡片内嵌）</strong></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">新增</span></td><td class="列表单元格">3.4</td><td class="列表单元格">每个积分项卡片内置「页面路径 + 页面截图」2 个字段：截图由运营上传，卡片缩略图点击可放大；编辑抽屉可改页面路径+截图（支持上传/重新上传/移除）；3.5 订阅配置「跳转页面」下拉以各卡片页面路径为统一数据源，格式：活动名称（页面路径），卡片清空路径后已引用的订阅模板自动回退为「不跳转」</td></tr>
 </tbody></table>
 <div class="列表脚注">共 4 项业务功能变更</div>
@@ -1625,7 +1625,7 @@ textarea.field-input { max-width: 100%; }
 <div id="积分项卡片区" class="jf-grid"></div>
 <div class="列表脚注">共 7 张活动卡片（积分项名称 = 积分明细流水类型名称，一一对应）</div>
 </div></section>
-<section class="页面面板" id="面_3_5" data-page="3.5"><div class="页面卡"><div class="页面头"><h2>订阅配置</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置订阅消息模板开关（运营配置后台 4 项之一）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">订阅配置</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">订阅模板由微信公众平台创建后回填本页，<strong>模板名称 / 模板ID / 订阅入口 / 通知节点 / 关联功能 5 个字段全部只读</strong>；本页可编辑 3 项（操作列「编辑」抽屉统一配置，状态也可在行内滑块直接切换）：①「排序」：全局默认优先级，同节点多模板命中仅发排序值最小的 1 条；②「跳转地址」下拉（选项来自 3.4 积分项卡片的页面路径，格式：活动名称（页面路径），用户点击订阅消息卡片后跳转该页面，默认「不跳转」）；③「状态」开关（生效/停用）：停用后 C 端不再发起该模板的订阅授权、服务端不再推送该模板消息；订阅开关不影响积分发放本身；<strong>状态开关受 3.4 积分项「功能总开关」联动</strong>：总开关关闭时，其名下订阅一同停用且置灰不可开启（功能开，订阅可自行开关；功能关，订阅一定关）——绑定关系：签到提醒→签到积分、积分到账→订单到账、活动过期提醒→下午茶/夜宵、兑换到账不送积分不受限</span></div></div></div>
+<section class="页面面板" id="面_3_5" data-page="3.5"><div class="页面卡"><div class="页面头"><h2>订阅配置</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置订阅消息模板开关（运营配置后台 4 项之一）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">订阅配置</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">订阅模板由微信公众平台创建后回填本页，<strong>模板名称 / 模板ID / 订阅入口 / 通知节点 / 关联功能 5 个字段全部只读</strong>；本页可编辑 3 项（操作列「编辑」抽屉统一配置，状态也可在行内滑块直接切换）：①「排序」：全局默认优先级，同节点多模板命中仅发排序值最小的 1 条；②「跳转地址」下拉（分两组：「积分项」组选项来自 3.4 积分项卡片的页面路径，格式：活动名称（页面路径）；「通用」组为固定枚举：首页、积分商城；用户点击订阅消息卡片后跳转该页面，默认「不跳转」）；③「状态」开关（生效/停用）：停用后 C 端不再发起该模板的订阅授权、服务端不再推送该模板消息；订阅开关不影响积分发放本身；<strong>状态开关受 3.4 积分项「功能总开关」联动</strong>：总开关关闭时，其名下订阅一同停用且置灰不可开启（功能开，订阅可自行开关；功能关，订阅一定关）——绑定关系：签到提醒→签到积分、积分到账→订单到账、活动过期提醒→下午茶/夜宵、兑换到账不送积分不受限</span></div></div></div>
 <style>.订阅开关{display:inline-block;padding:5px 14px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.6;white-space:nowrap;border:1px solid transparent;transition:all .15s;}.订阅开关:hover{filter:brightness(.96);}.订阅徽章{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.6;}.订阅徽章.on{background:#ecfdf3;color:#027a48;}.订阅徽章.off{background:#f1f5f9;color:#94a3b8;}
 .sub-switch{display:inline-block;width:40px;height:22px;border-radius:999px;background:#cbd5e1;position:relative;cursor:pointer;vertical-align:middle;transition:background .18s;flex:none;}
 .sub-switch i{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .18s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
@@ -1633,7 +1633,7 @@ textarea.field-input { max-width: 100%; }
 .sub-switch.on i{left:21px;}
 .sub-switch-label{margin-left:8px;font-size:12.5px;font-weight:600;vertical-align:middle;}
 .sub-switch-label.on{color:#027a48;}.sub-switch-label.off{color:#94a3b8;}</style>
-<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.8;">订阅模板由<strong>微信公众平台</strong>创建后回填到本页，本页只做<strong>开关管理</strong>，不做模板内容编辑；「跳转页面」下拉实时引用 <strong>3.4 积分项卡片的页面路径</strong>，格式为 <strong>活动名称（页面路径）</strong>。</div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.8;">订阅模板由<strong>微信公众平台</strong>创建后回填到本页，本页只做<strong>开关管理</strong>，不做模板内容编辑；「跳转页面」下拉分两组：<strong>「积分项」组</strong>实时引用 3.4 积分项卡片的页面路径，格式为 活动名称（页面路径）；<strong>「通用」组</strong>为固定枚举：首页、积分商城。</div>
 <pre style="margin:0 0 12px;font-family:Consolas,'SFMono-Regular',Menlo,monospace;font-size:12.5px;line-height:1.85;white-space:pre;overflow-x:auto;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px;">用户能否收到订阅通知？
 │
 ├── A. 活动关了（3.4 积分项「功能总开关」= 关）
@@ -1655,7 +1655,7 @@ textarea.field-input { max-width: 100%; }
 <tr class="数据行"><td class="列表单元格"><strong>兑换到账</strong></td><td class="列表单元格">SUB2026-EXCH-0003</td><td class="列表单元格">积分商城兑换确认页</td><td class="列表单元格">现金打款到账微信零钱时</td><td class="列表单元格">11.3 兑换记录 / 11.5 提现单</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="newuser" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_2">3</td><td class="列表单元格" id="订阅状态_2"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(2)">编辑</button></td></tr>
 <tr class="数据行"><td class="列表单元格"><strong>活动过期提醒</strong></td><td class="列表单元格">SUB2026-ACT-0004</td><td class="列表单元格">活动详情页「活动过期提醒」</td><td class="列表单元格">引导活动/红包卡过期前 24 小时</td><td class="列表单元格">3.4 积分项（引导活动）</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="pm" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_3">4</td><td class="列表单元格" id="订阅状态_3"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(3)">编辑</button></td></tr>
 </tbody></table>
-<div class="列表脚注">共 4 条订阅模板（1 条停用）；模板由微信公众平台创建后回填，无新增/删除；操作列「编辑」抽屉可改 排序 / 状态 / 跳转地址 3 项（状态也可在行内滑块直接切换，两处同步）；「跳转页面」下拉选项来自 3.4 积分项卡片的页面路径，格式为 活动名称（页面路径）；排序为全局默认优先级，同节点多模板命中时仅发排序值最小的 1 条（详见页内 ASCII 判断树）</div>
+<div class="列表脚注">共 4 条订阅模板（1 条停用）；模板由微信公众平台创建后回填，无新增/删除；操作列「编辑」抽屉可改 排序 / 状态 / 跳转地址 3 项（状态也可在行内滑块直接切换，两处同步）；「跳转页面」下拉分两组：「积分项」组选项来自 3.4 积分项卡片的页面路径，格式为 活动名称（页面路径）；「通用」组为固定枚举：首页、积分商城；排序为全局默认优先级，同节点多模板命中时仅发排序值最小的 1 条（详见页内 ASCII 判断树）</div>
 </div></section>
 <section class="页面面板" id="面_11_2" data-page="11.2"><div class="页面卡"><div class="页面头"><h2>积分明细</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑬</span><span class="流程信息卡-环节名">当前环节：⑬ 查询用户资产与各类记录（积分流水维度）</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 数据记录 &gt;</span> <span class="路径末段">积分明细</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">该表是用户积分账户的总账本，用户资产总览（11.8）的当前积分/累计获取/已消耗全部由本表汇总</span></div></div></div>
 <div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索流水号或用户"></div><div class="筛选区"><span class="筛选标签">流水类型：</span><select class="筛选下拉"><option>全部</option><option>签到积分</option><option>红包领取</option><option>订单到账</option><option style="color:#dc2626;font-weight:700;">小票积分</option><option>新人积分</option><option>下午茶</option><option>夜宵积分</option><option>主动兑换</option><option>自动兑换</option></select><span class="筛选标签">发生时间：</span><select class="筛选下拉"><option>近 7 天</option><option>近 30 天</option><option>全部</option></select></div></div>
@@ -1849,9 +1849,8 @@ window.订阅抽屉状态切换=function(){
 window.打开订阅抽屉=function(i){
   _订阅编辑idx=i;
   var on=window._订阅状态数据[i]==='生效';
-  var 选项='<option value="">不跳转</option>';
-  (window._积分项数据||[]).forEach(function(d){ if(!d.页面路径) return; 选项+='<option value="'+d.id+'">'+d.名称+'（'+d.页面路径+'）</option>'; });
-  _$gid('jf正文').innerHTML='<div class="jf-tip b">本抽屉仅可编辑 <b>排序 / 状态 / 跳转地址</b> 3 项，其余字段由微信公众平台回填只读；「状态」与列表行内滑块开关同步。排序为全局默认优先级：数字越小优先级越高，同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条。</div>'
+  var 选项=(typeof window.构建跳转选项==='function')?window.构建跳转选项(window._订阅跳转选中[i]).html:'<option value="">不跳转</option>';
+  _$gid('jf正文').innerHTML='<div class="jf-tip b">本抽屉仅可编辑 <b>排序 / 状态 / 跳转地址</b> 3 项，其余字段由微信公众平台回填只读；「状态」与列表行内滑块开关同步。「跳转地址」分两组：「积分项」组来自 3.4 积分项卡片的页面路径，「通用」组为固定枚举（首页、积分商城）。排序为全局默认优先级：数字越小优先级越高，同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条。</div>'
     +'<div class="field-card"><div class="field-card-header"><h4>订阅模板配置</h4></div><div class="field-card-body">'
     +'<div class="field-row"><span class="field-label">模板名称</span><span class="field-control"><input class="field-input" value="'+window._订阅模板名[i]+'" disabled style="background:#f1f5f9;color:#94a3b8;"></span></div>'
     +'<div class="field-row"><span class="field-label">排序</span><span class="field-control"><input id="订阅编辑排序" type="number" min="1" step="1" class="field-input" value="'+window._订阅排序[i]+'"></span></div>'
@@ -2006,7 +2005,7 @@ window._表单字段按节["3.5"]=[
   {名称:"通知节点",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"每日 0 点签到任务刷新时",数据来源:"C 端/服务端代码写死的业务事件",逻辑:"触发该订阅消息推送的业务事件；事件命中且模板状态=生效才推送",用途:"定义推送触发时机",节编号:"3.5"},
   {名称:"关联功能",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"3.3 签到",数据来源:"系统按模板归属回填",逻辑:"该订阅模板服务的后台模块，如 3.4 积分项 / 3.3 签到 / 11.3 兑换记录",用途:"模板与后台模块的归属映射",节编号:"3.5"},
   {名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"生效、停用",编辑性:"可编辑",示例值:"生效",数据来源:"运营在本页切换状态开关",逻辑:"本页可编辑字段；生效=通知节点命中即推送；停用=C 端不再发起该模板订阅授权、服务端不再推送；受 3.4 积分项「功能总开关」联动：总开关关闭则订阅一同停用且置灰不可开启（功能开订阅可自行开关，功能关订阅一定关）",用途:"订阅模板启停开关",节编号:"3.5"},
-  {名称:"跳转页面",类型原文:"enum",基础类型:"enum",枚举值:"3.4 积分项卡片页面路径（动态）",编辑性:"可编辑",示例值:"签到积分（/pages/sign/index）",数据来源:"下拉选项实时引用 3.4 各积分项卡片的页面路径，格式：活动名称（页面路径）；默认「不跳转」",逻辑:"用户点击订阅消息卡片后跳转的 C 端页面；卡片清空页面路径后已引用该卡片的模板自动回退为「不跳转」",用途:"订阅消息点击后的落地页配置",节编号:"3.5"},
+  {名称:"跳转页面",类型原文:"enum",基础类型:"enum",枚举值:"积分项组：3.4 卡片页面路径（动态）；通用组：首页/积分商城（固定）",编辑性:"可编辑",示例值:"签到积分（/pages/sign/index）",数据来源:"下拉分组展示：「积分项」组实时引用 3.4 各积分项卡片的页面路径，格式：活动名称（页面路径）；「通用」组为固定枚举：首页（/pages/index/index）、积分商城（/pages/mall/index）；默认「不跳转」",逻辑:"用户点击订阅消息卡片后跳转的 C 端页面；积分项卡片清空页面路径后已引用该卡片的模板自动回退为「不跳转」，通用枚举固定存在不受卡片影响",用途:"订阅消息点击后的落地页配置",节编号:"3.5"},
   {名称:"排序（订阅模板）",类型原文:"number",基础类型:"number",编辑性:"可编辑",示例值:"1",数据来源:"运营在 3.5 订阅配置操作列「编辑」抽屉中配置",逻辑:"全局默认优先级，数字越小优先级越高；同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条",用途:"同节点多模板冲突时的发送优先级仲裁",节编号:"3.5"}
 ];
 
@@ -2482,19 +2481,36 @@ function 保存页面配置(节编号) {
     显示提示('已保存：'+d.名称+'（'+状态+'，优先级 '+优先级+'）· 演示环境不落库','成功',2400);
   };
 
-  /* ── 3.5 订阅配置「跳转页面」下拉数据源：实时引用各卡片页面路径，格式 活动名称（页面路径） ── */
+  /* ── 3.5 订阅配置「跳转页面」下拉数据源：分组展示（积分项=各卡片页面路径；通用=固定枚举） ── */
+  window._通用跳转枚举=[
+    {id:'_home',名称:'首页',页面路径:'/pages/index/index'},
+    {id:'_mall',名称:'积分商城',页面路径:'/pages/mall/index'}
+  ];
+  /* 统一构建分组选项（optgroup）；返回 {html, 存在}，供行内下拉与订阅编辑抽屉共用 */
+  function 构建跳转选项(选中){
+    var h='<option value="">不跳转</option>', 存在=false;
+    h+='<optgroup label="积分项">';
+    window._积分项数据.forEach(function(d){
+      if(!d.页面路径) return;
+      if(d.id===选中) 存在=true;
+      h+='<option value="'+esc(d.id)+'"'+(d.id===选中?' selected':'')+'>'+esc(d.名称)+'（'+esc(d.页面路径)+'）</option>';
+    });
+    h+='</optgroup><optgroup label="通用">';
+    window._通用跳转枚举.forEach(function(d){
+      if(d.id===选中) 存在=true;
+      h+='<option value="'+d.id+'"'+(d.id===选中?' selected':'')+'>'+d.名称+'（'+d.页面路径+'）</option>';
+    });
+    h+='</optgroup>';
+    return {html:h, 存在:存在};
+  }
+  window.构建跳转选项=构建跳转选项;
   function 刷新订阅跳转下拉(){
     var sels=document.querySelectorAll('.跳转页面下拉');
     for(var k=0;k<sels.length;k++){
       var s=sels[k], 选中=s.getAttribute('data-选中')||'';
-      var h='<option value="">不跳转</option>', 存在=false;
-      window._积分项数据.forEach(function(d){
-        if(!d.页面路径) return;
-        if(d.id===选中) 存在=true;
-        h+='<option value="'+esc(d.id)+'"'+(d.id===选中?' selected':'')+'>'+esc(d.名称)+'（'+esc(d.页面路径)+'）</option>';
-      });
-      if(选中&&!存在){选中='';s.setAttribute('data-选中','');}
-      s.innerHTML=h; s.value=选中;
+      var r=构建跳转选项(选中);
+      if(选中&&!r.存在){选中='';s.setAttribute('data-选中','');}
+      s.innerHTML=r.html; s.value=选中;
     }
   }
   window.刷新订阅跳转下拉=刷新订阅跳转下拉;
