@@ -1850,8 +1850,9 @@ function 切换订阅状态(i){
 window._订阅排序=[1,2,3,4];
 window._订阅跳转选中=['签到页','积分商城','积分商城','领券中心'];
 var _订阅编辑idx=null;
+function _$gid(id){ return document.getElementById(id); }
 window.订阅抽屉状态切换=function(){
-  var s=$('订阅编辑状态'), t=$('订阅编辑状态字'); if(!s) return;
+  var s=_$gid('订阅编辑状态'), t=_$gid('订阅编辑状态字'); if(!s) return;
   var on=!s.classList.contains('on');
   s.className='sub-switch '+(on?'on':'off');
   t.className='sub-switch-label '+(on?'on':'off'); t.textContent=on?'生效':'停用';
@@ -1861,27 +1862,27 @@ window.打开订阅抽屉=function(i){
   var on=window._订阅状态数据[i]==='生效';
   var 选项='<option value="">不跳转</option>';
   (window._页面映射数据||[]).forEach(function(m){ 选项+='<option value="'+m.名称+'">'+m.名称+'（'+m.路径+'）</option>'; });
-  $('jf正文').innerHTML='<div class="jf-tip b">本抽屉仅可编辑 <b>排序 / 状态 / 跳转地址</b> 3 项，其余字段由微信公众平台回填只读；「状态」与列表行内滑块开关同步。排序为全局默认优先级：数字越小优先级越高，同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条。</div>'
+  _$gid('jf正文').innerHTML='<div class="jf-tip b">本抽屉仅可编辑 <b>排序 / 状态 / 跳转地址</b> 3 项，其余字段由微信公众平台回填只读；「状态」与列表行内滑块开关同步。排序为全局默认优先级：数字越小优先级越高，同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条。</div>'
     +'<div class="field-card"><div class="field-card-header"><h4>订阅模板配置</h4></div><div class="field-card-body">'
     +'<div class="field-row"><span class="field-label">模板名称</span><span class="field-control"><input class="field-input" value="'+window._订阅模板名[i]+'" disabled style="background:#f1f5f9;color:#94a3b8;"></span></div>'
     +'<div class="field-row"><span class="field-label">排序</span><span class="field-control"><input id="订阅编辑排序" type="number" min="1" step="1" class="field-input" value="'+window._订阅排序[i]+'"></span></div>'
     +'<div class="field-row"><span class="field-label">状态</span><span class="field-control"><span class="sub-switch '+(on?'on':'off')+'" id="订阅编辑状态" onclick="订阅抽屉状态切换()"><i></i></span><span id="订阅编辑状态字" class="sub-switch-label '+(on?'on':'off')+'">'+(on?'生效':'停用')+'</span><span class="jf-hint">活动关闭时订阅等同关闭（见页内 ASCII 判断树）</span></span></div>'
     +'<div class="field-row"><span class="field-label">跳转地址</span><span class="field-control"><select id="订阅编辑跳转" class="field-input">'+选项+'</select></span></div>'
     +'</div></div>';
-  $('订阅编辑跳转').value=window._订阅跳转选中[i]||'';
-  $('jf脚部').innerHTML='<button class="btn-secondary" onclick="关闭积分项抽屉()">取消</button><button class="主按钮" onclick="保存订阅编辑()">保存</button>';
-  $('jf标题').textContent='编辑 · '+window._订阅模板名[i];
-  $('积分项遮罩').classList.add('show');$('积分项抽屉').classList.add('show');
+  _$gid('订阅编辑跳转').value=window._订阅跳转选中[i]||'';
+  _$gid('jf脚部').innerHTML='<button class="btn-secondary" onclick="关闭积分项抽屉()">取消</button><button class="主按钮" onclick="保存订阅编辑()">保存</button>';
+  _$gid('jf标题').textContent='编辑 · '+window._订阅模板名[i];
+  _$gid('积分项遮罩').classList.add('show');_$gid('积分项抽屉').classList.add('show');
 };
 window.保存订阅编辑=function(){
   var i=_订阅编辑idx; if(i==null) return;
-  var v=parseInt($('订阅编辑排序').value,10);
+  var v=parseInt(_$gid('订阅编辑排序').value,10);
   if(isNaN(v)||v<1){ 显示提示('排序需为 ≥1 的整数','信息',2400); return; }
   window._订阅排序[i]=v;
   var 序格=document.getElementById('订阅排序_'+i); if(序格) 序格.textContent=v;
-  var on=$('订阅编辑状态').classList.contains('on');
+  var on=_$gid('订阅编辑状态').classList.contains('on');
   window._订阅状态数据[i]=on?'生效':'停用'; 渲染订阅开关();
-  window._订阅跳转选中[i]=$('订阅编辑跳转').value;
+  window._订阅跳转选中[i]=_$gid('订阅编辑跳转').value;
   var sel=document.querySelectorAll('.跳转页面下拉')[i];
   if(sel){ sel.setAttribute('data-选中',window._订阅跳转选中[i]); if(typeof 刷新订阅跳转下拉==='function') 刷新订阅跳转下拉(); }
   关闭积分项抽屉();
