@@ -1561,6 +1561,8 @@ textarea.field-input { max-width: 100%; }
 .jf-foot{display:flex;gap:8px;padding:9px 14px;border-top:1px solid #f1f5f9;}
 .jf-btn{flex:1;padding:6px 0;border-radius:5px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:12.5px;cursor:pointer;transition:all .15s;font-family:inherit;}
 .jf-btn:hover{border-color:#1d4ed8;color:#1d4ed8;background:#f8fbff;}
+.jf-btn:disabled{cursor:not-allowed;border-color:#e2e8f0;background:#f8fafc;color:#cbd5e1;}
+.jf-btn:disabled:hover{border-color:#e2e8f0;color:#cbd5e1;background:#f8fafc;}
 .jf-foot .详情按钮{flex:1;padding:6px 0;text-align:center;font-size:12.5px;}
 .jf-hint{display:block;font-size:11.5px;color:#94a3b8;margin-top:3px;line-height:1.6;}
 .jf-tip{border-radius:8px;padding:10px 14px;font-size:12.5px;line-height:1.8;margin-bottom:12px;}
@@ -1608,6 +1610,10 @@ textarea.field-input { max-width: 100%; }
 ├─ 字段类型：数字（越小越优先）
 └─ 说明：同一时刻多个弹窗同时命中触发条件时，按优先级先后顺序依次弹出（非只弹一个）；仅总开关已开启的活动才会有弹窗</pre>
 </div>
+<div class="jf-tip w"><strong>ⓘ 引导活动可配置性（后台写死 · 不对运营开放）</strong><br>
+本页 7 个积分活动的「引导活动」按钮能否配置，由<strong>后台硬编码</strong>控制，运营不可改：<br>
+▸ <strong>可配置</strong>（按钮可点）：<strong>下午茶</strong> · <strong>夜宵积分</strong><br>
+▸ <strong>不可配置</strong>（按钮置灰）：签到积分 · 红包领取 · 订单到账 · 小票积分 · 新人积分 —— 其引导活动与跳转逻辑写死在 C 端代码，卡片上「引导活动」按钮统一置灰不可点。</div>
 <div id="积分项卡片区" class="jf-grid"></div>
 <div class="列表脚注">共 7 张活动卡片（积分项名称 = 积分明细流水类型名称，一一对应）</div>
 </div></section>
@@ -2270,24 +2276,22 @@ function 保存页面配置(节编号) {
   // 活动卡片数据源：名称/开关/优先级/备注 + 引导活动[] + 关联页面{页面:[],弹窗:[]}（关联页面由 C 端写死，后台只读）
   window._积分项数据=[
     {id:'sign',名称:'签到积分',开关:'生效',弹窗优先级:10,备注:'每日签到时段命中；签到完成发签到积分',
-     引导活动:[{平台:'美团',活动ID:'ACT-SIGN',跳转方式:'小程序',去向:'',appid:APPID地图['美团']}],
+     引导活动:[],  /* 引导活动后台写死，不可配置（仅下午茶/夜宵可配） */
      关联页面:{页面:[{名称:'首页积分入口',位置:'首页 · 顶部签到区',形态:'图标入口'}],弹窗:[]}},
     {id:'coupon',名称:'红包领取',开关:'生效',弹窗优先级:20,备注:'领券中心命中；领券发红包领取积分（每卡每日限 1 次）',
      引导活动:[],
      关联页面:{页面:[],弹窗:[{名称:'toast首页弹窗',类型:'toast',触发:'首页红包卡当日可领时'}]}},
     {id:'order',名称:'订单到账',开关:'生效',弹窗优先级:30,备注:'订单已付款命中；发订单到账积分（佣金×50%×2000）',
-     引导活动:[{平台:'美团',活动ID:'ACT-ORDER',跳转方式:'小程序',去向:'',appid:APPID地图['美团']}],
+     引导活动:[],  /* 引导活动后台写死，不可配置（仅下午茶/夜宵可配） */
      关联页面:{页面:[],弹窗:[{名称:'积分到账',类型:'半屏抽屉',触发:'外卖订单已付款回传'}]}},
     {id:'receipt',名称:'小票积分',开关:'生效',弹窗优先级:40,备注:'上传小票 OCR 识别成功命中；发小票积分（每个客户仅一次）',
-     引导活动:[{平台:'美团',活动ID:'ACT-RECEIPT',跳转方式:'小程序',去向:'',appid:APPID地图['美团']}],
+     引导活动:[],  /* 引导活动后台写死，不可配置（仅下午茶/夜宵可配） */
      关联页面:{页面:[],弹窗:[
        {名称:'A-1 上传引导抽屉',类型:'半屏抽屉',触发:'「我的 → 上传小票」点击'},
        {名称:'A-2 识别小票',类型:'整页',触发:'拍照后 OCR 识别中（倒计时 5s）'},
        {名称:'A-3 识别成功弹窗',类型:'半屏抽屉',触发:'OCR 识别成功'}]}},
-    {id:'newuser',名称:'新人积分',开关:'生效',弹窗优先级:50,备注:'新用户首次进入命中；发新人积分；引导活动双平台并排',
-     引导活动:[
-       {平台:'美团',活动ID:'ACT-NEW',跳转方式:'小程序',去向:'',appid:APPID地图['美团']},
-       {平台:'饿了么',活动ID:'ACT-NEW-ELE',跳转方式:'小程序',去向:'',appid:APPID地图['饿了么']}],
+    {id:'newuser',名称:'新人积分',开关:'生效',弹窗优先级:50,备注:'新用户首次进入命中；发新人积分',
+     引导活动:[],  /* 引导活动后台写死，不可配置（仅下午茶/夜宵可配） */
      关联页面:{页面:[],弹窗:[]}},
     {id:'pm',名称:'下午茶',开关:'生效',弹窗优先级:60,备注:'每日 15:00-17:00 命中；时段内下单额外 +100 积分（见 3.1）',
      引导活动:[
@@ -2312,6 +2316,7 @@ function 保存页面配置(节编号) {
     var h='';
     window._积分项数据.forEach(function(d,i){
       var on=d.开关==='生效', n=(d.引导活动||[]).length;
+      var 可配引导 = (d.id==='pm'||d.id==='night');  /* 后台写死：仅下午茶/夜宵可配置引导活动，其余入口置灰 */
       var chip=n>0?'<span class="jf-g-on">已配置 '+n+' 个</span>':'<span class="jf-g-off">未配置</span>';
       h+='<div class="jf-card'+(on?'':' jf-off')+'">'
         +'<div class="jf-head"><span class="jf-name">'+esc(d.名称)+'</span>'
@@ -2323,7 +2328,9 @@ function 保存页面配置(节编号) {
         +'</div>'
         +'<div class="jf-foot">'
         +'<button class="详情按钮" onclick="打开积分项编辑('+i+')">编辑</button>'
-        +'<button class="jf-btn" onclick="打开引导活动('+i+')">引导活动</button>'
+        +(可配引导
+          ? '<button class="jf-btn" onclick="打开引导活动('+i+')">引导活动</button>'
+          : '<button class="jf-btn" disabled title="引导活动写死，不可配置">引导活动</button>')
         +'<button class="jf-btn" onclick="打开关联页面('+i+')">关联页面</button>'
         +'</div></div>';
     });
