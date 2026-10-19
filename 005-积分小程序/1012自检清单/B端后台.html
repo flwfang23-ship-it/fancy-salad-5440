@@ -1630,13 +1630,28 @@ textarea.field-input { max-width: 100%; }
 .sub-switch-label{margin-left:8px;font-size:12.5px;font-weight:600;vertical-align:middle;}
 .sub-switch-label.on{color:#027a48;}.sub-switch-label.off{color:#94a3b8;}</style>
 <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.8;">订阅模板由<strong>微信公众平台</strong>创建后回填到本页，本页只做<strong>开关管理</strong>，不做模板内容编辑；「跳转页面」下拉实时引用 <strong>3.6 页面路径映射</strong>，格式为 <strong>页面名称（页面路径）</strong>。</div>
-<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">模板名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('模板名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">模板ID<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('模板ID', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">订阅入口<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('订阅入口', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">通知节点<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('通知节点', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">关联功能<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('关联功能', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">跳转页面<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('跳转页面', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('状态（订阅模板）', event)">ⓘ</button></th></tr></thead><tbody>
-<tr class="数据行"><td class="列表单元格"><strong>签到提醒</strong></td><td class="列表单元格">SUB2026-SIGN-0001</td><td class="列表单元格">签到页「接收签到提醒」开关</td><td class="列表单元格">每日 0 点签到任务刷新时</td><td class="列表单元格">3.3 签到</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="签到页" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅状态_0"></td></tr>
-<tr class="数据行"><td class="列表单元格"><strong>积分到账</strong></td><td class="列表单元格">SUB2026-POINT-0002</td><td class="列表单元格">积分到账弹窗（订阅引导）</td><td class="列表单元格">外卖订单积分到账时</td><td class="列表单元格">3.4 积分项（订单到账）</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="积分商城" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅状态_1"></td></tr>
-<tr class="数据行"><td class="列表单元格"><strong>兑换到账</strong></td><td class="列表单元格">SUB2026-EXCH-0003</td><td class="列表单元格">积分商城兑换确认页</td><td class="列表单元格">现金打款到账微信零钱时</td><td class="列表单元格">11.3 兑换记录 / 11.5 提现单</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="积分商城" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅状态_2"></td></tr>
-<tr class="数据行"><td class="列表单元格"><strong>活动过期提醒</strong></td><td class="列表单元格">SUB2026-ACT-0004</td><td class="列表单元格">活动详情页「活动过期提醒」</td><td class="列表单元格">引导活动/红包卡过期前 24 小时</td><td class="列表单元格">3.4 积分项（引导活动）</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="领券中心" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅状态_3"></td></tr>
+<pre style="margin:0 0 12px;font-family:Consolas,'SFMono-Regular',Menlo,monospace;font-size:12.5px;line-height:1.85;white-space:pre;overflow-x:auto;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px;">用户能否收到订阅通知？
+│
+├── A. 活动关了（3.4 积分项「功能总开关」= 关）
+│      └── ✕ 收不到（订阅状态等同强制关闭，本页开关无效）
+│
+├── B. 活动开了，订阅状态 = 关
+│      └── ✕ 收不到（运营在本页手动关停该模板）
+│
+└── C. 活动开了 + 订阅状态 = 开 → 通知节点命中，进入发送判断
+       │
+       ├── 该节点只命中 1 条模板 → ✓ 直接发这 1 条
+       │
+       └── 该节点同时命中多条模板 → ✓ 只发「排序值最小」的 1 条
+             ※ 排序为全局默认优先级；不同用户订阅内容不同、命中集合不同，
+               每个用户只收到自己集合内排序值最小的那条</pre>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">模板名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('模板名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">模板ID<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('模板ID', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">订阅入口<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('订阅入口', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">通知节点<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('通知节点', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">关联功能<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('关联功能', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">跳转页面<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('跳转页面', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">排序<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('排序（订阅模板）', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('状态（订阅模板）', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格"><strong>签到提醒</strong></td><td class="列表单元格">SUB2026-SIGN-0001</td><td class="列表单元格">签到页「接收签到提醒」开关</td><td class="列表单元格">每日 0 点签到任务刷新时</td><td class="列表单元格">3.3 签到</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="签到页" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_0">1</td><td class="列表单元格" id="订阅状态_0"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(0)">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>积分到账</strong></td><td class="列表单元格">SUB2026-POINT-0002</td><td class="列表单元格">积分到账弹窗（订阅引导）</td><td class="列表单元格">外卖订单积分到账时</td><td class="列表单元格">3.4 积分项（订单到账）</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="积分商城" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_1">2</td><td class="列表单元格" id="订阅状态_1"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(1)">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>兑换到账</strong></td><td class="列表单元格">SUB2026-EXCH-0003</td><td class="列表单元格">积分商城兑换确认页</td><td class="列表单元格">现金打款到账微信零钱时</td><td class="列表单元格">11.3 兑换记录 / 11.5 提现单</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="积分商城" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_2">3</td><td class="列表单元格" id="订阅状态_2"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(2)">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>活动过期提醒</strong></td><td class="列表单元格">SUB2026-ACT-0004</td><td class="列表单元格">活动详情页「活动过期提醒」</td><td class="列表单元格">引导活动/红包卡过期前 24 小时</td><td class="列表单元格">3.4 积分项（引导活动）</td><td class="列表单元格"><select class="field-select 跳转页面下拉" data-选中="领券中心" onchange="订阅跳转变更(this)"></select></td><td class="列表单元格" id="订阅排序_3">4</td><td class="列表单元格" id="订阅状态_3"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(3)">编辑</button></td></tr>
 </tbody></table>
-<div class="列表脚注">共 4 条订阅模板（1 条停用）；模板由微信公众平台创建后回填，本页仅做开关管理，无编辑/删除；「跳转页面」下拉选项来自 3.6 页面路径映射，格式为 页面名称（页面路径）</div>
+<div class="列表脚注">共 4 条订阅模板（1 条停用）；模板由微信公众平台创建后回填，无新增/删除；操作列「编辑」抽屉可改 排序 / 状态 / 跳转地址 3 项（状态也可在行内滑块直接切换，两处同步）；「跳转页面」下拉选项来自 3.6 页面路径映射，格式为 页面名称（页面路径）；排序为全局默认优先级，同节点多模板命中时仅发排序值最小的 1 条（详见页内 ASCII 判断树）</div>
 </div></section>
 <section class="页面面板" id="面_3_6" data-page="3.6"><div class="页面卡"><div class="页面头"><h2>页面路径映射</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 维护 C 端页面名称与页面路径的映射关系</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 积分管理 &gt;</span> <span class="路径末段">页面路径映射</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本页维护 <strong>页面名称 ↔ 页面路径</strong> 的映射表（含运营上传的页面截图预览），支持新增 / 编辑 / 删除；订阅配置（3.5）的「跳转页面」下拉从本表取数，展示格式为 <strong>页面名称（页面路径）</strong>，如：签到页（/pages/sign/index）；映射删除后，已引用该映射的订阅模板「跳转页面」自动回退为「不跳转」</span></div></div></div>
 <style id="style-3.6-map">
@@ -1831,6 +1846,47 @@ function 切换订阅状态(i){
   显示提示('订阅模板「'+window._订阅模板名[i]+'」已'+window._订阅状态数据[i]+'（演示环境，不落库）',window._订阅状态数据[i]==='生效'?'成功':'信息',2200);
 }
 渲染订阅开关();
+/* ── 排序数据 + 操作列「编辑」抽屉（可改：排序 / 状态 / 跳转地址；其余字段只读） ── */
+window._订阅排序=[1,2,3,4];
+window._订阅跳转选中=['签到页','积分商城','积分商城','领券中心'];
+var _订阅编辑idx=null;
+window.订阅抽屉状态切换=function(){
+  var s=$('订阅编辑状态'), t=$('订阅编辑状态字'); if(!s) return;
+  var on=!s.classList.contains('on');
+  s.className='sub-switch '+(on?'on':'off');
+  t.className='sub-switch-label '+(on?'on':'off'); t.textContent=on?'生效':'停用';
+};
+window.打开订阅抽屉=function(i){
+  _订阅编辑idx=i;
+  var on=window._订阅状态数据[i]==='生效';
+  var 选项='<option value="">不跳转</option>';
+  (window._页面映射数据||[]).forEach(function(m){ 选项+='<option value="'+m.名称+'">'+m.名称+'（'+m.路径+'）</option>'; });
+  $('jf正文').innerHTML='<div class="jf-tip b">本抽屉仅可编辑 <b>排序 / 状态 / 跳转地址</b> 3 项，其余字段由微信公众平台回填只读；「状态」与列表行内滑块开关同步。排序为全局默认优先级：数字越小优先级越高，同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条。</div>'
+    +'<div class="field-card"><div class="field-card-header"><h4>订阅模板配置</h4></div><div class="field-card-body">'
+    +'<div class="field-row"><span class="field-label">模板名称</span><span class="field-control"><input class="field-input" value="'+window._订阅模板名[i]+'" disabled style="background:#f1f5f9;color:#94a3b8;"></span></div>'
+    +'<div class="field-row"><span class="field-label">排序</span><span class="field-control"><input id="订阅编辑排序" type="number" min="1" step="1" class="field-input" value="'+window._订阅排序[i]+'"></span></div>'
+    +'<div class="field-row"><span class="field-label">状态</span><span class="field-control"><span class="sub-switch '+(on?'on':'off')+'" id="订阅编辑状态" onclick="订阅抽屉状态切换()"><i></i></span><span id="订阅编辑状态字" class="sub-switch-label '+(on?'on':'off')+'">'+(on?'生效':'停用')+'</span><span class="jf-hint">活动关闭时订阅等同关闭（见页内 ASCII 判断树）</span></span></div>'
+    +'<div class="field-row"><span class="field-label">跳转地址</span><span class="field-control"><select id="订阅编辑跳转" class="field-input">'+选项+'</select></span></div>'
+    +'</div></div>';
+  $('订阅编辑跳转').value=window._订阅跳转选中[i]||'';
+  $('jf脚部').innerHTML='<button class="btn-secondary" onclick="关闭积分项抽屉()">取消</button><button class="主按钮" onclick="保存订阅编辑()">保存</button>';
+  $('jf标题').textContent='编辑 · '+window._订阅模板名[i];
+  $('积分项遮罩').classList.add('show');$('积分项抽屉').classList.add('show');
+};
+window.保存订阅编辑=function(){
+  var i=_订阅编辑idx; if(i==null) return;
+  var v=parseInt($('订阅编辑排序').value,10);
+  if(isNaN(v)||v<1){ 显示提示('排序需为 ≥1 的整数','信息',2400); return; }
+  window._订阅排序[i]=v;
+  var 序格=document.getElementById('订阅排序_'+i); if(序格) 序格.textContent=v;
+  var on=$('订阅编辑状态').classList.contains('on');
+  window._订阅状态数据[i]=on?'生效':'停用'; 渲染订阅开关();
+  window._订阅跳转选中[i]=$('订阅编辑跳转').value;
+  var sel=document.querySelectorAll('.跳转页面下拉')[i];
+  if(sel){ sel.setAttribute('data-选中',window._订阅跳转选中[i]); if(typeof 刷新订阅跳转下拉==='function') 刷新订阅跳转下拉(); }
+  关闭积分项抽屉();
+  显示提示('订阅模板「'+window._订阅模板名[i]+'」已保存（演示环境，不落库）','成功',2200);
+};
 </script>
 <script id="js-弹窗">
 window._字段总库 = window._字段总库 || [];
@@ -1958,7 +2014,8 @@ window._表单字段按节["3.5"]=[
   {名称:"通知节点",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"每日 0 点签到任务刷新时",数据来源:"C 端/服务端代码写死的业务事件",逻辑:"触发该订阅消息推送的业务事件；事件命中且模板状态=生效才推送",用途:"定义推送触发时机",节编号:"3.5"},
   {名称:"关联功能",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"3.3 签到",数据来源:"系统按模板归属回填",逻辑:"该订阅模板服务的后台模块，如 3.4 积分项 / 3.3 签到 / 11.3 兑换记录",用途:"模板与后台模块的归属映射",节编号:"3.5"},
   {名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"生效、停用",编辑性:"可编辑",示例值:"生效",数据来源:"运营在本页切换状态开关",逻辑:"本页可编辑字段；生效=通知节点命中即推送；停用=C 端不再发起该模板订阅授权、服务端不再推送；受 3.4 积分项「功能总开关」联动：总开关关闭则订阅一同停用且置灰不可开启（功能开订阅可自行开关，功能关订阅一定关）",用途:"订阅模板启停开关",节编号:"3.5"},
-  {名称:"跳转页面",类型原文:"enum",基础类型:"enum",枚举值:"3.6 页面路径映射全表（动态）",编辑性:"可编辑",示例值:"签到页（/pages/sign/index）",数据来源:"下拉选项实时引用 3.6 页面路径映射表，格式：页面名称（页面路径）；默认「不跳转」",逻辑:"用户点击订阅消息卡片后跳转的 C 端页面；映射删除后已引用该映射的模板自动回退为「不跳转」",用途:"订阅消息点击后的落地页配置",节编号:"3.5"}
+  {名称:"跳转页面",类型原文:"enum",基础类型:"enum",枚举值:"3.6 页面路径映射全表（动态）",编辑性:"可编辑",示例值:"签到页（/pages/sign/index）",数据来源:"下拉选项实时引用 3.6 页面路径映射表，格式：页面名称（页面路径）；默认「不跳转」",逻辑:"用户点击订阅消息卡片后跳转的 C 端页面；映射删除后已引用该映射的模板自动回退为「不跳转」",用途:"订阅消息点击后的落地页配置",节编号:"3.5"},
+  {名称:"排序（订阅模板）",类型原文:"number",基础类型:"number",编辑性:"可编辑",示例值:"1",数据来源:"运营在 3.5 订阅配置操作列「编辑」抽屉中配置",逻辑:"全局默认优先级，数字越小优先级越高；同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条",用途:"同节点多模板冲突时的发送优先级仲裁",节编号:"3.5"}
 ];
 
 window._表单字段按节["3.6"]=[
@@ -2184,6 +2241,7 @@ window._新增字段分组["11.8"]=[{组名:"积分资产",字段:["用户","当
 {名称:"关联功能",类型原文:"string",基础类型:"string",编辑性:"只读",数据来源:"系统按模板归属回填",逻辑:"该订阅模板服务的后台模块，如 3.4 积分项 / 3.3 签到 / 11.3 兑换记录",用途:"模板与后台模块归属映射",节编号:"3.5"},
 {名称:"状态（订阅模板）",类型原文:"enum",基础类型:"enum",枚举值:"生效、停用",编辑性:"可编辑",数据来源:"运营在 3.5 订阅配置切换状态开关",逻辑:"本页可编辑字段；停用后 C 端不再发起该模板订阅授权、服务端不再推送；受 3.4 积分项「功能总开关」联动：总开关关闭则订阅一同停用且置灰不可开启（功能关订阅一定关）",用途:"订阅模板启停开关",节编号:"3.5"},
 {名称:"跳转页面",类型原文:"enum",基础类型:"enum",枚举值:"3.6 页面路径映射全表（动态）",编辑性:"可编辑",数据来源:"下拉选项实时引用 3.6 页面路径映射表，格式：页面名称（页面路径）；默认「不跳转」",逻辑:"用户点击订阅消息卡片后跳转的 C 端页面；映射删除后已引用该映射的模板自动回退为「不跳转」",用途:"订阅消息点击后的落地页配置",节编号:"3.5"},
+{名称:"排序（订阅模板）",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"运营在 3.5 订阅配置操作列「编辑」抽屉中配置",逻辑:"全局默认优先级，数字越小优先级越高；同一通知节点命中多条生效模板时仅发送排序值最小的 1 条；不同用户订阅内容不同、命中集合不同，各用户只收到自己集合内排序值最小的那条",用途:"同节点多模板冲突时的发送优先级仲裁",节编号:"3.5"},
 {名称:"页面名称",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营在 3.6 新增/编辑时填写",逻辑:"C 端页面可读名称，全表唯一；作为 3.5 跳转页面下拉选项名",用途:"页面识别与下拉展示名",节编号:"3.6"},
 {名称:"页面路径",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营在 3.6 新增/编辑时填写",逻辑:"小程序页面路径；与名称拼为「页面名称（页面路径）」展示在 3.5；路径错误会落到报错页，需真机验证",用途:"订阅消息点击跳转目标路径",节编号:"3.6"},
 {名称:"截图预览",类型原文:"image",基础类型:"string",编辑性:"可编辑",数据来源:"运营在 3.6 新增/编辑时上传",逻辑:"C 端页面截图，仅作人工核对，不参与逻辑；列表点击可放大",用途:"人工核对页面与路径对应",节编号:"3.6"}
