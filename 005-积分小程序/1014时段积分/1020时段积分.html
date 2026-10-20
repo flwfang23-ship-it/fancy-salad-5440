@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<!--
+═══════════════════════════════════════════════════════════════════
+1020 迭代 · 时段积分（下午茶 / 晚餐 / 夜宵）文字稿
+═══════════════════════════════════════════════════════════════════
+版本：v3.0（2026-10-20）
+变更：本稿由「1020晚餐功能」扩展为 3 个时段活动统一说明；
+     时段调整为 下午茶 14:30-16:00 / 晚餐 17:00-19:00 / 夜宵 20:00-23:59，
+     三时段互不重叠，无重叠处理规则；订阅逻辑本期不做，后续单独补充。
+前置文档：
+  · 1012自检清单/B端后台.html（B 端配置基线）
+  · 1014时段积分/C端页面.html（C 端流程基线）
+标注约定：【可配置】（正文蓝色）= 运营可编辑；未标注为只读或系统生成。
+
+──────────────────────────────────
+一、全局说明
+──────────────────────────────────
+时段一览（每日）：
+  下午茶  14:30-16:00  额外 +100（既有）
+  晚餐    17:00-19:00  额外 +150（本次新增）
+  夜宵    20:00-23:59  额外 +200（既有）
+
+判断逻辑：打开小程序读取服务器时间 → 命中哪个时段进哪个活动页；
+未命中 / 后台未开启 → 缺省页。三时段互不重叠，不存在同时命中。
+
+──────────────────────────────────
+二、B端配置
+──────────────────────────────────
+① 3.1 全局配置 · 积分规则
+▸ 下午茶额外积分：number，默认 100【可配置】逻辑：每日 14:30-16:00 下单并收货额外发放，叠加基础积分之上（既有）
+▸ 晚餐额外积分：number，默认 150【可配置】逻辑：每日 17:00-19:00 下单并收货额外发放，叠加基础积分之上（本次新增）
+▸ 夜宵额外积分：number，默认 200【可配置】逻辑：每日 20:00-23:59 下单并收货额外发放，叠加基础积分之上（既有）
+
+② 3.4 积分项管理
+注：新增 3 个管理卡片（下午茶 / 晚餐 / 夜宵）
+▸ 活动开关：逻辑不赘述，详 1012 自检清单【可配置】
+▸ 弹窗优先级：同上【可配置】
+▸ 备注：同上【可配置】
+▸ 页面路径：同上【可配置】
+▸ 截图：同上【可配置】
+▸ 引导活动配置：下午茶、晚餐、夜宵都对运营开放【可配置】
+▸ 关联页面（只读）：晚餐页 or 下午茶页 or 夜宵页 + 积分到账抽屉
+
+③ 积分明细 · 新增流水类型
+▸ 新增「晚餐额外积分」，与卡片名称一一对应（下午茶 / 夜宵流水既有）
+
+──────────────────────────────────
+三、C端页面（新增 4 个 + 改造 2 个，共 6 项）
+──────────────────────────────────
+1. 时段判断页【改造】整页
+▸ 新增晚餐分支（17:00-19:00）；无倒计时、不自动跳帧，点「继续」前进
+
+2. 晚餐活动页【新增】整页
+▸ 后台开启且命中 17:00-19:00 可进入，否则进缺省页
+▸ 结构同下午茶：头图 + 参与时段 + 加码积分 + 平台跳转 + 吸底「去下单」
+
+3. 晚餐缺省页【新增】整页
+▸ 唯一出口：返回首页
+
+4. A-2 时段额外积分弹窗 · 晚餐版【新增】半屏抽屉
+▸ 17:00-19:00 打开小程序时触发，按弹窗优先级依次弹出
+
+5. 晚餐额外积分到账抽屉【新增】半屏抽屉
+▸ 下单收货后弹出 +150 到账，流水记「晚餐额外积分」
+
+6. 积分明细页【改造】整页
+▸ 新增「晚餐额外积分」流水类型展示
+═══════════════════════════════════════════════════════════════════
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1020 迭代 · 时段积分（下午茶 / 晚餐 / 夜宵）</title>
+<style>
+:root{
+  --brand:#17A34A; --ink:#16201A; --ink2:#3F4A42; --ink3:#7E8A82;
+  --line:#E5EAE6; --bg:#F2F7F3; --sheet:#FFFFFF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Alibaba PuHuiTi 2.0","MiSans","Noto Sans SC",sans-serif;background:var(--bg);color:var(--ink);padding:28px 20px 60px}
+.wrap{max-width:920px;margin:0 auto}
+header.top{background:linear-gradient(135deg,#14532D,#1A9E54);border-radius:18px;padding:26px 30px;color:#fff;margin-bottom:20px}
+header.top h1{font-size:24px;font-weight:800;letter-spacing:.5px}
+header.top .meta{margin-top:10px;font-size:12.5px;opacity:.92;line-height:1.9}
+.tag{display:inline-block;font-size:11.5px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.45);font-weight:600;margin-right:6px}
+section{background:var(--sheet);border:1.5px solid var(--line);border-radius:16px;padding:22px 26px;margin-bottom:18px}
+h2{font-size:18px;font-weight:800;color:#14532D;display:flex;align-items:center;gap:10px;margin-bottom:10px}
+h2 .no{width:26px;height:26px;border-radius:8px;background:var(--brand);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none}
+p.sub{font-size:12.5px;color:var(--ink3);line-height:1.8}
+table{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:13px}
+th{background:#F0F7F2;color:#14532D;font-weight:700;text-align:left;padding:9px 12px;border:1px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border:1px solid var(--line);color:var(--ink2);line-height:1.7}
+td b{color:var(--ink)}
+.cfg-tag{display:inline-block;background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8;font-size:11px;font-weight:700;padding:1px 8px;border-radius:12px;margin-left:6px;white-space:nowrap}
+.cfg{border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0}
+.cfg .ch{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;flex-wrap:wrap}
+.cfg .ch .step{min-width:22px;height:22px;border-radius:7px;background:#DCF2E3;color:#15803D;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;padding:0 5px}
+.cfg .cb{margin-top:8px;font-size:12.5px;color:var(--ink2);line-height:1.9}
+.cfg .cb code{background:#F1F5F4;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px;color:#14532D}
+.pill-new{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:#ECFDF3;color:#027A48;border:1px solid #B7E4C7;white-space:nowrap}
+.pill-mod{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;white-space:nowrap}
+.pill-old{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:#F1F5F4;color:#5F6B63;border:1px solid var(--line);white-space:nowrap}
+footer{font-size:12px;color:var(--ink3);text-align:center;line-height:1.9}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>1020 迭代 · 时段积分（下午茶 / 晚餐 / 夜宵）</h1>
+  <div class="meta">
+    <span class="tag">v3.0</span><span class="tag">2026-10-20</span><span class="tag">文字稿</span><span class="tag" style="background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8">蓝色 = 可配置</span><br>
+    前置文档：1012 自检清单 · 1014 时段积分 ｜ 三时段互不重叠，无重叠处理规则 ｜ 订阅逻辑本期不做，后续单独补充
+  </div>
+</header>
+
+<!-- ═══════════ 一、全局说明 ═══════════ -->
+<section>
+  <h2><span class="no">1</span>全局说明</h2>
+  <table>
+    <thead><tr><th>活动</th><th>时段（每日）</th><th>额外积分</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td><b>下午茶</b></td><td><b>14:30-16:00</b></td><td>+100</td><td><span class="pill-old">既有</span></td></tr>
+      <tr><td><b>晚餐</b></td><td><b>17:00-19:00</b></td><td>+150</td><td><span class="pill-new">本次新增</span></td></tr>
+      <tr><td><b>夜宵</b></td><td><b>20:00-23:59</b></td><td>+200</td><td><span class="pill-old">既有</span></td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin-top:8px">判断逻辑：打开小程序读取服务器时间 → 命中哪个时段进哪个活动页；未命中 / 后台未开启 → 缺省页。三时段互不重叠，不存在同时命中。</p>
+</section>
+
+<!-- ═══════════ 二、B端配置 ═══════════ -->
+<section>
+  <h2><span class="no">2</span>B 端配置（对照 1012 自检清单）</h2>
+
+  <div class="cfg">
+    <div class="ch"><span class="step">①</span>3.1 全局配置 · 积分规则</div>
+    <div class="cb">
+      ▸ <b>下午茶额外积分</b>：number，默认 100<span class="cfg-tag">可配置</span>逻辑：每日 14:30-16:00 下单并收货额外发放，叠加基础积分之上<span class="pill-old">既有</span><br>
+      ▸ <b>晚餐额外积分</b>：number，默认 150<span class="cfg-tag">可配置</span>逻辑：每日 17:00-19:00 下单并收货额外发放，叠加基础积分之上<span class="pill-new">本次新增</span><br>
+      ▸ <b>夜宵额外积分</b>：number，默认 200<span class="cfg-tag">可配置</span>逻辑：每日 20:00-23:59 下单并收货额外发放，叠加基础积分之上<span class="pill-old">既有</span>
+    </div>
+  </div>
+
+  <div class="cfg">
+    <div class="ch"><span class="step">②</span>3.4 积分项管理</div>
+    <div class="cb">
+      <b>注：新增 3 个管理卡片（下午茶 / 晚餐 / 夜宵）</b><br>
+      ▸ <b>活动开关</b>：逻辑不赘述，详 1012 自检清单<span class="cfg-tag">可配置</span><br>
+      ▸ <b>弹窗优先级</b>：同上<span class="cfg-tag">可配置</span><br>
+      ▸ <b>备注</b>：同上<span class="cfg-tag">可配置</span><br>
+      ▸ <b>页面路径</b>：同上<span class="cfg-tag">可配置</span><br>
+      ▸ <b>截图</b>：同上<span class="cfg-tag">可配置</span><br>
+      ▸ <b>引导活动配置</b>：下午茶、晚餐、夜宵都对运营开放<span class="cfg-tag">可配置</span><br>
+      ▸ <b>关联页面（只读）</b>：晚餐页 or 下午茶页 or 夜宵页 + 积分到账抽屉
+    </div>
+  </div>
+
+  <div class="cfg">
+    <div class="ch"><span class="step">③</span>积分明细 · 新增流水类型</div>
+    <div class="cb">
+      ▸ 新增「<b>晚餐额外积分</b>」，与卡片名称一一对应（下午茶 / 夜宵流水既有）
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 三、C端页面 ═══════════ -->
+<section>
+  <h2><span class="no">3</span>C 端页面（新增 4 个 + 改造 2 个，共 6 项）</h2>
+
+  <div class="cfg">
+    <div class="ch"><span class="step">1</span>时段判断页<span class="pill-mod">改造</span></div>
+    <div class="cb">
+      ▸ <b>改动</b>：新增晚餐分支（17:00-19:00）<br>
+      ▸ <b>交互</b>：无倒计时、不自动跳帧，点「继续」前进
+    </div>
+  </div>
+
+  <div class="cfg">
+    <div class="ch"><span class="step">2</span>晚餐活动页<span class="pill-new">新增</span></div>
+    <div class="cb">
+      ▸ <b>进入条件</b>：后台开启且命中 17:00-19:00，否则进缺省页<br>
+      ▸ <b>结构</b>：同下午茶（头图 + 参与时段 + 加码积分 + 平台跳转 + 吸底「去下单」）
+    </div>
+  </div>
+
+  <div class="cfg">
+    <div class="ch"><span class="step">3</span>晚餐缺省页<span class="pill-new">新增</span></div>
+    <div class="cb">
+      ▸ <b>出口</b>：唯一出口为返回首页
+    </div>
+  </div>
+
+  <div class="cfg">
+    <div class="ch"><span class="step">4</span>A-2 时段额外积分弹窗 · 晚餐版<span class="pill-new">新增</span></div>
+    <div class="cb">
+      ▸ <b>触发</b>：17:00-19:00 打开小程序时触发，按弹窗优先级依次弹出
+    </div>
+  </div>
+
+  <div class="cfg">
+    <div class="ch"><span class="step">5</span>晚餐额外积分到账抽屉<span class="pill-new">新增</span></div>
+    <div class="cb">
+      ▸ <b>触发</b>：下单收货后弹出 +150 到账，流水记「晚餐额外积分」
+    </div>
+  </div>
+
+  <div class="cfg">
+    <div class="ch"><span class="step">6</span>积分明细页<span class="pill-mod">改造</span></div>
+    <div class="cb">
+      ▸ <b>改动</b>：新增「晚餐额外积分」流水类型展示
+    </div>
+  </div>
+</section>
+
+<footer>
+  1020 迭代 · 时段积分 文字稿 v3.0 ｜ 前置：1012 自检清单 · 1014 时段积分 ｜ 蓝色「可配置」= 运营可编辑字段
+</footer>
+
+</div>
+</body>
+</html>
