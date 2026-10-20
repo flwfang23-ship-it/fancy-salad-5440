@@ -3,8 +3,9 @@
 ═══════════════════════════════════════════════════════════════════
 1013 小票积分 · 后台新增配置
 ═══════════════════════════════════════════════════════════════════
-版本：v1.0（2026-10-20）
-变更：小票积分分组本次开放可编辑（不置灰），统一说明其 B 端配置项。
+版本：v1.1（2026-10-20）
+变更：移除人工补发相关表述（无补发逻辑）；排版改为逐项独立行，避免文字堆砌。
+     小票积分分组本次开放可编辑（不置灰），统一说明其 B 端配置项。
 前置文档：
   · 1012自检清单/B端后台.html（B 端配置基线）
   · 1013小票积分迭代/C端页面.html（C 端流程基线）
@@ -16,19 +17,20 @@
 逻辑：
   1. 小票积分与其他积分活动相互独立，互不影响
   2. 触发条件：后台开启活动开关 + 用户上传小票且 OCR 识别成功
-  3. 赠送积分值由后台配置；每个客户仅可获得一次，识别失败不发放，运营可人工补发
+  3. 赠送积分值由后台配置；每个客户仅可获得一次，识别失败不发放且不可重试
 
 ──────────────────────────────────
 二、B端配置（本次开放可编辑）
 ──────────────────────────────────
 ① B端配置 - 小票积分
 ▸ 3.1 全局配置 · 小票积分：number，默认 200【可配置】每个客户仅一次，OCR 识别成功后到账
-▸ 3.4 积分项管理 · 小票积分卡片：活动开关 / 弹窗优先级 / 备注 / 页面路径 / 截图【可配置】（本次开放可编辑，不置灰）
-▸ 引导活动配置：不可增加（代码层写死，「引导活动」按钮置灰不可点）
-▸ 关联页面（只读）：上传小票页（/pages/receipt/upload）+ A-1 上传引导抽屉 / A-2 识别小票 / A-3 识别成功弹窗
-▸ 4.1 小票管理（只读查询）：小票号 / 用户 / 上传时间 / 小票图片 / 识别状态 / 到账积分；识别失败、待审核可由运营人工通过补发
-▸ 积分明细流水：「小票积分」，与卡片名称一一对应
+▸ 3.4 积分项管理 · 小票积分卡片（本次开放可编辑，不置灰）
+   ├─ 卡片字段：活动开关 / 弹窗优先级 / 备注 / 页面路径 / 截图【可配置】
+   ├─ 引导活动配置：不可增加（代码层写死，按钮置灰不可点）
+   └─ 关联页面（只读）：上传小票页（/pages/receipt/upload）+ A-1 / A-2 / A-3 弹窗
 ▸ 3.5 订阅配置：无
+▸ 3.6 积分明细流水：「小票积分」，与卡片名称一一对应
+▸ 4.1 小票管理（只读查询）：小票号 / 用户 / 上传时间 / 小票图片 / 识别状态 / 到账积分（无人工补发入口）
 ═══════════════════════════════════════════════════════════════════
 -->
 <html lang="zh-CN">
@@ -42,24 +44,39 @@
   --line:#E5EAE6; --bg:#F2F7F3; --sheet:#FFFFFF;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"Alibaba PuHuiTi 2.0","MiSans","Noto Sans SC",sans-serif;background:var(--bg);color:var(--ink);padding:28px 20px 60px}
-.wrap{max-width:920px;margin:0 auto}
-header.top{background:linear-gradient(135deg,#14532D,#1A9E54);border-radius:18px;padding:26px 30px;color:#fff;margin-bottom:20px}
+body{font-family:"Alibaba PuHuiTi 2.0","MiSans","Noto Sans SC",sans-serif;background:var(--bg);color:var(--ink);padding:40px 20px 80px}
+.wrap{max-width:960px;margin:0 auto}
+header.top{background:linear-gradient(135deg,#14532D,#1A9E54);border-radius:18px;padding:30px 34px;color:#fff;margin-bottom:24px}
 header.top h1{font-size:24px;font-weight:800;letter-spacing:.5px}
-header.top .meta{margin-top:10px;font-size:12.5px;opacity:.92;line-height:1.9}
+header.top .meta{margin-top:12px;font-size:12.5px;opacity:.92;line-height:2}
 .tag{display:inline-block;font-size:11.5px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.45);font-weight:600;margin-right:6px}
-section{background:var(--sheet);border:1.5px solid var(--line);border-radius:16px;padding:22px 26px;margin-bottom:18px}
-h2{font-size:18px;font-weight:800;color:#14532D;display:flex;align-items:center;gap:10px;margin-bottom:10px}
+section{background:var(--sheet);border:1.5px solid var(--line);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+h2{font-size:18px;font-weight:800;color:#14532D;display:flex;align-items:center;gap:10px;margin-bottom:14px}
 h2 .no{width:26px;height:26px;border-radius:8px;background:var(--brand);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none}
-p.sub{font-size:12.5px;color:var(--ink3);line-height:1.8}
-.cfg-tag{display:inline-block;background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8;font-size:11px;font-weight:700;padding:1px 8px;border-radius:12px;margin-left:6px;white-space:nowrap}
-.cfg{border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0}
-.cfg .ch{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;flex-wrap:wrap}
-.cfg .ch .step{min-width:22px;height:22px;border-radius:7px;background:#DCF2E3;color:#15803D;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;padding:0 5px}
-.cfg .cb{margin-top:8px;font-size:12.5px;color:var(--ink2);line-height:1.9}
-.pill-new{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:#ECFDF3;color:#027A48;border:1px solid #B7E4C7;white-space:nowrap}
+.cfg-tag{display:inline-block;background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8;font-size:11px;font-weight:700;padding:1px 8px;border-radius:12px;margin-left:8px;white-space:nowrap;vertical-align:1px}
 .pill-mod{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;white-space:nowrap}
-footer{font-size:12px;color:var(--ink3);text-align:center;line-height:1.9}
+
+/* 逻辑条目：独立卡片行，行距宽松 */
+.logic{display:flex;gap:14px;align-items:flex-start;background:#F7FAF8;border:1.5px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:12px}
+.logic:last-child{margin-bottom:0}
+.logic .ln{flex:none;width:24px;height:24px;border-radius:7px;background:#DCF2E3;color:#15803D;font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.logic .lt{font-size:13.5px;color:var(--ink2);line-height:1.9}
+
+/* B端配置卡：每个配置项独立行 */
+.cfg{border:1.5px solid var(--line);border-radius:14px;padding:6px 0;margin:14px 0 0}
+.cfg .ch{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:800;padding:16px 22px;border-bottom:1.5px solid var(--line);flex-wrap:wrap}
+.cfg .ch .step{min-width:24px;height:24px;border-radius:7px;background:#DCF2E3;color:#15803D;font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;padding:0 6px}
+.item{display:flex;gap:16px;padding:15px 22px;border-bottom:1px dashed var(--line);align-items:baseline}
+.item:last-child{border-bottom:none}
+.item .ik{flex:none;width:196px;font-size:13px;font-weight:700;color:var(--ink);line-height:1.9}
+.item .iv{flex:1;font-size:13px;color:var(--ink2);line-height:2}
+.item .iv .note{display:block;font-size:12px;color:var(--ink3);margin-top:2px}
+.item.parent{background:#F7FAF8}
+.item.parent .ik{color:#14532D}
+.item.child{padding-left:44px}
+.tree{color:#9AB3A3;font-weight:400;margin-right:4px;font-family:monospace}
+.ro{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:12px;background:#F1F5F4;color:#5F6B63;border:1px solid var(--line);margin-left:8px;white-space:nowrap;vertical-align:1px}
+footer{font-size:12px;color:var(--ink3);text-align:center;line-height:2;margin-top:8px}
 </style>
 </head>
 <body>
@@ -68,7 +85,7 @@ footer{font-size:12px;color:var(--ink3);text-align:center;line-height:1.9}
 <header class="top">
   <h1>1013 小票积分 · 后台新增配置</h1>
   <div class="meta">
-    <span class="tag">v1.0</span><span class="tag">2026-10-20</span><span class="tag">文字稿</span><span class="tag" style="background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8">蓝色 = 可配置</span><br>
+    <span class="tag">v1.1</span><span class="tag">2026-10-20</span><span class="tag">文字稿</span><span class="tag" style="background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8">蓝色 = 可配置</span><br>
     前置文档：1012 自检清单 · 1013 小票积分迭代 ｜ 小票积分分组本次开放可编辑（不置灰）
   </div>
 </header>
@@ -76,11 +93,19 @@ footer{font-size:12px;color:var(--ink3);text-align:center;line-height:1.9}
 <!-- ═══════════ 一、全局说明 ═══════════ -->
 <section>
   <h2><span class="no">1</span>全局说明</h2>
-  <p class="sub">
-    1. 小票积分与其他积分活动相互独立，互不影响<br>
-    2. 触发条件：后台开启活动开关 + 用户上传小票且 OCR 识别成功<br>
-    3. 赠送积分值由后台配置；每个客户仅可获得一次，识别失败不发放，运营可人工补发
-  </p>
+
+  <div class="logic">
+    <span class="ln">1</span>
+    <div class="lt">小票积分与其他积分活动<b>相互独立</b>，互不影响。</div>
+  </div>
+  <div class="logic">
+    <span class="ln">2</span>
+    <div class="lt"><b>触发条件</b>：后台开启活动开关 + 用户上传小票且 OCR 识别成功。</div>
+  </div>
+  <div class="logic">
+    <span class="ln">3</span>
+    <div class="lt">赠送积分值由后台配置；<b>每个客户仅可获得一次</b>，识别失败不发放且不可重试。</div>
+  </div>
 </section>
 
 <!-- ═══════════ 二、B端配置 ═══════════ -->
@@ -89,20 +114,52 @@ footer{font-size:12px;color:var(--ink3);text-align:center;line-height:1.9}
 
   <div class="cfg">
     <div class="ch"><span class="step">①</span>B端配置 - 小票积分<span class="pill-mod">本次开放可编辑</span></div>
-    <div class="cb">
-      ▸ <b>3.1 全局配置 · 小票积分</b>：number，默认 200<span class="cfg-tag">可配置</span>每个客户仅一次，OCR 识别成功后到账<br>
-      ▸ <b>3.4 积分项管理 · 小票积分卡片</b>：活动开关 / 弹窗优先级 / 备注 / 页面路径 / 截图<span class="cfg-tag">可配置</span>（本次开放可编辑，不置灰）<br>
-      ▸ <b>引导活动配置</b>：不可增加（代码层写死，「引导活动」按钮置灰不可点）<br>
-      ▸ <b>关联页面（只读）</b>：上传小票页（<code>/pages/receipt/upload</code>）+ A-1 上传引导抽屉 / A-2 识别小票 / A-3 识别成功弹窗<br>
-      ▸ <b>4.1 小票管理（只读查询）</b>：小票号 / 用户 / 上传时间 / 小票图片 / 识别状态 / 到账积分；识别失败、待审核可由运营人工通过补发<br>
-      ▸ <b>积分明细流水</b>：「小票积分」，与卡片名称一一对应<br>
-      ▸ <b>3.5 订阅配置</b>：无
+
+    <div class="item">
+      <div class="ik">3.1 全局配置 · 小票积分<span class="cfg-tag">可配置</span></div>
+      <div class="iv">number，默认 200<span class="note">每个客户仅一次，OCR 识别成功后到账，叠加基础积分之上</span></div>
+    </div>
+
+    <!-- 3.4 积分项管理：父级行 + 子项缩进 -->
+    <div class="item parent">
+      <div class="ik">3.4 积分项管理 · 小票积分卡片</div>
+      <div class="iv">本次开放可编辑，不置灰；含以下 3 个子项</div>
+    </div>
+
+    <div class="item child">
+      <div class="ik"><span class="tree">├─</span>卡片字段<span class="cfg-tag">可配置</span></div>
+      <div class="iv">活动开关 / 弹窗优先级 / 备注 / 页面路径 / 截图<span class="note">字段逻辑详 1012 自检清单</span></div>
+    </div>
+
+    <div class="item child">
+      <div class="ik"><span class="tree">├─</span>引导活动配置</div>
+      <div class="iv"><b>不可增加</b><span class="note">是否开放由代码层写死；本活动不开放，「引导活动」按钮置灰不可点</span></div>
+    </div>
+
+    <div class="item child">
+      <div class="ik"><span class="tree">└─</span>关联页面<span class="ro">只读</span></div>
+      <div class="iv">上传小票页（/pages/receipt/upload）<span class="note">弹窗：A-1 上传引导抽屉 ｜ A-2 识别小票 ｜ A-3 识别成功弹窗</span></div>
+    </div>
+
+    <div class="item">
+      <div class="ik">3.5 订阅配置</div>
+      <div class="iv">无</div>
+    </div>
+
+    <div class="item">
+      <div class="ik">3.6 积分明细流水</div>
+      <div class="iv">「小票积分」<span class="note">与卡片名称一一对应</span></div>
+    </div>
+
+    <div class="item">
+      <div class="ik">4.1 小票管理<span class="ro">只读</span></div>
+      <div class="iv">小票号 / 用户 / 上传时间 / 小票图片 / 识别状态 / 到账积分<span class="note">仅作查询核对，无人工补发入口</span></div>
     </div>
   </div>
 </section>
 
 <footer>
-  1013 小票积分 · 后台新增配置 v1.0 ｜ 前置：1012 自检清单 · 1013 小票积分迭代 ｜ 蓝色「可配置」= 运营可编辑字段
+  1013 小票积分 · 后台新增配置 v1.1 ｜ 前置：1012 自检清单 · 1013 小票积分迭代 ｜ 蓝色「可配置」= 运营可编辑字段
 </footer>
 
 </div>
