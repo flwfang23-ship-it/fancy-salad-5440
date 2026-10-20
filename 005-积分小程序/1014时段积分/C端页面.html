@@ -298,6 +298,12 @@ header.top .sub{font-size:12.5px;color:var(--ink3);padding-bottom:3px}
 .branch .bline{position:absolute;left:13px;top:-10px;bottom:14px;width:2px;background:#BFE6CC}
 .branch .btab{display:inline-block;font-size:10.5px;font-weight:700;color:#15803D;background:#EDF8F1;border:1px solid #CBEBD6;padding:2px 8px;border-radius:5px;margin-bottom:6px}
 
+/* 并列双卡（判断结果 1-2A / 1-2B） */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;position:relative;padding-left:0}
+.duo .step{padding-left:0}
+.duo .step::before{display:none}
+.duo .badge{display:none}
+
 /* 提示条（右栏底部） */
 .hintbar{margin-top:12px;font-size:10.5px;color:var(--ink3);line-height:1.6}
 .hintbar b{color:var(--ink2)}
@@ -411,17 +417,14 @@ html .gh-tip.show{opacity:1;visibility:visible}
             <div class="gh-tip left show" style="top:190px">点卡片进小程序 ›</div>
           </div>
 
-          <!-- 帧 1：C端时段判断（逻辑判断中间态 · 过渡/判断页组件，无倒计时，点按钮前进） -->
+          <!-- 帧 1：C端时段判断（逻辑自动判断 · 无交互无按钮，纯展示帧，仅右侧步骤卡可跳帧） -->
           <div class="frame" data-f="1">
             <div style="position:absolute;inset:0;background:#F7F8FA;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 30px;text-align:center">
               <div style="font-size:52px">⏰</div>
-              <span class="tag">打开小程序 · C端判断时段</span>
+              <span class="tag">打开小程序 · 自动判断</span>
               <div style="font-size:17px;font-weight:800">时段判断中</div>
-              <div style="font-size:12px;color:var(--ink3);line-height:1.8">读取当前服务器时间，判断是否命中时段：<br>· 下午茶 14:30-16:00 → 进【下午茶活动页】<br>· 夜宵 20:00-23:59 → 进【夜宵活动页】<br>· 后台未开启 / 其他时段 → 进缺省页</div>
-              <div class="d2btn" style="width:100%"><button class="main" id="btnJudge">继续</button></div>
+              <div style="font-size:12px;color:var(--ink3);line-height:1.95">读取当前服务器时间，命中以下任意时段即进入对应活动页：<br><br>· 下午茶 14:30-16:00 · +100<br>· 晚餐 17:00-19:00 · +150<br>· 夜宵 20:00-23:59 · +200<br><br>以上三项为 <b style="color:var(--brand)">三个独立的积分活动</b>，分别对应后台三张积分项卡片、独立流水类型，<br>并非同一个活动按时间段切分；后台未开启或其他时段进入缺省页。</div>
             </div>
-            <div class="guidehand show" style="left:250px;top:524px"><svg><use href="#ico-hand"/></svg></div>
-            <div class="gh-tip left show" style="top:510px">自动判断时段 ›</div>
           </div>
 
           <!-- 帧 2：下午茶活动页（小程序整页 · 非弹窗），点「去美团下单」跳端下单 -->
@@ -540,81 +543,122 @@ html .gh-tip.show{opacity:1;visibility:visible}
     <div class="sec-h"><span class="n">⑥</span><span class="t">时段活动 · 活动页 + 时段加码</span><span class="c">共 8 帧 · 2 个半屏抽屉</span></div>
 
     <div class="step cur" data-i="0">
-      <div class="badge">1</div>
+      <div class="badge" style="font-size:10px">1-1</div>
       <div class="body">
-        <div class="h"><span class="tt">微信分享卡片 · 进入小程序</span><span class="pill">起点</span></div>
-        <div class="meta"><span><b>页面：</b>微信聊天</span><span><b>弹窗：</b>否</span></div>
-        <div class="note">泛指微信分享卡片：用户在微信聊天点卡片进入小程序首页，触发 C 端时段判断。</div>
+        <div class="h"><span class="tt">进入小程序 · 触发时段判断</span></div>
+        <div class="meta">
+          <div><b>属性：</b>页面</div>
+          <div><b>来源：</b>微信聊天 · 分享卡片</div>
+          <div><b>结果：</b>点卡片进入小程序首页，触发 C 端时段判断</div>
+          <div><b>下一环：</b>1-2</div>
+        </div>
+        <div class="note">泛指微信分享卡片：用户在微信聊天点卡片进入小程序，进入即自动触发时段判断，无需额外点击。</div>
       </div>
     </div>
 
     <div class="step" data-i="1">
-      <div class="badge">2</div>
+      <div class="badge" style="font-size:10px">1-2</div>
       <div class="body">
-        <div class="h"><span class="tt">打开小程序 · C端判断时段</span><span class="pill">自动</span></div>
-        <div class="meta"><span><b>页面：</b>判断页</span><span><b>弹窗：</b>否</span></div>
-        <div class="note">整页判断中间态（过渡/判断页组件）：读取服务器时间，14:30-16:00 命中下午茶、20:00-23:59 命中夜宵，命中进入对应活动页；后台未开启或时段外进入缺省页；每次打开小程序重新判断，判断完点「继续」。</div>
+        <div class="h"><span class="tt">C端时段判断</span><span class="pill">判断</span></div>
+        <div class="meta">
+          <div><b>属性：</b>页面</div>
+          <div><b>触发：</b>打开小程序自动判断，读取服务器时间</div>
+          <div><b>结果：</b>分流到活动页或缺省页</div>
+          <div><b>下一环：</b>1-2A 或 1-2B</div>
+        </div>
+        <div class="note">纯逻辑自动判断，手机壳画面无按钮无交互，仅能通过右侧步骤卡推进。三个时段 <b style="color:var(--brand)">下午茶 / 晚餐 / 夜宵 是独立积分活动</b>（非同一活动的不同时段），各自对应后台独立积分项卡片、独立流水类型，时段互不重叠。</div>
       </div>
     </div>
 
-    <div class="step" data-i="2">
-      <div class="badge">3</div>
-      <div class="body">
-        <div class="h"><span class="tt">下午茶活动页</span><span class="pill pop">整页</span><span class="pill">【非弹窗】</span></div>
-        <div class="meta"><span><b>触发：</b>后台开启 · 命中 14:30-16:00</span><span><b>按钮：</b>去美团下单</span></div>
-        <div class="note">原「下午茶专属福利」半屏抽屉改为整页承载：活动头图 + 参与时段 + 加码 +100 + 平台/跳转方式（appid wxde8ac0a21135c07d）；吸底「去美团下单」跳端下单。</div>
-        <div class="br">⚠️ 支线：<i>夜宵线（20:00-23:59 · +200 · 饿了么 · H5 去淘宝闪购）</i>结构相同，本稿不展开。</div>
+    <div class="duo">
+      <div class="step" data-i="2">
+        <div class="body">
+          <div class="h"><span class="tt">1-2A 下午茶活动页</span></div>
+          <div class="meta">
+            <div><b>属性：</b>页面</div>
+            <div><b>触发：</b>后台开启 + 命中 14:30-16:00</div>
+            <div><b>结果：</b>点「去美团下单」跳端下单</div>
+            <div><b>下一环：</b>1-3</div>
+          </div>
+          <div class="note">整页承载：活动头图 + 参与时段 14:30-16:00 + 加码 +100（叠加基础积分之上）+ 平台美团 + 跳转 appid wxde8ac0a21135c07d。</div>
+          <div class="br">⚠️ 同构：<i>晚餐（17:00-19:00 · +150）、夜宵（20:00-23:59 · +200）</i>结构完全相同，本稿不展开。</div>
+        </div>
       </div>
-    </div>
-
-    <div class="step" data-i="3">
-      <div class="badge">4</div>
-      <div class="body">
-        <div class="h"><span class="tt">时段缺省页</span><span class="pill">异常</span><span class="pill">分支</span></div>
-        <div class="meta"><span><b>触发：</b>后台未开启 或 非 14:30-16:00</span><span><b>按钮：</b>返回首页</span></div>
-        <div class="note">仅「后台开启该活动 且 当前时间在指定时段内」才进入正常活动页，否则进入本缺省页；缺省页仅静态说明，唯一出口「返回首页」回小程序首页，主链自动跳过。</div>
+      <div class="step" data-i="3">
+        <div class="body">
+          <div class="h"><span class="tt">1-2B 缺省页</span></div>
+          <div class="meta">
+            <div><b>属性：</b>页面</div>
+            <div><b>触发：</b>后台未开启 或 非活动时段</div>
+            <div><b>结果：</b>唯一出口「返回首页」</div>
+            <div><b>下一环：</b>回 1-1</div>
+          </div>
+          <div class="note">仅「后台开启该活动 且 当前时间在指定时段内」才进入正常活动页，否则进入本缺省页；主链自动跳过，仅手动点入演示。</div>
+        </div>
       </div>
     </div>
 
     <div class="step" data-i="4">
-      <div class="badge">5</div>
+      <div class="badge" style="font-size:10px">1-3</div>
       <div class="body">
-        <div class="h"><span class="tt">下单付款</span><span class="pill">支付</span></div>
-        <div class="meta"><span><b>页面：</b>支付成功</span><span><b>弹窗：</b>否</span></div>
-        <div class="note">¥16.00 · 饿了么 · 肯德基（世纪大道店）· 微信支付；付款成功即触发积分回传入账。</div>
+        <div class="h"><span class="tt">下单付款</span></div>
+        <div class="meta">
+          <div><b>属性：</b>页面</div>
+          <div><b>画面：</b>支付成功（¥16.00 · 微信支付）</div>
+          <div><b>结果：</b>付款成功，触发积分回传</div>
+          <div><b>下一环：</b>1-4</div>
+        </div>
+        <div class="note">示例：肯德基（世纪大道店）· 微信支付；付款成功即触发积分回传，基础积分和时段额外积分依次到账。</div>
       </div>
     </div>
 
     <div class="step" data-i="5">
-      <div class="badge">6</div>
+      <div class="badge" style="font-size:10px">1-4</div>
       <div class="body">
-        <div class="h"><span class="tt">基础积分到账</span><span class="pill pop">弹窗</span><span class="pill">【半屏抽屉】</span></div>
-        <div class="meta"><span><b>触发：</b>付款成功自动弹</span><span><b>按钮：</b>我知道了</span></div>
-        <div class="note">第 1 个到账抽屉：+4,000 积分（已付款即入账，佣金 × 50% × 2000 折算）；点「我知道了」后弹第 2 个抽屉。</div>
+        <div class="h"><span class="tt">基础积分到账</span></div>
+        <div class="meta">
+          <div><b>属性：</b>弹窗</div>
+          <div><b>到账：</b>+4,000（佣金×50%×2000 折算）</div>
+          <div><b>结果：</b>点「我知道了」弹下一个抽屉</div>
+          <div><b>下一环：</b>1-5</div>
+        </div>
+        <div class="note">第 1 个到账抽屉（半屏底部），付款成功自动弹，用户点关闭后触发第 2 个时段额外积分到账抽屉。</div>
       </div>
     </div>
 
     <div class="step" data-i="6">
-      <div class="badge">7</div>
+      <div class="badge" style="font-size:10px">1-5</div>
       <div class="body">
-        <div class="h"><span class="tt">时段额外积分到账</span><span class="pill pop">弹窗</span><span class="pill">【半屏抽屉】</span></div>
-        <div class="meta"><span><b>触发：</b>承接第 1 个抽屉</span><span><b>按钮：</b>去积分明细</span></div>
-        <div class="note">第 2 个到账抽屉：+100 积分（下午茶 14:30-16:00 加码，叠加在基础积分之上）。</div>
+        <div class="h"><span class="tt">时段额外积分到账</span></div>
+        <div class="meta">
+          <div><b>属性：</b>弹窗</div>
+          <div><b>到账：</b>+100（下午茶 14:30-16:00 加码，叠加基础之上）</div>
+          <div><b>结果：</b>点「去积分明细」</div>
+          <div><b>下一环：</b>1-6</div>
+        </div>
+        <div class="note">第 2 个到账抽屉（半屏底部），承接第 1 个抽屉，叠加在基础积分之上，属于时段加码流水。</div>
       </div>
     </div>
 
     <div class="step" data-i="7">
-      <div class="badge">8</div>
+      <div class="badge" style="font-size:10px">1-6</div>
       <div class="body">
-        <div class="h"><span class="tt">流程结束 · 明细新增 2 条流水</span><span class="pill">闭环</span></div>
-        <div class="meta"><span><b>页面：</b>结束页</span><span><b>弹窗：</b>否</span></div>
-        <div class="note">积分明细新增「基础积分 + 下午茶额外积分」2 条流水；点「再走一遍」回到帧 1 可重入。</div>
+        <div class="h"><span class="tt">流程结束 · 明细新增 2 条流水</span></div>
+        <div class="meta">
+          <div><b>属性：</b>页面</div>
+          <div><b>画面：</b>流程结束页</div>
+          <div><b>结果：</b>积分明细新增基础积分 + 下午茶额外积分 2 条流水</div>
+          <div><b>下一环：</b>终点，可重入 1-1</div>
+        </div>
+        <div class="note">闭环完成；点「再走一遍」回起点分享卡片帧，可完整重跑全流程。</div>
       </div>
     </div>
 
     <div class="hintbar">
       <b>操作说明：</b>直接点任意步骤可切换左栏画面。<br>
-      <b>主线：</b>1 → 2 → 3 → 5 → 6 → 7 → 8（帧 4 为异常缺省分支，主链自动跳过；帧 8 可再走一遍回到帧 1）。
+      <b>主链：</b>1-1 分享卡片进小程序 → 1-2 时段判断 → 1-2A 活动页 → 1-3 下单付款 → 1-4 基础到账 → 1-5 时段额外到账 → 1-6 终点。<br>
+      <b>分支：</b>1-2B 缺省页（后台未开启或非活动时段触发），唯一出口「返回首页」回 1-1，主链自动跳过。<br>
+      <b>其他时段：</b>本稿以下午茶为代表，晚餐（17:00-19:00 · +150）、夜宵（20:00-23:59 · +200）为 <b style="color:var(--brand)">两个独立的积分活动</b>（非同一活动的不同时段），各自对应后台独立积分项卡片、独立流水类型。
     </div>
   </div>
 </div>
@@ -699,8 +743,8 @@ function go(i){
     tip.style.opacity = on ? '1' : '0';
     tip.style.visibility = on ? 'visible' : 'hidden';
   });
-  const stepsEl = document.querySelector('.steps');
-  if(stepsEl) stepsEl.scrollTo({top: cur * 82, behavior:'smooth'});
+  const curStep = document.querySelector(`.step[data-i="${cur}"]`);
+  if(curStep) curStep.scrollIntoView({block:'nearest', behavior:'smooth'});
   if(cur === 1){ try{ renderList(); }catch(e){ console.warn(e); } }
   if(cur === 2){ try{ renderDetail(); }catch(e){ console.warn(e); } }
   // 本稿无倒计时帧：各帧均由用户点按钮前进，不自动跳帧
@@ -732,9 +776,7 @@ steps.forEach(s => s.onclick = () => go(+s.dataset.i));
 const wxCard = document.getElementById('wxCard');
 wxCard.style.cursor = 'pointer'; wxCard.onclick = () => go(1);
 
-// 帧 1 时段判断：点「继续」→ 进下午茶活动页
-const btnJudge = document.getElementById('btnJudge');
-btnJudge.style.cursor = 'pointer'; btnJudge.onclick = () => go(2);
+// 帧 1 时段判断：纯逻辑自动判断帧，手机壳画面无按钮无交互，仅右侧步骤卡可跳帧
 
 // 帧 2 下午茶活动页（整页）：点「去美团下单」→ 跳端下单（支付成功）
 const btnAct = document.getElementById('btnAct');
