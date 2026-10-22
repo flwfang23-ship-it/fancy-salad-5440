@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>饭扫光 · 排行榜挑战免单 · B 端后台</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用壳 { display: grid; grid-template-columns: var(--泳道宽) var(--菜单宽) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+.菜单区 { background: #fff; color: #334155; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+.菜单品牌 { padding: 18px 18px 14px; border-bottom: 1px solid #eef2f7; }
+.菜单品牌名 { font-size: 16px; font-weight: 700; color: #172033; line-height: 1.4; }
+.菜单品牌小 { font-size: 11px; color: #94a3b8; margin-top: 3px; letter-spacing: .5px; }
+.菜单父 { padding: 16px 18px 4px; font-size: 12px; color: #0f6b8f; font-weight: 700; letter-spacing: .5px; }
+.菜单叶子 { display: flex; align-items: center; gap: 8px; color: #334155; font-size: 13px; cursor: pointer; user-select: none; border-left: 3px solid transparent; padding: 8px 18px 8px 30px; }
+.菜单叶子:hover { background: #f1f5f9; color: #0f172a; }
+.菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.菜单号 { font-family: Consolas, monospace; font-size: 11px; color: #94a3b8; min-width: 26px; }
+.菜单叶子.激活 .菜单号 { color: #0f6b8f; }
+.菜单图标 { font-size: 13px; }
+.内容区 { overflow-y: auto; background: #f1f5f9; }
+.页面面板 { display: none; padding: 22px 26px 48px; }
+.页面面板.激活 { display: block; }
+.页面卡 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(15,35,52,.04); margin-bottom: 18px; }
+.页面头 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.页面头 h2 { margin: 0; font-size: 19px; color: #172033; }
+.主按钮 { padding: 7px 16px; border: 1px solid #0f6b8f; border-radius: 6px; background: #0f6b8f; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.主按钮:hover { background: #0c5673; }
+.泳道区 { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 14px 12px 28px; }
+.泳道区 > h3 { margin: 2px 4px 10px; font-size: 14px; color: #334155; }
+.泳道简介 { margin: 0 4px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.75; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+</style>
+<style id="css-组件">
+.流程信息卡 { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; background: linear-gradient(180deg,#f8fbff,#f1f7ff); margin-bottom: 16px; overflow: hidden; }
+.流程信息卡-头部 { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #dbeafe; }
+.流程步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.流程信息卡-环节名 { font-size: 13.5px; font-weight: 600; color: #1e3a8a; }
+.流程信息卡-正文 { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+.流程信息卡-行 { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.流程信息卡-标签 { flex-shrink: 0; display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 150px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 150px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; white-space: nowrap; }
+.数据行:hover { background: #f8fafc; }
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; margin-right: 6px; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.删除按钮 { padding: 4px 12px; border: 1px solid #ef4444; border-radius: 4px; background: #fff; color: #ef4444; font-size: 12px; cursor: pointer; } .删除按钮:hover { background: #ef4444; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; }
+.编辑卡片区 { display: flex; flex-direction: column; gap: 20px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 120px 1fr 28px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 140px; }
+.field-input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; width: 100%; max-width: 360px; font-family: inherit; }
+textarea.field-input { max-width: 100%; }
+.field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; max-width: 94vw; height: 100vh; background: #f8fafc; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 60px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: #fff; }
+.panel-title { font-size: 17px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+.状态徽章 { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.状态徽章.进行中 { background: #ecfdf3; color: #027a48; }
+.状态徽章.未开始 { background: #f1f5f9; color: #94a3b8; }
+.状态徽章.已结束 { background: #fef2f2; color: #dc2626; }
+.状态徽章.冲榜中 { background: #eff6ff; color: #1d4ed8; }
+.状态徽章.已开奖 { background: #ecfdf3; color: #027a48; }
+.状态徽章.已删除 { background: #f1f5f9; color: #94a3b8; }
+</style>
+<style id="style-jf">
+.jf-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:12px;}
+.jf-card{border:1px solid #e2e8f0;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column;}
+.jf-card.jf-off{background:#f8fafc;}
+.jf-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid #f1f5f9;}
+.jf-name{font-weight:700;font-size:14px;color:#334155;}
+.jf-off .jf-name{color:#94a3b8;}
+.jf-status{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 10px;border-radius:999px;font-weight:600;flex:none;}
+.jf-status i{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.jf-status.jf-on{background:#ecfdf3;color:#027a48;}
+.jf-status.jf-off{background:#f1f5f9;color:#94a3b8;}
+.jf-body{padding:10px 14px;font-size:12.5px;color:#475569;line-height:1.9;flex:1;}
+.jf-row{display:flex;gap:8px;}
+.jf-row+.jf-row{margin-top:1px;}
+.jf-k{color:#94a3b8;flex:none;width:72px;}
+.jf-v{flex:1;min-width:0;}
+.jf-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.jf-foot{display:flex;gap:8px;padding:9px 14px;border-top:1px solid #f1f5f9;}
+.jf-btn{flex:1;padding:6px 0;border-radius:5px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:12.5px;cursor:pointer;transition:all .15s;font-family:inherit;}
+.jf-btn:hover{border-color:#1d4ed8;color:#1d4ed8;background:#f8fbff;}
+.jf-foot .详情按钮{flex:1;padding:6px 0;text-align:center;font-size:12.5px;}
+.jf-hint{display:block;font-size:11.5px;color:#94a3b8;margin-top:3px;line-height:1.6;}
+.jf-tip{border-radius:8px;padding:10px 14px;font-size:12.5px;line-height:1.8;margin-bottom:12px;}
+.jf-tip.b{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;}
+.jf-tip.w{background:#fffbeb;border:1px solid #fcd34d;color:#92400e;}
+.jf-tip.g{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;}
+.sub-switch{display:inline-block;width:40px;height:22px;border-radius:999px;background:#cbd5e1;position:relative;cursor:pointer;vertical-align:middle;transition:background .18s;flex:none;}
+.sub-switch i{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .18s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+.sub-switch.on{background:#22c55e;}
+.sub-switch.on i{left:21px;}
+.sub-switch-label{margin-left:8px;font-size:12.5px;font-weight:600;vertical-align:middle;}
+.sub-switch-label.on{color:#027a48;}.sub-switch-label.off{color:#94a3b8;}
+.阶梯行{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:center;padding:6px 0;}
+.阶梯行 input{padding:5px 8px;border:1px solid #cbd5e1;border-radius:5px;font-size:12.5px;width:100%;}
+.渠道行{display:grid;grid-template-columns:40px 1.2fr 0.8fr 0.8fr 0.8fr 60px;gap:8px;align-items:center;padding:6px 0;}
+.渠道行 input,.渠道行 select{padding:5px 8px;border:1px solid #cbd5e1;border-radius:5px;font-size:12.5px;width:100%;}
+.渠道-del{border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:5px;font-size:12px;padding:3px 8px;cursor:pointer;}
+.渠道-add{border:1px dashed #1d4ed8;background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:7px 14px;font-size:12.5px;cursor:pointer;width:100%;margin-top:6px;}
+.breadcrumb{font-size:12.5px;color:#64748b;margin-bottom:10px;}
+.breadcrumb a{color:#1d4ed8;cursor:pointer;text-decoration:none;}
+.breadcrumb a:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="应用壳">
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<div class="泳道简介" style="line-height:1.7;">
+<div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;">功能简介：</strong>
+<div style="padding:2px 0 0 20px;color:#475569;">① 运营配置活动规则 + CPS 渠道 + 订阅提醒</div>
+<div style="padding:2px 0 0 20px;color:#475569;">② C 端用户拍照发帖冲榜，好友领券助力集票</div>
+<div style="padding:2px 0 0 20px;color:#475569;">③ 周日开奖，前 10 名发放免单积分</div>
+</div>
+<div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;line-height:1.7;"><strong style="color:#2b6cb0;font-weight:700;margin-right:4px;">后台页面：</strong>
+<div style="padding:3px 0 0 20px;color:#475569;">
+<div>① <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('3.1')">活动管理</span>：活动周期/入榜人数/阶梯奖励/CPS渠道</div>
+<div>② <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('4.2')">订阅配置</span>：活动开始提醒 + 开奖提醒</div>
+<div>③ <span style="color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" onclick="切换页面('7.1')">积分明细</span>：饭扫光流水查询</div>
+</div>
+</div>
+</div>
+<div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:13px;background:#fff;">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid #e2e8f0;">
+<div style="padding:10px 8px;text-align:center;font-weight:700;font-size:13px;background:#eff6ff;color:#1d4ed8;">SaaS 总后台（运营）</div>
+<div style="padding:10px 8px;text-align:center;font-weight:700;font-size:13px;background:#ecfdf5;color:#065f46;">C 端用户</div>
+<div style="padding:10px 8px;text-align:center;font-weight:700;font-size:13px;background:#f8fafc;color:#475569;">系统任务（开奖）</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div style="padding:8px;border-right:1px solid #f1f5f9;"><span style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:inline-block;font-size:12.5px;font-weight:700;">① 配置活动/CPS渠道/订阅</span></div>
+<div style="padding:8px;border-right:1px solid #f1f5f9;"></div>
+<div style="padding:8px;"></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div style="padding:8px;border-right:1px solid #f1f5f9;"></div>
+<div style="padding:8px;border-right:1px solid #f1f5f9;"><span style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:inline-block;font-size:12.5px;font-weight:700;">② 拍照发帖 + 好友助力</span></div>
+<div style="padding:8px;"></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div style="padding:8px;border-right:1px solid #f1f5f9;"></div>
+<div style="padding:8px;border-right:1px solid #f1f5f9;"></div>
+<div style="padding:8px;"><span style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;display:inline-block;font-size:12.5px;font-weight:700;">③ 周日开奖 · 发免单积分</span></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;">
+<div style="padding:8px;border-right:1px solid #f1f5f9;"><span style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:inline-block;font-size:12.5px;font-weight:700;">④ 查询积分流水</span></div>
+<div style="padding:8px;border-right:1px solid #f1f5f9;"></div>
+<div style="padding:8px;"></div>
+</div>
+</div>
+</aside>
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">饭扫光运营后台</div><div class="菜单品牌小">排行榜挑战免单 · B 端原型</div></div>
+<div class="菜单父"><span>活动管理</span></div>
+<div class="菜单叶子 激活" data-menu-page="3.1" onclick="切换页面('3.1')"><span class="菜单号">3.1</span><span class="菜单图标">📋</span><span>活动管理</span></div>
+<div class="菜单父"><span>通知订阅</span></div>
+<div class="菜单叶子" data-menu-page="4.2" onclick="切换页面('4.2')"><span class="菜单号">4.2</span><span class="菜单图标">🔔</span><span>订阅配置</span></div>
+<div class="菜单父"><span>数据记录</span></div>
+<div class="菜单叶子" data-menu-page="7.1" onclick="切换页面('7.1')"><span class="菜单号">7.1</span><span class="菜单图标">📒</span><span>积分明细</span></div>
+</nav>
+<main class="内容区" id="内容区">
+
+<!-- 3.1 活动管理 -->
+<section class="页面面板 激活" id="面_3_1" data-page="3.1"><div class="页面卡"><div class="页面头"><h2>活动管理</h2><button class="主按钮" onclick="打开活动弹窗('新增',null)">+ 新增活动</button></div>
+<div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置活动规则</span></div><div class="流程信息卡-正文">
+<div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 饭扫光 &gt;</span> <span class="路径末段">活动管理</span></span></div>
+<div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">活动配置决定 C 端榜单期次、倒计时、入榜人数、中奖阶梯积分、未中奖兜底积分；CPS 渠道配置数量直接决定每日可助力次数</span></div>
+</div></div>
+<div class="工具栏">
+<div class="搜索框"><span class="搜索图标">🔍</span><input class="搜索输入" type="text" placeholder="搜索期次或活动名称"></div>
+<div class="筛选区"><span class="筛选标签">活动状态：</span><select class="筛选下拉"><option>全部</option><option>未开始</option><option>进行中</option><option>已结束</option></select></div>
+</div>
+<table class="数据表格"><thead><tr>
+<th class="列表表头"><span class="表头字段名">期次<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">活动名称<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span></th>
+<th class="列表表头"><span class="表头字段名">开始时间<span class="类型标签 date">date</span></span></th>
+<th class="列表表头"><span class="表头字段名">结束时间<span class="类型标签 date">date</span></span></th>
+<th class="列表表头"><span class="表头字段名">入榜人数<span class="类型标签 number">number</span></span></th>
+<th class="列表表头"><span class="表头字段名">阶梯奖励<span class="类型标签 组合字段">组合字段</span></span></th>
+<th class="列表表头"><span class="表头字段名">参与人数<span class="类型标签 number">number</span></span></th>
+<th class="列表表头"><span class="表头字段名">CPS渠道数<span class="类型标签 number">number</span></span></th>
+<th class="列表表头 操作列">操作</th>
+</tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格"><strong>第 47 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 进行中">进行中</span></td><td class="列表单元格">2026-11-23 00:00</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">128</td><td class="列表单元格">4</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开活动弹窗('编辑',0)">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>第 46 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 已结束">已结束</span></td><td class="列表单元格">2026-11-16 00:00</td><td class="列表单元格">2026-11-22 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">96</td><td class="列表单元格">0</td><td class="列表单元格 操作列"><button class="详情按钮" style="opacity:.5;cursor:not-allowed;" disabled>编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>第 48 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 未开始">未开始</span></td><td class="列表单元格">2026-11-30 00:00</td><td class="列表单元格">2026-12-06 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">0</td><td class="列表单元格">0</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开活动弹窗('编辑',2)">编辑</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 3 期活动</div>
+</div></section>
+
+<!-- 订阅配置 -->
+<section class="页面面板" id="面_4_2" data-page="4.2"><div class="页面卡"><div class="页面头"><h2>订阅配置</h2></div>
+<div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">③</span><span class="流程信息卡-环节名">当前环节：③ 配置订阅提醒</span></div><div class="流程信息卡-正文">
+<div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 通知订阅 &gt;</span> <span class="路径末段">订阅配置</span></span></div>
+<div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">本业务 2 个订阅提醒：活动开始提醒（活动开始时触发）、开奖提醒（活动结束时触发）；运营只做开关管理</span></div>
+</div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:#1e40af;line-height:1.8;">订阅模板由<strong>微信公众平台</strong>创建后回填到本页，本页只做<strong>开关管理</strong>，不做模板内容编辑。</div>
+<table class="数据表格"><thead><tr>
+<th class="列表表头"><span class="表头字段名">模板名称<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">模板ID<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">触发时机<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span></th>
+<th class="列表表头 操作列">操作</th>
+</tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格"><strong>活动开始提醒</strong></td><td class="列表单元格">SUB-FSG-START-001</td><td class="列表单元格">活动开始时</td><td class="列表单元格" id="订阅状态_0"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(0)">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>开奖提醒</strong></td><td class="列表单元格">SUB-FSG-DRAW-002</td><td class="列表单元格">活动结束时</td><td class="列表单元格" id="订阅状态_1"></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开订阅抽屉(1)">编辑</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 2 条订阅提醒；触发时机固定，运营仅维护开关状态</div>
+</div></section>
+
+<!-- 7.1 积分明细 -->
+<section class="页面面板" id="面_7_1" data-page="7.1"><div class="页面卡"><div class="页面头"><h2>积分明细</h2></div>
+<div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑬</span><span class="流程信息卡-环节名">当前环节：⑬ 查询积分流水（饭扫光维度）</span></div><div class="流程信息卡-正文">
+<div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 数据记录 &gt;</span> <span class="路径末段">积分明细</span></span></div>
+<div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">饭扫光相关流水可按流水类型筛选查询：排行榜积分、中奖免单积分、兜底参与积分</span></div>
+</div></div>
+<div class="工具栏">
+<div class="搜索框"><span class="搜索图标">🔍</span><input class="搜索输入" type="text" placeholder="搜索流水号或用户"></div>
+<div class="筛选区"><span class="筛选标签">流水类型：</span><select class="筛选下拉"><option>全部</option><option style="color:#dc2626;font-weight:700;">排行榜积分</option><option style="color:#dc2626;font-weight:700;">中奖免单积分</option><option style="color:#dc2626;font-weight:700;">兜底参与积分</option><option>（其他已有流水...）</option></select><span class="筛选标签">发生时间：</span><select class="筛选下拉"><option>近7天</option><option>近30天</option><option>全部</option></select></div>
+</div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;"><span style="color:#dc2626;font-weight:700;">红色加粗</span>为饭扫光业务专属流水类型：排行榜积分（每日助力发帖赠送）、中奖免单积分（周开奖按阶梯配置发放）、兜底参与积分（未中奖参与者每人赠送）</div>
+<table class="数据表格"><thead><tr>
+<th class="列表表头"><span class="表头字段名">流水号<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">用户<span class="类型标签 组合字段">组合字段</span></span></th>
+<th class="列表表头"><span class="表头字段名">流水类型<span class="类型标签 enum">enum</span></span></th>
+<th class="列表表头"><span class="表头字段名">变动积分<span class="类型标签 number">number</span></span></th>
+<th class="列表表头"><span class="表头字段名">变动后余额<span class="类型标签 number">number</span></span></th>
+<th class="列表表头"><span class="表头字段名">发生时间<span class="类型标签 date">date</span></span></th>
+<th class="列表表头"><span class="表头字段名">关联单号<span class="类型标签 string">string</span></span></th>
+</tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">JF20261123001</td><td class="列表单元格">奶茶控小李（of****a1）</td><td class="列表单元格"><span style="color:#dc2626;font-weight:700;">排行榜积分</span></td><td class="列表单元格"><span style="font-weight:700;color:#027a48">+4</span></td><td class="列表单元格">4</td><td class="列表单元格">2026-11-23 09:12</td><td class="列表单元格">P47001</td></tr>
+<tr class="数据行"><td class="列表单元格">JF20261123045</td><td class="列表单元格">三分糖少女（u****m2）</td><td class="列表单元格"><span style="color:#dc2626;font-weight:700;">排行榜积分</span></td><td class="列表单元格"><span style="font-weight:700;color:#027a48">+1</span></td><td class="列表单元格">1</td><td class="列表单元格">2026-11-23 14:30</td><td class="列表单元格">P47001</td></tr>
+<tr class="数据行"><td class="列表单元格">JF20261129001</td><td class="列表单元格">奶茶控小李（of****a1）</td><td class="列表单元格"><span style="color:#dc2626;font-weight:700;">中奖免单积分</span></td><td class="列表单元格"><span style="font-weight:700;color:#027a48">+3,500</span></td><td class="列表单元格">3,528</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">第47周开奖</td></tr>
+<tr class="数据行"><td class="列表单元格">JF20261129002</td><td class="列表单元格">三分糖少女（u****m2）</td><td class="列表单元格"><span style="color:#dc2626;font-weight:700;">中奖免单积分</span></td><td class="列表单元格"><span style="font-weight:700;color:#027a48">+3,000</span></td><td class="列表单元格">3,024</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">第47周开奖</td></tr>
+<tr class="数据行"><td class="列表单元格">JF20261129003</td><td class="列表单元格">去冰半糖（h****y5）</td><td class="列表单元格"><span style="color:#dc2626;font-weight:700;">兜底参与积分</span></td><td class="列表单元格"><span style="font-weight:700;color:#027a48">+200</span></td><td class="列表单元格">200</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">第47周开奖兜底</td></tr>
+</tbody></table>
+<div class="列表脚注">共 5 条记录（饭扫光维度）</div>
+</div></section>
+
+</main>
+</div>
+
+<!-- 表单弹窗抽屉 -->
+<div class="overlay" id="overlay" onclick="关闭表单弹窗()"></div>
+<div class="drawer" id="表单弹窗面板">
+<div class="panel-head"><span class="panel-title" id="表单弹窗标题">编辑</span><button class="btn-close" onclick="关闭表单弹窗()">✕</button></div>
+<div class="panel-body" id="表单弹窗正文"></div>
+<div class="panel-foot" id="表单弹窗脚部"></div>
+</div>
+
+<!-- 积分项抽屉 -->
+<div class="overlay" id="积分项遮罩" onclick="window.关闭积分项抽屉()"></div>
+<div class="drawer" id="积分项抽屉">
+<div class="panel-head"><span class="panel-title" id="jf标题">编辑</span><button class="btn-close" onclick="window.关闭积分项抽屉()">✕</button></div>
+<div class="panel-body" id="jf正文"></div>
+<div class="panel-foot" id="jf脚部"></div>
+</div>
+
+<!-- 提示容器 -->
+<div class="提示容器" id="提示容器"></div>
+
+<script id="js-页面切换">
+function 切换页面(页码) {
+  document.querySelectorAll('.页面面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(页码).replace('.', '_'));
+  if (panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单叶子').forEach(function(a) { a.classList.remove('激活'); });
+  var link = document.querySelector('[data-menu-page="' + 页码 + '"]');
+  if (link) link.classList.add('激活');
+  var c = document.getElementById('内容区'); if (c) c.scrollTop = 0;
+}
+</script>
+
+<script id="js-提示">
+function 显示提示(msg, type, dur) {
+  type = type || '信息'; dur = dur || 2000;
+  var box = document.getElementById('提示容器');
+  var el = document.createElement('div');
+  el.className = '提示 ' + type;
+  el.textContent = msg;
+  box.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.remove('显示'); el.classList.add('消失'); setTimeout(function() { el.remove(); }, 300); }, dur);
+}
+</script>
+
+<script id="js-活动管理">
+window._活动数据=[
+  {期次:'第 47 周',活动名称:'寻找夯爆奶茶',状态:'进行中',开始时间:'2026-11-23 00:00',结束时间:'2026-11-29 24:00',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[{排序:1,名称:'美团·天神券加码',平台:'美团',链接:'https://meituan.com/xxx',强推:'是',状态:'上架'},{排序:2,名称:'美团·爆品秒杀',平台:'美团',链接:'https://meituan.com/yyy',强推:'否',状态:'上架'},{排序:3,名称:'饿了么·吃货红包',平台:'饿了么',链接:'https://ele.me/zzz',强推:'否',状态:'上架'},{排序:4,名称:'饿了么·免配送费',平台:'饿了么',链接:'https://ele.me/www',强推:'否',状态:'上架'}],参与人数:128},
+  {期次:'第 46 周',活动名称:'寻找夯爆奶茶',状态:'已结束',开始时间:'2026-11-16 00:00',结束时间:'2026-11-22 24:00',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[],参与人数:96},
+  {期次:'第 48 周',活动名称:'寻找夯爆奶茶',状态:'未开始',开始时间:'2026-11-30 00:00',结束时间:'2026-12-06 24:00',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[],参与人数:0}
+];
+var _活动编辑idx=null;
+window.打开活动弹窗=function(模式,idx){
+  _活动编辑idx=idx;
+  var d = idx!=null ? window._活动数据[idx] : {期次:'',活动名称:'',开始时间:'',结束时间:'',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[]};
+  var 只读 = (idx!=null && d.状态==='已结束');
+  var 阶梯html='';
+  d.阶梯.forEach(function(s,i){ 阶梯html+='<div class="阶梯行"><input value="'+s.范围+'" '+(只读?'disabled':'')+' placeholder="名次范围"><input type="number" value="'+s.积分+'" '+(只读?'disabled':'')+' placeholder="积分奖励"><span style="color:#94a3b8;font-size:12px;">积分</span></div>'; });
+  var 渠道html='<div id="渠道列表区">';
+  d.渠道.forEach(function(c,i){ 渠道html+='<div class="渠道行"><input type="number" value="'+c.排序+'" '+(只读?'disabled':'')+'><input value="'+c.名称+'" '+(只读?'disabled':'')+'><select '+(只读?'disabled':'')+'><option'+(c.平台==='美团'?' selected':'')+'>美团</option><option'+(c.平台==='饿了么'?' selected':'')+'>饿了么</option></select><input value="'+c.链接+'" '+(只读?'disabled':'')+'><select '+(只读?'disabled':'')+'><option'+(c.强推==='是'?' selected':'')+'>是</option><option'+(c.强推==='否'?' selected':'')+'>否</option></select><button class="渠道-del" '+(只读?'disabled style="opacity:.4"':'')+'>删</button></div>'; });
+  渠道html+='</div>';
+  if(!只读) 渠道html+='<button class="渠道-add" onclick="添加渠道行()">+ 添加渠道</button>';
+  document.getElementById('表单弹窗标题').textContent = 模式 + ' · 活动';
+  document.getElementById('表单弹窗正文').innerHTML =
+    '<div class="编辑卡片区">' +
+    '<div class="field-card"><div class="field-card-header"><h4>基本信息</h4></div><div class="field-card-body">' +
+    '<div class="field-row"><span class="field-label">期次</span><span class="field-control"><input class="field-input" value="'+d.期次+'" '+(只读?'disabled':'')+'></span></div>' +
+    '<div class="field-row"><span class="field-label">活动名称</span><span class="field-control"><input class="field-input" value="'+d.活动名称+'" '+(只读?'disabled':'')+'></span></div>' +
+    '<div class="field-row"><span class="field-label">开始时间</span><span class="field-control"><input class="field-input" value="'+d.开始时间+'" '+(只读?'disabled':'')+'><span class="field-type-tag">datetime</span></span></div>' +
+    '<div class="field-row"><span class="field-label">结束时间</span><span class="field-control"><input class="field-input" value="'+d.结束时间+'" '+(只读?'disabled':'')+'><span class="field-type-tag">datetime</span></span></div>' +
+    '</div></div>' +
+    '<div class="field-card"><div class="field-card-header"><h4>入榜与奖励</h4></div><div class="field-card-body">' +
+    '<div class="field-row"><span class="field-label">入榜人数</span><span class="field-control"><input type="number" class="field-input" value="'+d.入榜人数+'" '+(只读?'disabled':'')+'></span></div>' +
+    '<div class="field-row"><span class="field-label">阶梯奖励</span><span class="field-control" style="flex-direction:column;align-items:stretch;">' + 阶梯html + '<span class="jf-hint">固定 4 档，名次范围由入榜人数决定，直接配置最终发放的积分数值</span></span></div>' +
+    '<div class="field-row"><span class="field-label">未中奖兜底</span><span class="field-control"><input type="number" class="field-input" value="'+d.兜底积分+'" '+(只读?'disabled':'')+'><span class="field-type-tag">积分 / 人</span><span class="jf-hint" style="margin-left:8px;">未进入前 '+d.入榜人数+' 名的参与者，每人赠送此金额，增加参与感</span></span></div>' +
+    '</div></div>' +
+    '<div class="field-card"><div class="field-card-header"><h4>助力规则</h4></div><div class="field-card-body">' +
+    '<div class="jf-tip b" style="margin-bottom:0;">CPS 渠道配置多少个，则每天可对每个配置的 CPS 活动进行助力。</div>' +
+    '</div></div>' +
+    '<div class="field-card"><div class="field-card-header"><h4>CPS 渠道配置</h4></div><div class="field-card-body">' + 渠道html + '</div></div>' +
+    '</div>';
+  document.getElementById('表单弹窗脚部').innerHTML = 只读 ? '<button class="btn-secondary" onclick="关闭表单弹窗()">关闭</button>' : '<button class="btn-secondary" onclick="关闭表单弹窗()">取消</button><button class="主按钮" onclick="保存活动()">保存</button>';
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('表单弹窗面板').classList.add('show');
+};
+window.添加渠道行=function(){
+  var box=document.getElementById('渠道列表区');
+  var div=document.createElement('div');
+  div.className='渠道行';
+  div.innerHTML='<input type="number" value="99"><input placeholder="渠道名称"><select><option>美团</option><option>饿了么</option></select><input placeholder="跳转链接"><select><option>否</option><option>是</option></select><button class="渠道-del" onclick="this.parentElement.remove()">删</button>';
+  box.appendChild(div);
+};
+window.保存活动=function(){
+  关闭表单弹窗();
+  显示提示('活动已保存（演示环境，不落库）','成功',2000);
+};
+window.关闭表单弹窗=function(){
+  document.getElementById('表单弹窗面板').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+};
+window.查看帖子=function(期次){};
+window.关闭积分项抽屉=function(){
+  document.getElementById('积分项抽屉').classList.remove('show');
+  document.getElementById('积分项遮罩').classList.remove('show');
+};
+</script>
+
+<script id="js-订阅配置">
+window._订阅状态数据=['生效','生效'];
+window._订阅模板名=['活动开始提醒','开奖提醒'];
+var _订阅idx=null;
+function 渲染订阅开关(){
+  for(var i=0;i<2;i++){
+    var 格=document.getElementById('订阅状态_'+i); if(!格) continue;
+    var on=window._订阅状态数据[i]==='生效';
+    格.innerHTML='<span class="sub-switch '+(on?'on':'off')+'" onclick="切换订阅状态('+i+')"><i></i></span><span class="sub-switch-label '+(on?'on':'off')+'">'+(on?'生效':'停用')+'</span>';
+  }
+}
+function 切换订阅状态(i){
+  window._订阅状态数据[i]=window._订阅状态数据[i]==='生效'?'停用':'生效';
+  渲染订阅开关();
+  显示提示('订阅提醒「'+window._订阅模板名[i]+'」已'+window._订阅状态数据[i]+'（演示环境，不落库）',window._订阅状态数据[i]==='生效'?'成功':'信息',2200);
+}
+window.打开订阅抽屉=function(i){
+  _订阅idx=i;
+  var on=window._订阅状态数据[i]==='生效';
+  var 触发时机=i===0?'活动开始时':'活动结束时';
+  document.getElementById('jf标题').textContent='编辑 · '+window._订阅模板名[i];
+  document.getElementById('jf正文').innerHTML=
+    '<div class="jf-tip b">触发时机固定不可编辑，运营仅维护<strong>开关状态</strong>。</div>' +
+    '<div class="field-card"><div class="field-card-header"><h4>订阅提醒配置</h4></div><div class="field-card-body">' +
+    '<div class="field-row"><span class="field-label">模板名称</span><span class="field-control"><span class="field-readonly">'+window._订阅模板名[i]+'</span></span></div>' +
+    '<div class="field-row"><span class="field-label">触发时机</span><span class="field-control"><span class="field-readonly" style="color:#1e40af;font-weight:700;">'+触发时机+'</span></span></div>' +
+    '<div class="field-row"><span class="field-label">状态</span><span class="field-control"><span class="sub-switch '+(on?'on':'off')+'" id="订阅编辑状态" onclick="订阅抽屉状态切换()"><i></i></span><span id="订阅编辑状态字" class="sub-switch-label '+(on?'on':'off')+'">'+(on?'生效':'停用')+'</span></span></div>' +
+    '</div></div>';
+  document.getElementById('jf脚部').innerHTML='<button class="btn-secondary" onclick="window.关闭积分项抽屉()">取消</button><button class="主按钮" onclick="保存订阅编辑()">保存</button>';
+  document.getElementById('积分项遮罩').classList.add('show');
+  document.getElementById('积分项抽屉').classList.add('show');
+};
+window.订阅抽屉状态切换=function(){
+  var s=document.getElementById('订阅编辑状态'),t=document.getElementById('订阅编辑状态字');
+  var on=!s.classList.contains('on');
+  s.className='sub-switch '+(on?'on':'off');
+  t.className='sub-switch-label '+(on?'on':'off'); t.textContent=on?'生效':'停用';
+};
+window.保存订阅编辑=function(){
+  var i=_订阅idx; if(i==null) return;
+  var on=document.getElementById('订阅编辑状态').classList.contains('on');
+  window._订阅状态数据[i]=on?'生效':'停用';
+  渲染订阅开关();
+  关闭积分项抽屉();
+  显示提示('订阅提醒「'+window._订阅模板名[i]+'」已保存（演示环境，不落库）','成功',2200);
+};
+渲染订阅开关();
+</script>
+</body>
+</html>

@@ -1,0 +1,603 @@
+﻿﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>饭扫光 · 交互演示</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#f2f3f5;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#111;height:100vh;display:flex;align-items:center;justify-content:center;gap:32px;padding:20px}
+
+/* —— 手机壳 —— */
+.phone{width:390px;height:844px;background:#fff;border-radius:44px;box-shadow:0 20px 60px rgba(0,0,0,.18),0 2px 12px rgba(0,0,0,.12);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.notch{width:130px;height:28px;background:#000;border-radius:0 0 18px 18px;margin:0 auto}
+.statusbar{display:flex;justify-content:space-between;padding:6px 26px 2px;font-size:13px;font-weight:600;color:#000}
+.navbar{display:flex;align-items:center;height:44px;padding:0 12px;border-bottom:1px solid #f1f1f1;background:#fff}
+.navbar .back{font-size:22px;font-weight:300;color:#333;width:32px;cursor:pointer;visibility:hidden}
+.navbar .back.show{visibility:visible}
+.navbar .title{flex:1;text-align:center;font-size:16px;font-weight:700;color:#111}
+.navbar .right{width:32px;font-size:13px;color:#999}
+
+/* —— 内容区 —— */
+.content{flex:1;position:relative;overflow:hidden}
+.page{position:absolute;inset:0;display:none;overflow-y:auto;padding-bottom:20px}
+.page.active{display:block}
+
+/* —— tab bar —— */
+.tabbar{display:flex;height:58px;border-top:1px solid #f1f1f1;background:#fff;padding-bottom:2px;flex-shrink:0}
+.tabbar .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#999;cursor:pointer;gap:2px}
+.tabbar .tab.active{color:#2e7d32}
+.tabbar .tab .ico{font-size:20px}
+.tabbar.hide{display:none}
+
+/* —— 通用样式 —— */
+.hero{background:linear-gradient(135deg,#2e7d32,#66bb6a);color:#fff;padding:18px 18px 22px}
+.hero .d{font-size:12px;opacity:.85}
+.hero .t{font-size:26px;font-weight:800;margin-top:4px}
+.hero .s{font-size:12px;opacity:.9;margin-top:4px}
+.card{background:#fff;border-radius:12px;padding:14px 16px;margin:12px}
+
+/* —— 抽屉 —— */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:10;display:none}
+.overlay.show{display:block}
+.drawer{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;z-index:11;transform:translateY(100%);transition:transform .28s ease;max-height:80vh;overflow-y:auto;padding:14px 16px 0}
+.drawer.show{transform:translateY(0)}
+.drawer .grab{width:38px;height:4px;background:#e0e0e0;border-radius:3px;margin:0 auto 12px}
+.drawer h3{font-size:16px;font-weight:800;text-align:center;margin-bottom:12px}
+.drawer .row{display:flex;justify-content:space-between;font-size:13px;padding:6px 0}
+.drawer .row span:first-child{color:#888}
+.drawer .btns{display:flex;gap:10px;padding:14px 16px 18px;background:#fff;border-top:1px solid #f1f1f1;margin:0 -16px;position:sticky;bottom:0}
+.btn{flex:1;padding:11px 0;border-radius:10px;font-size:14px;font-weight:700;border:none;cursor:pointer;transition:.15s}
+.btn-line{background:#f5f5f5;color:#333}
+.btn-primary{background:#2e7d32;color:#fff}
+
+/* —— 饭扫光内容流 —— */
+.food-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px}
+.food-card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.food-card .cover{height:140px;display:flex;align-items:center;justify-content:center;font-size:48px}
+.food-card .info{padding:10px 12px 12px}
+.food-card .name{font-size:14px;font-weight:700}
+.food-card .tag{font-size:11px;color:#999;margin-top:3px}
+.food-card .meta{display:flex;align-items:center;margin-top:8px;font-size:11px;color:#999}
+.food-card .meta .score{margin-left:auto;font-size:14px;font-weight:800;color:#2e7d32}
+
+/* —— 底部固定按钮 —— */
+.food-footer{position:sticky;bottom:0;z-index:5;display:flex;gap:10px;padding:12px 14px 16px;background:#fff;border-top:1px solid #f0f0f0}
+.food-footer .btn{flex:1;padding:12px;font-size:14px;font-weight:800;border-radius:12px}
+.food-footer .btn-line{background:#f5f5f5;color:#333;border:1px solid #eee}
+.food-footer .btn-primary{background:#2e7d32;color:#fff;box-shadow:0 4px 12px rgba(255,112,67,.3)}
+
+/* —— AI 评估等待 —— */
+.ai-eval{text-align:center;padding:30px 0 20px}
+.ai-eval .ico{font-size:56px;animation:spin 1.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-eval .tag{margin-top:12px;font-size:13px;font-weight:600;color:#2e7d32}
+.ai-eval .t{font-size:18px;font-weight:800;margin-top:8px}
+.ai-eval .s{font-size:12px;color:#999;margin-top:6px}
+.ai-eval .cd{font-size:36px;font-weight:800;color:#2e7d32;margin-top:14px}
+
+/* —— 统一结果页 —— */
+.result-photo{width:100%;height:220px;border-radius:14px;margin:14px;background:linear-gradient(135deg,#2e7d32,#66bb6a);display:flex;align-items:center;justify-content:center;font-size:72px}
+.result-header{text-align:center;margin-top:14px}
+.result-header .score{font-size:40px;font-weight:800;color:#2e7d32}
+.result-header .label{font-size:12px;color:#999;margin-top:-4px}
+.result-header .tag{display:inline-block;background:#e8f5e9;color:#1b5e20;font-size:12px;font-weight:700;border-radius:12px;padding:3px 12px;margin-top:8px}
+.result-ai{background:#fff7f2;border-radius:10px;padding:10px 12px;font-size:12px;color:#1b5e20;line-height:1.75;margin:12px 16px}
+.result-price-row{display:flex;align-items:center;justify-content:space-between;background:#f8f8fa;margin:0 16px;border-radius:10px;padding:10px 12px;font-size:12px;color:#666}
+.result-price-row .enter{color:#2e7d32;font-weight:700;cursor:pointer}
+
+/* —— 五芒星雷达图 —— */
+.radar-wrap{display:flex;justify-content:center;margin:10px 0 4px}
+.radar-wrap svg{overflow:visible}
+
+/* —— 发布成功页 —— */
+.done-card{background:linear-gradient(135deg,#2e7d32,#66bb6a);margin:12px;border-radius:16px;padding:40px 16px 32px;text-align:center;color:#fff}
+.done-card .ico{font-size:50px}
+.done-card .t{font-size:19px;font-weight:800;margin-top:10px}
+.done-card .s{font-size:12px;opacity:.9;margin-top:6px}
+.done-row{display:flex;justify-content:space-between;padding:10px 16px;font-size:13px;border-bottom:1px solid #f5f5f5}
+.done-row:last-child{border-bottom:none}
+.done-row span:first-child{color:#888}
+.done-row .bold{font-weight:800;color:#2e7d32}
+
+/* —— 价格选择 —— */
+.price-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0}
+.price-cell{text-align:center;font-size:13px;font-weight:600;padding:12px 0;border-radius:12px;cursor:pointer;border:1.5px solid #eee;background:#fff;color:#333}
+.price-cell.on{border-color:#2e7d32;background:#e8f5e9;color:#2e7d32}
+
+/* —— 右侧流程说明面板 —— */
+.flow-panel{width:380px;max-height:820px;overflow-y:auto;background:#fff;border-radius:20px;padding:22px 24px;box-shadow:0 10px 40px rgba(0,0,0,.08);flex-shrink:0}
+.flow-panel h2{font-size:18px;font-weight:800;margin-bottom:6px}
+.flow-panel .sub{font-size:12px;color:#888;margin-bottom:16px}
+.flow-step{display:flex;gap:10px;padding:12px 0;border-bottom:1px dashed #eee;font-size:13px}
+.flow-step:last-child{border-bottom:none}
+.flow-step .n{width:24px;height:24px;border-radius:50%;background:#2e7d32;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.flow-step.two .n{background:#43a047}
+.flow-step.three .n{background:#4caf50}
+.flow-step.four .n{background:#1b5e20}
+.flow-step.five .n{background:#bf360c}
+.flow-step .t{font-weight:700;margin-bottom:2px}
+.flow-step .d{font-size:12px;color:#888;line-height:1.6}
+.flow-step .hl{background:#e8f5e9;color:#1b5e20;padding:1px 5px;border-radius:3px;font-weight:700}
+
+/* —— 领券红包卡（首页） —— */
+.hb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px;margin:12px 0}
+.hb-card{border-radius:10px;padding:12px 10px;color:#fff;position:relative;overflow:hidden}
+.hb-card .pf{font-size:11px;opacity:.9}
+.hb-card .amt{font-size:17px;font-weight:800;margin:4px 0 6px}
+.hb-card .btn{background:rgba(255,255,255,.9);color:#1b5e20;border:none;border-radius:12px;font-size:11px;font-weight:700;padding:5px 0;width:100%}
+
+/* —— tab 内容隐藏 —— */
+.content.mall .page-home, .content.mine .page-home{display:none}
+.content.home .page-mall, .content.home .page-mine{display:none}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
+  <div class="navbar">
+    <div class="back" id="navBack" onclick="goBack()">‹</div>
+    <div class="title" id="navTitle">首页</div>
+    <div class="right"></div>
+  </div>
+
+  <div class="content" id="content">
+
+    <!-- ================ 页面1：首页 ================ -->
+    <div class="page page-home active" id="page-home">
+      <div class="hero">
+        <div class="d">我的积分</div>
+        <div class="t" id="hPts">12,000</div>
+        <div class="s">约合 ¥6.00</div>
+      </div>
+      <div class="card" style="background:linear-gradient(135deg,#2e7d32,#66bb6a);cursor:pointer;padding:16px" onclick="go('food')">
+        <div style="display:flex;align-items:center;gap:12px;color:#fff">
+          <div style="font-size:34px">🍽</div>
+          <div style="flex:1">
+            <div style="font-size:16px;font-weight:800">饭扫光 · 拍照测评</div>
+            <div style="font-size:11px;opacity:.92;margin-top:4px">拍下这顿饭，AI 给五维评分，赚积分</div>
+          </div>
+          <div style="background:#fff;color:#1b5e20;font-size:12px;font-weight:700;padding:7px 14px;border-radius:16px">去看看 ›</div>
+        </div>
+      </div>
+      <div class="hb-grid">
+        <div class="hb-card" style="background:linear-gradient(135deg,#43a047,#a5d6a7)"><div class="pf">饿了么红包</div><div class="amt">满20减5</div><div class="btn">领取 +5</div></div>
+        <div class="hb-card" style="background:linear-gradient(135deg,#43a047,#66bb6a)"><div class="pf">美团红包</div><div class="amt">满25减6</div><div class="btn">领取 +5</div></div>
+        <div class="hb-card" style="background:linear-gradient(135deg,#2e7d32,#a5d6a7)"><div class="pf">饿了么红包</div><div class="amt">满35减9</div><div class="btn">领取 +5</div></div>
+        <div class="hb-card" style="background:linear-gradient(135deg,#43a047,#66bb6a)"><div class="pf">美团红包</div><div class="amt">满30减8</div><div class="btn">领取 +5</div></div>
+        <div class="hb-card" style="background:linear-gradient(135deg,#1b5e20,#2e7d32)"><div class="pf">饿了么红包</div><div class="amt">满40减10</div><div class="btn">领取 +5</div></div>
+        <div class="hb-card" style="background:linear-gradient(135deg,#4caf50,#81c784)"><div class="pf">美团红包</div><div class="amt">满50减12</div><div class="btn">领取 +5</div></div>
+      </div>
+    </div>
+
+    <!-- ================ 页面2：饭扫光内容流 ================ -->
+    <div class="page page-food" id="page-food">
+      <div class="card" style="display:flex;align-items:center;gap:8px;padding:13px 16px;margin:12px">
+        <div style="font-size:15px;font-weight:800">🍽 饭扫光</div>
+        <div style="flex:1;font-size:11px;color:#999">按综合评分从高到低</div>
+      </div>
+      <div class="food-grid" id="foodGrid"></div>
+      <div style="height:12px"></div>
+      <div class="food-footer">
+        <button class="btn btn-line" onclick="notice('打开外卖平台下单页')">点外卖</button>
+        <button class="btn btn-primary" onclick="startFlow()">拍照测评</button>
+      </div>
+    </div>
+
+    <!-- ================ 页面3：统一结果 ================ -->
+    <div class="page page-result" id="page-result">
+      <div class="result-photo">🍲</div>
+      <div class="result-header">
+        <div class="score" id="resScore">--</div>
+        <div class="label">综合评分（参与维度均值 × 20）</div>
+        <div class="tag" id="resTag">--</div>
+      </div>
+      <div class="result-ai" id="resAi">小餐AI：正在读图…</div>
+      <div class="card" style="margin:0 16px;box-shadow:none;border:1px solid #f1f1f1">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px">
+          <span style="color:#888">识别名称</span><span style="font-weight:700" id="resName">麻辣香锅</span>
+        </div>
+        <div class="radar-wrap" id="radarWrap"></div>
+        <div id="dimRows"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 16px;font-size:13px">
+        <span style="color:#888">获得积分</span>
+        <span style="color:#2e7d32;font-weight:800">+200</span>
+      </div>
+      <div style="height:80px"></div>
+      <div class="food-footer">
+        <button class="btn btn-line" onclick="bfStep=7;showShare()">分享给好友</button>
+        <button class="btn btn-primary" onclick="bfStep=8;showDone()">不分享</button>
+      </div>
+    </div>
+
+    <!-- ================ 页面4：发布成功 ================ -->
+    <div class="page page-done" id="page-done">
+      <div class="done-card">
+        <div class="ico">🎉</div>
+        <div class="t">饭扫光测评完成</div>
+        <div class="s">内容已进流，可被浏览、点赞</div>
+      </div>
+      <div class="done-row"><span>识别名称</span><span>麻辣香锅</span></div>
+      <div class="done-row"><span>综合评分</span><span class="bold" id="doneScore">-- 分</span></div>
+      <div class="done-row"><span>评分维度</span><span id="doneDim">--</span></div>
+      <div class="done-row"><span>获得积分</span><span class="bold">+200</span></div>
+      <div style="padding:14px 16px 30px"><button class="btn btn-primary" onclick="resetFlow()">🔄 再走一遍</button></div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- ================ 底部 tab bar ================ -->
+  <div class="tabbar" id="tabbar">
+    <div class="tab active" onclick="go('home')"><div class="ico">🏠</div>首页</div>
+    <div class="tab"><div class="ico">🏪</div>商城</div>
+    <div class="tab"><div class="ico">👤</div>我的</div>
+  </div>
+
+  <!-- ================ 抽屉容器（空时不挡点击） ================ -->
+  <div class="overlay" id="overlay" onclick="hideDrawer()"></div>
+  <div id="drawerSlot" style="position:absolute;inset:0;z-index:10;pointer-events:none"></div>
+
+  <!-- ================ 微信分享卡（分享环节用） ================ -->
+  <div id="shareCard" style="position:absolute;inset:0;background:#e9e9ef;z-index:20;display:none">
+    <div style="background:#ededed;padding:10px 12px;font-size:13px;color:#555;border-bottom:1px solid #d9d9d9">💬 微信 · 干饭搭子</div>
+    <div style="padding:20px">
+      <div style="font-size:11px;color:#999;margin-bottom:8px">10月15日 12:30</div>
+      <div style="background:#fff;border-radius:10px;padding:12px;cursor:pointer" onclick="bfStep=8;showDone()">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:20px;height:20px;border-radius:4px;background:#2e7d32;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800">饭</div>
+          <div style="font-size:13px;font-weight:700">外卖积分</div>
+        </div>
+        <div style="font-size:14px;font-weight:600;color:#333">我在饭扫光给「麻辣香锅」打了 <span style="color:#2e7d32" id="shareScore">--</span> 分</div>
+        <div style="height:60px;background:linear-gradient(135deg,#2e7d32,#66bb6a);border-radius:8px;margin:10px 0;display:flex;align-items:center;justify-content:center;font-size:36px">🍲</div>
+        <div style="font-size:11px;color:#999">小程序 · 外卖积分</div>
+      </div>
+    </div>
+    <div style="position:absolute;bottom:0;left:0;right:0;padding:14px 16px;background:#fff;border-top:1px solid #e0e0e0">
+      <button class="btn btn-primary" onclick="hideShareCard()">收起分享</button>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+
+<!-- ================ 右侧流程说明面板 ================ -->
+<div class="flow-panel">
+  <h2>🍽 饭扫光 · 交互流程</h2>
+  <div class="sub">拍照晒饭 → AI 五维评分 → 赚积分 · 给老板看的交互演示</div>
+
+  <div class="flow-step">
+    <div class="n">1</div>
+    <div>
+      <div class="t">首页 → 饭扫光</div>
+      <div class="d">首页置顶入口卡「饭扫光 · 拍照测评」，点击进入二级页。同时首页保留 6 张红包卡做领券入口（纯样式）。</div>
+    </div>
+  </div>
+
+  <div class="flow-step two">
+    <div class="n">2</div>
+    <div>
+      <div class="t">饭扫光内容流</div>
+      <div class="d">双列瀑布流，按综合评分从高到低排序。底部固定两按钮：<span class="hl">点外卖</span>（回流主链路）+ <span class="hl">拍照测评</span>（发起新测评）。</div>
+    </div>
+  </div>
+
+  <div class="flow-step three">
+    <div class="n">3</div>
+    <div>
+      <div class="t">拍照 → AI 评估（半屏抽屉 · 5s）</div>
+      <div class="d">点拍照测评 → 弹出半屏抽屉取景 → 点拍照 → 弹第二个半屏抽屉显示 <span class="hl">小餐AI 评估中 · 倒计时 5s</span>。5 秒后自动收起。</div>
+    </div>
+  </div>
+
+  <div class="flow-step four">
+    <div class="n">4</div>
+    <div>
+      <div class="t">统一结果页（合并五维弹窗 + 补价格 + 测评结果）</div>
+      <div class="d">整个页面展示：<br>① 拍照的饭（照片位）<br>② <span class="hl">五芒星雷达图</span>（健康度/分量值/性价比/颜值值/口味值）<br>③ 综合分 + 特色标签 + 获得积分<br>④ 性价比旁有 <span class="hl">补价格</span> 入口，点了弹 5 档价格抽屉，选完实时刷新本页：性价比数值、五芒星、综合分、小餐 AI 评价口径自动从四维变五维<br>⑤ 小餐 AI 一句话评价</div>
+    </div>
+  </div>
+
+  <div class="flow-step five">
+    <div class="n">5</div>
+    <div>
+      <div class="t">分享 / 发布成功</div>
+      <div class="d">底部两按钮：<span class="hl">分享给好友</span>（弹出微信分享卡全屏覆盖，好友点开进小程序）或 <span class="hl">不分享</span>。两者都落到整个页面【发布成功】，显示识别名称、综合评分、评分维度、获得积分，底部有「🔄 再走一遍」。</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════
+   饭扫光 · 交互演示（极简版，只保留核心流程）
+   5 步：首页 → 饭扫光 → 拍照 → AI评估 → 统一结果 → 发布成功
+════════════════════════════════════════════════════ */
+
+// —— 全局状态 ——
+let curPage='home';
+let pickedPrice=-1;  // -1 未选，0=10以下, 1=10-20, 2=20-30, 3=30-40, 4=40以上
+let bfStep=0;        // 流程环节：0 首页 → 1 内容流 → 2 拍照抽屉 → 3 AI评估抽屉 → 4 统一结果 → 5 发布成功
+let aiTimer=null;
+
+// —— 演示数据 ——
+const D={
+  picked:{name:'麻辣香锅',health:4.3,portion:5,cost:4.2,look:4.7,taste:4.8,tagHigh:'大胃王之选',
+    ai:'锅气十足、分量给满，就是油偏大，减脂党慎入。',
+    aiNoCost:'锅气足、分量给满、卖相在线；没填价格，性价比这次先不算。'},
+  priceTiers:['10元以下','10-20元','20-30元','30-40元','40元以上'],
+  list:[
+    {name:'干锅牛蛙',emo:'🍲',c1:'#2e7d32',c2:'#66bb6a',tag:'大胃王之选',score:96,user:'小明',like:12},
+    {name:'黄焖鸡米饭',emo:'🍚',c1:'#81c784',c2:'#c8e6c9',tag:'省钱之选',score:88,user:'阿强',like:8},
+    {name:'麻辣烫',emo:'🍜',c1:'#E53935',c2:'#2e7d32',tag:'暖胃之选',score:85,user:'小红',like:15},
+    {name:'日式叉烧饭',emo:'🍱',c1:'#43a047',c2:'#FFD180',tag:'颜值之选',score:82,user:'David',like:20},
+    {name:'沙县拌面',emo:'🍝',c1:'#8D6E63',c2:'#BCAAA4',tag:'省钱之选',score:78,user:'路人甲',like:3},
+    {name:'轻食沙拉',emo:'🥗',c1:'#66BB6A',c2:'#AED581',tag:'健康之选',score:75,user:'健身男',like:9},
+  ]
+};
+
+// —— 导航 ——
+function go(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  curPage=p;
+  document.querySelector('.content').scrollTop=0;
+  // 导航条
+  const titles={home:'首页',food:'饭扫光',result:'测评结果',done:'发布成功'};
+  document.getElementById('navTitle').textContent=titles[p]||p;
+  // 返回按钮：food/result/done 才显示
+  const back=document.getElementById('navBack');
+  if(p==='home')back.classList.remove('show'); else back.classList.add('show');
+  // tab bar
+  const tabHidden={home:false,food:true,result:true,done:true};
+  document.getElementById('tabbar').classList.toggle('hide',tabHidden[p]!==false);
+  // tab active
+  document.querySelectorAll('.tabbar .tab').forEach((t,i)=>t.classList.toggle('active',p==='home'&&i===0));
+}
+function goBack(){
+  if(curPage==='food')go('home');
+  else if(curPage==='result'){hideDrawer();if(pickedPrice>=0){pickedPrice=-1;renderResult();}bfStep=1;go('food');}
+  else if(curPage==='done')resetFlow();
+  else go('home');
+}
+function notice(t){alert(t)}
+
+// —— 抽屉开关 ——
+function showDrawer(html){
+  const slot=document.getElementById('drawerSlot');
+  slot.innerHTML=html;
+  slot.style.pointerEvents='auto';
+  document.getElementById('overlay').classList.add('show');
+  setTimeout(()=>{const d=slot.querySelector('.drawer');if(d)d.classList.add('show')},10);
+}
+function hideDrawer(){
+  const slot=document.getElementById('drawerSlot');
+  const d=slot.querySelector('.drawer');
+  if(d)d.classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+  setTimeout(()=>{slot.innerHTML='';slot.style.pointerEvents='none'},300);
+}
+
+// —— 综合分计算 + 维度列表 ——
+function foodScore(){
+  const p=D.picked,vals=[p.health,p.portion,p.look,p.taste];
+  if(pickedPrice>=0)vals.push(p.cost);
+  return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*20);
+}
+function isFullDim(){return pickedPrice>=0}
+function dimList(){
+  const p=D.picked;
+  return [
+    {name:'健康度',v:p.health,c:'#E53935'},
+    {name:'分量值',v:p.portion,c:'#43a047'},
+    {name:'性价比',v:isFullDim()?p.cost:0,c:'#FDD835'},
+    {name:'颜值值',v:p.look,c:'#66BB6A'},
+    {name:'口味值',v:p.taste,c:'#42A5F5'},
+  ];
+}
+
+// —— 五芒星 SVG（雷达图）——
+function radarSVG(){
+  const dims=dimList();
+  const cx=110,cy=110,R=80,pad=24;
+  // 顶点角度（-90度起，顺时针）
+  const pts=dims.map((_,i)=>{
+    const a=(-90+i*72)*Math.PI/180;
+    return {x:cx+R*Math.cos(a),y:cy+R*Math.sin(a),lx:cx+(R+pad)*Math.cos(a),ly:cy+(R+pad)*Math.sin(a),a};
+  });
+  // 数据点
+  const dps=dims.map((d,i)=>{
+    const r=(d.v/5)*R;
+    const a=pts[i].a;
+    return {x:cx+r*Math.cos(a),y:cy+r*Math.sin(a),dim:d};
+  });
+  // 多边形路径
+  const polyPath=dps.map(d=>d.x+','+d.y).join(' ');
+  // 网格（5 层）
+  let grid='';
+  for(let k=1;k<=5;k++){
+    const rr=R*k/5;
+    const gp=pts.map(()=>{
+      const a=-90*dims.length/0; // no, reuse pts angles
+    });
+    // 重算
+    const poly=dims.map((_,i)=>{
+      const a=(-90+i*72)*Math.PI/180;
+      return (cx+rr*Math.cos(a))+','+(cy+rr*Math.sin(a));
+    }).join(' ');
+    grid+='<polygon points="'+poly+'" fill="none" stroke="#eee" stroke-width="1"/>';
+  }
+  // 顶点线
+  let axis='';
+  pts.forEach(p=>{axis+='<line x1="'+cx+'" y1="'+cy+'" x2="'+p.x+'" y2="'+p.y+'" stroke="#eee"/>';});
+  // 颜色渐变（只画五维，性价比那点在中心时不连线）
+  const valPath=isFullDim()?polyPath:dps.filter((_,i)=>i!==2).map(d=>d.x+','+d.y).join(' ');
+  // 标签
+  let labels='';
+  dims.forEach((d,i)=>{
+    const display=d.name==='性价比'&&!isFullDim()?'性价比\n？':d.name;
+    const c=d.name==='性价比'&&!isFullDim()?'#bbb':d.c;
+    labels+='<text x="'+pts[i].lx+'" y="'+pts[i].ly+'" fill="'+c+'" font-size="11" font-weight="600" text-anchor="middle" dominant-baseline="middle">'+(display.includes('\n')?display.replace('\n','')+'\n？':display)+'</text>';
+  });
+  labels=labels.replace(/\n/g,'<tspan x="'+cx+'" dy="13">？</tspan>');
+  // 简化：性价比没填时标签显示"性价比 ？"
+  let simpleLabels='';
+  dims.forEach((d,i)=>{
+    const text=d.name==='性价比'&&!isFullDim()?'性价比 ？':d.name;
+    simpleLabels+='<text x="'+pts[i].lx+'" y="'+pts[i].ly+'" fill="'+(d.name==='性价比'&&!isFullDim()?'#bbb':d.c)+'" font-size="11" font-weight="700" text-anchor="middle" dominant-baseline="middle">'+text+'</text>';
+  });
+  // 数据多边形点
+  let dpsColor='';
+  dps.forEach(d=>{dpsColor+='<circle cx="'+d.x+'" cy="'+d.y+'" r="4" fill="'+d.dim.c+'"/>';});
+  // 性价比缺失时：画四维路径（跳过 index 2）
+  let finalPath,finalFill;
+  if(isFullDim()){
+    finalPath=polyPath; finalFill='rgba(255,112,67,.18)';
+  }else{
+    // 四维：0,1,3,4
+    finalPath=[dps[0],dps[1],dps[3],dps[4]].map(d=>d.x+','+d.y).join(' ');
+    finalFill='rgba(255,112,67,.12)';
+  }
+  // 性价比缺失时把性价比那个顶点画成空心小圆
+  const costPoint=!isFullDim()?'<circle cx="'+pts[2].x+'" cy="'+pts[2].y+'" r="3.5" fill="#fff" stroke="#bbb" stroke-width="1.5"/>':'';
+
+  return '<svg width="260" height="260" viewBox="0 0 220 220">'
+    +grid+axis
+    +'<polygon points="'+finalPath+'" fill="'+finalFill+'" stroke="#2e7d32" stroke-width="2"/>'
+    +dpsColor+costPoint
+    +simpleLabels
+    +'</svg>';
+}
+
+// —— 维度文字行 ——
+function renderDimRows(){
+  const dims=dimList();
+  const stars=v=>'●'.repeat(Math.round(v))+'○'.repeat(5-Math.round(v))+' '+v.toFixed(1);
+  let html='';
+  dims.forEach(d=>{
+    const val=d.name==='性价比'&&!isFullDim()
+      ?'<span style="color:#bbb;font-weight:700">？  <span style="color:#2e7d32;font-size:11px;cursor:pointer" onclick="openPriceFromResult()">补价格</span></span>'
+      :d.name==='性价比'&&isFullDim()
+        ?'<span style="color:'+d.c+';font-weight:700">'+stars(d.v)+' · '+D.priceTiers[pickedPrice]+'</span>'
+        :'<span style="color:'+d.c+';font-weight:700">'+stars(d.v)+'</span>';
+    html+='<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0">'
+      +'<span style="color:#888">'+d.name+'</span><span>'+val+'</span></div>';
+  });
+  return html;
+}
+
+// —— 渲染统一结果页 ——
+function renderResult(){
+  document.getElementById('resScore').textContent=foodScore()+' 分';
+  document.getElementById('resTag').textContent=D.picked.tagHigh+' · '+(isFullDim()?'五维':'四维');
+  document.getElementById('resAi').textContent='小餐AI：'+(isFullDim()?D.picked.ai:D.picked.aiNoCost);
+  document.getElementById('radarWrap').innerHTML=radarSVG();
+  document.getElementById('dimRows').innerHTML=renderDimRows();
+  // 发布成功页同步
+  document.getElementById('doneScore').textContent=foodScore()+' 分';
+  document.getElementById('doneDim').textContent=isFullDim()?'五维（含性价比）':'四维（未填价格）';
+  document.getElementById('shareScore').textContent=foodScore();
+}
+
+// —— 饭扫光内容流渲染 ——
+function renderFoodGrid(){
+  const g=document.getElementById('foodGrid');
+  g.innerHTML=D.list.map((x,i)=>
+    '<div class="food-card">'
+    +'<div class="cover" style="background:linear-gradient(135deg,'+x.c1+','+x.c2+')">'+x.emo+'</div>'
+    +'<div class="info">'
+    +'<div class="name">'+x.name+'</div>'
+    +'<div class="tag">'+x.tag+'</div>'
+    +'<div class="meta"><span>🧑 '+x.user+(x.like?' · ❤ '+x.like:'')+'</span><span class="score">'+x.score+' 分</span></div>'
+    +'</div></div>'
+  ).join('');
+}
+
+// —— 价格抽屉 ——
+function priceDrawer(){
+  const cells=D.priceTiers.map((t,i)=>
+    '<div class="price-cell '+(pickedPrice===i?'on':'')+'" onclick="pickPrice('+i+')">'+t+'</div>'
+  ).join('');
+  return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3>这顿花了多少钱</h3>'
+    +'<div style="font-size:12px;color:#999;text-align:center;margin-bottom:14px">选一档，小餐AI 就能算性价比</div>'
+    +'<div class="price-grid">'+cells+'</div>'
+    +'<div class="btns"><button class="btn btn-line" onclick="hideDrawer()">取消</button>'
+    +'<button class="btn btn-primary" onclick="priceDone()">确定</button></div></div>';
+}
+function pickPrice(i){pickedPrice=i;document.querySelectorAll('.price-cell').forEach((c,j)=>c.classList.toggle('on',j===i))}
+function priceDone(){
+  if(pickedPrice<0){notice('先选一档价格');return;}
+  hideDrawer();
+  renderResult();
+}
+function openPriceFromResult(){showDrawer(priceDrawer())}
+
+// —— 拍照测评抽屉 ——
+function camDrawer(){
+  return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3>拍照测评</h3>'
+    +'<div style="height:290px;border-radius:14px;background:#2b2b30;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;margin-bottom:4px">'
+    +'<div style="position:absolute;inset:18px;border:1.5px dashed rgba(255,255,255,.3);border-radius:12px"></div>'
+    +'<div style="font-size:54px">🍲</div>'
+    +'<div style="position:absolute;bottom:14px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.72)">把这份外卖放进取景框</div></div>'
+    +'<div class="btns"><button class="btn btn-line" onclick="cancelFlow()">取消</button>'
+    +'<button class="btn btn-primary" onclick="takePhoto()">拍照</button></div></div>';
+}
+
+// —— AI 评估抽屉（5s 倒计时）——
+function aiDrawer(){
+  return '<div class="drawer" id="theDrawer"><div class="grab"></div><h3>小餐AI · 评估中</h3>'
+    +'<div class="ai-eval"><div class="ico">🤖</div>'
+    +'<div class="tag">正在读这顿饭</div>'
+    +'<div class="t" id="aiPhase">正在扫描菜品图像…</div>'
+    +'<div style="font-size:12px;color:#2e7d32;margin-top:8px;display:none" id="aiNameLine">识别到：麻辣香锅 🍲</div>'
+    +'<div class="cd" id="aiCd">5</div></div></div>';
+}
+
+// —— 流程控制 ——
+function startFlow(){
+  bfStep=2;
+  go('food');  // 保持在饭扫光页面
+  showDrawer(camDrawer());
+}
+function cancelFlow(){hideDrawer();bfStep=1}
+function takePhoto(){
+  hideDrawer();
+  bfStep=3;
+  showDrawer(aiDrawer());
+  // 倒计时 + 阶段动态切换
+  const phases=[null,'马上好 ✨','生成小餐 AI 评价…','正在给 5 个维度打分','AI 识别菜品名称','正在扫描菜品图像…'];
+  let n=5;
+  const el=document.getElementById('aiCd');
+  const phaseEl=()=>document.getElementById('aiPhase');
+  const nameEl=()=>document.getElementById('aiNameLine');
+  if(aiTimer)clearInterval(aiTimer);
+  // 先立即画一次 n=5 状态（phase 已在 HTML 里默认 = 正在扫描菜品图像）
+  if(nameEl())nameEl().style.display='none';
+  aiTimer=setInterval(()=>{
+    n--; if(el)el.textContent=n<=0?0:n;
+    const p=phaseEl(); if(p&&phases[n])p.textContent=phases[n];
+    if(n<=3&&nameEl())nameEl().style.display='block';  // 剩 3 秒时菜名浮现
+    if(n<=0){clearInterval(aiTimer);aiTimer=null;hideDrawer();bfStep=4;pickedPrice=-1;renderResult();go('result');}
+  },1000);
+}
+function showShare(){
+  document.getElementById('shareCard').style.display='block';
+}
+function hideShareCard(){
+  document.getElementById('shareCard').style.display='none';
+}
+function showDone(){
+  hideShareCard();
+  bfStep=5;
+  go('done');
+}
+function resetFlow(){
+  pickedPrice=-1;bfStep=0;
+  renderResult();renderFoodGrid();
+  go('home');
+}
+
+// —— 启动 ——
+renderFoodGrid();
+</script>
+</body>
+</html>
