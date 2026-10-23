@@ -827,8 +827,8 @@ html .gh-tip.show{opacity:1;visibility:visible}
 .pd-rows .r:last-child{border-bottom:none}
 .pd-rows .r span{color:#8A91A0}
 .pd-rows .r b{color:#1B1F27;font-weight:800}
-/* 订阅抽屉 · 2 个订阅模板 */
-.sub-list{margin-top:12px;display:flex;flex-direction:column;gap:9px}
+/* 订阅抽屉 · 3 个订阅模板 */
+.sub-list{margin-top:12px;display:flex;flex-direction:column;gap:9px;max-height:332px;overflow-y:auto;padding-right:2px}
 .sub-item{border:1px solid #EEF0F3;border-radius:12px;overflow:hidden;background:#fff}
 .si-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;background:#F7F8FA;border-bottom:1px solid #EEF0F3}
 .si-n{font-size:12.5px;font-weight:800;color:#1B1F27}
@@ -1707,7 +1707,19 @@ html .gh-tip.show{opacity:1;visibility:visible}
                   </div>
                   <div style="border-top:1px solid #F0F0F0;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:#576B95"><span>去参加</span><span style="font-size:15px">›</span></div>
                 </div>
-                <div style="text-align:center;font-size:11px;color:#B5B5B5;line-height:1.6">订阅 1 奖励发放通知：活动到达截止时间触发<br>订阅 2 活动开始提醒：活动到达开始时间触发<br>仅本期参与者可收到 · 订阅状态由后台「订阅配置」统一控制</div>
+                <div style="text-align:center;font-size:11px;color:#B5B5B5">周二 12:00</div>
+                <div id="subCard3" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+                  <div style="padding:12px 14px 10px">
+                    <div style="font-size:15px;font-weight:700;color:#1a1a1a">💰 积分到账通知</div>
+                    <div style="font-size:11.5px;color:#9A9A9A;margin-top:3px">饭扫光 · 积分账户</div>
+                  </div>
+                  <div style="padding:2px 14px 12px;font-size:13px;line-height:1.9">
+                    <div style="display:flex;justify-content:space-between"><span style="color:#9A9A9A">到账积分</span><span style="color:#17A34A;font-weight:700">+200 积分</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:#9A9A9A">当前余额</span><span style="color:#1a1a1a;font-weight:600">1,860 积分</span></div>
+                  </div>
+                  <div style="border-top:1px solid #F0F0F0;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:#576B95"><span>去积分商城</span><span style="font-size:15px">›</span></div>
+                </div>
+                <div style="text-align:center;font-size:11px;color:#B5B5B5;line-height:1.6">订阅 1 奖励发放通知：活动到达截止时间触发<br>订阅 2 活动开始提醒：活动到达开始时间触发<br>订阅 3 积分到账通知：积分到账实时触发（通用能力，与排行榜脱钩）<br>仅本期参与者可收到榜单类通知 · 订阅状态由后台「订阅配置」统一控制</div>
               </div>
             </div>
             <div class="guidehand show" style="left:212px;top:300px"><svg><use href="#ico-hand"/></svg></div>
@@ -1764,7 +1776,7 @@ html .gh-tip.show{opacity:1;visibility:visible}
               <div class="drh"></div>
               <div style="text-align:center;margin-bottom:6px"><div style="font-size:30px">🔔</div></div>
               <div class="dt" style="text-align:center">开启订阅提醒</div>
-              <div class="ds" style="text-align:center">2 条通知一次授权，全部开启</div>
+              <div class="ds" style="text-align:center">3 条通知一次授权，全部开启</div>
               <div class="sub-list">
                 <div class="sub-item">
                   <div class="si-h"><span class="si-n">奖励发放通知</span><span class="si-tag">订阅 1</span></div>
@@ -1780,8 +1792,15 @@ html .gh-tip.show{opacity:1;visibility:visible}
                   <div class="si-row"><span>活动名称</span><b>读后台活动名称</b></div>
                   <div class="si-row"><span>温馨提醒</span><b>第一名可获 N 元</b></div>
                 </div>
+                <div class="sub-item">
+                  <div class="si-h"><span class="si-n">积分到账通知</span><span class="si-tag">订阅 3</span></div>
+                  <div class="si-row"><span>模板ID</span><b class="si-id">待后台配置（通用积分模板）</b></div>
+                  <div class="si-row"><span>触发节点</span><b>积分到账时实时推送</b></div>
+                  <div class="si-row"><span>到账积分</span><b>本次到账数量（M 积分）</b></div>
+                  <div class="si-row"><span>说明</span><b>通用积分通知，与排行榜业务脱钩，不区分积分来源</b></div>
+                </div>
               </div>
-              <div class="bubble">一次授权开启 2 条通知，不会推送其他营销消息；可在微信「服务通知」中随时关闭。</div>
+              <div class="bubble">一次授权开启 3 条通知，不会推送其他营销消息；可在微信「服务通知」中随时关闭。</div>
               <div class="d2btn">
                 <button class="ghost" id="btnSubLater">暂不订阅</button>
                 <button class="main" id="btnSubOk">一键订阅</button>
@@ -1937,10 +1956,10 @@ html .gh-tip.show{opacity:1;visibility:visible}
       <div class="body">
         <div class="h"><span class="tt">订阅提醒</span><span class="pill">半屏抽屉</span></div>
         <div class="meta">
-          <div><b>状态</b>：底部抽屉 · 2 条订阅模板</div>
-          <div><b>属性</b>：微信订阅授权 · 2 条模板一次授权</div>
-          <div><b>关键字段</b>：奖励发放通知（模板ID WR2tz…，活动截止时触发）· 活动开始提醒（模板ID vWae…，活动开始时触发）· 一键订阅 · 暂不订阅</div>
-          <div><b>结果</b>：用户点击「一键订阅」→ Toast「已订阅 · 奖励发放通知 + 活动开始提醒」</div>
+          <div><b>状态</b>：底部抽屉 · 3 条订阅模板</div>
+          <div><b>属性</b>：微信订阅授权 · 3 条模板一次授权</div>
+          <div><b>关键字段</b>：奖励发放通知（模板ID WR2tz…，活动截止时触发）· 活动开始提醒（模板ID vWae…，活动开始时触发）· 积分到账通知（通用积分模板，积分到账实时触发）· 一键订阅 · 暂不订阅</div>
+          <div><b>结果</b>：用户点击「一键订阅」→ Toast「已订阅 · 奖励发放通知 + 活动开始提醒 + 积分到账通知」</div>
           <div><b>下一环</b>：帖子详情 · 作者-新帖（帧 5）</div>
         </div>
         <div class="note">拉起时机：确认发布成功后自动拉起；遮罩 / 暂不订阅 = 跳过，直接进帖子详情，不阻断发布</div>
@@ -2219,10 +2238,10 @@ html .gh-tip.show{opacity:1;visibility:visible}
       <div class="body">
         <div class="h"><span class="tt">订阅提醒</span><span class="pill">半屏抽屉</span></div>
         <div class="meta">
-          <div><b>状态</b>：底部抽屉 · 2 条订阅模板</div>
-          <div><b>属性</b>：微信订阅授权 · 2 条模板一次授权（同帧 21，多流程共用）</div>
-          <div><b>关键字段</b>：奖励发放通知（活动截止时触发）· 活动开始提醒（活动开始时触发）· 一键订阅 · 暂不订阅</div>
-          <div><b>结果</b>：用户点击「一键订阅」→ Toast「已订阅 · 奖励发放通知 + 活动开始提醒」</div>
+          <div><b>状态</b>：底部抽屉 · 3 条订阅模板</div>
+          <div><b>属性</b>：微信订阅授权 · 3 条模板一次授权（同帧 21，多流程共用）</div>
+          <div><b>关键字段</b>：奖励发放通知（活动截止时触发）· 活动开始提醒（活动开始时触发）· 积分到账通知（积分到账实时触发）· 一键订阅 · 暂不订阅</div>
+          <div><b>结果</b>：用户点击「一键订阅」→ Toast「已订阅 · 奖励发放通知 + 活动开始提醒 + 积分到账通知」</div>
           <div><b>下一环</b>：返回帖子详情（帧 5）</div>
         </div>
         <div class="note">该状态被多流程调用（A1 / A3-2），详右侧说明；遮罩 / 暂不订阅 = 直接返回帖子详情</div>
@@ -3195,7 +3214,7 @@ function bindEvents(){
   const closeSubSheet = () => go(5, curBlock);
   click('.frame[data-f="21"] .sheetmask', closeSubSheet);
   click('.frame[data-f="21"] #btnSubLater', closeSubSheet);
-  click('.frame[data-f="21"] #btnSubOk', () => { showToast('已订阅 · 奖励发放通知 + 活动开始提醒'); closeSubSheet(); });
+  click('.frame[data-f="21"] #btnSubOk', () => { showToast('已订阅 · 奖励发放通知 + 活动开始提醒 + 积分到账通知'); closeSubSheet(); });
 
   // --- 帧 22 赠送积分抽屉（A3-2 未上榜安慰）---
   const bonusToPost = () => selectPageState('postDetail', 'author-lose');
