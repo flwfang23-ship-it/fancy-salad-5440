@@ -245,13 +245,13 @@ textarea.field-input { max-width: 100%; }
 <section class="页面面板" id="面_7_1" data-page="7.1"><div class="页面卡"><div class="页面头"><h2>积分明细</h2></div>
 <div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">⑬</span><span class="流程信息卡-环节名">当前环节：⑬ 查询积分流水（饭扫光维度）</span></div><div class="流程信息卡-正文">
 <div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 数据记录 &gt;</span> <span class="路径末段">积分明细</span></span></div>
-<div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">饭扫光相关流水可按流水类型筛选查询：排行榜积分、中奖免单积分、兜底参与积分</span></div>
+<div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">饭扫光相关流水可按流水类型筛选查询：中奖免单积分、兜底参与积分</span></div>
 </div></div>
 <div class="工具栏">
 <div class="搜索框"><span class="搜索图标">🔍</span><input class="搜索输入" type="text" placeholder="搜索流水号或用户"></div>
-<div class="筛选区"><span class="筛选标签">流水类型：</span><select class="筛选下拉"><option>全部</option><option style="color:#dc2626;font-weight:700;">排行榜积分</option><option style="color:#dc2626;font-weight:700;">中奖免单积分</option><option style="color:#dc2626;font-weight:700;">兜底参与积分</option><option>（其他已有流水...）</option></select><span class="筛选标签">发生时间：</span><select class="筛选下拉"><option>近7天</option><option>近30天</option><option>全部</option></select></div>
+<div class="筛选区"><span class="筛选标签">流水类型：</span><select class="筛选下拉"><option>全部</option><option style="color:#dc2626;font-weight:700;">中奖免单积分</option><option style="color:#dc2626;font-weight:700;">兜底参与积分</option><option>（其他已有流水...）</option></select><span class="筛选标签">发生时间：</span><select class="筛选下拉"><option>近7天</option><option>近30天</option><option>全部</option></select></div>
 </div>
-<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;"><span style="color:#dc2626;font-weight:700;">红色加粗</span>为饭扫光业务专属流水类型：排行榜积分（每日助力发帖赠送）、中奖免单积分（周开奖按阶梯配置发放）、兜底参与积分（未中奖参与者每人赠送）</div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;"><span style="color:#dc2626;font-weight:700;">红色加粗</span>为饭扫光业务专属流水类型：中奖免单积分（周开奖按阶梯配置发放）、兜底参与积分（未中奖参与者每人赠送）</div>
 <table class="数据表格"><thead><tr>
 <th class="列表表头"><span class="表头字段名">流水号<span class="类型标签 string">string</span></span></th>
 <th class="列表表头"><span class="表头字段名">用户<span class="类型标签 组合字段">组合字段</span></span></th>
@@ -261,13 +261,11 @@ textarea.field-input { max-width: 100%; }
 <th class="列表表头"><span class="表头字段名">发生时间<span class="类型标签 date">date</span></span></th>
 <th class="列表表头"><span class="表头字段名">关联单号<span class="类型标签 string">string</span></span></th>
 </tr></thead><tbody>
-<tr class="数据行"><td class="列表单元格">JF20261123001</td><td class="列表单元格">奶茶控小李（of****a1）</td><td class="列表单元格"><span style="color:#dc2626;font-weight:700;">排行榜积分</span></td><td class="列表单元格"><span style="font-weight:700;color:#027a48">+4</span></td><td class="列表单元格">4</td><td class="列表单元格">2026-11-23 09:12</td><td class="列表单元格">P47001</td></tr>
-<tr class="数据行"><td class="列表单元格">JF20261123045</td><td class="列表单元格">三分糖少女（u****m2）</td><td class="列表单元格"><span style="color:#dc2626;font-weight:700;">排行榜积分</span></td><td class="列表单元格"><span style="font-weight:700;color:#027a48">+1</span></td><td class="列表单元格">1</td><td class="列表单元格">2026-11-23 14:30</td><td class="列表单元格">P47001</td></tr>
 <tr class="数据行"><td class="列表单元格">JF20261129001</td><td class="列表单元格">奶茶控小李（of****a1）</td><td class="列表单元格"><span style="color:#dc2626;font-weight:700;">中奖免单积分</span></td><td class="列表单元格"><span style="font-weight:700;color:#027a48">+3,500</span></td><td class="列表单元格">3,528</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">第47周开奖</td></tr>
 <tr class="数据行"><td class="列表单元格">JF20261129002</td><td class="列表单元格">三分糖少女（u****m2）</td><td class="列表单元格"><span style="color:#dc2626;font-weight:700;">中奖免单积分</span></td><td class="列表单元格"><span style="font-weight:700;color:#027a48">+3,000</span></td><td class="列表单元格">3,024</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">第47周开奖</td></tr>
 <tr class="数据行"><td class="列表单元格">JF20261129003</td><td class="列表单元格">去冰半糖（h****y5）</td><td class="列表单元格"><span style="color:#dc2626;font-weight:700;">兜底参与积分</span></td><td class="列表单元格"><span style="font-weight:700;color:#027a48">+200</span></td><td class="列表单元格">200</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">第47周开奖兜底</td></tr>
 </tbody></table>
-<div class="列表脚注">共 5 条记录（饭扫光维度）</div>
+<div class="列表脚注">共 3 条记录（饭扫光维度）</div>
 </div></section>
 
 </main>
