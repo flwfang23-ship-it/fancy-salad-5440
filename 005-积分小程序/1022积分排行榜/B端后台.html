@@ -199,12 +199,11 @@ textarea.field-input { max-width: 100%; }
 <div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">活动配置决定 C 端榜单期次、倒计时、入榜人数、中奖阶梯积分、未中奖兜底积分；CPS 渠道配置数量直接决定每日可助力次数</span></div>
 </div></div>
 <div class="工具栏">
-<div class="搜索框"><span class="搜索图标">🔍</span><input class="搜索输入" type="text" placeholder="搜索期次或活动名称"></div>
+<div class="搜索框"><span class="搜索图标">🔍</span><input class="搜索输入" type="text" placeholder="搜索活动期次"></div>
 <div class="筛选区"><span class="筛选标签">活动状态：</span><select class="筛选下拉"><option>全部</option><option>未开始</option><option>进行中</option><option>已结束</option></select></div>
 </div>
 <table class="数据表格"><thead><tr>
-<th class="列表表头"><span class="表头字段名">期次<span class="类型标签 string">string</span></span></th>
-<th class="列表表头"><span class="表头字段名">活动名称<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">活动期次<span class="类型标签 string">string</span></span></th>
 <th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span></th>
 <th class="列表表头"><span class="表头字段名">开始时间<span class="类型标签 date">date</span></span></th>
 <th class="列表表头"><span class="表头字段名">结束时间<span class="类型标签 date">date</span></span></th>
@@ -214,9 +213,9 @@ textarea.field-input { max-width: 100%; }
 <th class="列表表头"><span class="表头字段名">CPS渠道数<span class="类型标签 number">number</span></span></th>
 <th class="列表表头 操作列">操作</th>
 </tr></thead><tbody>
-<tr class="数据行"><td class="列表单元格"><strong>第 47 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 进行中">进行中</span></td><td class="列表单元格">2026-11-23 00:00</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">128</td><td class="列表单元格">4</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开活动弹窗('编辑',0)">编辑</button><button class="删除按钮" onclick="删除活动(0)">删除</button></td></tr>
-<tr class="数据行"><td class="列表单元格"><strong>第 46 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 已结束">已结束</span></td><td class="列表单元格">2026-11-16 00:00</td><td class="列表单元格">2026-11-22 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">96</td><td class="列表单元格">0</td><td class="列表单元格 操作列"><button class="详情按钮" style="opacity:.5;cursor:not-allowed;" disabled>编辑</button><button class="删除按钮" onclick="删除活动(1)">删除</button></td></tr>
-<tr class="数据行"><td class="列表单元格"><strong>第 48 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 未开始">未开始</span></td><td class="列表单元格">2026-11-30 00:00</td><td class="列表单元格">2026-12-06 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">0</td><td class="列表单元格">0</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开活动弹窗('编辑',2)">编辑</button><button class="删除按钮" onclick="删除活动(2)">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>第 47 周 · 寻找夯爆奶茶</strong></td><td class="列表单元格"><span class="状态徽章 进行中">进行中</span></td><td class="列表单元格">2026-11-23 00:00</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">128</td><td class="列表单元格">4</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开活动弹窗('编辑',0)">编辑</button><button class="删除按钮" onclick="删除活动(0)">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>第 46 周 · 寻找夯爆奶茶</strong></td><td class="列表单元格"><span class="状态徽章 已结束">已结束</span></td><td class="列表单元格">2026-11-16 00:00</td><td class="列表单元格">2026-11-22 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">96</td><td class="列表单元格">0</td><td class="列表单元格 操作列"><button class="详情按钮" style="opacity:.5;cursor:not-allowed;" disabled>编辑</button><button class="删除按钮" onclick="删除活动(1)">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>第 48 周 · 寻找夯爆奶茶</strong></td><td class="列表单元格"><span class="状态徽章 未开始">未开始</span></td><td class="列表单元格">2026-11-30 00:00</td><td class="列表单元格">2026-12-06 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">0</td><td class="列表单元格">0</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开活动弹窗('编辑',2)">编辑</button><button class="删除按钮" onclick="删除活动(2)">删除</button></td></tr>
 </tbody></table>
 <div class="列表脚注">共 3 期活动</div>
 </div></section>
@@ -317,14 +316,14 @@ function 显示提示(msg, type, dur) {
 
 <script id="js-活动管理">
 window._活动数据=[
-  {期次:'第 47 周',活动名称:'寻找夯爆奶茶',状态:'进行中',开始时间:'2026-11-23 00:00',结束时间:'2026-11-29 24:00',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[{排序:1,名称:'美团·天神券加码',平台:'美团',链接:'https://meituan.com/xxx',强推:'是',状态:'上架'},{排序:2,名称:'美团·爆品秒杀',平台:'美团',链接:'https://meituan.com/yyy',强推:'否',状态:'上架'},{排序:3,名称:'饿了么·吃货红包',平台:'饿了么',链接:'https://ele.me/zzz',强推:'否',状态:'上架'},{排序:4,名称:'饿了么·免配送费',平台:'饿了么',链接:'https://ele.me/www',强推:'否',状态:'上架'}],参与人数:128},
-  {期次:'第 46 周',活动名称:'寻找夯爆奶茶',状态:'已结束',开始时间:'2026-11-16 00:00',结束时间:'2026-11-22 24:00',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[],参与人数:96},
-  {期次:'第 48 周',活动名称:'寻找夯爆奶茶',状态:'未开始',开始时间:'2026-11-30 00:00',结束时间:'2026-12-06 24:00',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[],参与人数:0}
+  {活动期次:'第 47 周 · 寻找夯爆奶茶',状态:'进行中',开始时间:'2026-11-23 00:00',结束时间:'2026-11-29 24:00',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[{排序:1,名称:'美团·天神券加码',平台:'美团',链接:'https://meituan.com/xxx',强推:'是',状态:'上架'},{排序:2,名称:'美团·爆品秒杀',平台:'美团',链接:'https://meituan.com/yyy',强推:'否',状态:'上架'},{排序:3,名称:'饿了么·吃货红包',平台:'饿了么',链接:'https://ele.me/zzz',强推:'否',状态:'上架'},{排序:4,名称:'饿了么·免配送费',平台:'饿了么',链接:'https://ele.me/www',强推:'否',状态:'上架'}],参与人数:128},
+  {活动期次:'第 46 周 · 寻找夯爆奶茶',状态:'已结束',开始时间:'2026-11-16 00:00',结束时间:'2026-11-22 24:00',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[],参与人数:96},
+  {活动期次:'第 48 周 · 寻找夯爆奶茶',状态:'未开始',开始时间:'2026-11-30 00:00',结束时间:'2026-12-06 24:00',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[],参与人数:0}
 ];
 var _活动编辑idx=null;
 window.打开活动弹窗=function(模式,idx){
   _活动编辑idx=idx;
-  var d = idx!=null ? window._活动数据[idx] : {期次:'',活动名称:'',开始时间:'',结束时间:'',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[]};
+  var d = idx!=null ? window._活动数据[idx] : {活动期次:'',开始时间:'',结束时间:'',入榜人数:10,阶梯:[{范围:'第1名',积分:3500},{范围:'第2-3名',积分:3000},{范围:'第4-6名',积分:2500},{范围:'第7-10名',积分:2000}],兜底积分:200,渠道:[]};
   var 只读 = (idx!=null && d.状态==='已结束');
   var 阶梯html='';
   d.阶梯.forEach(function(s,i){ 阶梯html+='<div class="阶梯行"><input value="'+s.范围+'" '+(只读?'disabled':'')+' placeholder="名次范围"><input type="number" value="'+s.积分+'" '+(只读?'disabled':'')+' placeholder="积分奖励"><span style="color:#94a3b8;font-size:12px;">积分</span></div>'; });
@@ -336,8 +335,7 @@ window.打开活动弹窗=function(模式,idx){
   document.getElementById('表单弹窗正文').innerHTML =
     '<div class="编辑卡片区">' +
     '<div class="field-card"><div class="field-card-header"><h4>基本信息</h4></div><div class="field-card-body">' +
-    '<div class="field-row"><span class="field-label">期次</span><span class="field-control"><input class="field-input" value="'+d.期次+'" '+(只读?'disabled':'')+'></span></div>' +
-    '<div class="field-row"><span class="field-label">活动名称</span><span class="field-control"><input class="field-input" value="'+d.活动名称+'" '+(只读?'disabled':'')+'></span></div>' +
+    '<div class="field-row"><span class="field-label">活动期次</span><span class="field-control"><input class="field-input" value="'+d.活动期次+'" '+(只读?'disabled':'')+'></span></div>' +
     '<div class="field-row"><span class="field-label">开始时间</span><span class="field-control"><input class="field-input" value="'+d.开始时间+'" '+(只读?'disabled':'')+'><span class="field-type-tag">datetime</span></span></div>' +
     '<div class="field-row"><span class="field-label">结束时间</span><span class="field-control"><input class="field-input" value="'+d.结束时间+'" '+(只读?'disabled':'')+'><span class="field-type-tag">datetime</span></span></div>' +
     '</div></div>' +
@@ -368,7 +366,7 @@ window.保存活动=function(){
 };
 window.删除活动=function(idx){
   var d = window._活动数据[idx]; if(!d) return;
-  var 活动名 = d.期次 + ' · ' + d.活动名称;
+  var 活动名 = d.活动期次;
   if(!confirm('确认删除「' + 活动名 + '」吗？\n\n删除后该活动下的所有帖子将进入缺省态（用户端显示「本期活动已取消」），首页排行榜入口将自动隐藏。\n\n此操作不可恢复。')) return;
   // 从数据数组移除
   window._活动数据.splice(idx,1);
