@@ -214,9 +214,9 @@ textarea.field-input { max-width: 100%; }
 <th class="列表表头"><span class="表头字段名">CPS渠道数<span class="类型标签 number">number</span></span></th>
 <th class="列表表头 操作列">操作</th>
 </tr></thead><tbody>
-<tr class="数据行"><td class="列表单元格"><strong>第 47 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 进行中">进行中</span></td><td class="列表单元格">2026-11-23 00:00</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">128</td><td class="列表单元格">4</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开活动弹窗('编辑',0)">编辑</button></td></tr>
-<tr class="数据行"><td class="列表单元格"><strong>第 46 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 已结束">已结束</span></td><td class="列表单元格">2026-11-16 00:00</td><td class="列表单元格">2026-11-22 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">96</td><td class="列表单元格">0</td><td class="列表单元格 操作列"><button class="详情按钮" style="opacity:.5;cursor:not-allowed;" disabled>编辑</button></td></tr>
-<tr class="数据行"><td class="列表单元格"><strong>第 48 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 未开始">未开始</span></td><td class="列表单元格">2026-11-30 00:00</td><td class="列表单元格">2026-12-06 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">0</td><td class="列表单元格">0</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开活动弹窗('编辑',2)">编辑</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>第 47 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 进行中">进行中</span></td><td class="列表单元格">2026-11-23 00:00</td><td class="列表单元格">2026-11-29 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">128</td><td class="列表单元格">4</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开活动弹窗('编辑',0)">编辑</button><button class="删除按钮" onclick="删除活动(0)">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>第 46 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 已结束">已结束</span></td><td class="列表单元格">2026-11-16 00:00</td><td class="列表单元格">2026-11-22 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">96</td><td class="列表单元格">0</td><td class="列表单元格 操作列"><button class="详情按钮" style="opacity:.5;cursor:not-allowed;" disabled>编辑</button><button class="删除按钮" onclick="删除活动(1)">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格"><strong>第 48 周</strong></td><td class="列表单元格">寻找夯爆奶茶</td><td class="列表单元格"><span class="状态徽章 未开始">未开始</span></td><td class="列表单元格">2026-11-30 00:00</td><td class="列表单元格">2026-12-06 24:00</td><td class="列表单元格">10</td><td class="列表单元格">3500/3000/2500/2000 + 兜底200</td><td class="列表单元格">0</td><td class="列表单元格">0</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开活动弹窗('编辑',2)">编辑</button><button class="删除按钮" onclick="删除活动(2)">删除</button></td></tr>
 </tbody></table>
 <div class="列表脚注">共 3 期活动</div>
 </div></section>
@@ -365,6 +365,21 @@ window.添加渠道行=function(){
 window.保存活动=function(){
   关闭表单弹窗();
   显示提示('活动已保存（演示环境，不落库）','成功',2000);
+};
+window.删除活动=function(idx){
+  var d = window._活动数据[idx]; if(!d) return;
+  var 活动名 = d.期次 + ' · ' + d.活动名称;
+  if(!confirm('确认删除「' + 活动名 + '」吗？\n\n删除后该活动下的所有帖子将进入缺省态（用户端显示「本期活动已取消」），首页排行榜入口将自动隐藏。\n\n此操作不可恢复。')) return;
+  // 从数据数组移除
+  window._活动数据.splice(idx,1);
+  // 从 DOM 移除对应表格行
+  var rows = document.querySelectorAll('#面_3_1 .数据表格 tbody .数据行');
+  if(rows[idx]) rows[idx].remove();
+  // 更新脚注
+  var cnt = document.querySelectorAll('#面_3_1 .数据表格 tbody .数据行').length;
+  var fn = document.querySelector('#面_3_1 .列表脚注');
+  if(fn) fn.textContent = '共 ' + cnt + ' 期活动';
+  显示提示('活动「' + 活动名 + '」已删除，关联帖子进入缺省态','信息',2500);
 };
 window.关闭表单弹窗=function(){
   document.getElementById('表单弹窗面板').classList.remove('show');

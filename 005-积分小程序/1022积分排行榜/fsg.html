@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -827,6 +827,17 @@ html .gh-tip.show{opacity:1;visibility:visible}
 .pd-rows .r:last-child{border-bottom:none}
 .pd-rows .r span{color:#8A91A0}
 .pd-rows .r b{color:#1B1F27;font-weight:800}
+/* 订阅抽屉 · 2 个订阅模板 */
+.sub-list{margin-top:12px;display:flex;flex-direction:column;gap:9px}
+.sub-item{border:1px solid #EEF0F3;border-radius:12px;overflow:hidden;background:#fff}
+.si-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;background:#F7F8FA;border-bottom:1px solid #EEF0F3}
+.si-n{font-size:12.5px;font-weight:800;color:#1B1F27}
+.si-tag{font-size:10px;font-weight:800;color:var(--brand);background:#FFF1E6;border-radius:5px;padding:1px 6px;flex:none}
+.si-row{display:flex;gap:8px;padding:5px 11px;font-size:11.5px;line-height:1.55}
+.si-row+.si-row{border-top:1px dashed #F2F3F6}
+.si-row span{color:#8A91A0;flex:none;width:66px}
+.si-row b{color:#1B1F27;font-weight:600;flex:1;min-width:0}
+.si-row b.si-id{font-family:Consolas,monospace;font-size:10px;color:#4A5160;word-break:break-all;font-weight:500}
 /* 个人中心（page.me）*/
 .me{position:absolute;inset:0;background:#F7F8FA;overflow-y:auto;padding-bottom:24px}
 .me-top{display:flex;align-items:center;gap:12px;padding:18px 16px 16px;background:linear-gradient(135deg,#17A34A,#3FB950);color:#fff}
@@ -1082,6 +1093,7 @@ html .gh-tip.show{opacity:1;visibility:visible}
         <div class="p-group"><span class="p-code">B2</span>异常流程</div>
         <div class="p-item p-sub" data-idx="20" data-b="B2-1"><span class="p-code">B2-1</span>帖子已删</div>
         <div class="p-item p-sub" data-idx="8" data-b="B2-2"><span class="p-code">B2-2</span>活动已结束</div>
+        <div class="p-item p-sub" data-idx="23" data-b="B2-3"><span class="p-code">B2-3</span>活动已取消</div>
       </div>
     </div>
 
@@ -1665,29 +1677,41 @@ html .gh-tip.show{opacity:1;visibility:visible}
             </div>
           </div>
 
-          <!-- 帧 18：订阅消息 · 开奖通知 -->
+          <!-- 帧 18：订阅消息 · 奖励发放通知 -->
           <div class="frame" data-f="18" id="f-sub">
-            <div style="position:absolute;inset:0;background:#EDEDED;padding-top:44px">
+            <div style="position:absolute;inset:0;background:#EDEDED;padding-top:44px;overflow-y:auto">
               <div class="nav" style="background:#F7F7F7;border-bottom:1px solid #E4E4E4"><div class="back" id="subBack">‹</div><span style="font-size:16px">服务通知</span></div>
               <div style="padding:16px 12px;display:flex;flex-direction:column;gap:12px">
                 <div style="text-align:center;font-size:11px;color:#B5B5B5">周日 24:05</div>
                 <div id="subCard" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
                   <div style="padding:12px 14px 10px">
-                    <div style="font-size:15px;font-weight:700;color:#1a1a1a">🎉 榜单开奖通知</div>
+                    <div style="font-size:15px;font-weight:700;color:#1a1a1a">🎉 奖励发放通知</div>
                     <div style="font-size:11.5px;color:#9A9A9A;margin-top:3px">饭扫光 · 奶茶免单排行榜</div>
                   </div>
                   <div style="padding:2px 14px 12px;font-size:13px;line-height:1.9">
-                    <div style="display:flex;justify-content:space-between"><span style="color:#9A9A9A">活动</span><span style="color:#1a1a1a;font-weight:600">寻找夯爆奶茶 · 周榜</span></div>
-                    <div style="display:flex;justify-content:space-between"><span style="color:#9A9A9A">我的名次</span><span id="subRank" style="color:#1a1a1a;font-weight:600">第 3 名</span></div>
-                    <div style="display:flex;justify-content:space-between"><span id="subAmtLabel" style="color:#9A9A9A">获得免单</span><span id="subAmt" style="color:#17A34A;font-weight:700">30 元（3000 积分）</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:#9A9A9A">活动</span><span style="color:#1a1a1a;font-weight:600">寻找夯爆奶茶 · 第 47 周</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:#9A9A9A">奖励来源</span><span id="subSource" style="color:#1a1a1a;font-weight:600">排行榜第 3 名</span></div>
+                    <div style="display:flex;justify-content:space-between"><span id="subAmtLabel" style="color:#9A9A9A">奖励内容</span><span id="subAmt" style="color:#17A34A;font-weight:700">3000 积分（可兑换 30 元）</span></div>
                   </div>
-                  <div style="border-top:1px solid #F0F0F0;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:#576B95"><span id="subAction">查看开奖结果</span><span style="font-size:15px">›</span></div>
+                  <div style="border-top:1px solid #F0F0F0;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:#576B95"><span id="subAction">查看我的奖励</span><span style="font-size:15px">›</span></div>
                 </div>
-                <div style="text-align:center;font-size:11px;color:#B5B5B5;line-height:1.6">仅本期参与者可收到此通知<br>订阅状态由后台「订阅配置」统一控制</div>
+                <div style="text-align:center;font-size:11px;color:#B5B5B5">周一 00:00</div>
+                <div id="subCard2" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+                  <div style="padding:12px 14px 10px">
+                    <div style="font-size:15px;font-weight:700;color:#1a1a1a">🔔 活动开始提醒</div>
+                    <div style="font-size:11.5px;color:#9A9A9A;margin-top:3px">饭扫光 · 奶茶免单排行榜</div>
+                  </div>
+                  <div style="padding:2px 14px 12px;font-size:13px;line-height:1.9">
+                    <div style="display:flex;justify-content:space-between"><span style="color:#9A9A9A">活动名称</span><span style="color:#1a1a1a;font-weight:600">寻找夯爆奶茶 · 第 48 周</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:#9A9A9A">温馨提醒</span><span style="color:#17A34A;font-weight:700">第一名可获 35 元</span></div>
+                  </div>
+                  <div style="border-top:1px solid #F0F0F0;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:#576B95"><span>去参加</span><span style="font-size:15px">›</span></div>
+                </div>
+                <div style="text-align:center;font-size:11px;color:#B5B5B5;line-height:1.6">订阅 1 奖励发放通知：活动到达截止时间触发<br>订阅 2 活动开始提醒：活动到达开始时间触发<br>仅本期参与者可收到 · 订阅状态由后台「订阅配置」统一控制</div>
               </div>
             </div>
             <div class="guidehand show" style="left:212px;top:300px"><svg><use href="#ico-hand"/></svg></div>
-            <div class="gh-tip left show" style="left:66px;top:286px">点通知查看开奖结果 ›</div>
+            <div class="gh-tip left show" style="left:66px;top:286px">点通知查看奖励 ›</div>
           </div>
 
           <!-- 帧 19：识别失败 · 抽屉 -->
@@ -1738,18 +1762,29 @@ html .gh-tip.show{opacity:1;visibility:visible}
             <div class="sheetmask on"></div>
             <div class="drawer show">
               <div class="drh"></div>
-              <div style="text-align:center;margin-bottom:6px"><div style="font-size:34px">🔔</div></div>
+              <div style="text-align:center;margin-bottom:6px"><div style="font-size:30px">🔔</div></div>
               <div class="dt" style="text-align:center">开启订阅提醒</div>
-              <div class="ds" style="text-align:center">订阅后开奖第一时间通知你，不怕错过</div>
-              <div class="pd-rows">
-                <div class="r"><span>订阅内容</span><b>开奖通知</b></div>
-                <div class="r"><span>推送时机</span><b>每周日开奖后</b></div>
-                <div class="r"><span>推送渠道</span><b>微信服务通知</b></div>
+              <div class="ds" style="text-align:center">2 条通知一次授权，全部开启</div>
+              <div class="sub-list">
+                <div class="sub-item">
+                  <div class="si-h"><span class="si-n">奖励发放通知</span><span class="si-tag">订阅 1</span></div>
+                  <div class="si-row"><span>模板ID</span><b class="si-id">WR2tzgjlxKtlNlR0I-MWyZGgUz2u3Ckf7RsVJiVlJaU</b></div>
+                  <div class="si-row"><span>触发节点</span><b>活动到达截止时间</b></div>
+                  <div class="si-row"><span>场景1 · 中奖</span><b>奖励来源 排行榜第 N 名 · 奖励内容 M 积分（可兑换）</b></div>
+                  <div class="si-row"><span>场景2 · 参与奖</span><b>已发帖且截止时帖子仍在 · 奖励内容 K 积分</b></div>
+                </div>
+                <div class="sub-item">
+                  <div class="si-h"><span class="si-n">活动开始提醒</span><span class="si-tag">订阅 2</span></div>
+                  <div class="si-row"><span>模板ID</span><b class="si-id">vWaeTmKoCjstA9arfhHx3_-rzSkd1gwixayNDu7IEj4</b></div>
+                  <div class="si-row"><span>触发节点</span><b>活动到达开始时间</b></div>
+                  <div class="si-row"><span>活动名称</span><b>读后台活动名称</b></div>
+                  <div class="si-row"><span>温馨提醒</span><b>第一名可获 N 元</b></div>
+                </div>
               </div>
-              <div class="bubble">订阅为一次性授权，不会再推送其他营销消息；可在微信「服务通知」中随时关闭。</div>
+              <div class="bubble">一次授权开启 2 条通知，不会推送其他营销消息；可在微信「服务通知」中随时关闭。</div>
               <div class="d2btn">
                 <button class="ghost" id="btnSubLater">暂不订阅</button>
-                <button class="main" id="btnSubOk">订阅</button>
+                <button class="main" id="btnSubOk">一键订阅</button>
               </div>
             </div>
           </div>
@@ -1771,19 +1806,31 @@ html .gh-tip.show{opacity:1;visibility:visible}
               <div class="ds" style="text-align:center">本期没中奖，但你为冲榜努力过啦</div>
               <div class="pd-amt" style="border-color:#B2DBBF;background:#F3FCF6">
                 <div class="lb" style="color:#12A150">赠送积分</div>
-                <div class="n" style="color:#12A150"><b>50</b> 积分</div>
+                <div class="n" style="color:#12A150"><b>200</b> 积分</div>
                 <div class="sub" style="color:#5A6472">已自动发放到你的账户</div>
               </div>
               <div class="pd-rows">
                 <div class="r"><span>积分用途</span><b>积分商城兑换现金红包 / 奶茶优惠券</b></div>
                 <div class="r"><span>使用期限</span><b>2026-12-31 前有效</b></div>
               </div>
-              <div class="bubble">没上榜不代表不好，下周再来！订阅开奖通知，第一时间知道结果～</div>
+              <div class="bubble">没上榜不代表不好，下周再来！订阅提醒，开赛和发奖第一时间通知你～</div>
               <div class="d2btn">
                 <button class="ghost" id="btnBonusLater">收下啦</button>
-                <button class="main" id="btnBonusSub">订阅开奖通知</button>
+                <button class="main" id="btnBonusSub">订阅提醒</button>
               </div>
             </div>
+          </div>
+
+          <!-- 帧 23：活动已删除 · 缺省页（activity-gone） -->
+          <div class="frame" data-f="23">
+            <div class="ck-page">
+              <div class="ck-empty">
+                <div class="emo">🏆</div>
+                <div class="t1">本期活动已取消</div>
+                <div class="t2">该活动已被运营删除，感谢你的参与<br>下期再来冲榜拿免单吧</div>
+              </div>
+            </div>
+            <div class="ck-foot"><button class="ck-btn" id="btnActGoneHome">回首页</button></div>
           </div>
 
 <!-- ★② 业务帧结束 -->
@@ -1888,12 +1935,12 @@ html .gh-tip.show{opacity:1;visibility:visible}
     <div class="step" data-page="subSheet" data-b="A1" data-seq="6">
       <div class="badge">6</div>
       <div class="body">
-        <div class="h"><span class="tt">订阅开奖通知</span><span class="pill">半屏抽屉</span></div>
+        <div class="h"><span class="tt">订阅提醒</span><span class="pill">半屏抽屉</span></div>
         <div class="meta">
-          <div><b>状态</b>：底部抽屉</div>
-          <div><b>属性</b>：微信订阅授权 · 一次性授权</div>
-          <div><b>关键字段</b>：订阅项「开奖通知」· 订阅按钮 · 暂不订阅</div>
-          <div><b>结果</b>：用户点击「订阅」→ Toast「已订阅 · 开奖通知」</div>
+          <div><b>状态</b>：底部抽屉 · 2 条订阅模板</div>
+          <div><b>属性</b>：微信订阅授权 · 2 条模板一次授权</div>
+          <div><b>关键字段</b>：奖励发放通知（模板ID WR2tz…，活动截止时触发）· 活动开始提醒（模板ID vWae…，活动开始时触发）· 一键订阅 · 暂不订阅</div>
+          <div><b>结果</b>：用户点击「一键订阅」→ Toast「已订阅 · 奖励发放通知 + 活动开始提醒」</div>
           <div><b>下一环</b>：帖子详情 · 作者-新帖（帧 5）</div>
         </div>
         <div class="note">拉起时机：确认发布成功后自动拉起；遮罩 / 暂不订阅 = 跳过，直接进帖子详情，不阻断发布</div>
@@ -2078,16 +2125,16 @@ html .gh-tip.show{opacity:1;visibility:visible}
 
     <!-- ====== A3-1 活动开奖 · 获奖 ====== -->
     <div class="blk g3"><span class="bt">A3-1 活动开奖 · 获奖</span><span class="be2">推送 · 订阅消息入口</span></div>
-    <div class="sec-h"><span class="n">A3-1</span><span class="t">开奖通知</span><span class="c">订阅消息 · 开奖通知</span></div>
+    <div class="sec-h"><span class="n">A3-1</span><span class="t">奖励发放通知</span><span class="c">订阅消息 · 场景1 用户中奖</span></div>
     <div class="step" data-page="subMsg" data-b="A3-1" data-seq="1">
       <div class="badge">1</div>
       <div class="body">
         <div class="h"><span class="tt">订阅消息</span><span class="pill">页面</span></div>
         <div class="meta">
-          <div><b>状态</b>：开奖通知</div>
-          <div><b>属性</b>：推送入口 · 微信服务通知</div>
-          <div><b>关键字段</b>：期次 · 排名 · 中奖结果 · 查看开奖结果</div>
-          <div><b>结果</b>：用户点击「查看开奖结果」</div>
+          <div><b>状态</b>：奖励发放通知 · 场景1 中奖</div>
+          <div><b>属性</b>：活动截止时间触发 · 模板ID WR2tzgjlxKtlNlR0I-MWyZGgUz2u3Ckf7RsVJiVlJaU</div>
+          <div><b>关键字段</b>：活动 · 奖励来源（排行榜第 N 名）· 奖励内容（M 积分，可兑换）· 查看我的奖励</div>
+          <div><b>结果</b>：用户点击「查看我的奖励」</div>
           <div><b>下一环</b>：直接弹出中奖结果抽屉（帧 14）</div>
         </div>
         <div class="note">入口合规：推送 · 订阅消息；用户一点进来先恭喜中奖，抽屉关闭后才进入帖子详情</div>
@@ -2124,19 +2171,19 @@ html .gh-tip.show{opacity:1;visibility:visible}
 
     <!-- ====== A3-2 活动开奖 · 未获奖 ====== -->
     <div class="blk g3"><span class="bt">A3-2 活动开奖 · 未获奖</span><span class="be2">推送 · 订阅消息入口</span></div>
-    <div class="sec-h"><span class="n">A3-2</span><span class="t">未上榜通知</span><span class="c">订阅消息 · 开奖通知</span></div>
+    <div class="sec-h"><span class="n">A3-2</span><span class="t">参与奖通知</span><span class="c">订阅消息 · 场景2 未中奖但有帖子</span></div>
     <div class="step" data-page="subMsg" data-b="A3-2" data-seq="1">
       <div class="badge">1</div>
       <div class="body">
         <div class="h"><span class="tt">订阅消息</span><span class="pill">页面</span></div>
         <div class="meta">
-          <div><b>状态</b>：开奖通知</div>
-          <div><b>属性</b>：推送入口 · 微信服务通知</div>
-          <div><b>关键字段</b>：期次 · 排名 · 未上榜结果 · 查看结果</div>
+          <div><b>状态</b>：奖励发放通知 · 场景2 参与奖</div>
+          <div><b>属性</b>：活动截止时间触发 · 模板ID WR2tzgjlxKtlNlR0I-MWyZGgUz2u3Ckf7RsVJiVlJaU</div>
+          <div><b>关键字段</b>：活动 · 奖励来源（排行榜参与奖）· 奖励内容（K 积分）· 查看结果</div>
           <div><b>结果</b>：用户点击「查看结果」</div>
           <div><b>下一环</b>：弹出赠送积分抽屉（帧 22）</div>
         </div>
-        <div class="note">入口合规：推送 · 订阅消息；未中奖用户也有安慰奖励，先弹赠送积分</div>
+        <div class="note">不发奖条件：未中奖且截止时帖子已被删除 → 不推送、不发放参与奖</div>
       </div>
     </div>
     <div class="step" data-page="bonusPoints" data-b="A3-2" data-seq="2">
@@ -2146,11 +2193,11 @@ html .gh-tip.show{opacity:1;visibility:visible}
         <div class="meta">
           <div><b>状态</b>：底部抽屉 · 自动弹出</div>
           <div><b>属性</b>：安慰奖励 · 所有未上榜者均有</div>
-          <div><b>关键字段</b>：感谢参与 · 50 积分 · 收下啦 / 订阅开奖通知</div>
-          <div><b>结果</b>：用户选择「收下啦」或「订阅开奖通知」</div>
+          <div><b>关键字段</b>：感谢参与 · 200 积分 · 收下啦 / 订阅提醒</div>
+          <div><b>结果</b>：用户选择「收下啦」或「订阅提醒」</div>
           <div><b>下一环</b>：收下 → 帖子详情（帧 5）；订阅 → 订阅抽屉（帧 21）→ 返回帖子详情</div>
         </div>
-        <div class="note">50 积分自动到账；积分可在商城兑换现金红包 / 奶茶优惠券；这是未中奖用户的安慰闭环</div>
+        <div class="note">200 积分自动到账；积分可在商城兑换现金红包 / 奶茶优惠券；这是未中奖用户的安慰闭环</div>
       </div>
     </div>
     <div class="step" data-page="postDetail" data-state="author-lose" data-b="A3-2" data-seq="3">
@@ -2170,12 +2217,12 @@ html .gh-tip.show{opacity:1;visibility:visible}
     <div class="step" data-page="subSheet" data-b="A3-2" data-seq="4">
       <div class="badge">4</div>
       <div class="body">
-        <div class="h"><span class="tt">订阅开奖通知</span><span class="pill">半屏抽屉</span></div>
+        <div class="h"><span class="tt">订阅提醒</span><span class="pill">半屏抽屉</span></div>
         <div class="meta">
-          <div><b>状态</b>：底部抽屉</div>
-          <div><b>属性</b>：微信订阅授权 · 一次性授权（同帧 21，多流程共用）</div>
-          <div><b>关键字段</b>：订阅项「开奖通知」· 订阅按钮 · 暂不订阅</div>
-          <div><b>结果</b>：用户点击「订阅」→ Toast「已订阅 · 开奖通知」</div>
+          <div><b>状态</b>：底部抽屉 · 2 条订阅模板</div>
+          <div><b>属性</b>：微信订阅授权 · 2 条模板一次授权（同帧 21，多流程共用）</div>
+          <div><b>关键字段</b>：奖励发放通知（活动截止时触发）· 活动开始提醒（活动开始时触发）· 一键订阅 · 暂不订阅</div>
+          <div><b>结果</b>：用户点击「一键订阅」→ Toast「已订阅 · 奖励发放通知 + 活动开始提醒」</div>
           <div><b>下一环</b>：返回帖子详情（帧 5）</div>
         </div>
         <div class="note">该状态被多流程调用（A1 / A3-2），详右侧说明；遮罩 / 暂不订阅 = 直接返回帖子详情</div>
@@ -2261,6 +2308,24 @@ html .gh-tip.show{opacity:1;visibility:visible}
           <div><b>下一环</b>：回首页（帧 0）</div>
         </div>
         <div class="note">异常逻辑：同帧 8 切活动结束态；助力按钮置灰不可点；提示回首页</div>
+      </div>
+    </div>
+
+    <!-- ====== B2-3 异常流程 · 活动被运营删除 ====== -->
+    <div class="blk g4"><span class="bt">B2-3 异常流程 · 活动被运营删除</span><span class="be2">后台触发 · 活动级删除</span></div>
+    <div class="sec-h"><span class="n">B2-3</span><span class="t">活动已取消</span><span class="c">活动删除 · 缺省页</span></div>
+    <div class="step" data-page="postDetail" data-state="activity-gone" data-b="B2-3" data-seq="1">
+      <div class="badge">1</div>
+      <div class="body">
+        <div class="h"><span class="tt">帖子详情</span><span class="pill">页面</span></div>
+        <div class="meta">
+          <div><b>状态</b>：缺省页 · 活动被运营删除</div>
+          <div><b>属性</b>：活动级缺省 · 与作者删帖（gone 态）独立</div>
+          <div><b>关键字段</b>：🏆 本期活动已取消 · 回首页</div>
+          <div><b>结果</b>：用户点击「回首页」</div>
+          <div><b>下一环</b>：首页（帧 0）</div>
+        </div>
+        <div class="note">触发源：后台执行活动删除 → 该活动下所有帖子统一进此缺省态；仅影响被删活动关联的帖子，其他活动不受影响</div>
       </div>
     </div>
 
@@ -2432,7 +2497,7 @@ const PAGES = {
   camera:        { frame: 2 },
   eval:          { frame: 3 },
   confirm:       { frame: 4 },
-  postDetail:    { frame: 5,  frames: { 'author-new': 5, 'author-live': 5, 'author-win': 5, 'author-lose': 5, 'author-archive': 5, 'friend-open': 8, 'friend-closed': 8, 'gone': 20 }, states: ['author-new','author-live','author-win','author-lose','author-archive','friend-open','friend-closed','gone'], apply: applyPostDetail },
+  postDetail:    { frame: 5,  frames: { 'author-new': 5, 'author-live': 5, 'author-win': 5, 'author-lose': 5, 'author-archive': 5, 'friend-open': 8, 'friend-closed': 8, 'gone': 20, 'activity-gone': 23 }, states: ['author-new','author-live','author-win','author-lose','author-archive','friend-open','friend-closed','gone','activity-gone'], apply: applyPostDetail },
   sharePanel:    { frame: 6 },
   shareDone:     { frame: 7 },
   meituanSheet:  { frame: 9 },
@@ -2511,7 +2576,7 @@ function applyPostDetail(state){
       'author-new':      { chip:'冲榜中',   main:'分享冲榜',       act:false, view:true,  bt:'🔥 第 47 周 · 新帖已发布',        bd:'已锁定【25 元档】· 快去分享邀请好友助力冲榜' },
       'author-live':     { chip:'冲榜中',   main:'分享冲榜',       act:true,  view:false, bt:'🔥 第 47 周 · 冲榜中',            bd:'喊上好友助力冲榜，本周预估可得最高 35 元（积分兑现金）～' },
       'author-win':      { chip:'已中奖',   main:'查看中奖结果',   act:false, view:false, bt:'🎉 已中奖 · 本期第 3 名',          bd:'获得 30 元免单（3000 积分），已到账 · 点下方按钮查看中奖详情' },
-      'author-lose':     { chip:'未上榜',   main:'开赛前提醒我',   act:false, view:false, bt:'🍃 本期未上榜 · 第 18 名',         bd:'距前 10 名差 32 票 · 未上榜不发放免单，订阅开奖通知，下期开赛第一时间提醒你' },
+      'author-lose':     { chip:'未上榜',   main:'开赛前提醒我',   act:false, view:false, bt:'🍃 本期未上榜 · 第 18 名',         bd:'距前 10 名差 32 票 · 未上榜不发放免单，订阅提醒，下期开赛第一时间通知你' },
       'author-archive':  { chip:'往期归档', main:'',             act:false, view:false, btnHide:true, bt:'📦 第 46 周 · 第 8 名', bd:'往期已结算 · 获得 20 元免单（2000 积分），该期榜单已归档不可再操作' }
     };
     const v = S[state] || S['author-new'];
@@ -2558,22 +2623,22 @@ function applyMyRecords(state){
   if(st){ st.textContent = v.txt; st.className = 'mp-st' + (v.cls ? ' ' + v.cls : ''); }
   if(v.dst) first.dataset.st = v.dst;
 }
-// --- subMsg：A3-1 中奖 / A3-2 未上榜（同帧 18，按 curBlock 切换内容） ---
+// --- subMsg：A3-1 中奖 / A3-2 参与奖（同帧 18，按 curBlock 切换内容） ---
 function applySubMsg(state){
   const f = frameOf(18); if(!f) return;
-  const rankEl = f.querySelector('#subRank');
+  const srcEl = f.querySelector('#subSource');
   const labelEl = f.querySelector('#subAmtLabel');
   const amtEl = f.querySelector('#subAmt');
   const actEl = f.querySelector('#subAction');
   const win = (curBlock === 'A3-1');
-  if(rankEl) rankEl.textContent = win ? '第 3 名' : '第 18 名';
-  if(labelEl) labelEl.textContent = win ? '获得免单' : '开奖结果';
+  if(srcEl) srcEl.textContent = win ? '排行榜第 3 名' : '排行榜参与奖';
+  if(labelEl) labelEl.textContent = '奖励内容';
   if(amtEl){
-    amtEl.textContent = win ? '30 元（3000 积分）' : '未上榜';
+    amtEl.textContent = win ? '3000 积分（可兑换 30 元）' : '200 积分';
     amtEl.style.color = win ? '#17A34A' : '#8A91A0';
     amtEl.style.fontWeight = win ? '700' : '600';
   }
-  if(actEl) actEl.textContent = win ? '查看开奖结果' : '查看结果';
+  if(actEl) actEl.textContent = win ? '查看我的奖励' : '查看结果';
 }
 
 // ============ 步骤卡 → 页面对象库映射（引擎） ============
@@ -2718,9 +2783,9 @@ const POPUPS = {
   meituanSheet: { d:'D2', name:'领券助力',      frame:9,  page:'postDetail', states:['friend-open'],   trigger:'B1-1 助力页点「帮TA助力领券」' },
   boostSuccess: { d:'D3', name:'助力成功',      frame:10, page:'postDetail', states:['friend-open'],   trigger:'B1-1 领券渠道返回后自动弹出；B1-2 起点复用' },
   boostDetail:  { d:'D4', name:'助力明细',      frame:11, page:'postDetail', states:['author-live'],   trigger:'A2-1 帖子详情（作者-冲榜中）点「助力明细」' },
-  winSheet:     { d:'D5', name:'中奖结果',      frame:14, page:'postDetail', states:['author-win'],    trigger:'A3-1 直接弹出（订阅消息点开奖结果后）；也可从帖子详情「查看中奖结果」再次打开' },
+  winSheet:     { d:'D5', name:'中奖结果',      frame:14, page:'postDetail', states:['author-win'],    trigger:'A3-1 直接弹出（订阅消息点奖励通知后）；也可从帖子详情「查看中奖结果」再次打开' },
   bonusPoints:  { d:'D6', name:'赠送积分',      frame:22, page:'subMsg',     states:['default'], stateText:'订阅消息（A3-2 未上榜）', trigger:'A3-2 未中奖用户点订阅消息「查看结果」后自动弹出' },
-  subSheet:     { d:'S1', name:'订阅开奖通知',  frame:21, page:'subMsg',     states:['default'], stateText:'首页（未发起）/ 帖子详情（作者-未上榜）', trigger:'A1 确认发布后自动拉起；A3-2 未上榜态点底部「开赛前提醒我」；A3-2 赠送积分弹窗主按钮' }
+  subSheet:     { d:'S1', name:'订阅提醒',      frame:21, page:'subMsg',     states:['default'], stateText:'首页（未发起）/ 帖子详情（作者-未上榜）', trigger:'A1 确认发布后自动拉起；A3-2 未上榜态点底部「开赛前提醒我」；A3-2 赠送积分弹窗主按钮' }
 };
 
 // ============ ★④ PAGE_TREE 页面导航 ============
@@ -2734,7 +2799,7 @@ const PAGE_TREE = [
     { key:'postDetail', name:'帖子详情', popups:['meituanSheet','boostSuccess','boostDetail','winSheet'] }
   ] },
   { cat:'其他页面', pages:[ { key:'shareDone', name:'分享成功' } ] },
-  { cat:'订阅', pages:[ { key:'subMsg', name:'订阅消息', popups:['bonusPoints'] }, { key:'subSheet', name:'订阅开奖通知' } ] }
+  { cat:'订阅', pages:[ { key:'subMsg', name:'订阅消息', popups:['bonusPoints'] }, { key:'subSheet', name:'订阅提醒' } ] }
 ];
 
 // ============ 页面视图状态 ============
@@ -2775,7 +2840,7 @@ function renderTree(){
       const cls = ready ? '' : shell ? ' shell' : ' todo';
       const badge = ready ? '对象' : shell ? '壳' : '待补';
       const bcls = ready ? 'tree-ready' : shell ? 'tree-shell' : 'tree-todo';
-      // 导航只放页面；订阅开奖通知是唯一例外，可留在外面，且不带红字说明
+      // 导航只放页面；订阅提醒是唯一例外，可留在外面，且不带红字说明
       const selfPop = POPUPS[p.key];
       return '<div class="p-item' + cls + '" ' +
           (selfPop ? 'data-pop="' + p.key + '"' : 'data-pg="' + p.key + '"') + '>' +
@@ -3123,11 +3188,14 @@ function bindEvents(){
   // --- 帧 20 帖子已删除 ---
   click('.frame[data-f="20"] #btnGoneHome', () => go(0));
 
+  // --- 帧 23 活动已删除 ---
+  click('.frame[data-f="23"] #btnActGoneHome', () => go(0));
+
   // --- 帧 21 拉起订阅抽屉（A1 / A3-2 共用，关闭后回帖子详情）---
   const closeSubSheet = () => go(5, curBlock);
   click('.frame[data-f="21"] .sheetmask', closeSubSheet);
   click('.frame[data-f="21"] #btnSubLater', closeSubSheet);
-  click('.frame[data-f="21"] #btnSubOk', () => { showToast('已订阅 · 开奖通知'); closeSubSheet(); });
+  click('.frame[data-f="21"] #btnSubOk', () => { showToast('已订阅 · 奖励发放通知 + 活动开始提醒'); closeSubSheet(); });
 
   // --- 帧 22 赠送积分抽屉（A3-2 未上榜安慰）---
   const bonusToPost = () => selectPageState('postDetail', 'author-lose');
