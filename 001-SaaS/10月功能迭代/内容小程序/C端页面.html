@@ -1,0 +1,2937 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>美食内容社区 · C端交互稿</title>
+<style>
+:root{
+  --brand:#17A34A; --brand2:#3FB950; --ink:#16201A; --ink2:#3F4A42; --ink3:#7E8A82;
+  --line:#E5EAE6; --bg:#F2F7F3; --sheet:#FFFFFF; --ok:#17A34A; --warn:#E08A16; --danger:#E5484D;
+  --radius:18px;
+  /* ---- 视觉系统 v1（4px 栅格 / 4 级字号 / 语义色 / 统一圆角·阴影）---- */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s7:32px;
+  --f-xs:11px; --f-sm:13px; --f-md:16px; --f-lg:20px;
+  --c-ink:#16201A; --c-ink2:#3F4A42; --c-ink3:#7E8A82;
+  --c-brand:#17A34A; --c-brand-ink:#15803D; --c-brand-bg:#E7F6EC; --c-brand-line:#CBEBD6;
+  --c-ok:#17A34A; --c-ok-bg:#E7F6EC;
+  --c-line:#E5EAE6; --c-line2:#D4DED6;
+  --r-card:16px; --r-ctl:12px; --r-pill:999px;
+  --sh-card:0 1px 2px rgba(16,24,40,.04),0 12px 24px -12px rgba(16,24,40,.16);
+  --sh-soft:0 1px 3px rgba(16,24,40,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Alibaba PuHuiTi 2.0","MiSans","Noto Sans SC",sans-serif;background:var(--bg);color:var(--ink);padding:22px 26px 34px 246px}
+header.top{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+header.top h1{font-size:23px;font-weight:700;letter-spacing:.5px}
+header.top .sub{font-size:12.5px;color:var(--ink3);padding-bottom:3px}
+.tag{display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:20px;background:#F7F8FA;color:var(--c-brand-ink);font-weight:600}
+.layout{display:grid;grid-template-columns:390px 520px;gap:22px;align-items:start;justify-content:center}
+.phone-col{justify-self:center}
+@media(max-width:1280px){.layout{grid-template-columns:360px 1fr}}
+@media(max-width:960px){.layout{grid-template-columns:1fr}.menu-col{display:none}body{padding-left:26px}}
+@media(max-width:680px){.layout{grid-template-columns:1fr}}
+/* 小程序页面视图：字段说明卡需要更宽 */
+body.view-pages .layout{grid-template-columns:360px 900px}
+@media(max-width:1360px){body.view-pages .layout{grid-template-columns:360px 1fr}}
+@media(max-width:960px){body.view-pages .layout{grid-template-columns:1fr}}
+
+/* ============ 手机壳 ============ */
+.phone-col{position:sticky;top:18px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.phone{width:390px;height:800px;background:#16201A;border-radius:58px;padding:11px;box-shadow:0 22px 50px -18px rgba(15,30,22,.5);position:relative;flex-shrink:0}
+.phone::after{content:"";position:absolute;inset:11px;border-radius:48px;border:1.5px solid #2c3a31;pointer-events:none}
+.screen{width:100%;height:100%;background:#F7F8FA;border-radius:46px;overflow:hidden;position:relative}
+.notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:112px;height:26px;background:#16201A;border-radius:0 0 18px 18px;z-index:60}
+.stbar{position:absolute;top:0;left:0;right:0;height:44px;z-index:55;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:13px;font-weight:600;color:#16201A}
+.app{position:absolute;inset:0;overflow:hidden}
+/* 帧：统一预留 44px 状态栏（P5 红线），业务内容从 52px 起排 */
+.frame{position:absolute;inset:0;display:flex;flex-direction:column;padding-top:44px;opacity:0;transform:translateY(8px);transition:opacity .32s ease,transform .32s ease;pointer-events:none}
+.frame.on{opacity:1;transform:none;pointer-events:auto;z-index:10}
+.slive{position:absolute;left:50%;bottom:9px;transform:translateX(-50%);width:118px;height:4.5px;border-radius:4px;background:#16201A;z-index:60}
+
+/* 通用壳内元素 */
+.nav{height:52px;display:flex;align-items:center;padding:0 16px;gap:10px;font-weight:700;font-size:17px;background:#fff;position:relative;z-index:20}
+.nav .back{width:26px;height:26px;border-radius:50%;background:#F2F3F6;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink2)}
+.pull{position:absolute;left:50%;top:8px;transform:translateX(-50%);width:36px;height:4px;border-radius:4px;background:#D9DCE3;z-index:30}
+.dot{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--brand);z-index:40}
+
+/* 底部双按钮 */
+.dblbtn{position:absolute;left:16px;right:16px;bottom:20px;display:flex;gap:10px;z-index:30}
+.dblbtn button{flex:1;height:50px;border-radius:14px;border:1.5px solid #E3E5EC;background:#fff;font-size:15px;font-weight:700;color:var(--ink2);font-family:inherit}
+.dblbtn button.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border:none;color:#fff;box-shadow:0 8px 18px -8px var(--brand)}
+
+/* ============ 帧：首页 ============ */
+.hero{margin:12px 16px 0;background:linear-gradient(135deg,var(--brand),var(--brand2));border-radius:16px;padding:16px;color:#fff;position:relative;overflow:hidden}
+.hero .t1{font-size:18px;font-weight:800}
+.hero .t2{font-size:12.5px;opacity:.92;margin-top:5px}
+.hero .go{display:inline-block;margin-top:12px;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.6);padding:5px 13px;border-radius:20px;font-size:12px;font-weight:700}
+.hero .emo{position:absolute;right:14px;top:14px;font-size:46px}
+.card{border:1.5px solid #EEEFF3;border-radius:14px;padding:13px;margin:12px 16px 0;background:#fff}
+.card .ct{font-size:14px;font-weight:700}
+.card .cs{font-size:12px;color:var(--ink3);margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 16px 0}
+.g2{border-radius:14px;padding:13px;background:#fff;border:1.5px solid #EEEFF3}
+.g2 .n{font-size:13px;font-weight:700}
+.g2 .p{font-size:11px;color:var(--ink3);margin-top:3px}
+.sign{margin:12px 16px 0;background:#fff;border:1.5px solid #EEEFF3;border-radius:14px;padding:13px;display:flex;gap:10px;align-items:center}
+.sign .av{width:34px;height:34px;border-radius:50%;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:16px}
+.sign .tt{font-size:13.5px;font-weight:700}
+.sign .td{font-size:11.5px;color:var(--ink3)}
+
+/* ============ 帧：内容流 ============ */
+.fhead{display:flex;align-items:center;gap:8px;padding:6px 16px 10px}
+.fhead .tt{font-size:16px;font-weight:800}
+.fhead .tab{margin-left:auto;display:flex;gap:6px;font-size:12px;color:var(--ink3)}
+.fhead .tab b{color:var(--brand);font-weight:700}
+.water{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
+.wc{background:#fff;border-radius:13px;overflow:hidden;border:1.5px solid #E9EEEB}
+.wc .pic{height:130px;position:relative;background-size:cover;background-position:center}
+.wc .pic.a{background:linear-gradient(160deg,#C7E7C8,#7CC98A)}
+.wc .pic.b{background:linear-gradient(160deg,#C7E7C8,#7CC98A)}
+.wc .pts{position:absolute;top:7px;right:7px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:700;padding:3px 7px;border-radius:20px}
+.wc .bd{padding:10px 11px 12px;display:flex;flex-direction:column;gap:5px}
+.wc .nm{font-size:13.5px;font-weight:700;color:#1a1a1a;line-height:1.3}
+.wc .ai{font-size:11.5px;color:#888;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.wc .ai::before{content:'小餐AI：';color:#aaa}
+.wc .tg{font-size:10.5px;background:#EFF5F1;color:var(--c-brand-ink);display:inline-block;padding:2px 7px;border-radius:10px;font-weight:600;align-self:flex-start}
+.wc .sc{font-size:12px;color:#1C8A46;font-weight:600;margin-top:2px}
+.wc .sc b{color:var(--c-brand-ink);font-size:14px;font-weight:700;margin-left:2px}
+.jh{position:absolute;left:16px;right:16px;top:62px;background:#fff;border-radius:12px;padding:11px;box-shadow:0 10px 26px -10px rgba(0,0,0,.35);border:1.5px solid #EEF0F3;z-index:25}
+.jh .t{font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px}
+.jh .c{font-size:11.5px;color:var(--ink2);margin-top:5px;line-height:1.5}
+.jh .x{position:absolute;right:9px;top:9px;font-size:12px;color:var(--ink3)}
+
+/* ============ 帧：相机 ============ */
+.cam{position:absolute;inset:0;background:linear-gradient(180deg,#1a1f2b 0%,#2c3546 55%,#14181f 55%,#0d1015 100%)}
+.cam .vf{position:absolute;inset:52px 0 150px;border:1px solid rgba(255,255,255,.14);margin:0 22px;border-radius:10px}
+.cam .cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px}
+.cam .cross::before,.cam .cross::after{content:"";position:absolute;background:rgba(255,255,255,.6)}
+.cam .cross::before{left:0;right:0;top:50%;height:1px}
+.cam .cross::after{top:0;bottom:0;left:50%;width:1px}
+.cam .guide{position:absolute;left:0;right:0;top:64px;text-align:center;color:rgba(255,255,255,.85);font-size:12.5px}
+.cambar{position:absolute;left:0;right:0;bottom:0;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.cambar .shutter{width:66px;height:66px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 5px rgba(255,255,255,.18)}
+.cambar .shutter i{width:54px;height:54px;border-radius:50%;background:var(--brand);display:block}
+.cambar .ck{font-size:11.5px;color:rgba(255,255,255,.75)}
+.cam .canc{position:absolute;left:20px;bottom:28px;color:#fff;font-size:13px}
+
+/* ============ 帧：AI 评估中 ============ */
+.think{position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.ring{width:86px;height:86px;border-radius:50%;border:5px solid #F2F3F6;border-top-color:var(--brand);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.think .t{font-size:17px;font-weight:800}
+.think .d{font-size:12.5px;color:var(--ink3)}
+.think .cd{font-size:26px;font-weight:800;color:var(--brand);font-variant-numeric:tabular-nums}
+
+/* ============ 抽屉 ============ */
+.drawer{position:absolute;left:0;right:0;bottom:0;background:#fff;box-shadow:0 -10px 30px -12px rgba(10,12,18,.28);border-radius:22px 22px 0 0;padding:18px 18px 24px;z-index:40;transform:translateY(102%);transition:transform .36s cubic-bezier(.32,.72,0,1)}
+.drawer.show{transform:none}
+.drh{width:36px;height:4px;border-radius:4px;background:#E3E5EC;margin:0 auto 14px}
+.dt{font-size:17.5px;font-weight:800}
+.ds{font-size:12px;color:var(--ink3);margin-top:4px}
+.airow{display:flex;align-items:center;gap:9px;margin-top:13px}
+.airow .k{font-size:12.5px;color:var(--ink2);width:52px;flex-shrink:0}
+.dots{display:flex;gap:3px;flex:1}
+.dots i{width:15px;height:15px;border-radius:50%;background:#F2F3F6;display:block}
+.dots i.on{background:var(--brand)}
+.dots i.on2{background:var(--brand)}
+.airow .v{font-size:12.5px;font-weight:700;color:var(--brand);width:30px;text-align:right}
+.bubble{margin-top:14px;background:#F2FAF4;border:1px solid #CBEBD6;border-radius:12px;padding:11px 12px;font-size:12.5px;line-height:1.6;color:#1B4D2E}
+.bubble b{color:var(--c-brand-ink)}
+.d2btn{display:flex;gap:10px;margin-top:16px}
+.d2btn button{flex:1;height:46px;border-radius:13px;font-size:14.5px;font-weight:700;font-family:inherit}
+.d2btn .ghost{background:#fff;border:1.5px solid #E3E5EC;color:var(--ink2)}
+.d2btn .main{background:linear-gradient(135deg,var(--brand),var(--brand2));border:none;color:#fff}
+/* 1-5 冲榜确认抽屉（利益前置 · 转化版） */
+.cv-tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;color:var(--c-brand-ink);background:#F7F8FA;border:1px solid #EEF0F3;border-radius:20px;padding:3px 10px}
+.cv-amt{margin-top:10px;font-size:15px;font-weight:800;color:#1B1F27;line-height:1}
+.cv-amt b{font-size:36px;color:#F04438;font-variant-numeric:tabular-nums;margin:0 3px;vertical-align:-3px}
+.cv-amt span{font-size:17px}
+.cv-sub{margin-top:8px;font-size:12px;color:#7E8A82}
+.cv-ladder{display:flex;gap:6px;margin-top:14px}
+.cv-ladder .lv{flex:1;text-align:center;border-radius:11px;padding:8px 0;background:#F7F8FA;border:1.5px solid #EEF0F3}
+.cv-ladder .lv .n{font-size:15px;font-weight:800;color:#7E8A82;font-variant-numeric:tabular-nums;line-height:1.1}
+.cv-ladder .lv .k{font-size:10px;color:#98A1AE;margin-top:4px}
+.cv-ladder .lv.on{background:#F2FAF4;border-color:#17A34A;box-shadow:0 6px 14px -10px rgba(23,163,74,.7)}
+.cv-ladder .lv.on .n{color:#12A150}
+.cv-ladder .lv.on .k{color:#12A150;font-weight:700}
+.cv-main{margin-top:16px;width:100%;height:52px;border:none;border-radius:26px;background:linear-gradient(135deg,#17A34A,#3FC46B);color:#fff;font-size:16.5px;font-weight:800;font-family:inherit;letter-spacing:.5px;box-shadow:0 14px 26px -12px rgba(23,163,74,.75);cursor:pointer}
+.cv-retake{margin-top:11px;text-align:center;font-size:12.5px;color:#7E8A82;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.cv-fail-tips{margin-top:14px;background:#F7F8FA;border:1.5px solid #EEF0F3;border-radius:14px;padding:12px 14px;font-size:12.5px;color:#5A6472;line-height:1.9;text-align:left}
+.cv-fail-tips b{color:#1B1F27}
+.sheetmask{position:absolute;inset:0;background:rgba(10,12,18,.45);z-index:35;opacity:0;pointer-events:none;transition:opacity .3s}
+.sheetmask.on{opacity:1;pointer-events:auto}
+
+/* 价格页 */
+.price{padding-top:6px}
+.pitem{display:flex;align-items:center;justify-content:space-between;padding:14px 12px;border-radius:12px;margin-bottom:9px;background:#F9FAFB;border:1.5px solid transparent;font-size:14.5px}
+.pitem.on{background:#F7F8FA;border-color:var(--brand);color:var(--c-brand-ink);font-weight:700}
+.pitem .cir{width:19px;height:19px;border-radius:50%;border:1.5px solid #CFD3DC;display:flex;align-items:center;justify-content:center}
+.pitem.on .cir{background:var(--brand);border-color:var(--brand)}
+.pitem.on .cir i{display:block}
+
+/* 结果页 */
+/* ============ 结果页：虎扑评分页范式 ============ */
+.result{position:absolute;top:44px;left:0;right:0;bottom:0;background:#fff;overflow-y:auto}
+.result .rnav{height:52px;display:flex;align-items:center;justify-content:center;position:relative;background:#fff;z-index:20}
+.result .rnav .rb{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;background:#F2F3F6;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink2)}
+.result .rnav .rt{font-size:16px;font-weight:800}
+.result .rnav .rs{position:absolute;right:14px;font-size:12.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand2));padding:4px 10px;border-radius:14px}
+/* 头图：左大图 + 右文字 */
+.result .hero-row{display:flex;gap:12px;padding:10px 16px 18px}
+.result .hero-row .ph{width:104px;height:104px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:flex;align-items:center;justify-content:center;font-size:46px;flex-shrink:0;overflow:hidden;position:relative}
+.result .hero-row .ph .badge-logo{position:absolute;left:6px;top:6px;width:22px;height:22px;border-radius:50%;background:#1B1F27;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:2px;line-height:1;text-align:center}
+.result .hero-row .info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.result .hero-row .nm{font-size:17.5px;font-weight:800;color:#1B1F27;display:flex;align-items:center;gap:5px}
+.result .hero-row .nm .bkn{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:var(--brand);color:#fff;font-size:8.5px;font-weight:800;line-height:1}
+.result .hero-row .ai{font-size:12px;color:#5A6472;line-height:1.55;margin-top:7px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.result .hero-row .price-row{margin-top:8px;display:flex;align-items:center;gap:6px}
+.result .hero-row .price-row .lb{font-size:12px;color:#8A91A0}
+.result .hero-row .price-row .fix{font-size:11px;color:var(--brand);font-weight:700;background:#F7F8FA;padding:3px 10px;border-radius:12px;border:1.5px solid #EEF0F3;cursor:pointer;font-family:inherit}
+/* 数据条：7 项等宽 */
+.result .stats{margin:18px 16px 0;display:flex;padding:14px 10px;background:#fff;border:1px solid var(--c-line);border-radius:14px;box-shadow:var(--sh-soft)}
+.result .stats .si{flex:1;text-align:center}
+.result .stats .si .v{font-size:15.5px;font-weight:800;color:#1B1F27;font-variant-numeric:tabular-nums;line-height:1.1}
+.result .stats .si .v.neg{color:#8A91A0}
+.result .stats .si .k{font-size:10px;color:#8A91A0;margin-top:5px}
+/* 评分卡 */
+.result .ratecard{margin:18px 16px 0;background:#F7F8FA;border:1px solid #EEF0F3;border-radius:14px;padding:14px 14px 12px}
+.result .ratecard .rchead{display:flex;align-items:center;justify-content:space-between}
+.result .ratecard .rchead .rcbrand{font-size:16px;font-weight:800;color:var(--brand);letter-spacing:.5px}
+.result .ratecard .rchead .rcbrand i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--brand);margin-right:3px;vertical-align:middle}
+.result .rcinfo{margin-top:9px;font-size:10.5px;color:#8A91A0;line-height:1.6}
+.result .rcinfo .sw{display:inline-flex;gap:3px;align-items:center;margin-left:6px;color:var(--brand);font-weight:700;cursor:pointer}
+.result .rcbody{display:flex;align-items:center;gap:16px;margin-top:14px}
+.result .rcscore{width:92px;text-align:center;flex-shrink:0}
+.result .rcscore .big{font-size:50px;font-weight:800;color:var(--brand);line-height:.98;font-variant-numeric:tabular-nums}
+.result .rcscore .lb{font-size:11px;color:#8A91A0;margin-top:6px}
+.result .rcbars{flex:1;display:flex;flex-direction:column;gap:4px}
+.result .rcb{display:flex;align-items:center;gap:7px}
+.result .rcb .st{display:flex;gap:1px;width:60px;flex-shrink:0;justify-content:flex-end}
+.result .rcb .st svg{width:11px;height:11px;display:block}
+.result .rcb .track{flex:1;height:11px;background:#fff;border-radius:3px;overflow:hidden}
+.result .rcb .fill{height:100%;background:linear-gradient(90deg,#7ED89A,var(--brand));border-radius:3px}
+.result .rcb .pct{width:40px;font-size:10.5px;color:#8A91A0;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.result .rcfoot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid #EEF0F3}
+.result .rcfoot .l{font-size:12.5px;color:#5A6472}
+.result .rcfoot .l b{color:#1B1F27}
+.result .rcfoot .r{display:flex;gap:5px}
+.result .rcfoot .r svg{width:19px;height:19px;cursor:pointer}
+.result .rcfoot .r svg .so{fill:var(--brand)}
+.result .rcfoot .r svg .soo{fill:#E3E5EC}
+/* 段位卡 */
+.result .tier{margin:18px 16px 0;background:#F7F8FA;border:1px solid #EEF0F3;border-radius:14px;padding:13px 14px;display:block}
+.result .tier .tw{font-size:13.5px;font-weight:800;color:var(--c-brand-ink)}
+.result .tier .td{font-size:11.5px;color:#8A91A0;margin-top:6px;line-height:1.55}
+/* AI 综合分 · 锁定档位 */
+.result .hero-row .lock{font-size:11.5px;font-weight:800;color:var(--c-brand-ink);background:#F7F8FA;border:1.5px solid #EEF0F3;border-radius:12px;padding:3px 9px;margin-top:7px;align-self:flex-start}
+/* 起跑线：AI 定起点 · 好友助力定名次 */
+.result .boost{margin:18px 16px 0;background:linear-gradient(180deg,#F3FCF6,#fff);border:1.5px solid #C6EBD5;border-radius:16px;padding:16px}
+.result .boost .bhead{font-size:13.5px;font-weight:800;color:#12A150;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.result .boost .bhead span{font-size:11px;font-weight:600;color:#8A91A0}
+.result .boost .brow{display:flex;align-items:center;gap:8px;margin-top:13px;font-size:13px;color:#5A6472}
+.result .boost .brow b{font-size:19px;font-weight:800;color:#12A150;font-variant-numeric:tabular-nums}
+.result .boost .dots{display:flex;gap:5px;margin-left:auto}
+.result .boost .dots i{width:13px;height:9px;border-radius:4px;background:#E4EFE8;display:block}
+.result .boost .dots i.on{background:linear-gradient(135deg,#5BD07A,#12A150)}
+.result .boost .bnext{margin-top:13px;font-size:13px;color:#5A6472}
+.result .boost .bnext b{color:var(--c-brand-ink);font-size:14px}
+.result .boost .brec{margin-top:13px;font-size:12.5px;color:#8A91A0;background:#F7F8FA;border:1px solid #EEF0F3;border-radius:10px;padding:9px 12px;line-height:1.55}
+.result .boost .brec b{color:var(--c-brand-ink)}
+/* 五维明细 */
+.result .dims{margin:20px 16px 0;padding-bottom:16px}
+.result .dims .dh{font-size:13.5px;font-weight:800;margin-bottom:11px;display:flex;align-items:center;gap:6px}
+.result .dims .dh .en{font-size:10px;color:#8A91A0;font-weight:600;margin-left:auto;letter-spacing:.5px}
+.result .dim-row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.result .dim-row .lb{width:50px;font-size:12.5px;color:#5A6472;font-weight:600;flex-shrink:0}
+.result .dim-row .track{flex:1;min-width:80px;height:12px;background:#F2F3F6;border-radius:3px;overflow:hidden}
+.result .dim-row .fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--brand),var(--brand2))}
+.result .dim-row .fill.warn{background:linear-gradient(90deg,#F79009,#FBBF24)}
+.result .dim-row .fill.bad{background:linear-gradient(90deg,#F04438,#FF7A6B)}
+.result .dim-row .fill.unknown{background:#E8EAF0;border:1.5px dashed #CFD3DC}
+.result .dim-row .val{width:44px;font-size:12.5px;font-weight:700;color:#1B1F27;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.result .dim-row .val.unknown{color:#C7CBD4}
+/* 吸底操作条 */
+.result .ract{position:sticky;bottom:0;padding:9px 16px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-top:1px solid #F2F3F6;display:flex;gap:9px;z-index:30}
+.result .ract button{flex:1;height:44px;border-radius:12px;font-size:14.5px;font-weight:700;font-family:inherit}
+.result .ract .ghost{background:#fff;border:1.5px solid #E3E5EC;color:var(--ink2)}
+.result .ract .main{background:linear-gradient(135deg,var(--brand),var(--brand2));border:none;color:#fff;box-shadow:0 6px 16px -8px var(--brand)}
+
+/* 成功页 */
+.okbox{position:absolute;inset:0;background:rgba(255,255,255,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:45;opacity:0;pointer-events:none;transition:opacity .3s}
+.okbox.on{opacity:1;pointer-events:auto}
+.okbox .ic{width:70px;height:70px;border-radius:50%;background:#E7F8EF;display:flex;align-items:center;justify-content:center;font-size:32px}
+.okbox .t{font-size:19px;font-weight:800}
+.okbox .pt{font-size:12.5px;color:var(--ink3)}
+.okbox button{margin-top:8px;width:180px;height:46px;border-radius:13px;border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:15px;font-weight:700;font-family:inherit}
+
+/* 分享提示条 */
+.sharetip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:230px;background:#1B1F27;color:#fff;border-radius:14px;padding:16px;text-align:center;z-index:50;opacity:0;pointer-events:none;transition:opacity .3s;box-shadow:0 16px 40px -12px rgba(0,0,0,.5)}
+.sharetip.on{opacity:1}
+.sharetip .i{font-size:30px}
+.sharetip .t{font-size:13.5px;font-weight:700;margin-top:8px}
+.sharetip .d{font-size:11.5px;color:#AEB4C0;margin-top:5px;line-height:1.5}
+
+/* 分享面板：整屏遮罩 + 底部抽屉 */
+.sh-panel{position:absolute;inset:0;z-index:50;background:rgba(0,0,0,.35);display:flex;flex-direction:column;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
+.sh-panel.show{opacity:1;pointer-events:auto}
+.sh-sheet{background:#fff;border-radius:16px 16px 0 0;padding:14px 16px 18px;transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);max-height:78%}
+.sh-panel.show .sh-sheet{transform:translateY(0)}
+.sh-hand{width:34px;height:4px;background:#E3E5EC;border-radius:3px;margin:0 auto 12px}
+.sh-app{display:flex;align-items:center;gap:10px;padding:4px 2px 12px;border-bottom:1px solid #F2F3F6}
+.sh-app .ava{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
+.sh-app-nm{font-size:15px;font-weight:700;color:#1B1F27}
+.sh-app-sub{font-size:11px;color:#8A91A0;margin-top:2px}
+.sh-sec{font-size:12px;color:#8A91A0;padding:12px 2px 8px}
+.sh-row{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none}
+.sh-row::-webkit-scrollbar{display:none}
+.sh-c{width:56px;flex-shrink:0;text-align:center;cursor:pointer}
+.sh-c .ava{width:44px;height:44px;border-radius:8px;background:#F2F3F6;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto}
+.sh-c .nm{font-size:10px;color:#666;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px 6px;padding:10px 2px 4px}
+.sh-g{text-align:center;cursor:pointer}
+.sh-g .ava{width:44px;height:44px;border-radius:12px;background:#F4F5F8;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto}
+.sh-g .nm{font-size:10px;color:#666;margin-top:5px}
+.sh-cancel{margin-top:14px;border-top:1px solid #F2F3F6;text-align:center;padding:14px 0 4px;font-size:15px;color:#1B1F27;font-weight:600;cursor:pointer}
+
+/* ============ 右栏步骤 ============ */
+.steps{background:var(--sheet);border-radius:var(--radius);padding:18px 18px 10px;border:1px solid var(--line);padding-bottom:76px}
+.sec-h{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.sec-h .n{font-size:12px;font-weight:700;color:var(--brand);background:#F7F8FA;padding:3px 9px;border-radius:6px}
+.sec-h .t{font-size:15.5px;font-weight:800}
+.sec-h .c{margin-left:auto;font-size:12px;color:var(--ink3)}
+.step{position:relative;padding:0 0 4px 44px;cursor:pointer}
+.step:last-child{padding-bottom:0}
+.step::before{content:"";position:absolute;left:14px;top:34px;bottom:-6px;width:2px;background:var(--line)}
+.step:last-child::before{display:none}
+.step .badge{position:absolute;left:0;top:2px;width:28px;height:28px;border-radius:50%;background:#F2F3F6;color:#8A91A0;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;border:2px solid #fff;z-index:2}
+.step.cur .badge{background:var(--brand);color:#fff;box-shadow:0 0 0 4px #EEF0F3}
+.step.past .badge{background:#E7F8EF;color:var(--ok)}
+.step.cur::before{background:linear-gradient(180deg,var(--brand) 0%,var(--line) 100%)}
+.step .body{background:#FAFBFC;border:1.5px solid #F0F1F5;border-radius:13px;padding:11px 13px;transition:.18s}
+.step.cur .body{background:#F7F8FA;border-color:var(--brand);box-shadow:0 6px 18px -10px rgba(23,163,74,.7)}
+.step .h{display:flex;align-items:center;gap:8px}
+.step .h .tt{font-size:14.5px;font-weight:700}
+.step .h .pill{font-size:10.5px;padding:2px 7px;border-radius:5px;background:#F2F3F6;color:var(--ink2);font-weight:600}
+.step .h .pill.pop{background:#F7F8FA;color:var(--c-brand-ink)}
+.step .h .pill.judge{background:#F7F8FA;color:#4A5160;border:1px solid #EEF0F3}  /* 唯一允许的 pill：判断 */
+.step .meta{font-size:11.5px;color:#8A91A0;margin-top:7px;line-height:1.7;font-family:"Noto Sans SC",sans-serif}
+.step .meta>div{margin-top:1px}  /* 4 行固定结构：属性/关键字段/结果/下一环 */
+.step .meta b{color:var(--ink2);font-weight:600}
+.step .meta .limit{color:var(--danger);font-weight:700}  /* 可选第 5 行：限制条件（红字） */
+.step .note{font-size:11.5px;color:#1B4D2E;background:#F2FAF4;border-left:2.5px solid var(--brand);padding:6px 9px;border-radius:0 6px 6px 0;margin-top:8px;line-height:1.55;display:none;word-break:break-all}
+.step.cur .note{display:block}
+.step .br{font-size:11.5px;color:var(--ink3);margin-top:8px;line-height:1.6;display:none;word-break:break-all}
+.step.cur .br{display:block}
+.step .br i{font-style:normal;color:var(--brand);font-weight:700}
+
+/* 分支标记 */
+.branch{position:relative;padding-left:44px;margin-top:-2px}
+.branch .bline{position:absolute;left:14px;top:-10px;bottom:14px;width:2px;background:#EEF0F3}
+.branch .btab{display:inline-block;font-size:10.5px;font-weight:700;color:#4A5160;background:#FEF4E6;border:1px solid #EEF0F3;padding:2px 8px;border-radius:5px;margin-bottom:6px}
+
+/* 判断结果并列双卡（同一行左右展示，参考 1013 模板） */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.duo .step{padding-left:0}
+.duo .step::before{display:none}
+.duo .badge{display:none}
+
+/* ============ 块头：9 条子流程的分块标题（每条二级子流程一个块，第一帧必须是可视化入口）============ */
+.blk{display:flex;align-items:center;gap:8px;margin:16px 0 12px;padding:9px 11px;border-radius:10px;border:1px solid}
+.blk:first-of-type{margin-top:2px}
+.blk .bt{font-size:13px;font-weight:800;white-space:nowrap}
+.blk .be2{font-size:11px;line-height:1.4}
+.blk.g1{background:#E7F6EC;border-color:#CBEBD6}.blk.g1 .bt{color:#14532D}.blk.g1 .be2{color:#15803D}
+.blk.g2{background:#EFF6FF;border-color:#BFDBFE}.blk.g2 .bt{color:#1E3A8A}.blk.g2 .be2{color:#1D4ED8}
+.blk.g3{background:#F7F8FA;border-color:#EEF0F3}.blk.g3 .bt{color:#4A5160}.blk.g3 .be2{color:var(--c-brand-ink)}
+.blk.g4{background:#FDF2F8;border-color:#FBCFE8}.blk.g4 .bt{color:#9D174D}.blk.g4 .be2{color:#BE185D}
+.step.be::before{display:none}  /* 每条子流程的最后一步：连接线不再延伸 */
+
+/* 底部控制条 */
+.ctrl{position:relative;left:0;right:0;bottom:0;margin-top:14px;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:12px 26px;display:flex;align-items:center;gap:14px;z-index:80}
+.ctrl .pg{font-size:12px;color:var(--ink3);white-space:nowrap}
+.ctrl .pg b{color:var(--brand);font-size:14px}
+.ctrl .prog{flex:1;height:5px;background:#EEEFF3;border-radius:5px;overflow:hidden}
+.ctrl .prog i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2));width:9%;transition:width .3s}
+.ctrl button{border:none;font-family:inherit;font-size:14px;font-weight:700;height:42px;padding:0 22px;border-radius:12px;cursor:pointer;white-space:nowrap}
+.ctrl .prev{background:#fff;border:1.5px solid #E3E5EC;color:var(--ink2)}
+.ctrl .next{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 8px 18px -8px var(--brand)}
+.ctrl button:disabled{opacity:.38;cursor:not-allowed;box-shadow:none}
+.hintbar{margin-top:12px;font-size:11.5px;color:var(--ink3);line-height:1.7}
+.hintbar b{color:var(--ink2)}
+/* ================= 布局：三列（左菜单 + 手机壳 + 步骤卡）================= */
+html .layout{grid-template-columns:390px 520px;align-items:start;justify-content:center}
+html .phone-col{align-self:start}
+
+/* ============ 左菜单 ============ */
+.menu-col{position:fixed;left:0;top:18px;bottom:18px;width:220px;max-height:calc(100vh - 36px);overflow-y:auto;border-radius:0 16px 16px 0;background:var(--sheet);border:1px solid var(--line);border-left:none;padding:14px 12px 16px;scrollbar-width:thin;z-index:5}
+.menu-col::-webkit-scrollbar{width:4px}
+.menu-col::-webkit-scrollbar-thumb{background:#CFD3DC;border-radius:4px}
+/* 大类标题 */
+.menu-col .cat{display:flex;align-items:center;gap:6px;padding:10px 10px 6px;font-size:13px;font-weight:800;color:var(--c-ink);letter-spacing:.5px;user-select:none}
+.menu-col .cat .dot{position:static;width:8px;height:8px;border-radius:50%;background:var(--brand);flex-shrink:0}
+.menu-col .cat .name{flex:1}
+/* 流程项列表 */
+.menu-col .p-list{display:flex;flex-direction:column;gap:2px;padding-left:6px}
+.menu-col .p-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;font-size:12.5px;font-weight:600;color:var(--c-ink2);cursor:pointer;transition:background .18s,color .18s;margin-left:10px;border-left:2px solid transparent}
+.menu-col .p-item:hover{background:#F2FAF4;color:var(--brand)}
+/* 当前选中态：绿底白字 + 左竖条 */
+.menu-col .p-item.cur{background:linear-gradient(135deg,#17A34A,#3FB950);color:#fff;border-left-color:var(--brand);box-shadow:0 6px 14px -8px rgba(23,163,74,.5)}
+/* 未建成：置灰 */
+.menu-col .p-item.todo{color:#A0A6B0;background:#F4F5F8;cursor:not-allowed}
+.menu-col .p-item.todo:hover{background:#F4F5F8;color:#A0A6B0}
+
+/* ===== 两级菜单 + 小程序页面视图 ===== */
+.lv1-row{display:flex;gap:6px}
+.lv1-item{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 6px;border-radius:10px;font-size:13px;font-weight:800;color:var(--ink2);cursor:pointer;transition:background .18s,color .18s;user-select:none;white-space:nowrap}
+.lv1-item:hover{background:#F2FAF4;color:var(--brand)}
+.lv1-item.cur{background:linear-gradient(135deg,#17A34A,#3FB950);color:#fff;box-shadow:0 6px 14px -8px rgba(23,163,74,.5)}
+.lv1-item:empty,.lv1-item[data-v="other"]{cursor:default}
+.lv1-item[data-v="other"]:not(.cur):hover{background:transparent;color:var(--ink2)}
+#pagesMenu{margin-top:2px}
+.tree-ready{font-size:10px;color:#15803D;background:#E7F6EC;padding:1px 7px;border-radius:6px;font-weight:800;margin-left:auto;flex-shrink:0}
+.tree-todo{font-size:10px;color:var(--ink3);background:#F3F5F7;padding:1px 7px;border-radius:6px;font-weight:800;margin-left:auto;flex-shrink:0}
+.tree-shell{font-size:10px;color:#4A5160;background:#F7F8FA;padding:1px 7px;border-radius:6px;font-weight:800;margin-left:auto;flex-shrink:0}
+.state-tabs{display:none;margin:0 auto 10px;max-width:932px;background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:6px 12px;align-items:center;gap:6px;flex-wrap:wrap}
+.st-head{width:100%;display:flex;align-items:baseline;gap:8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.st-pills{width:100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.st-row{width:100%;display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px}
+.st-row-lb{font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:.08em;min-width:38px}
+.st-row-main{color:var(--brand)}
+.st-page{font-size:12.5px;font-weight:800}
+.st-key{font-size:10.5px;color:var(--ink3);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-right:4px}
+.st-pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit;transition:all .15s}
+.st-pill:hover{border-color:var(--brand);color:var(--brand)}
+.st-pill.cur{background:var(--brand);border-color:var(--brand);color:#fff}
+.spec-col{display:none;background:var(--sheet);border-radius:var(--radius);padding:18px 18px 26px;border:1px solid var(--line);grid-column:2;grid-row:1}
+.spec-obj{font-size:11.5px;color:var(--ink3);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-bottom:4px}
+.spec-title{display:block;font-size:16px;font-weight:800;margin:2px 0 6px}
+/* 页面视图：右栏字段说明卡顶部让位 3 个标题行高度（对齐顶部状态块标题区） */
+body.view-pages .spec-col .spec-obj{margin-top:75px}
+.spec-state{display:inline-block;font-size:11.5px;font-weight:800;color:#15803D;background:#E7F6EC;padding:3px 10px;border-radius:999px;margin:8px 0 12px}
+.spec-main{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:#15803D;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.spec-sub{display:inline-block;font-size:10px;font-weight:800;color:var(--ink3);background:#F1F3F6;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.spec-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.spec-table td{padding:7px 8px;border-top:1px solid var(--line);vertical-align:top;line-height:1.6}
+.spec-table td:first-child{width:84px;font-weight:800;color:var(--ink2);white-space:nowrap}
+.spec-sec{font-size:11px;font-weight:800;color:var(--ink3);letter-spacing:.12em;margin:16px 0 8px}
+.sp-stline{margin:8px 0 4px;font-size:12px;color:var(--ink2)}
+.sp-stline .spec-state{margin:0 0 0 6px}
+.sp-sec{font-size:11px;font-weight:800;color:var(--brand);letter-spacing:.12em;margin:18px 0 8px;padding-top:12px;border-top:1px dashed var(--line)}
+.sp-intro{font-size:12.5px;line-height:1.8;color:var(--ink2)}
+.sp-block{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;background:#fff}
+.sp-bname{font-size:12px;font-weight:800;margin-bottom:4px;color:#2563EB}
+.sp-bline{font-size:12.5px;color:var(--ink2);line-height:1.7}
+.sp-ftab{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;table-layout:fixed}
+.sp-ftab th,.sp-ftab td{padding:7px 8px;border-top:1px solid var(--line);vertical-align:top;line-height:1.6;text-align:left}
+.sp-ftab th{font-size:11px;color:var(--ink3);border-top:none;letter-spacing:.06em;font-weight:800}
+.sp-ftab th:nth-child(1),.sp-ftab td:nth-child(1){width:33.33%}
+.sp-ftab th:nth-child(2),.sp-ftab td:nth-child(2){width:33.33%}
+.sp-ftab th:nth-child(3),.sp-ftab td:nth-child(3){width:33.33%}
+.sp-ftab td:nth-child(1){font-weight:800;color:var(--ink2)}
+/* 小程序页面视图：隐藏流程视图用的引导手型与悬浮提示条，保持手机壳干净 */
+body.view-pages .gh-tip, body.view-pages .guidehand{display:none !important}
+.sp-dline{font-size:12px;line-height:1.8;color:var(--ink2)}
+.sp-none{color:var(--ink3)}
+.sp-dk{display:inline-block;font-size:10px;font-weight:800;color:#15803D;background:#E7F6EC;border-radius:4px;padding:0 5px;margin-right:5px;vertical-align:1px}
+.sp-grp{display:flex;align-items:baseline;gap:8px;margin:12px 0 8px;padding:7px 10px;border-radius:8px;background:#F6F8F7;border-left:3px solid var(--brand)}
+.sp-grp-t{font-size:12.5px;font-weight:800;color:var(--ink)}
+.sp-grp-s{font-size:11px;color:var(--ink3)}
+.sp-tag{display:inline-block;font-size:10px;font-weight:800;color:var(--c-brand-ink);background:#F7F8FA;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+.sp-ftag{display:inline-block;font-size:9.5px;font-weight:800;border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:1px}
+.sp-ftag.ft-new{color:#15803D;background:#E7F6EC}
+.sp-ftag.ft-diff{color:var(--c-brand-ink);background:#F7F8FA}
+.sp-same{font-size:11.5px;color:var(--ink3);padding:1px 0 2px}
+.sp-block-diff{border-color:#BFE8CD;background:#FCFEFD}
+.sp-ref{border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:#FAFBFA}
+.sp-ref>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;padding:8px 10px;font-size:12px;font-weight:700;color:var(--ink2)}
+.sp-ref>summary::-webkit-details-marker{display:none}
+.sp-ref>summary:before{content:'▸';color:var(--ink3);font-size:11px;transition:transform .15s}
+.sp-ref[open]>summary:before{transform:rotate(90deg)}
+.sp-ref-n{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--ink3)}
+.sp-ref-body{padding:0 8px 8px}
+.sp-list .sp-li{font-size:12.5px;line-height:1.8;color:var(--ink2);padding-left:14px;position:relative}
+.sp-list .sp-li:before{content:'·';position:absolute;left:4px;color:var(--brand)}
+.sp-chain{font-size:12.5px;line-height:1.8;color:var(--ink2)}
+.ref-chip{display:inline-block;font-size:11px;font-weight:700;color:#8a5a17;background:#FBF1DE;border-radius:8px;padding:3px 9px;margin:0 5px 5px 0}
+.spec-import{position:fixed;right:18px;bottom:18px;z-index:9998;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #E2E8E2;border-radius:12px;padding:8px 12px;box-shadow:0 8px 24px -8px rgba(0,0,0,.18)}
+.spec-import button{border:0;background:#15803D;color:#fff;font-size:12px;font-weight:800;padding:8px 14px;border-radius:8px;cursor:pointer;font-family:inherit}
+.spec-import button:hover{background:#116A33}
+.spec-import span{font-size:11px;color:#8a938a}
+.steps{grid-column:2;grid-row:1}
+.phone-col{grid-column:1;grid-row:1}
+body.view-pages .steps{display:none}
+/* 一列菜单：流程与页面入口始终同时可见，不再有维度 tab 切换 */
+/* 小程序页面视图：顶部状态块跨「手机壳列 + 字段说明卡列」，作为两列公共标题条；
+   右栏改为内部滚动（layout 锁定视口高度）→ 顶栏与手机壳天然固定不动 */
+body.view-pages .state-tabs{display:flex;grid-column:1/-1;grid-row:1;max-width:none;margin:0 0 14px}
+body.view-pages .layout{row-gap:0;height:calc(100vh - 106px);min-height:480px;align-items:stretch}
+body.view-pages .phone-col{grid-column:1;grid-row:2;position:static}
+body.view-pages .spec-col{grid-column:2;grid-row:2;display:block;overflow-y:auto;max-height:100%;scrollbar-width:thin}
+@media(max-width:960px){body.view-pages .spec-col{grid-column:1;grid-row:3}}
+/* P 编号 */
+.menu-col .p-code{font-size:10.5px;font-weight:800;color:var(--ink3);font-family:monospace;flex-shrink:0;width:28px;text-align:center;background:#F2F3F6;border-radius:6px;padding:2px 0}
+.menu-col .p-item.cur .p-code{background:rgba(255,255,255,.25);color:#fff}
+.menu-col .p-item.todo .p-code{background:#ECEEF2;color:#A0A6B0}
+.menu-col .p-sub{margin-left:26px;font-size:11.5px;font-weight:500;padding:6px 10px}
+.menu-col .p-sub .p-code{width:34px;font-size:9.5px}
+/* 一级标题：纯分组，无交互 */
+.menu-col .p-group{display:flex;align-items:center;gap:8px;padding:8px 10px 2px;margin-left:10px;font-size:12.5px;font-weight:800;color:var(--c-ink);cursor:default;user-select:none}
+.menu-col .p-group .p-code{width:28px;font-size:10.5px;font-weight:800;color:var(--brand);font-family:monospace;flex-shrink:0;text-align:center;background:#E7F6EC;border-radius:6px;padding:2px 0}
+/* 分隔 */
+.menu-col .divider{height:1px;background:var(--line);margin:10px 4px}
+/* 菜单标题 */
+.menu-title{font-size:13px;font-weight:700;color:var(--c-ink);padding:4px 10px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.menu-title .menu-tag{font-size:10.5px;font-weight:600;color:var(--brand);background:#E7F6EC;padding:2px 8px;border-radius:10px}
+/* 紧凑版手机壳：与右栏 .steps 的 740px 同高（口径与 fsg 一致，勿再改动） */
+.phone{width:360px;height:740px}
+.stbar{padding:0 24px}
+.jh{left:14px;right:14px}
+.fhead{padding:6px 14px 10px}
+.water{padding:0 14px}
+.card,.grid2,.sign,.hero{margin-left:14px;margin-right:14px}
+/* 右栏：固定为手机壳同高、顶部对齐，内部滚动 + 标题吸顶 */
+html .steps{position:sticky;top:18px;height:740px;max-height:calc(100vh - 40px);overflow-y:auto;scroll-padding-top:64px;padding:0 14px 8px;border-radius:16px;padding-bottom:64px;scrollbar-width:thin}
+/* 吸顶条：从面板顶部起就是白底，滚上来的卡片被它整块盖住，不漏内容 */
+html .steps .sec-h{position:sticky;top:0;z-index:6;background:#FFFFFF;margin:0 -14px 14px;padding:14px 14px 10px;border-bottom:1px solid var(--line)}
+html .sec-h .t{font-size:14.5px}
+html .step{padding:0 0 2px 40px}
+.step .body{padding:9px 11px;border-radius:12px}
+.step .h .tt{font-size:13.5px}
+.step .meta{font-size:11px;margin-top:6px}
+.step .note,.step .br{font-size:10.5px;margin-top:6px;line-height:1.5}
+.step::before{left:13px;top:30px}
+.step .badge{width:26px;height:26px;font-size:11.5px}
+html .branch{padding-left:40px}
+html .branch .bline{left:13px}
+html .hintbar{font-size:10.5px;line-height:1.6}
+html .ctrl{margin-top:12px;padding:10px 22px;gap:12px}
+html .ctrl button{font-size:13px;height:38px;padding:0 18px;border-radius:11px}
+.ctrl .pg{font-size:11px}
+.ctrl .pg b{font-size:13px}
+
+/* ================= 小手引导 ================= */
+html .guidehand{
+  position:absolute;z-index:85;width:84px;height:84px;pointer-events:none;
+  filter:drop-shadow(0 8px 18px rgba(8,14,10,.42));
+  opacity:0;transform:translateY(10px) scale(.86);
+  transition:opacity .3s ease,transform .3s ease;
+}
+html .guidehand svg{width:100%;height:100%;display:block}
+@keyframes ghfloat{
+  0%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-15px) scale(1.1)}
+  100%{transform:translateY(0) scale(1)}
+}
+html .frame.on .guidehand.show{opacity:1;transform:none;animation:ghfloat 1.7s ease-in-out infinite}
+html .gh-tip{
+  position:absolute;z-index:86;font-size:12.5px;font-weight:700;color:#fff;letter-spacing:.2px;
+  background:linear-gradient(135deg,#17A34A,#2FB960);padding:7px 13px;border-radius:20px;white-space:nowrap;
+  box-shadow:0 8px 18px -8px rgba(23,163,74,.65);
+  opacity:0;
+  transition:opacity .28s ease .08s,transform .28s ease .08s;
+}
+html .gh-tip::before{content:"";position:absolute;width:8px;height:8px;background:inherit;transform:rotate(45deg);}
+html .gh-tip.left::before{right:-3px;top:50%;margin-top:-4px}
+html .gh-tip.right::before{left:-3px;top:50%;margin-top:-4px}
+html .gh-tip.top::before{left:50%;bottom:-3px;margin-left:-4px}
+/* 手机壳外层放开 overflow，让 tip/手型能溢出 */
+html .phone{overflow:visible}
+/* 重父后：tip 相对 .phone 定位，left 类推到壳外左侧 */
+html .gh-tip.left{
+  left:0 !important;
+  right:auto;
+  transform:translateX(calc(-100% - 14px));
+}
+html .gh-tip.right{
+  right:0 !important;
+  left:auto;
+  transform:translateX(calc(100% + 14px));
+}
+html .gh-tip.top{
+  left:50% !important;
+  right:auto;
+  transform:translateY(calc(-100% - 14px));
+}
+/* 显隐只控制 opacity/visibility，不碰 transform */
+html .gh-tip{opacity:0;visibility:hidden}
+html .gh-tip.show{opacity:1;visibility:visible}
+
+/* ================= 首页：我的排名卡 ================= */
+.myrk{margin:12px 16px 0;background:#16201A;color:#fff;border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px}
+.myrk .ic{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#17A34A,#3FB950);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.myrk .t1{font-size:14px;font-weight:800}
+.myrk .t2{font-size:11.5px;color:#A9B7AE;margin-top:4px;line-height:1.5}
+.myrk .t2 b{color:var(--c-brand-ink)}
+.myrk .go{margin-left:auto;font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);padding:6px 12px;border-radius:16px;white-space:nowrap;flex-shrink:0}
+
+/* ================= 排行榜页（视觉系统 v1）================= */
+.rk-tabs{display:flex;gap:var(--s2);padding:var(--s3) var(--s4) var(--s1)}
+.rk-tab{flex:1;text-align:center;font-size:var(--f-sm);font-weight:700;color:var(--c-ink2);padding:10px 0;border-radius:var(--r-pill);background:#fff;border:1px solid var(--c-line);cursor:pointer;transition:.2s}
+.rk-tab.on{color:#fff;background:#12A150;border-color:#12A150;box-shadow:0 10px 20px -10px rgba(18,161,80,.55)}
+.rk-rule{margin:var(--s3) var(--s4) 0;font-size:var(--f-xs);color:var(--c-ink2);background:var(--c-brand-bg);border:1px solid var(--c-brand-line);border-radius:var(--r-ctl);padding:10px 12px;line-height:1.6}
+.rk-rule b{color:var(--c-brand-ink)}
+/* 结算倒计时（吸顶：滚动榜单时仍可见） */
+.rk-cd{position:sticky;top:0;z-index:20;background:#F7F8FA;padding:var(--s3) var(--s4) var(--s1)}
+.rk-cd .cd-card{background:linear-gradient(135deg,#F7F8FA,#F7F8FA);border:1px solid #EEF0F3;border-radius:var(--r-card);padding:12px 14px;box-shadow:0 8px 20px -14px rgba(23,163,74,.7)}
+.rk-cd .cd-top{display:flex;align-items:center;gap:6px;font-size:var(--f-xs);font-weight:800;color:var(--c-brand-ink)}
+.rk-cd .cd-live{margin-left:auto;font-size:10px;font-weight:700;color:#12A150;background:#EAF9EF;border:1px solid #C6EBD5;border-radius:var(--r-pill);padding:2px 8px}
+.rk-cd .cd-clock{display:flex;gap:6px;margin-top:11px}
+.rk-cd .cd-cell{flex:1;text-align:center;background:#fff;border:1px solid #EEF0F3;border-radius:var(--r-ctl);padding:8px 0}
+.rk-cd .cd-cell .n{font-size:21px;font-weight:800;color:#1B1F27;font-variant-numeric:tabular-nums;line-height:1}
+.rk-cd .cd-cell .l{font-size:10px;color:#8A91A0;margin-top:5px}
+.rk-cd .cd-foot{margin-top:11px;padding-top:9px;border-top:1px dashed #EEF0F3;font-size:11px;color:#8A91A0;text-align:center;line-height:1.5}
+.rk-cd .cd-foot b{color:var(--c-brand-ink)}
+/* 冻结态：倒计时归零 → 已开奖 */
+.rk-cd.lock .cd-card{background:#F4F5F7;border-color:var(--c-line2);box-shadow:none}
+.rk-cd.lock .cd-top{color:#8A91A0}
+.rk-cd.lock .cd-cell{border-color:var(--c-line2)}
+.rk-cd.lock .cd-cell .n{color:#8A91A0}
+.rk-cd.lock .cd-foot{border-top-color:var(--c-line2)}
+.rk-scroll{position:absolute;left:0;right:0;top:52px;bottom:112px;overflow-y:auto;padding-bottom:var(--s4)}
+/* 榜单：统一卡片流 —— ①名次+免单 ｜ 头像+昵称 ②左图 88×88 + 右商品名/AI拉票 ③助力数 ｜ 助力 */
+.rk-list{padding:var(--s2) var(--s4) var(--s5);display:flex;flex-direction:column;gap:var(--s3)}
+.rk-row{background:#fff;border:1px solid var(--c-line);border-radius:var(--r-card);padding:var(--s3) var(--s4);cursor:pointer;box-shadow:var(--sh-card)}
+/* 第 1 名：与普通行一致，仅名次文字高亮 */
+.rk-row.top1{border:1.5px solid var(--c-line);background:#fff;box-shadow:0 6px 18px -14px rgba(16,24,40,.18)}
+.rk-head{display:flex;align-items:center;gap:var(--s2)}
+.rk-no{font-size:var(--f-sm);font-weight:800;color:var(--c-ink);flex-shrink:0}
+.rk-row.top1 .rk-no{color:var(--brand)}
+.rk-head .rk-amt{font-size:var(--f-sm);font-weight:800;color:var(--c-brand-ink);flex-shrink:0}
+.rk-user{margin-left:auto;display:flex;align-items:center;gap:var(--s2);flex-shrink:0}
+.rk-ava{width:26px;height:26px;border-radius:50%;background:#EFF6F1;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.rk-un{font-size:var(--f-xs);font-weight:700;color:var(--c-ink2);max-width:66px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 左图 + 右（商品名 / AI 拉票） */
+.rk-mid{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s3)}
+.rk-img{width:88px;height:88px;border-radius:var(--r-ctl);background-size:cover;background-position:center;background-color:#F2F4F7;flex-shrink:0}
+.rk-txt{flex:1;min-width:0}
+.rk-name{font-size:var(--f-md);font-weight:800;color:var(--c-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rk-pitch{font-size:var(--f-sm);font-weight:600;line-height:1.5;color:var(--c-brand-ink);margin-top:var(--s1);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rk-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);margin-top:var(--s3)}
+.rk-foot .rk-like-n{font-size:var(--f-xs);font-weight:700;color:var(--c-ink2)}
+.rk-foot .rk-like{font-size:var(--f-xs);font-weight:700;color:var(--c-ink2);border:1px solid var(--c-line2);border-radius:var(--r-pill);padding:5px 12px;background:#fff;flex-shrink:0}
+/* 我的帖子：置底 + 绿样式 + 助力进度 */
+.rk-row.mine{background:linear-gradient(180deg,#F3FCF6,#fff);border-color:#C6EBD5}
+.rk-row.mine .rk-ava{background:var(--c-ok);color:#fff}
+.rk-row.mine .rk-un{color:var(--c-ok)}
+.rk-row.mine .rk-no,.rk-row.mine .rk-amt{color:var(--c-ink3)}
+.rk-row.mine .rk-like{color:#B4BCB5;border-color:var(--c-line)}
+.rk-mine-tag{font-size:10px;font-weight:800;color:#fff;background:var(--c-ok);border-radius:var(--r-pill);padding:2px 8px}
+.rk-prog{margin-top:var(--s3)}
+.rk-prog .pb{display:flex;gap:var(--s1)}
+.rk-prog .pb i{flex:1;height:6px;border-radius:var(--r-pill);background:#EDEFF3;display:block}
+.rk-prog .pb i.on{background:linear-gradient(90deg,#5BD07A,var(--c-ok))}
+/* 助力构成：票源条 */
+.rk-foot .rk-total{font-size:var(--f-xs);font-weight:800;color:var(--c-ink);flex-shrink:0}
+.rk-src{margin-top:var(--s3)}
+.rk-src .bar{display:flex;height:8px;border-radius:var(--r-pill);overflow:hidden;background:#EDEFF3}
+.rk-src .bar i{display:block;height:100%;flex-basis:0;flex-grow:0}
+.rk-src .bar i.fr{background:linear-gradient(90deg,#3FB950,#17A34A)}
+.rk-src .lg{display:flex;align-items:center;gap:var(--s4);margin-top:6px;font-size:11px;font-weight:700;color:var(--c-ink2)}
+.rk-src .lg span{display:flex;align-items:center;gap:5px}
+.rk-src .lg b{color:var(--c-ink)}
+.rk-src .lg i{width:8px;height:8px;border-radius:2px;display:block;flex-shrink:0}
+.rk-src .lg i.fr{background:var(--brand)}
+/* 吸底：参与挑战 / 我的排名 */
+.challenge-entry,.mine-entry{position:absolute;left:var(--s4);right:var(--s4);bottom:var(--s5);z-index:30}
+.ce-strip{background:var(--c-brand-bg);border:1px solid var(--c-brand-line);border-radius:var(--r-ctl);padding:9px 12px;font-size:var(--f-xs);color:var(--c-brand-ink);font-weight:600;text-align:center;margin-bottom:var(--s2)}
+.ce-btn{position:relative;width:100%;height:52px;border:none;border-radius:var(--r-pill);background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:var(--f-md);font-weight:800;font-family:inherit;letter-spacing:.5px;box-shadow:0 14px 26px -12px rgba(23,163,74,.7);cursor:pointer}
+.mine-btn{width:100%;height:52px;border:none;border-radius:var(--r-pill);background:linear-gradient(135deg,#22B85C,var(--c-ok));color:#fff;font-size:var(--f-md);font-weight:800;font-family:inherit;letter-spacing:.5px;box-shadow:0 14px 26px -12px rgba(18,161,80,.7);cursor:pointer}
+.ce-tag{position:absolute;left:2px;top:-10px;background:linear-gradient(135deg,var(--brand2),var(--c-brand));color:#fff;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:var(--r-pill);transform:rotate(-8deg);box-shadow:0 6px 14px -8px rgba(23,163,74,.7)}
+
+/* ================= 帖子详情 / 助力页 ================= */
+.progress-wrap{margin:14px 16px 0;background:#fff;border:1.5px solid #EEEFF3;border-radius:14px;padding:13px}
+.progress-wrap .pr-t{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;font-weight:700}
+.progress-wrap .pr-t .c{color:var(--c-brand-ink)}
+.pr-bar{display:flex;gap:6px;margin-top:10px}
+.pr-bar i{flex:1;height:9px;border-radius:5px;background:#F2F3F6;display:block}
+.pr-bar i.on{background:linear-gradient(90deg,#7ED89A,var(--brand))}
+.progress-wrap .pr-d{font-size:11px;color:var(--ink3);margin-top:9px;line-height:1.5}
+/* 帖子详情（整页）：助力进度块嵌在结果骨架内 */
+.result .progress-wrap{margin-top:20px}
+
+/* ===== page.post(assist)：集赞为首要信息，奶茶为次要信息 ===== */
+.gcard{margin:10px 16px 0;background:#fff;border:1.5px solid #EEF0F3;border-radius:16px;padding:14px 14px 12px;box-shadow:0 10px 24px -18px rgba(27,31,39,.18)}
+.gcard .gtop{font-size:16.5px;font-weight:900;color:#1B1F27;line-height:1.25}
+.gcard .gtop b{font-size:26px;color:var(--brand);font-variant-numeric:tabular-nums;margin:0 2px;vertical-align:-2px}
+.gcard .gsub{margin-top:5px;font-size:11.5px;color:#7E8A82}
+.gcard .pr-t{margin-top:12px;display:flex;align-items:center;justify-content:space-between;font-size:12.5px;font-weight:800;color:#1B1F27}
+.gcard .pr-t .c{color:var(--brand)}
+.gcard .gladder{display:flex;gap:6px;margin-top:12px}
+.gcard .gladder .lv{flex:1;text-align:center;border-radius:10px;padding:7px 0;background:#F7F8FA;border:1.5px solid #EEF0F3}
+.gcard .gladder .lv .n{font-size:14px;font-weight:800;color:#7E8A82;font-variant-numeric:tabular-nums;line-height:1.1}
+.gcard .gladder .lv .k{font-size:10px;color:#98A1AE;margin-top:3px}
+.gcard .gladder .lv.on{background:#F2FAF4;border-color:#17A34A;box-shadow:0 6px 14px -10px rgba(23,163,74,.7)}
+.gcard .gladder .lv.on .n{color:#12A150}
+.gcard .gladder .lv.on .k{color:#12A150;font-weight:700}
+.gcard .gfoot{margin-top:11px;font-size:11.5px;color:#7E8A82;text-align:center}
+.gcard .gfoot b{color:#1B1F27}
+/* page.post(closed)：活动已结束覆盖层 */
+.closed-wrap{position:absolute;inset:0;background:#F4F5F8;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:0 28px;z-index:60;text-align:center}
+.closed-wrap.on{display:flex}
+.closed-wrap .ico{font-size:46px;line-height:1}
+.closed-wrap .ct{font-size:17px;font-weight:900;color:#1B1F27;margin-top:6px}
+.closed-wrap .cs{font-size:12.5px;color:#7E8A82;line-height:1.7}
+.closed-wrap .cbtn{margin-top:26px;width:100%;height:50px;border:none;border-radius:25px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:15.5px;font-weight:800;font-family:inherit;box-shadow:0 14px 26px -12px rgba(23,163,74,.75);cursor:pointer}
+/* 渠道抽屉内的说明行 */
+.mtnote{margin-top:11px;text-align:center;font-size:11.5px;color:#7E8A82;line-height:1.6}
+.mtnote b{color:var(--c-brand-ink)}
+
+/* ===== 帧 0 入口分支 / 帧 8 双按钮 / 帧 9 发起人行 + 4 跳转键 ===== */
+/* 帧 9：发起人头像 + 昵称行 */
+.author-row{display:flex;align-items:center;gap:8px;margin:10px 16px 0;padding:9px 12px;background:#fff;border:1.5px solid #EEEFF3;border-radius:12px}
+.author-row .ava{width:30px;height:30px;border-radius:50%;background:#F2F3F6;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.author-row .anm{font-size:12.5px;font-weight:800;color:#1B1F27}
+.author-row .arole{margin-left:auto;font-size:10px;font-weight:700;color:#17A34A;background:#E7F6EC;padding:2px 8px;border-radius:9px;flex-shrink:0}
+/* 帧 9：4 个跳转键（1 强推美团高亮 + 3 弱化） */
+.jump4{margin:12px 16px 14px;background:#fff;border:1.5px solid #EEEFF3;border-radius:14px;padding:12px}
+.jump4 .jh{font-size:11.5px;color:var(--ink3);font-weight:600;text-align:center}
+.jump4 .jh b{color:var(--c-brand-ink)}
+.jump4 .jgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.jump4 .jk{position:relative;height:38px;border-radius:11px;border:1.5px solid #E3E5EC;background:#FAFBFC;color:var(--ink2);font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;overflow:hidden;white-space:nowrap;padding:0 6px}
+.jump4 .jk .jd{font-size:9.5px;font-weight:600;color:#8A91A0;margin-left:4px}
+.jump4 .jk.hot{border:1.5px solid var(--brand);background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 6px 16px -8px var(--brand)}
+.jump4 .jk.hot .jd{color:rgba(255,255,255,.85)}
+.jump4 .jk .hot-tag{position:absolute;right:-1px;top:-1px;font-size:9px;font-weight:800;background:var(--brand);color:#4A5160;padding:2px 7px;border-radius:0 11px 0 11px}
+/* 帧 8：分享成功底部双按钮（微信绿主按钮） */
+.f8btns{position:absolute;bottom:20px;left:14px;right:14px;display:flex;gap:10px;z-index:3}
+.f8btns button{flex:1;height:44px;border-radius:22px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
+.f8btns .ghost{background:#fff;border:1.5px solid #E3E5EC;color:var(--ink2)}
+.f8btns .main{background:#07C160;border:1.5px solid #07C160;color:#fff;box-shadow:0 8px 18px -8px rgba(7,193,96,.5)}
+
+/* ===== 帖子管理（我的帖详情 / 助力明细 / 删除确认 / 再发起拦截） ===== */
+.p2card{margin:14px 16px 0;background:#fff;border:1.5px solid #EEEFF3;border-radius:14px;padding:13px}
+.p2card .p2h{font-size:13px;font-weight:800;color:#1B1F27;display:flex;align-items:center;justify-content:space-between}
+.p2card .p2h span{font-size:10.5px;color:#8A91A0;font-weight:600}
+/* 帧 15 本期/该期榜单：成绩卡内嵌数据条（.stats 全局样式作用域在 .result 下，此处单独补） */
+.frame[data-f="15"] .stats{margin:10px 0 0;display:flex;background:#F7F8FA;border-radius:10px;padding:11px 6px}
+.frame[data-f="15"] .stats .si{flex:1;text-align:center}
+.frame[data-f="15"] .stats .si + .si{border-left:1px solid #E8EAEE}
+.frame[data-f="15"] .stats .si .v{font-size:15.5px;font-weight:800;color:#1B1F27;font-variant-numeric:tabular-nums;line-height:1.1}
+.frame[data-f="15"] .stats .si .v.hl{color:var(--c-brand)}
+.frame[data-f="15"] .stats .si .k{font-size:10px;color:#8A91A0;margin-top:5px}
+.p2gap{margin-top:11px;font-size:11.5px;color:#7E8A82;line-height:1.6;background:#F7F8FA;border-radius:9px;padding:8px 10px}
+.p2gap b{color:var(--c-brand-ink)}
+.p2rule{margin:12px 16px 0;font-size:10.5px;color:#A0A6B0;line-height:1.6;padding:0 2px}
+/* 吸底三按钮：主拉票 + 明细/删除 */
+.result .ract.p2act{flex-direction:column;gap:8px}
+.result .ract.p2act .main{width:100%;flex:none}
+.p2act-row{display:flex;gap:9px;width:100%}
+.p2act-row .ghost{flex:1}
+.p2act-row .ghost.danger{color:#E5484D;border-color:#F5C6C8}
+/* 开奖页：免单阶梯行 */
+.p5-prize-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#F7F8FA;border:1px solid #EEF0F3;border-radius:10px}
+.p5-prize-row .rn{font-size:12.5px;font-weight:700;color:#1B1F27}
+.p5-prize-row .amt{font-size:14px;font-weight:800;color:var(--brand)}
+/* 助力明细列表 */
+.hl-list{margin-top:8px}
+.hl-row{display:flex;align-items:center;gap:9px;padding:9px 2px;border-bottom:1px solid #F2F3F6}
+.hl-row:last-child{border-bottom:none}
+.hl-ava{width:30px;height:30px;border-radius:50%;background:#F2F3F6;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.hl-nm{font-size:13px;font-weight:700;color:#1B1F27}
+.hl-n{margin-left:auto;font-size:11.5px;color:var(--c-brand-ink);font-weight:700;flex-shrink:0}
+.hl-empty{padding:18px 0 8px;text-align:center;font-size:12px;color:#8A91A0;line-height:1.7}
+.hl-me{margin-top:8px;background:#F2FAF4;border:1px solid #CBEBD6;border-radius:10px;padding:9px 11px;font-size:11.5px;color:#1B4D2E;line-height:1.5}
+.hl-me b{color:#15803D}
+/* 删除确认主按钮（红色警示） */
+.d2btn .main.danger{background:linear-gradient(135deg,#F04438,#F97066);box-shadow:0 8px 18px -8px #F04438}
+
+/* 美团渠道抽屉：已助力渠道标记（置灰 + 「已助力」角标） */
+.jump4 .jk.used{opacity:.55;border-style:dashed;cursor:not-allowed}
+.jump4 .jk.used .hot-tag{display:none}
+.jump4 .jk .used-tag{position:absolute;right:-1px;top:-1px;font-size:9px;font-weight:800;background:#EEF1F4;color:#8A91A0;border:1px solid #D9DEE4;padding:2px 7px;border-radius:0 11px 0 11px;display:none}
+.jump4 .jk.used .used-tag{display:block}
+/* ===== page.postDetail：赛后成绩态（win / lose / archived）===== */
+.pd-verdict{display:none;margin:12px 16px 0;border-radius:14px;padding:12px 14px;align-items:center;gap:12px;background:#F7F8FA;border:1.5px solid #EEF0F3}
+.pd-verdict.on{display:flex}
+.pd-verdict .em{font-size:26px;line-height:1;flex-shrink:0}
+.pd-verdict .tx{flex:1;min-width:0}
+.pd-verdict .t1{font-size:13.5px;font-weight:800;color:#1B1F27;line-height:1.4}
+.pd-verdict .t1 b{font-size:17px;color:var(--brand);font-variant-numeric:tabular-nums}
+.pd-verdict .t2{font-size:11.5px;color:#8A91A0;margin-top:3px;line-height:1.5}
+.pd-verdict .tag{font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;background:#EFFAF3;color:#12A150;flex-shrink:0}
+.pd-verdict.lose,.pd-verdict.arch{background:#F7F8FA;border-color:#E2E5EA}
+.pd-verdict.lose .tag,.pd-verdict.arch .tag{background:#EFF1F4;color:#7E8A82}
+.pd-verdict.arch .t1 b{color:#C8A04A}
+.result .ract.pd-resbar{display:none;padding:10px 16px 16px}
+.result .ract.pd-resbar.on{display:flex}
+.result .ract.pd-resbar button{height:46px}
+/* 中奖结果弹窗：金额块 + 明细行 */
+.pd-amt{margin:16px 0 0;background:linear-gradient(135deg,#F7F8FA,#F7F8FA);border:1.5px solid #EEF0F3;border-radius:14px;padding:14px;text-align:center}
+.pd-amt .lb{font-size:11px;color:#9A8A63}
+.pd-amt .n{font-size:34px;font-weight:900;color:#C8A04A;line-height:1.1;margin-top:2px}
+.pd-amt .sub{font-size:11px;color:#9A8A63;margin-top:5px}
+.pd-amt .sub b{color:var(--c-brand-ink)}
+.pd-rows{margin-top:12px;border:1px solid #EEF0F3;border-radius:12px;overflow:hidden}
+.pd-rows .r{display:flex;align-items:center;justify-content:space-between;padding:11px 12px;font-size:12.5px;border-bottom:1px solid #F2F3F6}
+.pd-rows .r:last-child{border-bottom:none}
+.pd-rows .r span{color:#8A91A0}
+.pd-rows .r b{color:#1B1F27;font-weight:800}
+/* 订阅抽屉 · 3 个订阅模板 */
+.sub-list{margin-top:12px;display:flex;flex-direction:column;gap:9px;max-height:332px;overflow-y:auto;padding-right:2px}
+.sub-item{border:1px solid #EEF0F3;border-radius:12px;overflow:hidden;background:#fff}
+.si-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;background:#F7F8FA;border-bottom:1px solid #EEF0F3}
+.si-n{font-size:12.5px;font-weight:800;color:#1B1F27}
+.si-tag{font-size:10px;font-weight:800;color:var(--brand);background:var(--c-brand-bg);border-radius:5px;padding:1px 6px;flex:none}
+.si-row{display:flex;gap:8px;padding:5px 11px;font-size:11.5px;line-height:1.55}
+.si-row+.si-row{border-top:1px dashed #F2F3F6}
+.si-row span{color:#8A91A0;flex:none;width:66px}
+.si-row b{color:#1B1F27;font-weight:600;flex:1;min-width:0}
+.si-row b.si-id{font-family:Consolas,monospace;font-size:10px;color:#4A5160;word-break:break-all;font-weight:500}
+/* 个人中心（page.me）*/
+.me{position:absolute;inset:0;background:#F7F8FA;overflow-y:auto;padding-bottom:24px}
+.me-top{display:flex;align-items:center;gap:12px;padding:18px 16px 16px;background:linear-gradient(135deg,#17A34A,#3FB950);color:#fff}
+.me-av{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.24);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;border:1.5px solid rgba(255,255,255,.5)}
+.me-nm{font-size:17px;font-weight:800}
+.me-lv{font-size:11.5px;opacity:.92;margin-top:4px}
+.me-set{margin-left:auto;font-size:18px;opacity:.9}
+.me-stats{display:flex;background:#fff;margin:12px 16px 0;border-radius:14px;padding:14px 0;box-shadow:var(--sh-soft)}
+.me-stats .i{flex:1;text-align:center;border-right:1px solid #F1F3F6}
+.me-stats .i:last-child{border-right:none}
+.me-stats .v{font-size:17px;font-weight:900;color:#1B1F27;font-variant-numeric:tabular-nums}
+.me-stats .k{font-size:11px;color:#8A91A0;margin-top:3px}
+.me-list{margin:12px 16px 0;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--sh-soft)}
+.me-row{display:flex;align-items:center;gap:10px;padding:14px;border-bottom:1px solid #F3F4F7;cursor:pointer}
+.me-row:last-child{border-bottom:none}
+.me-row .ic{font-size:17px;flex-shrink:0}
+.me-row .nm{font-size:13.5px;font-weight:700;color:#1B1F27}
+.me-row .ex{margin-left:auto;font-size:11.5px;color:#A0A6B0}
+.me-row .ar{color:#C7CCD4;font-size:15px;font-weight:700}
+.me-tip{margin:14px 20px 0;font-size:10.5px;color:#A0A6B0;line-height:1.7;text-align:center}
+/* 我的帖子列表（page.myPosts）*/
+.mp-note{margin:12px 12px 0;background:#EFFAF3;border:1px solid #CBEBD6;border-radius:10px;padding:9px 11px;font-size:11px;color:#1B4D2E;line-height:1.6}
+.mp-list{padding:12px;display:flex;flex-direction:column;gap:12px}
+.mp-card{background:#fff;border:1px solid #EDEFF2;border-radius:16px;box-shadow:var(--sh-soft);overflow:hidden;cursor:pointer}
+.mp-card.cur{border-color:#CBEBD6;box-shadow:0 10px 24px -16px rgba(23,163,74,.6)}
+.mp-head{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid #F4F5F8}
+.mp-week{font-size:13px;font-weight:800;color:#1B1F27}
+.mp-week i{font-style:normal;font-size:10px;font-weight:800;color:#12A150;background:#EFFAF3;border:1px solid #CBEBD6;padding:2px 6px;border-radius:999px;margin-left:5px}
+.mp-st{font-size:11.5px;font-weight:800;color:#12A150}
+.mp-st.lose{color:#8A91A0}
+.mp-st.arch{color:#C8A04A}
+.mp-body{display:flex;gap:11px;padding:12px 13px}
+.mp-img{width:66px;height:66px;border-radius:11px;background-size:cover;background-position:center;flex-shrink:0;background-color:#F2F3F6}
+.mp-tx{min-width:0;flex:1}
+.mp-nm{font-size:14px;font-weight:800;color:#1B1F27}
+.mp-ai{font-size:11.5px;color:#8A91A0;line-height:1.5;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mp-votes{font-size:11px;color:var(--c-brand-ink);font-weight:700;margin-top:6px}
+.mp-foot{padding:0 13px 12px}
+.mp-btn{width:100%;height:38px;border-radius:10px;border:1.5px solid #E3E5EC;background:#fff;color:#4A5160;font-size:12.5px;font-weight:800;font-family:inherit;cursor:pointer}
+.mp-btn.on{border-color:#CBEBD6;background:#F2FAF4;color:#15803D}
+
+/* ============================================================
+   ★ 业务组件库（新项目直接复用，禁止从零写业务 CSS）
+   页面骨架：.frame 已自动预留 44px 状态栏
+     有顶栏：.nav（52px）→ .ck-page（滚动内容）→ .ck-foot（吸底）
+     无顶栏：.ck-page（顶部自动 52px 起排）→ .ck-foot
+     抽屉按钮：.d2btn（抽屉内）  结果页吸底：.ract（.result 内）
+   三类吸底容器禁止混用。
+============================================================ */
+.ck-page{flex:1;min-height:0;overflow-y:auto;padding:8px 0 16px}
+.ck-foot{flex-shrink:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(to top,#fff 70%,rgba(255,255,255,0));border-top:1px solid var(--c-line)}
+.ck-btn{width:100%;height:46px;border:none;border-radius:var(--r-pill);background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-family:inherit;font-size:15px;font-weight:800;box-shadow:0 10px 20px -8px var(--brand);cursor:pointer}
+.ck-btn.ghost{background:#fff;border:1.5px solid var(--c-line2);color:var(--ink2);box-shadow:none}
+.ck-btn.done{background:#E9EBEF;color:var(--ink3);box-shadow:none;cursor:default}
+.nav .rt{margin-left:auto;font-size:13px;font-weight:800;color:var(--ink2)}
+/* 顶部信息横幅 */
+.ck-hero{margin:8px 12px 0;padding:14px 16px;border-radius:var(--r-card);background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
+.ck-hero .n{display:flex;align-items:center;gap:6px;font-size:22px;font-weight:900;line-height:1.2}
+.ck-hero .n .ico{font-size:20px}
+.ck-hero .d{margin-top:4px;font-size:12px;opacity:.92}
+/* 入口卡 */
+.ck-entry{display:flex;align-items:center;gap:10px;margin:8px 12px 0;padding:12px;border:1.5px solid var(--c-brand-line);border-radius:var(--r-card);background:var(--c-brand-bg);cursor:pointer}
+.ck-entry .ico{font-size:26px;flex-shrink:0}
+.ck-entry .bd{flex:1;min-width:0}
+.ck-entry .nm{font-size:13px;font-weight:900;color:var(--c-brand-ink)}
+.ck-entry .ds{margin-top:2px;font-size:11px;color:var(--ink2)}
+.ck-entry .ar{font-size:16px;font-weight:800;color:var(--brand)}
+/* 通用列表：日历 / 记录 / 明细 */
+.ck-list{margin:8px 12px 0;background:#fff;border-radius:var(--r-card);box-shadow:var(--sh-soft);overflow:hidden}
+.ck-list .row{display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid #F3F4F7;font-size:13px}
+.ck-list .row:last-child{border-bottom:none}
+.ck-list .row .k{color:var(--ink3)}
+.ck-list .row .v{margin-left:auto;font-weight:800;color:var(--ink)}
+/* 阶梯进度：连签 / 等级 */
+.ck-ladder{margin:8px 12px 0;padding:14px 12px;background:#fff;border-radius:var(--r-card);box-shadow:var(--sh-soft)}
+.ck-ladder .ttl{margin-bottom:10px;font-size:12px;font-weight:700;color:var(--ink3)}
+.ck-track{position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 4px}
+.ck-track::before{content:"";position:absolute;left:8px;right:8px;top:14px;height:2px;background:var(--c-line);z-index:0}
+.ck-node{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ck-node .dot{width:14px;height:14px;border-radius:50%;background:#fff;border:2.5px solid var(--c-line2)}
+.ck-node .lb{font-size:10px;font-weight:700;color:var(--ink3)}
+.ck-node .rw{font-size:10px;font-weight:800;color:var(--c-brand-ink)}
+.ck-node.hit .dot{background:var(--c-ok);border-color:var(--c-ok)}
+.ck-node.gift .dot{width:18px;height:18px;border-color:var(--warn)}
+.ck-node.gift .lb,.ck-node.gift .rw{color:var(--warn)}
+.ck-node.gift.hit .dot{background:var(--warn)}
+/* 积分数值卡 */
+.ck-pts{text-align:center;padding:8px 0 4px}
+.ck-pts .n{font-size:36px;font-weight:900;line-height:1;color:var(--c-ok)}
+.ck-pts .lb{margin-top:6px;font-size:12px;color:var(--ink3)}
+.ck-pts .sub{margin-top:8px;font-size:13px;font-weight:600;color:var(--ink2)}
+/* 分享面板 */
+.ck-share{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px 0}
+.ck-share .it{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border:1px solid var(--c-line);border-radius:var(--r-ctl);background:#F7F9F8;cursor:pointer}
+.ck-share .it .ico{font-size:24px}
+.ck-share .it .nm{font-size:12.5px;font-weight:700;color:var(--ink2)}
+/* ============================================================
+   帧 7 分享成功 · 微信对话（复刻参考图 · 全新独立类名）
+   ============================================================ */
+.chat-body{flex:1;min-height:0;overflow-y:auto;padding:12px;background:#F5F5F5;display:flex;flex-direction:column;gap:10px}
+.chat-row{display:flex;align-items:flex-start;gap:8px}
+.chat-row.is-me{flex-direction:row-reverse}
+.chat-ava{width:32px;height:32px;border-radius:6px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.chat-bub{max-width:72%;padding:8px 12px;border-radius:8px;background:#fff;font-size:12.5px;line-height:1.5;box-shadow:0 1px 2px rgba(0,0,0,.06);color:#333}
+.chat-row.is-me .chat-bub{background:#95EC69}
+
+/* 小程序卡片（标准样式，复刻参考图美团联盟卡片） */
+.mp-card{width:220px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);flex-shrink:0}
+.mp-top{display:flex;align-items:center;gap:6px;padding:10px 12px 4px}
+.mp-ico{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mp-app{font-size:11.5px;font-weight:700;color:#1a1a1a}
+.mp-title{padding:0 12px;font-size:14px;font-weight:700;line-height:1.4;color:#1a1a1a}
+.mp-thumb{margin:8px 12px;height:100px;border-radius:6px;overflow:hidden;background:#eee;display:flex;align-items:center;justify-content:center}
+.mp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.mp-tag{padding:6px 12px 10px;font-size:10.5px;color:#999;display:flex;align-items:center;gap:3px}
+
+/* 聊天输入栏（置底） */
+.chat-input{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -1px 4px rgba(0,0,0,.05)}
+.ci-field{flex:1;height:34px;border-radius:17px;background:#F2F2F2;font-size:12px;color:#999;display:flex;align-items:center;padding:0 14px}
+.ci-btn{flex-shrink:0;height:34px;padding:0 16px;border:none;border-radius:17px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-family:inherit;font-size:12px;font-weight:700;box-shadow:0 4px 10px -4px var(--brand);cursor:pointer}
+/* 缺省页：活动关闭 / 网络失败 */
+.ck-empty{display:flex;flex-direction:column;align-items:center;gap:14px;padding:60px 24px;text-align:center}
+.ck-empty .emo{font-size:56px}
+.ck-empty .t1{font-size:17px;font-weight:900;color:var(--ink)}
+.ck-empty .t2{font-size:13px;line-height:1.6;color:var(--ink3)}
+.ck-empty .ck-btn{width:auto;height:40px;margin-top:8px;padding:0 28px;border-radius:20px;font-size:14px}
+/* 榜单开奖：名次 + 奖励 + 内容 + 票数（已结算只读）
+   用法：
+   <div class="ck-rank">
+     <div class="ck-rank-row top1">
+       <div class="hd"><span class="no">第 1 名</span><span class="prize">已发 35 元</span>
+         <span class="user"><span class="ava">🧑</span><span class="nm">小王</span></span></div>
+       <div class="mid"><div class="img">🧋</div><div class="tx"><div class="name">伯牙绝弦</div><div class="sub">「茶香醇厚」</div></div></div>
+       <div class="ft"><span>👍 12 人助力</span><span class="n">共 16 票</span></div>
+     </div>
+   </div>
+   变体：.top1 第一名高亮 / .me 我的名次 / .muted 归档置灰 */
+.ck-rank{margin:8px 12px 0;display:flex;flex-direction:column;gap:10px}
+.ck-rank-row{background:#fff;border:1px solid var(--c-line);border-radius:var(--r-card);padding:11px 13px;box-shadow:var(--sh-soft)}
+.ck-rank-row .hd{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;color:var(--ink)}
+.ck-rank-row .no{flex-shrink:0}
+.ck-rank-row .prize{flex-shrink:0;color:var(--c-brand-ink)}
+.ck-rank-row .user{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0;min-width:0}
+.ck-rank-row .user .ava{width:24px;height:24px;border-radius:50%;background:#EFF6F1;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.ck-rank-row .user .nm{max-width:64px;font-size:11px;font-weight:700;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ck-rank-row .mid{display:flex;align-items:center;gap:10px;margin-top:10px}
+.ck-rank-row .img{display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:var(--r-ctl);background:#F2F4F7;background-size:cover;background-position:center;font-size:26px;flex-shrink:0}
+.ck-rank-row .tx{flex:1;min-width:0}
+.ck-rank-row .tx .name{font-size:14px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ck-rank-row .tx .sub{margin-top:3px;font-size:11.5px;font-weight:600;line-height:1.5;color:var(--c-brand-ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ck-rank-row .ft{display:flex;align-items:center;justify-content:space-between;margin-top:9px;font-size:11px;color:var(--ink3)}
+.ck-rank-row .ft .n{font-weight:800;color:var(--ink2)}
+.ck-rank-row.top1{border:1.5px solid var(--c-line);background:#fff;box-shadow:0 6px 18px -14px rgba(16,24,40,.18)}
+.ck-rank-row.top1 .no{color:var(--brand)}
+.ck-rank-row.me{border-color:var(--c-brand-line);background:#F7F8FA}
+.ck-rank-row.me .no{color:var(--c-brand-ink)}
+.ck-rank-row.muted{opacity:.85}
+/* 微信小程序分享卡片（放在 .wx-msg 内）
+   用法：
+   <div class="wx-msg">
+     <div class="ava">友</div>
+     <div class="ck-wxcard">
+       <div class="hd"><span class="logo">饭</span><span class="app">饭扫光</span></div>
+       <div class="ttl">小餐AI：这顿值 30 元免单</div>
+       <div class="thumb" style="padding:0;overflow:hidden"><img src="引用素材/奶茶1.jpg" alt="帖子图" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+       <div class="brand"><span class="mini">饭</span>饭扫光 · 小程序</div>
+     </div>
+   </div> */
+.ck-wxcard{max-width:78%;padding:10px 12px;background:#fff;border:1px solid var(--c-line);border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.ck-wxcard .hd{display:flex;align-items:center;gap:6px}
+.ck-wxcard .logo{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:10px;font-weight:800;flex-shrink:0}
+.ck-wxcard .app{font-size:11.5px;font-weight:700;color:var(--ink)}
+.ck-wxcard .ttl{margin-top:8px;font-size:13.5px;font-weight:700;line-height:1.4;color:var(--ink)}
+.ck-wxcard .thumb{display:flex;align-items:center;justify-content:center;height:110px;margin-top:8px;border-radius:6px;background:linear-gradient(135deg,#EFF5F0,#DDEBE1);font-size:42px}
+.ck-wxcard .bd{margin-top:8px;font-size:11px;line-height:1.5;color:var(--ink3)}
+.ck-wxcard .brand{display:flex;align-items:center;gap:5px;margin-top:8px;font-size:10px;color:var(--ink3)}
+.ck-wxcard .brand .mini{display:flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:3px;background:var(--brand);color:#fff;font-size:7px;font-weight:800}
+/* ===== 15 个新增跨项目组件 ===== */
+
+/* ① AI/模型评估中加载态（旋转环 + 倒计时数字）
+   用法：
+   <div class="ck-think">
+     <div class="ck-ring"></div>
+     <div class="t">AI 评估中 · 识别菜品</div>
+     <div class="d">请稍候，约 5 秒完成</div>
+     <div class="ck-cd">5</div>
+   </div> */
+.ck-think{position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.ck-ring{width:86px;height:86px;border-radius:50%;border:5px solid var(--c-line);border-top-color:var(--brand);animation:ck-spin 1s linear infinite}
+@keyframes ck-spin{to{transform:rotate(360deg)}}
+.ck-think .t{font-size:17px;font-weight:800;color:var(--ink)}
+.ck-think .d{font-size:12.5px;color:var(--ink3)}
+.ck-cd{font-size:26px;font-weight:800;color:var(--brand);font-variant-numeric:tabular-nums}
+
+/* ② 档位阶梯（扩展 .ck-ladder 的 tier 变体，用于免单阶梯 / 等级档位）
+   用法：
+   <div class="ck-ladder tier">
+     <div class="ttl">免单阶梯</div>
+     <div class="ck-track">
+       <div class="ck-node"><span class="dot"></span><span class="lb">第 4-6 名</span><span class="rw">25 元</span></div>
+       <div class="ck-node hit"><span class="dot"></span><span class="lb">第 2-3 名</span><span class="rw">30 元</span></div>
+       <div class="ck-node tier on"><span class="dot"></span><span class="lb">第 1 名</span><span class="rw">35 元</span></div>
+     </div>
+   </div>
+   变体：.tier.on 当前档高亮（绿边绿底）*/
+.ck-node.tier.on{background:#F2FAF4;border:1.5px solid var(--brand);border-radius:var(--r-ctl);box-shadow:0 6px 14px -10px rgba(23,163,74,.7)}
+.ck-node.tier.on .dot{background:var(--brand);border-color:var(--brand)}
+.ck-node.tier.on .lb,.ck-node.tier.on .rw{color:var(--c-brand-ink);font-weight:800}
+
+/* ③ 订阅列表（订阅消息 / 推送模板 / 授权抽屉）
+   用法：
+   <div class="ck-sub">
+     <div class="ck-sub-item">
+       <div class="si-h"><div class="si-n">开奖通知</div><span class="si-tag">订阅</span></div>
+       <div class="si-row"><span>触发条件</span><b>本期榜单结算时</b></div>
+       <div class="si-row"><span>推送内容</span><b>中奖金额 + 下期预告</b></div>
+     </div>
+   </div> */
+.ck-sub{margin:8px 12px 0;display:flex;flex-direction:column;gap:9px;max-height:332px;overflow-y:auto}
+.ck-sub-item{border:1px solid var(--c-line);border-radius:var(--r-ctl);overflow:hidden;background:#fff}
+.ck-sub-item .si-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;background:#F7F8FA;border-bottom:1px solid var(--c-line)}
+.ck-sub-item .si-n{font-size:12.5px;font-weight:800;color:var(--ink)}
+.ck-sub-item .si-tag{font-size:10px;font-weight:800;color:var(--c-brand-ink);background:var(--c-brand-bg);border-radius:5px;padding:1px 6px;flex:none}
+.ck-sub-item .si-row{display:flex;gap:8px;padding:5px 11px;font-size:11.5px;line-height:1.55}
+.ck-sub-item .si-row+.si-row{border-top:1px dashed var(--c-line)}
+.ck-sub-item .si-row span{color:var(--ink3);flex:none;width:66px}
+.ck-sub-item .si-row b{color:var(--ink2);font-weight:600;flex:1;min-width:0}
+
+/* ④ 个人中心头部（头像 + 昵称 + 等级 + 统计 + 列表）
+   用法：
+   <div class="ck-me">
+     <div class="ck-me-top"><div class="ck-me-av">🧑</div><div><div class="ck-me-nm">小王</div><div class="ck-me-lv">Lv.3 · 饭扫光达人</div></div></div>
+     <div class="ck-me-stats"><div class="i"><div class="v">12</div><div class="k">发帖</div></div><div class="i"><div class="v">38</div><div class="k">助力</div></div><div class="i"><div class="v">¥0</div><div class="k">待领奖</div></div></div>
+     <div class="ck-me-list">
+       <div class="ck-me-row"><div class="ic">📋</div><div class="nm">我的帖子</div><div class="ar">›</div></div>
+       <div class="ck-me-row"><div class="ic">🏆</div><div class="nm">历史榜单</div><div class="ar">›</div></div>
+     </div>
+   </div> */
+.ck-me{position:absolute;inset:0;background:var(--bg);overflow-y:auto;padding-bottom:24px}
+.ck-me-top{display:flex;align-items:center;gap:12px;padding:18px 16px 16px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
+.ck-me-av{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.24);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;border:1.5px solid rgba(255,255,255,.5)}
+.ck-me-nm{font-size:17px;font-weight:800}
+.ck-me-lv{font-size:11.5px;opacity:.92;margin-top:4px}
+.ck-me-stats{display:flex;background:#fff;margin:12px 16px 0;border-radius:var(--r-card);padding:14px 0;box-shadow:var(--sh-soft)}
+.ck-me-stats .i{flex:1;text-align:center;border-right:1px solid var(--c-line)}
+.ck-me-stats .i:last-child{border-right:none}
+.ck-me-stats .v{font-size:17px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums}
+.ck-me-stats .k{font-size:11px;color:var(--ink3);margin-top:3px}
+.ck-me-list{margin:12px 16px 0;background:#fff;border-radius:var(--r-card);overflow:hidden;box-shadow:var(--sh-soft)}
+.ck-me-row{display:flex;align-items:center;gap:10px;padding:14px;border-bottom:1px solid var(--c-line);cursor:pointer}
+.ck-me-row:last-child{border-bottom:none}
+.ck-me-row .ic{font-size:17px;flex-shrink:0}
+.ck-me-row .nm{font-size:13.5px;font-weight:700;color:var(--ink)}
+.ck-me-row .ar{margin-left:auto;color:var(--ink3);font-size:15px;font-weight:700}
+
+/* ⑤ 赛后成绩判定卡（中奖 / 参与奖 / 未上榜 / 归档）
+   用法：
+   <div class="ck-winner win">
+     <div class="em">🎉</div>
+     <div class="tx"><div class="t1">恭喜上榜！<b>第 2 名</b></div><div class="t2">本期免单 30 元已发放</div></div>
+     <span class="tag">中奖</span>
+   </div>
+   变体：.win 中奖（深绿标签）/ .lose 未上榜（中性灰）/ .arch 归档（金色）*/
+.ck-winner{margin:8px 12px 0;border-radius:var(--r-card);padding:12px 14px;display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid var(--c-line)}
+.ck-winner .em{font-size:26px;line-height:1;flex-shrink:0}
+.ck-winner .tx{flex:1;min-width:0}
+.ck-winner .t1{font-size:13.5px;font-weight:800;color:var(--ink);line-height:1.4}
+.ck-winner .t1 b{font-size:17px;color:var(--c-brand);font-variant-numeric:tabular-nums}
+.ck-winner .t2{font-size:11.5px;color:var(--ink3);margin-top:3px;line-height:1.5}
+.ck-winner .tag{font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--c-brand-bg);color:var(--c-brand-ink);flex-shrink:0}
+.ck-winner.lose,.ck-winner.arch{background:#F7F8FA;border-color:var(--c-line2)}
+.ck-winner.lose .tag,.ck-winner.arch .tag{background:#EFF1F4;color:var(--ink3)}
+.ck-winner.arch .t1 b{color:#C8A04A}
+
+/* ⑥ 金额块（免单金额 / 积分到账 / 中奖金额）
+   用法：
+   <div class="ck-amt"><div class="lb">本期免单金额</div><div class="n">30 元</div><div class="sub">已发放至账户</div></div>
+   变体：.arch 归档态（金色）*/
+.ck-amt{margin:8px 0 0;background:linear-gradient(180deg,#F7F8FA,#fff);border:1.5px solid var(--c-line);border-radius:var(--r-card);padding:14px;text-align:center}
+.ck-amt .lb{font-size:11px;color:var(--ink3)}
+.ck-amt .n{font-size:34px;font-weight:900;color:var(--c-brand);line-height:1.1;margin-top:2px}
+.ck-amt .sub{font-size:11px;color:var(--ink3);margin-top:5px}
+.ck-amt .sub b{color:var(--c-brand)}
+.ck-amt.arch .n{color:#C8A04A}
+
+/* ⑦ 明细流水行（左右对齐键值）
+   用法：
+   <div class="ck-rows">
+     <div class="r"><span>中奖名次</span><b>第 2 名</b></div>
+     <div class="r"><span>免单金额</span><b>30 元</b></div>
+     <div class="r"><span>积分补偿</span><b>+50</b></div>
+   </div> */
+.ck-rows{margin-top:12px;border:1px solid var(--c-line);border-radius:var(--r-ctl);overflow:hidden}
+.ck-rows .r{display:flex;align-items:center;justify-content:space-between;padding:11px 12px;font-size:12.5px;border-bottom:1px solid var(--c-line)}
+.ck-rows .r:last-child{border-bottom:none}
+.ck-rows .r span{color:var(--ink3)}
+.ck-rows .r b{color:var(--ink);font-weight:800}
+
+/* ⑧ 倒计时卡（期次结算 / 活动倒计时 / 榜单冻结）
+   用法：
+   <div class="ck-countdown">
+     <div class="cd-card">
+       <div class="cd-top">⏰ 本期榜结算倒计时<span class="cd-live">进行中</span></div>
+       <div class="cd-clock"><div class="cd-cell"><div class="n">02</div><div class="l">天</div></div><div class="cd-cell"><div class="n">14</div><div class="l">时</div></div><div class="cd-cell"><div class="n">30</div><div class="l">分</div></div><div class="cd-cell"><div class="n">05</div><div class="l">秒</div></div></div>
+       <div class="cd-foot">本周日 24:00 截止结算</div>
+     </div>
+   </div>
+   变体：.lock 冻结态（归零后自动切置灰）*/
+.ck-countdown{position:sticky;top:0;z-index:20;background:var(--bg);padding:10px 16px 4px}
+.ck-countdown .cd-card{background:linear-gradient(180deg,#fff,var(--c-brand-bg));border:1px solid var(--c-brand-line);border-radius:var(--r-card);padding:12px 14px;box-shadow:var(--sh-soft)}
+.ck-countdown .cd-top{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--c-brand-ink)}
+.ck-countdown .cd-live{margin-left:auto;font-size:10px;font-weight:700;color:var(--c-brand);background:var(--c-brand-bg);border:1px solid var(--c-brand-line);border-radius:var(--r-pill);padding:2px 8px}
+.ck-countdown .cd-clock{display:flex;gap:6px;margin-top:11px}
+.ck-countdown .cd-cell{flex:1;text-align:center;background:#fff;border:1px solid var(--c-line);border-radius:var(--r-ctl);padding:8px 0}
+.ck-countdown .cd-cell .n{font-size:21px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.ck-countdown .cd-cell .l{font-size:10px;color:var(--ink3);margin-top:5px}
+.ck-countdown .cd-foot{margin-top:11px;padding-top:9px;border-top:1px dashed var(--c-line);font-size:11px;color:var(--ink3);text-align:center;line-height:1.5}
+.ck-countdown.lock .cd-card{background:#F4F5F7;border-color:var(--c-line2);box-shadow:none}
+.ck-countdown.lock .cd-top{color:var(--ink3)}
+.ck-countdown.lock .cd-live{color:var(--ink3);background:#F4F5F7;border-color:var(--c-line2)}
+.ck-countdown.lock .cd-cell{border-color:var(--c-line2)}
+.ck-countdown.lock .cd-cell .n{color:var(--ink3)}
+.ck-countdown.lock .cd-foot{border-top-color:var(--c-line2)}
+
+/* ⑨ 票源/构成条（bar + legend，用于助力来源 / 渠道构成 / 用户构成）
+   用法：
+   <div class="ck-src">
+     <div class="bar"><i class="green" style="flex-basis:60%"></i><i class="gray" style="flex-basis:40%"></i></div>
+     <div class="lg"><span><i class="green"></i>好友助力 60%</span><span><i class="gray"></i>自发发帖 40%</span></div>
+   </div> */
+.ck-src{margin-top:10px}
+.ck-src .bar{display:flex;height:8px;border-radius:var(--r-pill);overflow:hidden;background:var(--c-line)}
+.ck-src .bar i{display:block;height:100%;flex-basis:0;flex-grow:0}
+.ck-src .bar i.green{background:linear-gradient(90deg,var(--brand2),var(--brand))}
+.ck-src .bar i.gray{background:#DDE0DD}
+.ck-src .lg{display:flex;align-items:center;gap:14px;margin-top:6px;font-size:11px;font-weight:700;color:var(--ink2)}
+.ck-src .lg span{display:flex;align-items:center;gap:5px}
+.ck-src .lg i{width:8px;height:8px;border-radius:2px;display:block;flex-shrink:0}
+.ck-src .lg i.green{background:var(--brand)}
+.ck-src .lg i.gray{background:#A0A6B0}
+
+/* ⑩ 4 宫格跳转键（商家渠道 / 活动入口，含强推高亮 + 已用置灰）
+   用法：
+   <div class="ck-quick4">
+     <div class="jk hot">美团外卖 · 强推<span class="jd">20 元</span><span class="hot-tag">HOT</span></div>
+     <div class="jk">饿了么 · 红包<span class="jd">15 元</span></div>
+     <div class="jk used">美团到店<span class="jd">已助力</span><span class="used-tag">已助力</span></div>
+     <div class="jk">饿了么到店<span class="jd">12 元</span></div>
+   </div>
+   变体：.hot 强推高亮（品牌绿渐变 + HOT 角标）/ .used 已用置灰（虚线边框）*/
+.ck-quick4{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ck-quick4 .jk{position:relative;height:38px;border-radius:var(--r-ctl);border:1.5px solid var(--c-line);background:#FAFBFC;color:var(--ink2);font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;overflow:hidden;white-space:nowrap;padding:0 6px;display:flex;align-items:center}
+.ck-quick4 .jk .jd{font-size:9.5px;font-weight:600;color:var(--ink3);margin-left:4px}
+.ck-quick4 .jk.hot{border:1.5px solid var(--brand);background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 6px 16px -8px var(--brand)}
+.ck-quick4 .jk.hot .jd{color:rgba(255,255,255,.85)}
+.ck-quick4 .jk .hot-tag{position:absolute;right:-1px;top:-1px;font-size:9px;font-weight:800;background:var(--brand);color:#fff;padding:2px 7px;border-radius:0 11px 0 11px}
+.ck-quick4 .jk.used{opacity:.55;border-style:dashed;cursor:not-allowed}
+.ck-quick4 .jk.used .hot-tag{display:none}
+.ck-quick4 .jk .used-tag{position:absolute;right:-1px;top:-1px;font-size:9px;font-weight:800;background:#EFF1F4;color:var(--ink3);border:1px solid var(--c-line);padding:2px 7px;border-radius:0 11px 0 11px;display:none}
+.ck-quick4 .jk.used .used-tag{display:block}
+
+/* ⑪ 活动已结束覆盖层（整页置灰 + 返回按钮）
+   用法：
+   <div class="ck-closed">
+     <div class="ico">🚫</div>
+     <div class="ct">本期活动已结束</div>
+     <div class="cs">下期开启会第一时间通知你</div>
+     <button class="ck-btn">返回首页</button>
+   </div> */
+.ck-closed{position:absolute;inset:0;background:#F4F5F8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:0 28px;z-index:60;text-align:center}
+.ck-closed .ico{font-size:46px;line-height:1}
+.ck-closed .ct{font-size:17px;font-weight:900;color:var(--ink);margin-top:6px}
+.ck-closed .cs{font-size:12.5px;color:var(--ink3);line-height:1.7}
+.ck-closed button{margin-top:26px}
+
+/* ⑫ 作者信息行（头像 + 昵称 + 角色标签）
+   用法：
+   <div class="ck-author">
+     <div class="ava">🧑</div>
+     <div class="anm">发起人·小王</div>
+     <div class="arole">挑战发起</div>
+   </div> */
+.ck-author{display:flex;align-items:center;gap:8px;margin:8px 12px 0;padding:9px 12px;background:#fff;border:1.5px solid var(--c-line);border-radius:var(--r-ctl)}
+.ck-author .ava{width:30px;height:30px;border-radius:50%;background:var(--c-line);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.ck-author .anm{font-size:12.5px;font-weight:800;color:var(--ink)}
+.ck-author .arole{margin-left:auto;font-size:10px;font-weight:700;color:var(--c-brand-ink);background:var(--c-brand-bg);padding:2px 8px;border-radius:9px;flex-shrink:0}
+
+/* ⑬ 助力明细列表（头像 + 昵称 + 数据，含自己高亮行）
+   用法：
+   <div class="ck-msg-list">
+     <div class="hl-row"><div class="hl-ava">🧑</div><div class="hl-nm">好友A</div><div class="hl-n">+1 助力</div></div>
+     <div class="hl-row me"><div class="hl-ava">🙋</div><div class="hl-nm">我</div><div class="hl-n">+1 助力</div></div>
+   </div> */
+.ck-msg-list{margin-top:8px}
+.ck-msg-list .hl-row{display:flex;align-items:center;gap:9px;padding:9px 2px;border-bottom:1px solid var(--c-line)}
+.ck-msg-list .hl-row:last-child{border-bottom:none}
+.ck-msg-list .hl-ava{width:30px;height:30px;border-radius:50%;background:var(--c-line);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ck-msg-list .hl-nm{font-size:13px;font-weight:700;color:var(--ink)}
+.ck-msg-list .hl-n{margin-left:auto;font-size:11.5px;color:var(--c-brand-ink);font-weight:700;flex-shrink:0}
+.ck-msg-list .hl-row.me{background:var(--c-brand-bg);border:1px solid var(--c-brand-line);border-radius:var(--r-ctl);padding:9px 11px;margin:4px -9px}
+.ck-msg-list .hl-row.me .hl-n{color:var(--c-brand-ink)}
+
+/* ⑭ 首页排名卡（深色背景 + 排名信息 + 进入按钮）
+   用法：
+   <div class="ck-myrank">
+     <div class="ic">🏆</div>
+     <div><div class="t1">当前第 5 名 · 距上榜还差 3 票</div><div class="t2">本期还有 2 天结算，发朋友圈拉票更快</div></div>
+     <div class="go">立即冲榜 ›</div>
+   </div> */
+.ck-myrank{margin:12px 16px 0;background:#16201A;color:#fff;border-radius:var(--r-card);padding:14px;display:flex;align-items:center;gap:12px}
+.ck-myrank .ic{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.ck-myrank .t1{font-size:14px;font-weight:800}
+.ck-myrank .t2{font-size:11.5px;color:#A9B7AE;margin-top:4px;line-height:1.5}
+.ck-myrank .t2 b{color:var(--brand2)}
+.ck-myrank .go{margin-left:auto;font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);padding:6px 12px;border-radius:16px;white-space:nowrap;flex-shrink:0}
+
+/* ⑮ 标签行（tab 切换 / 分段控件）
+   用法：
+   <div class="ck-tags">
+     <div class="ck-tab on">本期榜</div>
+     <div class="ck-tab">历史榜</div>
+     <div class="ck-tab">我的</div>
+   </div> */
+.ck-tags{display:flex;gap:8px;padding:10px 16px 4px}
+.ck-tab{flex:1;text-align:center;font-size:13px;font-weight:700;color:var(--ink2);padding:10px 0;border-radius:var(--r-pill);background:#fff;border:1px solid var(--c-line);cursor:pointer;transition:.2s}
+.ck-tab.on{color:#fff;background:var(--brand);border-color:var(--brand);box-shadow:0 10px 20px -10px var(--brand)}
+
+/* ============================================================
+   美食内容社区 · 项目专用样式（仅本项目，不改母版）
+   范围：顶部 4 tab / 分类栏 / 瀑布流作者行 / 底部 tabbar /
+        帖子详情 / 我的 / 工具页
+   ============================================================ */
+/* 引导提示条：固定 7 中文字宽 + 自动换行（母版默认 nowrap 会溢出到菜单） */
+html .gh-tip{width:104px;white-space:normal;word-break:break-all;line-height:1.45;text-align:center;padding:7px 10px}
+
+/* —— 顶部导航：搜索 + 种草/发现/美食 —— */
+.fd-head{display:flex;align-items:center;gap:8px;padding:6px 12px 8px;background:#fff}
+.fd-head .sc{width:30px;height:30px;border-radius:50%;background:#F2F4F7;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:var(--ink3)}
+.fd-tabs{display:flex;align-items:center;gap:6px;flex:1;justify-content:flex-end}
+.fd-tab{font-size:13px;font-weight:700;color:var(--ink2);padding:6px 12px;border-radius:999px;background:#F4F6F5;white-space:nowrap}
+.fd-tab.on{color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:0 6px 14px -8px var(--brand)}
+/* —— 分类栏 —— */
+.fd-cats{display:flex;gap:8px;padding:2px 12px 10px;overflow-x:auto;background:#fff;scrollbar-width:none}
+.fd-cats::-webkit-scrollbar{display:none}
+.fd-cat{flex-shrink:0;font-size:12px;font-weight:600;color:var(--ink3);padding:5px 10px;border-radius:8px;background:#F4F6F5}
+.fd-cat.on{color:var(--c-brand-ink);background:var(--c-brand-bg);font-weight:800}
+/* —— 瀑布流：复用 .water / .wc，仅补图片与作者行 —— */
+.fd-feed{padding-bottom:16px}
+.ck-page.fd-feed{padding-top:10px}
+.wc .pic img{width:100%;height:100%;object-fit:cover;display:block}
+.wc .dsc{margin-top:1px;font-size:11.5px;color:#8A91A0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.wc .au{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:10.5px;color:var(--ink3)}
+.wc .au .av{width:16px;height:16px;border-radius:50%;background:#EDF1EE;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+.wc .au .lk{margin-left:auto;font-weight:700;color:var(--ink2)}
+.wc .keep{display:inline-block;font-size:10px;font-weight:800;color:var(--c-brand-ink);background:var(--c-brand-bg);border-radius:4px;padding:1px 5px;align-self:flex-start}
+/* —— 底部 tabbar（沿用 .ck-foot 骨架，仅换内边距） —— */
+.fd-tabbar{padding:7px 4px calc(7px + env(safe-area-inset-bottom))!important;background:#fff}
+.fd-tabbar .in{display:flex;align-items:center}
+.fd-tabbar .ti{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;font-weight:600;color:var(--ink3)}
+.fd-tabbar .ti .ic{font-size:18px;line-height:1}
+.fd-tabbar .ti.on{color:var(--brand);font-weight:800}
+/* —— 帖子详情 —— */
+.fd-dnav{display:flex;align-items:center;gap:8px;height:52px;padding:0 14px;background:#fff;flex-shrink:0}
+.fd-dnav .back{width:26px;height:26px;border-radius:50%;background:#F2F3F6;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink2);flex-shrink:0}
+.fd-ava{width:30px;height:30px;border-radius:50%;background:#EDF1EE;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.fd-dnav .nm{font-size:12.5px;font-weight:800;line-height:1.25}
+.fd-dnav .sub{font-size:10px;color:var(--ink3);margin-top:1px}
+.fd-sub{margin-left:auto;font-size:11px;font-weight:800;color:var(--c-brand-ink);background:var(--c-brand-bg);border:1px solid var(--c-brand-line);border-radius:999px;padding:4px 12px;flex-shrink:0}
+.fd-dbody{flex:1;min-height:0;overflow-y:auto;background:#fff}
+.fd-hero{position:relative;height:296px;background:#000;overflow:hidden}
+.fd-hero img{width:100%;height:100%;object-fit:cover;display:block}
+.fd-hero .cnt{position:absolute;right:10px;top:10px;font-size:10.5px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);padding:2px 9px;border-radius:999px}
+.fd-hero .ov{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;line-height:1.6;border-radius:10px;padding:8px 10px;backdrop-filter:blur(2px)}
+.fd-title{font-size:16.5px;font-weight:900;line-height:1.35;padding:12px 14px 0}
+.fd-txt{font-size:13px;color:var(--ink2);line-height:1.65;padding:6px 14px 0}
+.fd-metarow{display:flex;align-items:center;gap:8px;padding:11px 14px 0;font-size:11.5px;color:var(--ink2)}
+.fd-metarow .loc{display:flex;align-items:center;gap:3px;background:#F4F6F5;border-radius:7px;padding:3px 9px;font-weight:600}
+.fd-metarow .dt{color:var(--ink3)}
+.fd-nolike{margin-left:auto;font-size:11px;color:var(--ink3);border:1px solid var(--c-line);border-radius:999px;padding:3px 10px;flex-shrink:0}
+.fd-input{margin:11px 14px 4px;height:36px;border-radius:999px;background:#F4F6F5;display:flex;align-items:center;gap:6px;padding:0 14px;font-size:12px;color:#9AA3AC}
+.fd-act{display:flex;align-items:center;padding:10px 6px calc(10px + env(safe-area-inset-bottom))!important}
+.fd-act .a{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--ink2)}
+.fd-act .a .ic{font-size:16px}
+.fd-act .a.heart{color:#E5484D}
+.fd-act .a.star{color:#E0A111}
+/* 详情页四项操作的「已操作态」（一状态一帧，不靠帧内点击） */
+.fd-act .a.on{font-weight:800;padding:4px 0}
+.fd-act .a.heart.on{background:rgba(229,72,77,.16);border-radius:999px;color:#D9342B;box-shadow:inset 0 0 0 1px rgba(229,72,77,.32)}
+.fd-act .a.star.on{background:rgba(224,161,17,.18);border-radius:999px;box-shadow:inset 0 0 0 1px rgba(224,161,17,.38)}
+.fd-act .a.on .ic{transform:scale(1.15)}
+.fd-flag{font-size:9.5px;font-weight:800;color:#fff;background:#E5484D;border-radius:999px;padding:1px 6px;margin-left:3px;line-height:1.5}
+.fd-flag.amber{background:#E0A111}
+.fd-sub.on{background:#F2F3F6;color:#8B949D;border-color:#E3E6EA}
+.fd-nolike.on{background:#3F4A42;color:#fff;border-color:#3F4A42}
+.fd-input.typing{background:#fff;border:1px solid var(--c-line);color:var(--ink)}
+.fd-send{margin-left:auto;font-size:11px;font-weight:800;color:#fff;background:var(--brand);border-radius:999px;padding:4px 12px;flex-shrink:0}
+/* —— 我的 —— */
+.fd-me{flex:1;min-height:0;overflow-y:auto;background:var(--bg)}
+.fd-me-top{display:flex;align-items:center;gap:12px;padding:20px 16px 18px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
+.fd-me-av{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.24);border:1.5px solid rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.fd-me-nm{font-size:17px;font-weight:800}
+.fd-me-id{font-size:11px;opacity:.92;margin-top:4px}
+.fd-me-more{margin-left:auto;font-size:16px;opacity:.9;flex-shrink:0}
+.fd-me-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 16px 0}
+.fd-me-g{display:flex;align-items:center;gap:9px;background:#fff;border-radius:var(--r-card);padding:12px;box-shadow:var(--sh-soft)}
+.fd-me-g .ic{width:34px;height:34px;border-radius:10px;background:#F2FAF4;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.fd-me-g .n{font-size:12.5px;font-weight:800;color:var(--ink)}
+.fd-me-g .p{font-size:10px;color:var(--ink3);margin-top:2px}
+.fd-me-entry{margin:12px 16px 0;background:#fff;border-radius:var(--r-card);overflow:hidden;box-shadow:var(--sh-soft)}
+.fd-me-row{display:flex;align-items:center;gap:10px;padding:14px;border-bottom:1px solid #F3F4F7}
+.fd-me-row:last-child{border-bottom:none}
+.fd-me-row .ic{font-size:17px;flex-shrink:0}
+.fd-me-row .nm{font-size:13.5px;font-weight:700}
+.fd-me-row .ds{font-size:10.5px;color:var(--ink3);margin-top:2px}
+.fd-me-row .ct{margin-left:auto;font-size:12px;font-weight:800;color:var(--brand);font-variant-numeric:tabular-nums}
+.fd-me-row .ar{color:var(--ink3);font-size:14px;font-weight:700}
+/* —— 工具页 —— */
+.fd-tool-hero{margin:10px 16px 0;padding:16px;border-radius:var(--r-card);background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
+.fd-tool-hero .t1{font-size:16px;font-weight:900}
+.fd-tool-hero .t2{font-size:11.5px;opacity:.92;margin-top:5px;line-height:1.5}
+.fd-tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 16px 0}
+.fd-tool-g{display:flex;flex-direction:column;gap:6px;background:#fff;border:1px solid var(--c-line);border-radius:var(--r-card);padding:14px 12px;box-shadow:var(--sh-soft)}
+.fd-tool-g .ic{width:36px;height:36px;border-radius:11px;background:#F2FAF4;display:flex;align-items:center;justify-content:center;font-size:19px}
+.fd-tool-g .n{font-size:13px;font-weight:800}
+.fd-tool-g .d{font-size:10.5px;color:var(--ink3);line-height:1.45}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ico-hand" viewBox="0 0 72 72">
+  <g transform="translate(8,6) rotate(-13)">
+    <path d="M27 4 C22.6 4 19.2 7.4 19 11.6 L17.4 27.5 C15.2 26.1 12.2 26.4 10.2 28.4 C7.6 31 7.6 35.2 10.2 37.8 L20.8 48.4 C23.4 51 26.8 52.4 30.4 52.4 L36.2 52.4 C41.4 52.4 46 48.6 47.6 43.6 L52 30.2 C53.1 26.9 51.6 23.3 48.6 21.8 C46.4 20.7 43.8 21.1 41.9 22.6 L39.6 12.4 C39 9.5 36.4 7.6 33.5 7.9 C31.7 8.1 30.2 9.2 29.4 10.9 C28.6 8.7 26.4 7.4 24 7.6 C23.2 7.7 22.4 8.1 21.8 8.6 C22.6 6.3 24.6 4.4 27 4 Z"
+          fill="#FFFFFF" stroke="#101810" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M20.8 48.4 C23.4 51 26.8 52.4 30.4 52.4 L36.2 52.4 C41.4 52.4 46 48.6 47.6 43.6 L52 30.2"
+          fill="none" stroke="#101810" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M17.4 27.5 C19.7 29.1 21.4 31.6 21.4 34.4" fill="none" stroke="#101810" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M11.4 32.6 C12.6 31.4 14.4 31.2 15.9 32.1" fill="none" stroke="#101810" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</symbol>
+  </defs>
+</svg>
+
+
+<!-- ============================================================
+  ★ 填空区清单（新项目按顺序填，其余代码一行不动）
+  
+  ★① <title> + <header class="top"> → 填业务名 + 一句话价值描述（不写"半成品"）
+  ⚠️ 全稿架构铁律（本节优先级最高，冲突时以本节为准）
+      1. 帧内零交互：任何 .frame 里的元素都不绑定业务点击，包括返回、tab 切换、
+         瀑布流卡片、点赞/收藏、遮罩关闭、抽屉开合，一律不绑。
+      2. 一状态一帧：帧 = 一个确定性画面。交互结果（点赞后、收藏后、抽屉打开、
+         分享成功）各自独立成帧，不靠 JS 现场改 DOM。
+      3. 步骤卡是唯一导航源：用户只有"点右侧步骤卡"这一个动作，
+         点卡 → go() → 换帧。手机壳只负责播放画面。
+
+  ★② .frame 业务帧 DOM → 手机壳内的页面画面（连续编号 data-f=0,1,2...，数量 = 帧清单 ID 数量）
+      · 帧清单是 4 字段：ID + 页面 + 状态 + 类型（ID 只增不改）
+      · 抽屉/弹窗 = 独立帧：sheetmask 写死 class="sheetmask on"、drawer 写死 class="drawer show"
+      · 帧内所有按钮、卡片、返回箭头只做视觉，不绑事件
+      · .frame 已自动预留 44px 状态栏，禁止首个子元素从 0-44px 起排
+      · 页面骨架：.nav + .ck-page + .ck-foot；无顶栏只用 .ck-page
+      · 三类吸底容器禁止混用：页面 .ck-foot / 抽屉 .d2btn / 结果页 .ract
+      · 业务组件直接用母版组件库，禁止重复造 CSS
+      · 时间型帧必须调 startCountdown() 让倒计时真实跳动（只做演示动效，不跳帧）
+  ★③ const PAGES = {} 对象库 → 页面只定义一次，帧号/状态/apply函数在此
+      · 同一帧承载多状态时，apply(state) 只做【预置区块的显隐】，禁止现场生成 DOM
+  ★④ const PAGE_TREE = [] → 页面导航分组（左菜单「页面」视图）
+  ★⑤ .steps 右栏步骤卡 → 全稿唯一导航源
+      · 每张卡 = 一个帧：data-page + data-state + data-b(流程块) + data-seq(块内序号)
+      · 点卡 → go() → 换帧 + 切块显隐 + 高亮 cur/past + 滚动，不执行任何业务动作
+      · 步骤卡必须有 note 批注（解释业务逻辑，关键步骤必写）
+      · 每个流程块第一张卡必须是真实可视化入口（首页 / 分享页 / 订阅入口）
+  ★⑥ page_specs.json → 右侧字段说明（外部文件，改文案只改 JSON）
+  
+  ✅ CSS 全部保留
+  ✅ 引擎代码全部保留（renderTree/renderTabs/renderSpec/go/applyPage/reparentTips/双视图切换/JSON加载/showToast/startCountdown）
+  ✅ 帧内零 JS：不存在事件委托、不存在原地高亮、不存在抽屉开合
+  ❌ 业务帧 / PAGES对象 / PAGE_TREE / steps卡 / dishes数据 / 业务渲染函数 全部挖空
+============================================================ -->
+
+
+<!-- ★① 标题填空区 -->
+<header class="top">
+  <h1>美食内容社区 · C端交互稿</h1>
+<span class="tag">4 组流程 · 15 帧 · 首页 3 tab 换数据源 · 零帧内交互</span>
+</header>
+
+<div class="layout">
+
+  <!-- 小程序页面视图：顶部状态块 -->
+  <div class="state-tabs" id="stateTabs"></div>
+
+  <!-- ============ 左栏：菜单栏 ============ -->
+  <div class="menu-col" id="menuCol">
+    <div class="menu-title">🗺️ 文档导航<span class="menu-tag">一列菜单</span></div>
+
+    <!-- 流程入口（B1~B4） -->
+    <div class="lv2" id="flowMenu">
+      <div class="p-list">
+        <div class="p-item p-sub cur" data-idx="0" data-b="B1"><span class="p-code">B1</span>首页内容流</div>
+        <div class="p-item p-sub" data-idx="0" data-b="B2"><span class="p-code">B2</span>详情互动与转发</div>
+        <div class="p-item p-sub" data-idx="6" data-b="B3"><span class="p-code">B3</span>我的回顾</div>
+        <div class="p-item p-sub" data-idx="8" data-b="B4"><span class="p-code">B4</span>工具入口</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 页面入口（一级页面 / 二级页面，树由 JS 渲染） -->
+    <div class="lv2" id="pagesMenu"></div>
+  </div>
+
+  <!-- ============ 中栏：手机壳 ============ -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="stbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="slive"></div>
+        <div class="app">
+
+<!-- ★② 业务帧填空区：按帧清单逐帧画；帧数量 = ID 数量；用下方组件库拼装 -->
+
+          <!-- 帧 0 · 首页 · 美食 tab（按发布时间倒序） -->
+          <div class="frame on" data-f="0">
+            <div class="fd-head">
+              <div class="sc">🔍</div>
+              <div class="fd-tabs">
+                <div class="fd-tab">种草</div>
+                <div class="fd-tab">发现</div>
+                <div class="fd-tab on">美食</div>
+              </div>
+            </div>
+            <div class="fd-cats">
+              <div class="fd-cat on">全部</div>
+              <div class="fd-cat">推荐</div>
+              <div class="fd-cat">活动</div>
+              <div class="fd-cat">美食</div>
+              <div class="fd-cat">新热打卡</div>
+              <div class="fd-cat">周末出行</div>
+            </div>
+            <div class="ck-page fd-feed">
+              <div class="water">
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/r1.png" alt="广州美食地图攻略"><div class="pts">812 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">广州美食地图攻略，跟着逛就够了</div>
+                    <div class="dsc">3 号线沿线 12 家店，从早茶一路吃到夜宵</div>
+                    <div class="au"><span class="av">🦊</span><span>钰涵环游记</span><span class="lk">↗ 86</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/r2.png" alt="广州最推荐的自助"><div class="pts">1375 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">广州最推荐的自助！！！！</div>
+                    <div class="dsc">200 块真的值，刺身现切、牛排现煎</div>
+                    <div class="au"><span class="av">🍓</span><span>草莓公主</span><span class="lk">↗ 120</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/r3.png" alt="小厨娘日常"><div class="pts">406 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">小厨娘日常：一锅炖出幸福感</div>
+                    <div class="dsc">下班 20 分钟搞定的三道家常菜</div>
+                    <div class="au"><span class="av">👩‍🍳</span><span>Sukie阿</span><span class="lk">↗ 42</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/m1.png" alt="摆摊第一天"><div class="pts">229 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">摆摊第一天，卖完 3 锅才收摊</div>
+                    <div class="dsc">城中村口 18 块一份，回头客排到马路边</div>
+                    <div class="au"><span class="av">🐔</span><span>小方</span><span class="lk">↗ 31</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="ck-foot fd-tabbar">
+              <div class="in">
+                <div class="ti on"><span class="ic">🏠</span>首页</div>
+                <div class="ti"><span class="ic">🎫</span>领券</div>
+                <div class="ti"><span class="ic">🧰</span>工具</div>
+                <div class="ti"><span class="ic">👤</span>我的</div>
+              </div>
+            </div>
+            <div class="guidehand show" style="left:74px;top:172px"><svg><use href="#ico-hand"/></svg></div>
+            <div class="gh-tip left show" style="left:0;top:168px" data-frame-idx="0">美食 tab 按时间倒序</div>
+          </div>
+
+          <!-- 帧 1 · 首页 · 发现 tab（打乱重排） -->
+          <div class="frame" data-f="1">
+            <div class="fd-head">
+              <div class="sc">🔍</div>
+              <div class="fd-tabs">
+                <div class="fd-tab">种草</div>
+                <div class="fd-tab on">发现</div>
+                <div class="fd-tab">美食</div>
+              </div>
+            </div>
+            <div class="fd-cats">
+              <div class="fd-cat on">全部</div>
+              <div class="fd-cat">推荐</div>
+              <div class="fd-cat">活动</div>
+              <div class="fd-cat">美食</div>
+              <div class="fd-cat">新热打卡</div>
+              <div class="fd-cat">周末出行</div>
+            </div>
+            <div class="ck-page fd-feed">
+              <div class="water">
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/r2.png" alt="广州最推荐的自助"><div class="pts">1375 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">广州最推荐的自助！！！！</div>
+                    <div class="dsc">200 块真的值，刺身现切、牛排现煎</div>
+                    <div class="au"><span class="av">🍓</span><span>草莓公主</span><span class="lk">↗ 120</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/m1.png" alt="摆摊第一天"><div class="pts">229 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">摆摊第一天，卖完 3 锅才收摊</div>
+                    <div class="dsc">城中村口 18 块一份，回头客排到马路边</div>
+                    <div class="au"><span class="av">🐔</span><span>小方</span><span class="lk">↗ 31</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/r1.png" alt="广州美食地图攻略"><div class="pts">812 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">广州美食地图攻略，跟着逛就够了</div>
+                    <div class="dsc">3 号线沿线 12 家店，从早茶一路吃到夜宵</div>
+                    <div class="au"><span class="av">🦊</span><span>钰涵环游记</span><span class="lk">↗ 86</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/r3.png" alt="小厨娘日常"><div class="pts">406 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">小厨娘日常：一锅炖出幸福感</div>
+                    <div class="dsc">下班 20 分钟搞定的三道家常菜</div>
+                    <div class="au"><span class="av">👩‍🍳</span><span>Sukie阿</span><span class="lk">↗ 42</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="ck-foot fd-tabbar">
+              <div class="in">
+                <div class="ti on"><span class="ic">🏠</span>首页</div>
+                <div class="ti"><span class="ic">🎫</span>领券</div>
+                <div class="ti"><span class="ic">🧰</span>工具</div>
+                <div class="ti"><span class="ic">👤</span>我的</div>
+              </div>
+            </div>
+            <div class="guidehand show" style="left:184px;top:172px"><svg><use href="#ico-hand"/></svg></div>
+            <div class="gh-tip left show" style="left:0;top:168px" data-frame-idx="1">发现只重排不放新</div>
+          </div>
+
+          <!-- 帧 2 · 首页 · 种草 tab（我的收藏集合） -->
+          <div class="frame" data-f="2">
+            <div class="fd-head">
+              <div class="sc">🔍</div>
+              <div class="fd-tabs">
+                <div class="fd-tab on">种草</div>
+                <div class="fd-tab">发现</div>
+                <div class="fd-tab">美食</div>
+              </div>
+            </div>
+            <div class="ck-page fd-feed">
+              <div class="water">
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/b1.png" alt="北京路汉堡"><div class="pts">954 赞</div></div>
+                  <div class="bd">
+                    <div class="keep">已收藏</div>
+                    <div class="nm">北京路这家汉堡，排队 40 分钟也值</div>
+                    <div class="au"><span class="av">🐔</span><span>阿方</span><span class="lk">↗ 28</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/p1.png" alt="隆江猪脚饭"><div class="pts">633 赞</div></div>
+                  <div class="bd">
+                    <div class="keep">已收藏</div>
+                    <div class="nm">隆江猪脚饭，肥而不腻的秘密在卤水</div>
+                    <div class="au"><span class="av">🐔</span><span>阿方</span><span class="lk">↗ 19</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/c1.png" alt="便利店可乐"><div class="pts">318 赞</div></div>
+                  <div class="bd">
+                    <div class="keep">已收藏</div>
+                    <div class="nm">便利店可乐的 5 种喝法，第 3 种最上头</div>
+                    <div class="au"><span class="av">🐔</span><span>小方</span><span class="lk">↗ 12</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/r3.png" alt="小厨娘日常"><div class="pts">406 赞</div></div>
+                  <div class="bd">
+                    <div class="keep">已收藏</div>
+                    <div class="nm">小厨娘日常：一锅炖出幸福感</div>
+                    <div class="au"><span class="av">👩‍🍳</span><span>Sukie阿</span><span class="lk">↗ 42</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="ck-foot fd-tabbar">
+              <div class="in">
+                <div class="ti on"><span class="ic">🏠</span>首页</div>
+                <div class="ti"><span class="ic">🎫</span>领券</div>
+                <div class="ti"><span class="ic">🧰</span>工具</div>
+                <div class="ti"><span class="ic">👤</span>我的</div>
+              </div>
+            </div>
+            <div class="guidehand show" style="left:74px;top:172px"><svg><use href="#ico-hand"/></svg></div>
+            <div class="gh-tip left show" style="left:0;top:168px" data-frame-idx="2">种草即我的收藏</div>
+          </div>
+
+          <!-- 帧 3 · 帖子详情（点赞/收藏/不喜欢/转发，无评论区） -->
+          <div class="frame" data-f="3">
+            <div class="fd-dnav">
+              <div class="back">‹</div>
+              <div class="fd-ava">🍓</div>
+              <div>
+                <div class="nm">草莓公主</div>
+                <div class="sub">广州 · 美食探店</div>
+              </div>
+              <div class="fd-sub">＋ 订阅</div>
+              <div class="back">↗</div>
+            </div>
+            <div class="fd-dbody">
+              <div class="fd-hero">
+                <img src="资源/img/r2.png" alt="自助餐多图">
+                <div class="cnt">1/3</div>
+                <div class="ov">这家自助我来了三次，每次都要提前 1 小时排队｜左右滑看更多</div>
+              </div>
+              <div class="fd-title">广州最推荐的自助！！！！</div>
+              <div class="fd-txt">200 块真的值！！带朋友来过生日她太开心了，刺身现切、牛排现煎，甜品台 20 多种随便拿。</div>
+              <div class="fd-metarow">
+                <span class="loc">📍 广州·天河区</span>
+                <span class="dt">2025-11-27</span>
+                <span class="fd-nolike">😶 不喜欢</span>
+              </div>
+              <div class="fd-input">💬 说点什么…</div>
+            </div>
+            <div class="ck-foot fd-act">
+              <div class="a heart"><span class="ic">♥</span>1375</div>
+              <div class="a star"><span class="ic">★</span>690</div>
+              <div class="a"><span class="ic">↗</span>120</div>
+            </div>
+            <div class="guidehand show" style="left:236px;top:610px"><svg><use href="#ico-hand"/></svg></div>
+            <div class="gh-tip left show" style="left:0;top:604px" data-frame-idx="3">点转发拉起渠道</div>
+          </div>
+
+          <!-- 帧 11 · 详情 · 已点赞（点赞变红 +1，再点取消） -->
+          <div class="frame" data-f="11">
+            <div class="fd-dnav">
+              <div class="back">‹</div>
+              <div class="fd-ava">🍓</div>
+              <div>
+                <div class="nm">草莓公主</div>
+                <div class="sub">广州 · 美食探店</div>
+              </div>
+              <div class="fd-sub">＋ 订阅</div>
+              <div class="back">↗</div>
+            </div>
+            <div class="fd-dbody">
+              <div class="fd-hero">
+                <img src="资源/img/r2.png" alt="自助餐多图">
+                <div class="cnt">1/3</div>
+                <div class="ov">这家自助我来了三次，每次都要提前 1 小时排队｜左右滑看更多</div>
+              </div>
+              <div class="fd-title">广州最推荐的自助！！！！</div>
+              <div class="fd-txt">200 块真的值！！带朋友来过生日她太开心了，刺身现切、牛排现煎，甜品台 20 多种随便拿。</div>
+              <div class="fd-metarow">
+                <span class="loc">📍 广州·天河区</span>
+                <span class="dt">2025-11-27</span>
+                <span class="fd-nolike">😶 不喜欢</span>
+              </div>
+              <div class="fd-input">💬 说点什么…</div>
+            </div>
+            <div class="ck-foot fd-act">
+              <div class="a heart on"><span class="ic">♥</span>1376<span class="fd-flag">已赞</span></div>
+              <div class="a star"><span class="ic">★</span>690</div>
+              <div class="a"><span class="ic">↗</span>120</div>
+            </div>
+            <div class="gh-tip left show" style="left:0;top:662px" data-frame-idx="11">点赞变红并 +1</div>
+          </div>
+
+          <!-- 帧 12 · 详情 · 已收藏（收藏高亮 +1，同时进种草夹） -->
+          <div class="frame" data-f="12">
+            <div class="fd-dnav">
+              <div class="back">‹</div>
+              <div class="fd-ava">🍓</div>
+              <div>
+                <div class="nm">草莓公主</div>
+                <div class="sub">广州 · 美食探店</div>
+              </div>
+              <div class="fd-sub">＋ 订阅</div>
+              <div class="back">↗</div>
+            </div>
+            <div class="fd-dbody">
+              <div class="fd-hero">
+                <img src="资源/img/r2.png" alt="自助餐多图">
+                <div class="cnt">1/3</div>
+                <div class="ov">这家自助我来了三次，每次都要提前 1 小时排队｜左右滑看更多</div>
+              </div>
+              <div class="fd-title">广州最推荐的自助！！！！</div>
+              <div class="fd-txt">200 块真的值！！带朋友来过生日她太开心了，刺身现切、牛排现煎，甜品台 20 多种随便拿。</div>
+              <div class="fd-metarow">
+                <span class="loc">📍 广州·天河区</span>
+                <span class="dt">2025-11-27</span>
+                <span class="fd-nolike">😶 不喜欢</span>
+              </div>
+              <div class="fd-input">💬 说点什么…</div>
+            </div>
+            <div class="ck-foot fd-act">
+              <div class="a heart"><span class="ic">♥</span>1375</div>
+              <div class="a star on"><span class="ic">★</span>691<span class="fd-flag amber">已收藏</span></div>
+              <div class="a"><span class="ic">↗</span>120</div>
+            </div>
+            <div class="gh-tip left show" style="left:0;top:662px" data-frame-idx="12">收藏即进种草夹</div>
+          </div>
+
+          <!-- 帧 13 · 详情 · 已标记不喜欢 -->
+          <div class="frame" data-f="13">
+            <div class="fd-dnav">
+              <div class="back">‹</div>
+              <div class="fd-ava">🍓</div>
+              <div>
+                <div class="nm">草莓公主</div>
+                <div class="sub">广州 · 美食探店</div>
+              </div>
+              <div class="fd-sub">＋ 订阅</div>
+              <div class="back">↗</div>
+            </div>
+            <div class="fd-dbody">
+              <div class="fd-hero">
+                <img src="资源/img/r2.png" alt="自助餐多图">
+                <div class="cnt">1/3</div>
+                <div class="ov">这家自助我来了三次，每次都要提前 1 小时排队｜左右滑看更多</div>
+              </div>
+              <div class="fd-title">广州最推荐的自助！！！！</div>
+              <div class="fd-txt">200 块真的值！！带朋友来过生日她太开心了，刺身现切、牛排现煎，甜品台 20 多种随便拿。</div>
+              <div class="fd-metarow">
+                <span class="loc">📍 广州·天河区</span>
+                <span class="dt">2025-11-27</span>
+                <span class="fd-nolike on">✓ 已减少此类</span>
+              </div>
+              <div class="fd-input">💬 说点什么…</div>
+            </div>
+            <div class="ck-foot fd-act">
+              <div class="a heart"><span class="ic">♥</span>1375</div>
+              <div class="a star"><span class="ic">★</span>690</div>
+              <div class="a"><span class="ic">↗</span>120</div>
+            </div>
+            <div class="gh-tip left show" style="left:0;top:440px" data-frame-idx="13">不喜欢只记录不删帖</div>
+          </div>
+
+          <!-- 帧 14 · 详情 · 留言输入态（不落库） -->
+          <div class="frame" data-f="14">
+            <div class="fd-dnav">
+              <div class="back">‹</div>
+              <div class="fd-ava">🍓</div>
+              <div>
+                <div class="nm">草莓公主</div>
+                <div class="sub">广州 · 美食探店</div>
+              </div>
+              <div class="fd-sub">＋ 订阅</div>
+              <div class="back">↗</div>
+            </div>
+            <div class="fd-dbody">
+              <div class="fd-hero">
+                <img src="资源/img/r2.png" alt="自助餐多图">
+                <div class="cnt">1/3</div>
+                <div class="ov">这家自助我来了三次，每次都要提前 1 小时排队｜左右滑看更多</div>
+              </div>
+              <div class="fd-title">广州最推荐的自助！！！！</div>
+              <div class="fd-txt">200 块真的值！！带朋友来过生日她太开心了，刺身现切、牛排现煎，甜品台 20 多种随便拿。</div>
+              <div class="fd-metarow">
+                <span class="loc">📍 广州·天河区</span>
+                <span class="dt">2025-11-27</span>
+                <span class="fd-nolike">😶 不喜欢</span>
+              </div>
+              <div class="fd-input typing"><span>200 块真的值，下次还来</span><span class="fd-send">发送</span></div>
+            </div>
+            <div class="ck-foot fd-act">
+              <div class="a heart"><span class="ic">♥</span>1375</div>
+              <div class="a star"><span class="ic">★</span>690</div>
+              <div class="a"><span class="ic">↗</span>120</div>
+            </div>
+            <div class="gh-tip left show" style="left:0;top:486px" data-frame-idx="14">留言本次不落库</div>
+          </div>
+
+          <!-- 帧 15 · 详情 · 已订阅（订阅按钮转灰，不调模板） -->
+          <div class="frame" data-f="15">
+            <div class="fd-dnav">
+              <div class="back">‹</div>
+              <div class="fd-ava">🍓</div>
+              <div>
+                <div class="nm">草莓公主</div>
+                <div class="sub">广州 · 美食探店</div>
+              </div>
+              <div class="fd-sub on">✓ 已订阅</div>
+              <div class="back">↗</div>
+            </div>
+            <div class="fd-dbody">
+              <div class="fd-hero">
+                <img src="资源/img/r2.png" alt="自助餐多图">
+                <div class="cnt">1/3</div>
+                <div class="ov">这家自助我来了三次，每次都要提前 1 小时排队｜左右滑看更多</div>
+              </div>
+              <div class="fd-title">广州最推荐的自助！！！！</div>
+              <div class="fd-txt">200 块真的值！！带朋友来过生日她太开心了，刺身现切、牛排现煎，甜品台 20 多种随便拿。</div>
+              <div class="fd-metarow">
+                <span class="loc">📍 广州·天河区</span>
+                <span class="dt">2025-11-27</span>
+                <span class="fd-nolike">😶 不喜欢</span>
+              </div>
+              <div class="fd-input">💬 说点什么…</div>
+            </div>
+            <div class="ck-foot fd-act">
+              <div class="a heart"><span class="ic">♥</span>1375</div>
+              <div class="a star"><span class="ic">★</span>690</div>
+              <div class="a"><span class="ic">↗</span>120</div>
+            </div>
+            <div class="gh-tip left show" style="left:0;top:14px" data-frame-idx="15">订阅后变已订阅</div>
+          </div>
+
+          <!-- 帧 4 · 转发面板（半屏抽屉，遮罩写死） -->
+          <div class="frame" data-f="4">
+            <div class="fd-dnav">
+              <div class="back">‹</div>
+              <div class="fd-ava">🍓</div>
+              <div>
+                <div class="nm">草莓公主</div>
+                <div class="sub">广州 · 美食探店</div>
+              </div>
+              <div class="fd-sub">＋ 订阅</div>
+              <div class="back">↗</div>
+            </div>
+            <div class="fd-dbody">
+              <div class="fd-hero" style="height:250px">
+                <img src="资源/img/r2.png" alt="自助餐多图">
+                <div class="cnt">1/3</div>
+              </div>
+              <div class="fd-title">广州最推荐的自助！！！！</div>
+              <div class="fd-txt">200 块真的值！！带朋友来过生日她太开心了。</div>
+            </div>
+            <div class="sh-panel show">
+              <div class="sh-sheet">
+                <div class="sh-hand"></div>
+                <div class="sh-app">
+                  <div class="ava">小</div>
+                  <div>
+                    <div class="sh-app-nm">小餐AI</div>
+                    <div class="sh-app-sub">小程序 · 美食内容社区</div>
+                  </div>
+                </div>
+                <div class="sh-sec">常用联系人</div>
+                <div class="sh-row">
+                  <div class="sh-c"><div class="ava">🐔</div><div class="nm">阿方</div></div>
+                  <div class="sh-c"><div class="ava">👩‍🍳</div><div class="nm">Sukie</div></div>
+                  <div class="sh-c"><div class="ava">🦊</div><div class="nm">钰涵</div></div>
+                  <div class="sh-c"><div class="ava">＋</div><div class="nm">更多</div></div>
+                </div>
+                <div class="sh-sec">分享到</div>
+                <div class="sh-grid">
+                  <div class="sh-g"><div class="ava">💬</div><div class="nm">微信</div></div>
+                  <div class="sh-g"><div class="ava">🌤</div><div class="nm">朋友圈</div></div>
+                  <div class="sh-g"><div class="ava">🐧</div><div class="nm">QQ</div></div>
+                  <div class="sh-g"><div class="ava">📣</div><div class="nm">微博</div></div>
+                  <div class="sh-g"><div class="ava">🔗</div><div class="nm">复制链接</div></div>
+                </div>
+                <div class="sh-cancel">取消</div>
+              </div>
+            </div>
+            <div class="gh-tip left show" style="left:0;top:470px" data-frame-idx="4">选微信发给好友</div>
+          </div>
+
+          <!-- 帧 5 · 分享成功（微信对话：我发出的请求 + 对方收到的卡片） -->
+          <div class="frame" data-f="5">
+            <div class="nav"><div class="back">‹</div><span>分享成功</span></div>
+            <div class="ck-page">
+              <div class="chat-body" style="padding-top:22px">
+                <div class="chat-row is-me">
+                  <div class="chat-ava">方</div>
+                  <div class="chat-bub">这家自助真的可以，200 块吃到扶墙（链接给你）</div>
+                </div>
+                <div class="chat-row">
+                  <div class="chat-ava">友</div>
+                  <div class="mp-card">
+                    <div class="mp-top"><div class="mp-ico">小</div><div class="mp-app">小餐AI</div></div>
+                    <div class="mp-title">小餐AI：200 块的价位里，刺身新鲜度排前列，带朋友过生日氛围加分</div>
+                    <div class="mp-thumb"><img src="资源/img/r2.png" alt="自助餐"></div>
+                    <div class="mp-tag">美食内容社区 · 小程序</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="ck-foot"><button class="ck-btn">返回首页</button></div>
+            <div class="guidehand show" style="left:250px;top:580px"><svg><use href="#ico-hand"/></svg></div>
+            <div class="gh-tip left show" style="left:0;top:576px" data-frame-idx="5">转发出去了</div>
+          </div>
+
+          <!-- 帧 6 · 我的（点赞/种草两个入口） -->
+          <div class="frame" data-f="6">
+            <div class="fd-me">
+              <div class="fd-me-top">
+                <div class="fd-me-av">🐔</div>
+                <div>
+                  <div class="fd-me-nm">阿方</div>
+                  <div class="fd-me-id">ID: 387 · 广州 · 已吃 68 家</div>
+                </div>
+                <div class="fd-me-more">⋯</div>
+              </div>
+              <div class="fd-me-grid">
+                <div class="fd-me-g"><div class="ic">🍱</div><div><div class="n">今天吃什么</div><div class="p">随机推荐一道</div></div></div>
+                <div class="fd-me-g"><div class="ic">🔥</div><div><div class="n">热量识别</div><div class="p">拍照算卡路里</div></div></div>
+              </div>
+              <div class="fd-me-entry">
+                <div class="fd-me-row">
+                  <div class="ic">👍</div>
+                  <div><div class="nm">点赞</div><div class="ds">我点过赞的帖子</div></div>
+                  <div class="ct">12</div>
+                  <div class="ar">›</div>
+                </div>
+                <div class="fd-me-row">
+                  <div class="ic">🌟</div>
+                  <div><div class="nm">种草</div><div class="ds">我收藏过的帖子</div></div>
+                  <div class="ct">8</div>
+                  <div class="ar">›</div>
+                </div>
+              </div>
+              <div class="fd-me-grid">
+                <div class="fd-me-g"><div class="ic">🍰</div><div><div class="n">下午茶种草</div><div class="p">3 点档特惠</div></div></div>
+                <div class="fd-me-g"><div class="ic">🎫</div><div><div class="n">我的券</div><div class="p">2 张待使用</div></div></div>
+              </div>
+            </div>
+            <div class="ck-foot fd-tabbar">
+              <div class="in">
+                <div class="ti"><span class="ic">🏠</span>首页</div>
+                <div class="ti"><span class="ic">🎫</span>领券</div>
+                <div class="ti"><span class="ic">🧰</span>工具</div>
+                <div class="ti on"><span class="ic">👤</span>我的</div>
+              </div>
+            </div>
+            <div class="gh-tip left show" style="left:0;top:274px" data-frame-idx="6">点赞/种草两入口</div>
+          </div>
+
+          <!-- 帧 7 · 点赞列表（点赞集合） -->
+          <div class="frame" data-f="7">
+            <div class="nav"><div class="back">‹</div><span>点赞我的</span><span class="rt">12</span></div>
+            <div class="ck-page fd-feed">
+              <div class="water">
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/r2.png" alt="广州最推荐的自助"><div class="pts">1375 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">广州最推荐的自助！！！！</div>
+                    <div class="au"><span class="av">🍓</span><span>草莓公主</span><span class="lk">♥ 已赞</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/r1.png" alt="广州美食地图攻略"><div class="pts">812 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">广州美食地图攻略，跟着逛就够了</div>
+                    <div class="au"><span class="av">🦊</span><span>钰涵环游记</span><span class="lk">♥ 已赞</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/b1.png" alt="北京路汉堡"><div class="pts">954 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">北京路这家汉堡，排队 40 分钟也值</div>
+                    <div class="au"><span class="av">🐔</span><span>阿方</span><span class="lk">♥ 已赞</span></div>
+                  </div>
+                </div>
+                <div class="wc">
+                  <div class="pic"><img src="资源/img/m1.png" alt="摆摊第一天"><div class="pts">229 赞</div></div>
+                  <div class="bd">
+                    <div class="nm">摆摊第一天，卖完 3 锅才收摊</div>
+                    <div class="au"><span class="av">🐔</span><span>小方</span><span class="lk">♥ 已赞</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="guidehand show" style="left:74px;top:172px"><svg><use href="#ico-hand"/></svg></div>
+            <div class="gh-tip left show" style="left:0;top:168px" data-frame-idx="7">点卡片回帖子</div>
+          </div>
+
+          <!-- 帧 8 · 工具（一级页面，4 个既有功能入口） -->
+          <div class="frame" data-f="8">
+            <div class="nav"><span>工具 · 小餐AI</span></div>
+            <div class="ck-page">
+              <div class="fd-tool-hero">
+                <div class="t1">今天的饭，交给工具决定</div>
+                <div class="t2">拍照算热量、没想法就随机、3 点档找下午茶券</div>
+              </div>
+              <div class="fd-tool-grid">
+                <div class="fd-tool-g"><div class="ic">🔥</div><div class="n">热量识别</div><div class="d">拍一张，算出这餐多少卡</div></div>
+                <div class="fd-tool-g"><div class="ic">🍱</div><div class="n">今天吃什么</div><div class="d">摇一道，告别选择困难</div></div>
+                <div class="fd-tool-g"><div class="ic">🍰</div><div class="n">下午茶种草</div><div class="d">14:30-16:00 专属券</div></div>
+                <div class="fd-tool-g"><div class="ic">🔔</div><div class="n">订阅不定时神券</div><div class="d">有券时第一时间提醒</div></div>
+              </div>
+            </div>
+            <div class="ck-foot fd-tabbar">
+              <div class="in">
+                <div class="ti"><span class="ic">🏠</span>首页</div>
+                <div class="ti"><span class="ic">🎫</span>领券</div>
+                <div class="ti on"><span class="ic">🧰</span>工具</div>
+                <div class="ti"><span class="ic">👤</span>我的</div>
+              </div>
+            </div>
+            <div class="gh-tip left show" style="left:0;top:292px" data-frame-idx="8">4 个子页都已存在</div>
+          </div>
+
+          <!-- 帧 9 · 首页 · 种草空态（异常：收藏为 0，新用户必现） -->
+          <div class="frame" data-f="9">
+            <div class="fd-head">
+              <div class="sc">🔍</div>
+              <div class="fd-tabs">
+                <div class="fd-tab on">种草</div>
+                <div class="fd-tab">发现</div>
+                <div class="fd-tab">美食</div>
+              </div>
+            </div>
+            <div class="ck-page fd-feed">
+              <div class="ck-empty">
+                <div class="emo">🌟</div>
+                <div class="t1">还没有收藏的帖子</div>
+                <div class="t2">在帖子里点「收藏」<br>想再吃一次的店就会留在这里</div>
+                <button class="ck-btn">去逛逛美食</button>
+              </div>
+            </div>
+            <div class="ck-foot fd-tabbar">
+              <div class="in">
+                <div class="ti on"><span class="ic">🏠</span>首页</div>
+                <div class="ti"><span class="ic">🎫</span>领券</div>
+                <div class="ti"><span class="ic">🧰</span>工具</div>
+                <div class="ti"><span class="ic">👤</span>我的</div>
+              </div>
+            </div>
+            <div class="gh-tip left show" style="left:0;top:168px" data-frame-idx="9">空态只留一条出口</div>
+          </div>
+
+          <!-- 帧 10 · 帖子详情 · 已删除（页面视图专用，交互稿不引用） -->
+          <div class="frame" data-f="10">
+            <div class="nav"><div class="back">‹</div><span>帖子详情</span></div>
+            <div class="ck-page">
+              <div class="ck-empty">
+                <div class="emo">🗑</div>
+                <div class="t1">该帖子已被作者删除</div>
+                <div class="t2">内容不再展示<br>去看看其他人的推荐吧</div>
+                <button class="ck-btn">返回首页</button>
+              </div>
+            </div>
+          </div>
+
+<!-- ★② 业务帧结束 -->
+
+          </div><!-- .app -->
+      </div><!-- .screen -->
+    </div><!-- .phone -->
+  </div><!-- .phone-col -->
+
+  <!-- ============ 右栏：步骤卡 / 字段说明卡 ============ -->
+
+  <!-- ★⑤ .steps 右栏步骤卡 = 全稿唯一导航源（帧内不绑任何交互，全部由这里驱动） -->
+  <div class="steps" id="steps">
+
+    <!-- 流程块 B1 -->
+    <div class="blk g1"><span class="bt">B1 首页内容流</span><span class="be2">三个 tab 共用一套骨架，只有数据源与排序不同</span></div>
+
+    <div class="sec-h">
+      <span class="n">1-1</span>
+      <span class="t">首页 · 美食 tab</span>
+      <span class="c">页面·首页/美食</span>
+    </div>
+
+    <div class="step cur" data-i="0" data-b="B1" data-seq="1" data-blk="B1">
+      <div class="badge">1</div>
+      <div class="body">
+        <div class="h"><span class="tt">首页 · 美食 tab</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 顶栏「搜索 / 种草 / 发现 / 美食」· 分类栏「全部」 · 双列瀑布流</div>
+          <div><b>结果</b>：默认落地美食 tab，按发布时间倒序；点卡片进详情</div>
+          <div><b>下一环</b>：切「发现」tab → 1-2；底部进「我的 / 工具」→ 3-1 / 4-1</div>
+        </div>
+        <div class="note">顶部 tab 顺序沿用原稿（种草 / 发现 / 美食）只改名改功能；首页不挂额外按钮，入口全收进 tabbar 与卡片。</div>
+        <div class="note limit">限制：分类栏默认「全部」，切换分类只过滤当前 feed，不单独出帧。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">1-2</span>
+      <span class="t">首页 · 发现 tab</span>
+      <span class="c">页面·首页/发现</span>
+    </div>
+
+    <div class="step" data-i="1" data-b="B1" data-seq="2" data-blk="B1">
+      <div class="badge">2</div>
+      <div class="body">
+        <div class="h"><span class="tt">首页 · 发现 tab</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 同骨架 · 卡片顺序打乱</div>
+          <div><b>结果</b>：数据源不变，仅重排出新顺序，制造「逛」的感觉</div>
+          <div><b>下一环</b>：切「种草」tab → 1-3</div>
+        </div>
+        <div class="note">发现不引入新内容源、不改卡片结构，纯排序差异，避免用户以为进了另一个频道。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">1-3</span>
+      <span class="t">首页 · 种草 tab</span>
+      <span class="c">页面·首页/种草</span>
+    </div>
+
+    <div class="step" data-i="2" data-b="B1" data-seq="3" data-blk="B1">
+      <div class="badge">3</div>
+      <div class="body">
+        <div class="h"><span class="tt">首页 · 种草 tab</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：数据源 · 我的收藏集合 · 卡片带「已收藏」标</div>
+          <div><b>结果</b>：只展示我收藏过的帖子，与详情页「收藏」按钮同源</div>
+          <div><b>下一环</b>：有收藏 → 点卡片进 2-2；无收藏 → 1-4 空态</div>
+        </div>
+        <div class="note">「关注」改成「种草」后，这个 tab 不再是订阅流，而是用户自己的收藏夹，直接复用收藏数据；因为已经是收藏夹，这一页取消分类栏。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">1-4</span>
+      <span class="t">首页 · 种草空态</span>
+      <span class="c">页面·首页/种草-空</span>
+    </div>
+
+    <div class="step" data-i="9" data-b="B1" data-seq="4" data-blk="B1">
+      <div class="badge">4</div>
+      <div class="body">
+        <div class="h"><span class="tt">种草空态</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 空态图标 · 文案「还没有收藏的帖子」· 唯一按钮「去逛逛美食」</div>
+          <div><b>结果</b>：收藏数为 0 时展示，不出现分类栏、不出现任何帖子占位</div>
+          <div><b>下一环</b>：点「去逛逛美食」→ 回 1-1 美食 tab</div>
+        </div>
+        <div class="note">新用户注册后收藏必定为空，这是高频必现路径，必须单独出帧；空态只留一条出口，避免用户在空页面里打转。</div>
+        <div class="note limit">限制：空态只在收藏数 = 0 时出现；「我的 → 种草」进入同样落这一帧。</div>
+      </div>
+    </div>
+
+    <!-- 流程块 B2 -->
+    <div class="blk g2"><span class="bt">B2 详情互动与转发</span><span class="be2">浏览 → 互动 → 转发 → 分享成功，评论链路已移除</span></div>
+
+    <div class="sec-h">
+      <span class="n">2-1</span>
+      <span class="t">首页 · 点第 2 张卡进入详情</span>
+      <span class="c">页面·首页/美食</span>
+    </div>
+
+    <div class="step" data-i="0" data-b="B2" data-seq="1" data-blk="B2">
+      <div class="badge">1</div>
+      <div class="body">
+        <div class="h"><span class="tt">首页入口 · 点卡片</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 与 1-1 同一帧 · 动作=点「广州最推荐的自助」</div>
+          <div><b>结果</b>：进入帖子详情，卡片整块可点，不限图区或文区</div>
+          <div><b>下一环</b>：2-2 帖子详情</div>
+        </div>
+        <div class="note">同帧多卡：与 1-1 是同一画面，这里只作详情链路入口，不重复出帧。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">2-2</span>
+      <span class="t">帖子详情 · 多图 + 互动</span>
+      <span class="c">页面·详情/默认</span>
+    </div>
+
+    <div class="step" data-i="3" data-b="B2" data-seq="2" data-blk="B2">
+      <div class="badge">2</div>
+      <div class="body">
+        <div class="h"><span class="tt">帖子详情</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 1/3 多图 · 图上气泡 · 地点行 · 日期 · 不喜欢 · 点赞 1375 / 收藏 690 / 转发 120</div>
+          <div><b>结果</b>：点赞、收藏原地高亮切换；不喜欢记录偏好后降噪；输入框保留输入态</div>
+          <div><b>下一环</b>：点「转发」→ 2-3 转发面板</div>
+        </div>
+        <div class="note">原「关注」改「订阅」、「评论」改「转发」，评论数与评论区整体移除，底部只留三项互动。</div>
+        <div class="note limit">限制：地点文案由后台配置、用户不可编辑；「说点什么」暂不落库。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">2-2A</span>
+      <span class="t">帖子详情 · 点赞后</span>
+      <span class="c">页面·详情/已点赞</span>
+    </div>
+
+    <div class="step" data-i="11" data-b="B2" data-seq="3" data-blk="B2">
+      <div class="badge">3</div>
+      <div class="body">
+        <div class="h"><span class="tt">点赞</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 版式同 2-2 · ♥ 变红并加底色 · 1375 → 1376</div>
+          <div><b>结果</b>：点赞生效，再点一次取消、计数回 1375</div>
+          <div><b>下一环</b>：留在本页继续其他操作；点「转发」→ 2-3</div>
+        </div>
+        <div class="note">并列操作：与 2-2B~2-2E 同级，都从 2-2 直接触发，本卡只演示点赞后的画面。</div>
+        <div class="note limit">限制：同一账号对同一帖只记一次赞。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">2-2B</span>
+      <span class="t">帖子详情 · 收藏后</span>
+      <span class="c">页面·详情/已收藏</span>
+    </div>
+
+    <div class="step" data-i="12" data-b="B2" data-seq="4" data-blk="B2">
+      <div class="badge">4</div>
+      <div class="body">
+        <div class="h"><span class="tt">收藏</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · ★ 高亮并加底色 · 690 → 691</div>
+          <div><b>结果</b>：帖子进入「种草」收藏夹，首页种草 tab 立即可见</div>
+          <div><b>下一环</b>：回 2-2；或首页「种草」tab → 1-3</div>
+        </div>
+        <div class="note">收藏与「种草」是同一份数据，不额外造收藏页。</div>
+        <div class="note limit">限制：在种草 tab 取消收藏后，此处计数同步回落。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">2-2C</span>
+      <span class="t">帖子详情 · 不喜欢</span>
+      <span class="c">页面·详情/已标记不喜欢</span>
+    </div>
+
+    <div class="step" data-i="13" data-b="B2" data-seq="5" data-blk="B2">
+      <div class="badge">5</div>
+      <div class="body">
+        <div class="h"><span class="tt">不喜欢</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 😶 不喜欢 → ✓ 已减少此类（深底白字）</div>
+          <div><b>结果</b>：只记录偏好用于降噪，帖子不消失、不进任何列表</div>
+          <div><b>下一环</b>：回 2-2</div>
+        </div>
+        <div class="note">不喜欢是纯负反馈，不与点赞互斥，也不删帖。</div>
+        <div class="note limit">限制：同一账号对同一帖只记一次。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">2-2D</span>
+      <span class="t">帖子详情 · 留言输入</span>
+      <span class="c">页面·详情/留言输入态</span>
+    </div>
+
+    <div class="step" data-i="14" data-b="B2" data-seq="6" data-blk="B2">
+      <div class="badge">6</div>
+      <div class="body">
+        <div class="h"><span class="tt">留言</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 输入框进入输入态 · 已输入文案 · 右侧「发送」</div>
+          <div><b>结果</b>：只保留输入态，本次不落库、不上屏</div>
+          <div><b>下一环</b>：回 2-2</div>
+        </div>
+        <div class="note">评论区已整体移除，这里只留输入框占位，给后续迭代留口。</div>
+        <div class="note limit">限制：本次不做发送与留言列表，点「发送」不产生记录。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">2-2E</span>
+      <span class="t">帖子详情 · 订阅后</span>
+      <span class="c">页面·详情/已订阅</span>
+    </div>
+
+    <div class="step" data-i="15" data-b="B2" data-seq="7" data-blk="B2">
+      <div class="badge">7</div>
+      <div class="body">
+        <div class="h"><span class="tt">订阅</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 顶部「＋ 订阅」→「✓ 已订阅」（转灰）</div>
+          <div><b>结果</b>：按钮状态切换，作者与帖子都不跳走</div>
+          <div><b>下一环</b>：回 2-2</div>
+        </div>
+        <div class="note">本次只做「订阅 → 已订阅」，不接订阅消息模板。</div>
+        <div class="note limit">限制：不弹授权、不发消息；未登录时先登录再置「已订阅」，推送留待后续迭代。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">2-3</span>
+      <span class="t">转发面板</span>
+      <span class="c">弹窗·半屏抽屉</span>
+    </div>
+
+    <div class="step" data-i="4" data-b="B2" data-seq="8" data-blk="B2">
+      <div class="badge">8</div>
+      <div class="body">
+        <div class="h"><span class="tt">转发面板</span><span class="pill">弹窗</span></div>
+        <div class="meta">
+          <div><b>属性</b>：弹窗</div>
+          <div><b>关键字段</b>：画面 · 常用联系人 · 微信 / 朋友圈 / QQ / 微博 / 复制链接 · 取消</div>
+          <div><b>结果</b>：选任一渠道即唤起微信，分享完成</div>
+          <div><b>下一环</b>：选「微信」→ 2-4 分享成功；点「取消」→ 回 2-2</div>
+        </div>
+        <div class="note">统一半屏抽屉、背景保留详情页虚化；面板内不做二跳，点渠道即离开小程序。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">2-4</span>
+      <span class="t">分享成功</span>
+      <span class="c">页面·分享成功</span>
+    </div>
+
+    <div class="step" data-i="5" data-b="B2" data-seq="9" data-blk="B2">
+      <div class="badge">9</div>
+      <div class="body">
+        <div class="h"><span class="tt">分享成功</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 我方文字气泡 · 对方收到的卡片（小餐AI + AI 评价）</div>
+          <div><b>结果</b>：分享链路闭环，返回首页</div>
+          <div><b>下一环</b>：点「返回首页」→ 1-1</div>
+        </div>
+        <div class="note">真实微信唤起不在本次范围，本帧用微信对话样式表达结果；卡片文案固定为「小餐AI：AI 评价」，不带菜名与分数。</div>
+      </div>
+    </div>
+
+    <!-- 流程块 B3 -->
+    <div class="blk g3"><span class="bt">B3 我的回顾</span><span class="be2">「我的」收口点赞与种草两条回顾线</span></div>
+
+    <div class="sec-h">
+      <span class="n">3-1</span>
+      <span class="t">我的 · 两个回顾入口</span>
+      <span class="c">页面·我的/默认</span>
+    </div>
+
+    <div class="step" data-i="6" data-b="B3" data-seq="1" data-blk="B3">
+      <div class="badge">1</div>
+      <div class="body">
+        <div class="h"><span class="tt">我的</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 头像 / 昵称 / ID · 点赞 12 · 种草 8 · 工具入口</div>
+          <div><b>结果</b>：点赞 12 与种草 8 直接读用户行为数据，数量实时</div>
+          <div><b>下一环</b>：点「点赞」→ 3-2；点「种草」→ 3-3</div>
+        </div>
+        <div class="note">「我的」由底部 tabbar 进入，是这两条回顾线的唯一入口，首页不额外挂入口。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">3-2</span>
+      <span class="t">点赞我的 · 列表</span>
+      <span class="c">页面·点赞列表</span>
+    </div>
+
+    <div class="step" data-i="7" data-b="B3" data-seq="2" data-blk="B3">
+      <div class="badge">2</div>
+      <div class="body">
+        <div class="h"><span class="tt">点赞列表</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 顶栏「点赞我的 12」· 双列卡片 · 角标「已赞」</div>
+          <div><b>结果</b>：按点赞时间倒序，点卡片回详情</div>
+          <div><b>下一环</b>：点卡片 → 2-2</div>
+        </div>
+        <div class="note">列表直接复用首页卡片组件，只换数据源与角标，不再单独设计一套卡片。</div>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <span class="n">3-3</span>
+      <span class="t">种草列表 · 复用首页种草 tab</span>
+      <span class="c">页面·首页/种草</span>
+    </div>
+
+    <div class="step" data-i="2" data-b="B3" data-seq="3" data-blk="B3">
+      <div class="badge">3</div>
+      <div class="body">
+        <div class="h"><span class="tt">种草列表</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 复用帧 2（种草 tab）· 卡片带「已收藏」标</div>
+          <div><b>结果</b>：与「我的 → 种草」同源，直接落回首页种草 tab</div>
+          <div><b>下一环</b>：有收藏 → 点卡片进 2-2；无收藏 → 1-4 空态</div>
+        </div>
+        <div class="note">同帧多卡：种草集合只出一次帧，两个入口都指到这里，避免同一列表画两遍。</div>
+      </div>
+    </div>
+
+    <!-- 流程块 B4 -->
+    <div class="blk g4"><span class="bt">B4 工具入口</span><span class="be2">工具页只做入口规划，4 个子页面均已存在</span></div>
+
+    <div class="sec-h">
+      <span class="n">4-1</span>
+      <span class="t">工具 · 4 个功能入口</span>
+      <span class="c">页面·工具/默认</span>
+    </div>
+
+    <div class="step" data-i="8" data-b="B4" data-seq="1" data-blk="B4">
+      <div class="badge">1</div>
+      <div class="body">
+        <div class="h"><span class="tt">工具</span></div>
+        <div class="meta">
+          <div><b>属性</b>：页面</div>
+          <div><b>关键字段</b>：画面 · 热量识别 · 今天吃什么 · 下午茶种草 · 订阅不定时神券</div>
+          <div><b>结果</b>：4 个入口各跳一个既有功能页，本稿不重画子页</div>
+          <div><b>下一环</b>：返回首页 → 1-1</div>
+        </div>
+        <div class="note">工具升级为一级页面后，原「领神券」浮动按钮取消，券能力并入「领券」tab 与下午茶入口。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 小程序页面视图：字段说明卡（渲染后替换 .steps） -->
+  <div class="spec-col" id="specCol">
+    <!-- renderSpec() 填充 -->
+  </div>
+</div><!-- .layout -->
+
+<!-- JSON 手动导入兜底（file:// 双击打开时使用） -->
+<div class="spec-import" id="specImport" style="display:none">
+  <button id="specImportBtn">📥 导入 page_specs.json</button>
+  <input type="file" id="specFile" accept=".json" style="display:none">
+  <span>file:// 直接打开时需手动导入</span>
+</div>
+
+<script>
+// ============ 引擎代码（一行不动） ============
+
+// --- 重父 gh-tip：从 .screen 内部提到 .phone，用 transform 推到壳外 ---
+(function reparentTips(){
+  const phone = document.querySelector('.phone');
+  if(!phone) return;
+  phone.style.position = 'relative';
+  document.querySelectorAll('.gh-tip').forEach(tip => {
+    const frame = tip.closest('.frame');
+    tip.dataset.frameIdx = frame ? frame.dataset.f : -1;
+    const origTop = parseInt(tip.style.top || '0') || 0;
+    tip.dataset.origTop = origTop;
+    phone.appendChild(tip);
+    tip.style.position = 'absolute';
+    tip.style.top = (origTop + 11) + 'px';
+  });
+})();
+
+// ============ 引擎变量 ============
+const steps = document.querySelectorAll('.step');
+const frames = document.querySelectorAll('.frame');
+let cur = 0;
+let curBlock = 'A1';
+let cdTimer = null;
+
+function frameOf(n){ return document.querySelector('.frame[data-f="' + n + '"]'); }
+
+// ============ ★③ PAGES 对象库 ============
+// 每个页面只定义一次，帧号/状态/apply函数在此统一管理；状态→帧用 frames 映射
+const PAGES = {
+  home: {
+    frame: 0,
+    frames: { food:0, discover:1, star:2, starEmpty:9 },
+    states: ['food','discover','star','starEmpty']
+  },
+  postDetail: {
+    frame: 3,
+    frames: { normal:3, liked:11, collected:12, disliked:13, commenting:14, subscribed:15, deleted:10 },
+    states: ['normal','liked','collected','disliked','commenting','subscribed','deleted']
+  },
+  me:     { frame: 6, states: ['normal'] },
+  likes:  { frame: 7, states: ['normal'] },
+  tools:  { frame: 8, states: ['normal'] },
+  shareResult: { frame: 5, states: ['normal'] }
+};
+
+// ============ 引擎：applyPage 统一调用 ============
+function applyPage(pageKey, state){
+  const p = PAGES[pageKey];
+  if(!p) return;
+  const st = state || (p.states ? p.states[0] : 'default');
+  const fns = Array.isArray(p.apply) ? p.apply : (p.apply ? [p.apply] : []);
+  fns.forEach(fn => { try { fn(st); } catch(e){ console.warn('apply 跳过:', e.message); } });
+}
+
+// ============ ★③ 示例 apply 函数（会话①留空，待会话②③替换为真实逻辑） ============
+
+// ============ 步骤卡 → 页面对象库映射（引擎） ============
+steps.forEach(s => {
+  const p = s.dataset.page;
+  if(p && PAGES[p]) s.dataset.i = (PAGES[p].frames && PAGES[p].frames[s.dataset.state]) || PAGES[p].frame;
+});
+
+// ============ 右栏按子流程过滤（引擎） ============
+(function tagStepBlocks(){
+  const cont = document.querySelector('.steps');
+  if(!cont) return;
+  let blk = '';
+  Array.from(cont.children).forEach(el => {
+    if(el.classList.contains('step')){
+      if(el.dataset.b) blk = el.dataset.b;
+      el.dataset.blk = blk;
+    } else if(el.classList.contains('duo')){
+      const first = el.querySelector('.step');
+      if(first && first.dataset.b) blk = first.dataset.b;
+      el.dataset.blk = blk;
+      el.querySelectorAll('.step').forEach(s => s.dataset.blk = blk);
+    } else if(el.classList.contains('blk') || el.classList.contains('sec-h')){
+      // 向前找下一个 step/duo 确定所属块
+      let next = el.nextElementSibling;
+      while(next && !next.classList.contains('step') && !next.classList.contains('duo')) next = next.nextElementSibling;
+      if(next){
+        const step = next.classList.contains('duo') ? next.querySelector('.step') : next;
+        if(step && step.dataset.b) blk = step.dataset.b;
+      }
+      el.dataset.blk = blk;
+    }
+  });
+})();
+
+// ============ go()：核心引擎函数 ============
+function go(i, block, stepEl){
+  const targetFrame = frameOf(i);
+  if(!targetFrame) return;
+  cur = i;
+  const stepArr = Array.from(steps);
+  let target = null;
+  if(stepEl && stepEl.classList && stepEl.classList.contains('step')) target = stepEl;
+  if(!target && block != null) target = stepArr.find(s => +s.dataset.i === i && s.dataset.b === String(block));
+  if(!target) target = stepArr.find(s => +s.dataset.i === i && s.dataset.b === curBlock);
+  if(!target) target = stepArr.find(s => +s.dataset.i === i);
+  if(target) curBlock = target.dataset.b;
+  document.querySelectorAll('.steps [data-blk]').forEach(el => {
+    el.style.display = (el.dataset.blk === curBlock) ? '' : 'none';
+  });
+  const targetSeq = target ? +target.dataset.seq : 0;
+  steps.forEach(s => {
+    const inBlock = s.dataset.b === curBlock;
+    s.classList.toggle('cur', s === target);
+    s.classList.toggle('past', inBlock && !!target && +s.dataset.seq < targetSeq);
+  });
+  const pageKey = target ? target.dataset.page : null;
+  const pState = target ? target.dataset.state : '';
+  if(pageKey){
+    applyPage(pageKey, pState);
+  } else {
+    const fallbackKey = Object.keys(PAGES).find(k => PAGES[k].frame === i ||
+      (PAGES[k].frames && Object.values(PAGES[k].frames).includes(i)));
+    if(fallbackKey) applyPage(fallbackKey, '');
+  }
+  frames.forEach(f => f.classList.toggle('on', f === targetFrame));
+  document.querySelectorAll('#menuCol .p-item').forEach(item => {
+    item.classList.toggle('cur', item.dataset.b === curBlock);
+  });
+  document.querySelectorAll('.gh-tip').forEach(tip => {
+    tip.style.opacity = (+tip.dataset.frameIdx === cur && tip.classList.contains('show')) ? '1' : '0';
+    tip.style.visibility = (+tip.dataset.frameIdx === cur && tip.classList.contains('show')) ? 'visible' : 'hidden';
+  });
+  const stepsEl = document.querySelector('.steps');
+  const curStep = target;
+  const TITLE_GAP = 64;
+  if(stepsEl && curStep){
+    let anchor = curStep;
+    const domIdx = stepArr.indexOf(curStep);
+    if(domIdx > 0){
+      let p = domIdx - 1;
+      while(p >= 0 && stepArr[p].offsetTop >= curStep.offsetTop) p--;
+      if(p >= 0) anchor = stepArr[p];
+    }
+    stepsEl.scrollTo({top: Math.max(0, anchor.offsetTop - TITLE_GAP), behavior:'smooth'});
+  }
+  const menuCol = document.getElementById('menuCol');
+  const curMenu = document.querySelector('#menuCol .p-item.cur');
+  if(menuCol && curMenu) menuCol.scrollTo({top: Math.max(0, curMenu.offsetTop - 50), behavior:'smooth'});
+  stopCountdown();
+  renderFrameContent(cur, pState);
+}
+
+// ============ startCountdown / stopCountdown（引擎：参数化倒计时） ============
+function startCountdown(opts){
+  stopCountdown();
+  if(!opts || !opts.el && !opts.onTick) return;
+  let t = opts.from || 5;
+  if(opts.el) opts.el.textContent = t;
+  cdTimer = setInterval(() => {
+    t--;
+    if(opts.el) opts.el.textContent = Math.max(t, 0);
+    if(typeof opts.onTick === 'function') opts.onTick(t);
+    if(t <= 0){ stopCountdown(); if(typeof opts.onDone === 'function') opts.onDone(); }
+  }, opts.interval || 1000);
+}
+function stopCountdown(){
+  if(cdTimer){ clearInterval(cdTimer); cdTimer = null; }
+}
+
+// ============ renderFrameContent（引擎签名，业务内容留空） ============
+function renderFrameContent(fr, pState){
+  // ★ 新项目在此按帧号渲染动态内容（如榜单列表、商品图等）
+}
+
+// ============ 步骤卡点击绑定（全稿唯一导航入口） ============
+steps.forEach(s => s.onclick = () => go(+s.dataset.i, s.dataset.b, s));
+
+// ============ ★⑦ POPUPS 弹窗注册表 ============
+// 每个弹窗：D 编号 + popup key + 帧号 + 宿主页面 + 触发状态 + 触发条件（红字展示，供 JSON 落库）
+const POPUPS = {
+  shareSheet: { d:'D1', name:'转发面板', frame:4, page:'postDetail', states:['normal'], trigger:'详情页点底部「转发」' }
+};
+
+// ============ ★④ PAGE_TREE 页面导航 ============
+const PAGE_TREE = [
+  { cat:'一级页面', pages:[
+    { key:'home', name:'首页' },
+    { key:'me',   name:'我的' },
+    { key:'tools', name:'工具' }
+  ]},
+  { cat:'二级页面', pages:[
+    { key:'postDetail', name:'帖子详情', popups:['shareSheet'] },
+    { key:'likes',      name:'点赞列表' },
+    { key:'shareResult', name:'分享成功' }
+  ]}
+];
+
+// ============ 页面视图状态 ============
+// pvState 必须落在 page_specs.json 里真实存在的状态上，否则首次切「页面」视图会显示「字段说明待补」
+let pvPage = 'home', pvState = 'food', openPopupKey = null;
+
+// ============ 弹窗辅助 ============
+function popupsOf(pg){
+  const g = PAGE_TREE.reduce((a, x) => a.concat(x.pages), []).find(p => p.key === pg);
+  return (g && g.popups) || [];
+}
+function pageNameOf(pg){
+  return (PAGE_TREE.reduce((a, x) => a.concat(x.pages), []).find(p => p.key === pg) || {}).name || pg;
+}
+// 状态 key → 中文名（page_specs.json 的 stateLabels，缺省回落 key）
+function stateLabelOf(pg, st){
+  const spec = PAGE_SPECS[pg];
+  return (spec && spec.stateLabels && spec.stateLabels[st]) || st;
+}
+// 触发状态文案：stateLabels 已含 key（如 author-win（作者-中奖）），直接取用；不挂载宿主页的弹窗用 stateText
+function popupStatesText(p){
+  if(p.stateText) return p.stateText;
+  return p.states.map(s => stateLabelOf(p.page, s)).join(' / ');
+}
+function popupRedLine(k){
+  const p = POPUPS[k];
+  return '<span style="color:#D92D20;font-size:10px;line-height:1.5;font-weight:700">' +
+    '状态：' + popupStatesText(p) +
+    ' · 触发：' + p.trigger + '</span>';
+}
+
+// ============ renderTree() ============
+function renderTree(){
+  // 页面视图固定 3 层：页面（tab）→ 一级/二级页面（分组）→ 页面名（可点），不挂徽标
+  document.getElementById('pagesMenu').innerHTML = PAGE_TREE.map(g =>
+    '<div class="cat"><span class="name">' + g.cat + '</span></div><div class="p-list">' +
+    g.pages.map(p =>
+      '<div class="p-item" ' + (POPUPS[p.key] ? 'data-pop="' + p.key + '"' : 'data-pg="' + p.key + '"') + '>' + p.name + '</div>'
+    ).join('') + '</div>').join('');
+}
+
+// ============ renderTabs() ============
+function renderTabs(){
+  const spec = PAGE_SPECS[pvPage];
+  const allStates = PAGES[pvPage] ? (PAGES[pvPage].states || []) : [];
+  const main = (spec && spec.main) || allStates[0] || 'default';
+  const labelOf = s => (spec && spec.stateLabels && spec.stateLabels[s]) || s;
+  const name = (spec && spec.name) || pageNameOf(pvPage);
+  const pill = s => '<button class="st-pill' + (s === pvState ? ' cur' : '') + '" data-st="' + s + '">' + labelOf(s) + '</button>';
+  const groups = (spec && spec.stateGroups) || null;
+  let subHtml = '';
+  if(groups){
+    subHtml = groups.map(g =>
+      '<div class="st-row"><span class="st-row-lb">' + g.label + '</span>' +
+      g.states.filter(s => s !== main && allStates.includes(s)).map(pill).join('') + '</div>'
+    ).join('');
+  }else{
+    const subs = allStates.filter(s => s !== main);
+    subHtml = subs.length ? '<div class="st-row"><span class="st-row-lb">分状态</span>' + subs.map(pill).join('') + '</div>' : '';
+  }
+  // 弹窗行：该页面无弹窗 → 整行不出现
+  const pops = popupsOf(pvPage);
+  const popHtml = pops.length
+    ? '<div class="st-row" style="margin-top:6px"><span class="st-row-lb">弹窗</span>' +
+        pops.map(k => '<button class="st-pill' + (openPopupKey === k ? ' cur' : '') + '" data-pop="' + k + '">' +
+          POPUPS[k].d + ' ' + POPUPS[k].name + '</button>').join('') + '</div>' +
+      '<div class="st-row" style="margin-top:0;align-items:flex-start"><span class="st-row-lb"></span>' +
+        '<div style="flex:1;display:flex;flex-direction:column;gap:2px">' +
+        pops.map(k => '<div>' + popupRedLine(k) + '</div>').join('') + '</div></div>'
+    : '';
+  document.getElementById('stateTabs').innerHTML =
+    '<div class="st-head"><span class="st-page">' + name + '</span>' +
+      '<span class="st-key">page.' + pvPage + ' · ' + allStates.length + ' 个状态对象' +
+        (pops.length ? ' · ' + pops.length + ' 个弹窗' : '') + '</span></div>' +
+    (main ? '<div class="st-row"><span class="st-row-lb st-row-main">主状态</span>' + pill(main) + '</div>' : '') +
+    subHtml + popHtml;
+}
+
+// ============ renderSpec() ============
+function renderSpec(){
+  // 弹窗态：展示弹窗标识 / 宿主 / 触发说明（红字）
+  const pk = openPopupKey || (POPUPS[pvPage] ? pvPage : null);
+  if(pk && POPUPS[pk]){
+    const p = POPUPS[pk];
+    document.getElementById('specCol').innerHTML =
+      '<div class="spec-obj">对象 · popup.' + pk + '[' + p.d + '] · 帧 ' + p.frame + '</div>' +
+      '<div class="spec-title">' + p.name + '</div>' +
+      '<div class="sp-stline">宿主页面：<span class="spec-state">page.' + p.page + '</span>' +
+        '<span class="spec-sub">弹窗</span></div>' +
+      '<div class="spec-sec">触发说明</div>' +
+      '<div style="font-size:12.5px;line-height:1.9;color:#D92D20;font-weight:700">' +
+        '触发状态：' + popupStatesText(p) + '<br>' +
+        '触发条件：' + p.trigger + '</div>' +
+      '<div class="spec-sec">字段说明</div>' +
+      '<div class="sp-intro">该弹窗字段说明待补 · 标识 popup.' + pk + ' · 帧 ' + p.frame +
+        ' · 遮罩/返回落点 = 宿主页面</div>';
+    return;
+  }
+  const spec = PAGE_SPECS[pvPage];
+  const st = spec && spec.states && spec.states[pvState];
+  if(!spec || !st){
+    const pageName = (spec && spec.name) || pageNameOf(pvPage);
+    const pm = PAGES[pvPage];
+    const fr = pm ? ' · 帧 ' + ((pm.frames && pm.frames[pvState]) || pm.frame) : '';
+    const msg = spec ? '该状态字段说明待补' : '该页面字段说明待补<br>框架已就位 · 内容待 page_specs.json 录入';
+    document.getElementById('specCol').innerHTML =
+      '<div class="spec-obj">对象 · page.' + pvPage + '[' + stateLabelOf(pvPage, pvState) + ']' + fr + '</div>' +
+      '<div class="spec-title">' + pageName + '</div>' +
+      '<div class="spec-sec">字段说明</div>' +
+      '<div class="sp-intro">' + msg + '</div>';
+    return;
+  }
+  const mainSt = spec.states[spec.main], isMain = pvState === spec.main;
+  const label = s => spec.stateLabels[s] || s;
+  const sec = (t, body) => '<div class="sp-sec">' + t + '</div>' + body;
+  const cell = r => {
+    const out = [];
+    if (r[2]) out.push('<div class="sp-dline"><span class="sp-dk">来源</span>' + r[2] + '</div>');
+    if (r[3]) out.push('<div class="sp-dline"><span class="sp-dk">限制</span>' + r[3] + '</div>');
+    if (r[4]) out.push('<div class="sp-dline"><span class="sp-dk">更新</span>' + r[4] + '</div>');
+    if (r[5]) out.push('<div class="sp-dline"><span class="sp-dk">缺省</span>' + r[5] + '</div>');
+    return out.length ? out.join('') : '<div class="sp-dline sp-none">—</div>';
+  };
+  const table = (rows, tags) => '<table class="sp-ftab"><tr><th>字段名称</th><th>示例值</th><th>数据详细</th></tr>' +
+    rows.map((r, i) => '<tr><td>' + r[0] + (tags && tags[i] ? '<span class="sp-ftag ' + (tags[i] === '新增' ? 'ft-new' : 'ft-diff') + '">' + tags[i] + '</span>' : '') + '</td><td>' + r[1] + '</td><td>' + cell(r) + '</td></tr>').join('') + '</table>';
+  const blockHtml = b => '<div class="sp-block"><div class="sp-bname">' + b.name + '</div>' + (b.rows ? table(b.rows) : '') + '</div>';
+  const base = n => n.split('（')[0];
+  const rowTag = (mb, r) => {
+    if(!mb) return '新增';
+    const mr = (mb.rows || []).find(x => x[0] === r[0]);
+    if(!mr) return '新增';
+    for(let i = 1; i < 6; i++){ if((r[i] || '') !== (mr[i] || '')) return '差异'; }
+    return null;
+  };
+  const num = n => +((n.match(/块(d+)/) || [0, '99'])[1]);
+  const mainMap = {}; mainSt.blocks.forEach(mb => mainMap[base(mb.name)] = mb);
+  const items = [];
+  mainSt.blocks.forEach(mb => {
+    const bn = base(mb.name);
+    const sb = st.blocks.find(b => base(b.name) === bn);
+    if(sb){
+      const rows = [], tags = [];
+      (sb.rows || []).forEach(r => { const t = rowTag(mb, r); if(t){ rows.push(r); tags.push(t); } });
+      items.push({ num: num(bn), name: bn, rows: rows, tags: tags });
+    } else {
+      items.push({ num: num(bn), name: bn, same: true });
+    }
+  });
+  st.blocks.forEach(sb => {
+    const bn = base(sb.name);
+    if(!mainMap[bn]){
+      const rows = [], tags = [];
+      (sb.rows || []).forEach(r => { rows.push(r); tags.push('新增'); });
+      items.push({ num: num(bn), name: bn, rows: rows, tags: tags });
+    }
+  });
+  items.sort((a, b) => a.num - b.num);
+  const groupHead = (t, s) => '<div class="sp-grp"><span class="sp-grp-t">' + t + '</span><span class="sp-grp-s">' + s + '</span></div>';
+  const subBlockHtml = it => (it.same || !it.rows.length)
+    ? ''
+    : '<div class="sp-block"><div class="sp-bname">' + it.name + '</div>' + table(it.rows, it.tags) + '</div>';
+  const bodyHtml = isMain
+    ? groupHead('主状态 · ' + label(spec.main), '完整字段定义') + mainSt.blocks.map(blockHtml).join('')
+    : groupHead('分状态 · ' + label(pvState), '只列与主状态不同的字段，其余同主状态') +
+      (items.filter(it => !it.same && it.rows.length).map(subBlockHtml).join('') ||
+        '<div class="sp-block"><div class="sp-same">该状态与主状态完全一致，无差异字段</div></div>');
+  document.getElementById('specCol').innerHTML =
+    '<div class="spec-obj">对象 · page.' + pvPage + '[' + stateLabelOf(pvPage, pvState) + '] · 帧 ' + ((PAGES[pvPage].frames && PAGES[pvPage].frames[pvState]) || PAGES[pvPage].frame) + '</div>' +
+    '<div class="spec-title">' + spec.name + '</div>' +
+    '<div class="sp-stline">状态：<span class="spec-state">' + label(pvState) + '</span>' +
+      (isMain ? '<span class="spec-main">主状态</span>' : '<span class="spec-sub">分状态</span>') + '</div>' +
+    sec('① 页面简介', '<div class="sp-intro">' + st.intro.map(x => '<div>' + x + '</div>').join('') + '</div>') +
+    sec('② 字段说明', bodyHtml);
+}
+
+// ============ selectPageState() ============
+function selectPageState(pg, st){
+  openPopupKey = null;
+  const pageMeta = PAGES[pg];
+  if(!pageMeta){
+    showToast('「' + pageNameOf(pg) + '」尚未搭建页面框架');
+    return;
+  }
+  // 一列菜单：选页面即切到页面模式（右栏换字段说明、隐藏步骤卡与引导）
+  document.body.classList.add('view-pages');
+  document.querySelectorAll('#flowMenu .p-item').forEach(n => n.classList.remove('cur'));
+  const spec = PAGE_SPECS[pg];
+  pvPage = pg;
+  pvState = st || (spec && spec.main) || (pageMeta.states ? pageMeta.states[0] : 'default');
+  applyPage(pg, pvState);
+  const fr = (pageMeta.frames && pageMeta.frames[pvState]) || pageMeta.frame;
+  const tf = frameOf(fr);
+  frames.forEach(f => f.classList.toggle('on', f === tf));
+  cur = fr;
+  renderFrameContent(fr, pvState);
+  renderTabs(); renderSpec();
+  document.querySelectorAll('#pagesMenu .p-item').forEach(n => {
+    n.classList.toggle('cur', n.dataset.pg === pg);
+  });
+}
+
+// ============ selectPagePopup()：宿主页面 + 叠加弹窗 ============
+function selectPagePopup(k){
+  const p = POPUPS[k];
+  if(!p) return;
+  openPopupKey = k;
+  pvPage = p.page;
+  pvState = p.states[0] || pvState;
+  applyPage(pvPage, pvState);
+  const tf = frameOf(p.frame);
+  frames.forEach(f => f.classList.toggle('on', f === tf));
+  cur = p.frame;
+  renderTabs(); renderSpec();
+  document.querySelectorAll('#pagesMenu .p-item').forEach(n => {
+    n.classList.toggle('cur', n.dataset.pop === k);
+  });
+}
+
+// ============ showToast() ============
+function showToast(msg, dur){
+  let t = document.getElementById('__toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = '__toast';
+    t.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#1B1F27;color:#fff;padding:12px 18px;border-radius:12px;font-size:13px;font-weight:600;line-height:1.6;text-align:center;max-width:330px;white-space:normal;z-index:9999;box-shadow:0 10px 30px -10px rgba(0,0,0,.5);pointer-events:none;opacity:0;transition:opacity .25s';
+    document.body.appendChild(t);
+  }
+  t.innerHTML = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => { t.style.opacity = '0'; }, dur || 2600);
+}
+
+// ============ 帧内交互：已按架构铁律移除 ============
+// 旧版的 click() / jumpOrTip() / bindEvents() 三件套已删除。
+// 理由：帧内零交互，所有跳转由 .steps 步骤卡 onClick → go() 承担；
+//       抽屉/弹窗/遮罩状态各自独立成帧，不需要 JS 开合。
+//       如新项目确有必须的演示动效（倒计时、小动画），写在 renderFrameContent() 里，
+//       但禁止在该函数里绑定任何 click。
+// ============ PAGE_SPECS JSON 加载（引擎） ============
+let PAGE_SPECS = {};
+let SPEC_READY = false;
+async function loadPageSpecs(){
+  try{
+    const res = await fetch('page_specs.json?v=' + Date.now(), { cache:'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    PAGE_SPECS = await res.json();
+    SPEC_READY = true;
+    if(typeof renderTree === 'function') renderTree();
+    if(typeof pvPage !== 'undefined' && pvPage && PAGE_SPECS[pvPage]){ renderTabs(); renderSpec(); }
+    console.log('page_specs.json 加载成功');
+  }catch(e){
+    SPEC_READY = false;
+    console.warn('page_specs.json 自动加载失败：' + e.message);
+    const show = () => {
+      const w = document.getElementById('specImport');
+      if(w) w.style.display = 'flex';
+      showToast('JSON 自动读取被拦截（file:// 直接打开）<br>请点击右下角「导入 page_specs.json」选择该文件', 5000);
+    };
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show); else show();
+  }
+}
+loadPageSpecs();
+
+function importSpecs(file, cb){
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      PAGE_SPECS = JSON.parse(r.result);
+      SPEC_READY = true;
+      renderTree();
+      selectPageState(pvPage, PAGE_SPECS[pvPage] ? PAGE_SPECS[pvPage].main : pvPage);
+      document.getElementById('specImport').style.display = 'none';
+      showToast('page_specs.json 导入成功 · ' + Object.keys(PAGE_SPECS).length + ' 个页面对象', 2600);
+      if(cb) cb(true);
+    }catch(err){
+      showToast('JSON 解析失败：' + err.message, 4000);
+      if(cb) cb(false);
+    }
+  };
+  r.onerror = () => { showToast('文件读取失败', 4000); if(cb) cb(false); };
+  r.readAsText(file, 'utf-8');
+}
+window.__loadSpecFile = importSpecs;
+const _importBtn = document.getElementById('specImportBtn');
+if(_importBtn) _importBtn.addEventListener('click', () => document.getElementById('specFile').click());
+const _specFile = document.getElementById('specFile');
+if(_specFile) _specFile.addEventListener('change', e => importSpecs(e.target.files[0]));
+
+// ============ 事件绑定 ============
+document.getElementById('pagesMenu').addEventListener('click', e => {
+  const n = e.target.closest('.p-item');
+  if(!n) return;
+  if(n.dataset.pop) selectPagePopup(n.dataset.pop);
+  else selectPageState(n.dataset.pg);
+});
+document.getElementById('stateTabs').addEventListener('click', e => {
+  const pp = e.target.closest('.st-pill[data-pop]');
+  if(pp){ selectPagePopup(pp.dataset.pop); return; }
+  const p = e.target.closest('.st-pill');
+  if(p) selectPageState(pvPage, p.dataset.st);
+});
+
+// 左菜单点击绑定：一列菜单里流程入口（B1~B4）与页面入口（一级/二级页面）并存
+document.querySelectorAll('#menuCol .p-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const idx = +item.dataset.idx;
+    const b = item.dataset.b;
+    if(isNaN(idx)) return;
+    // 点流程入口 = 回交互模式：显示步骤卡、隐藏字段说明与状态块
+    document.body.classList.remove('view-pages');
+    document.querySelectorAll('#pagesMenu .p-item').forEach(n => n.classList.remove('cur'));
+    go(idx, b);
+  });
+});
+
+// ============ 启动 ============
+renderTree();   // 一列菜单：页面入口先渲染出来（不依赖 JSON 是否加载成功）
+go(0, 'B1');
+
+</script>
+</body>
+</html>
