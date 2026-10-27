@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>美食内容社区 · B 端运营后台</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; --主色:#15803d; --主色深:#166534; --主色浅:#ecfdf3; }
+* { box-sizing: border-box; }
+body { margin:0; font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",-apple-system,sans-serif; background:#f1f5f9; color:#334155; -webkit-font-smoothing:antialiased; }
+.应用壳 { display:grid; grid-template-columns: var(--泳道宽) var(--菜单宽) minmax(0,1fr); height:100vh; overflow:hidden; }
+@media (max-width:1500px){ :root { --泳道宽:320px; --菜单宽:204px; } }
+@media (max-width:1280px){ :root { --泳道宽:280px; --菜单宽:190px; } }
+.泳道区 { background:#f8fafc; border-right:1px solid #e2e8f0; overflow-y:auto; padding:14px 12px 28px; }
+.泳道区 > h3 { margin:2px 4px 10px; font-size:14px; color:#334155; }
+.泳道简介 { margin:0 4px 12px; padding:9px 11px; font-size:12px; line-height:1.75; color:#475569; background:#fff; border:1px solid #e2e8f0; border-radius:8px; }
+.泳道简介 strong { color:#15803d; }
+.泳道简介 .li-row+.li-row { border-top:1px dashed #e2e8f0; margin-top:6px; padding-top:6px; }
+.泳道简介 a { color:#15803d; font-weight:700; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+.泳道图 { border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; font-size:12.5px; background:#fff; }
+.泳道头 { display:grid; grid-template-columns:repeat(3,1fr); border-bottom:2px solid #e2e8f0; }
+.泳道头 div { padding:9px 6px; text-align:center; font-weight:700; font-size:12.5px; }
+.泳道头 .h1 { background:#ecfdf3; color:#15803d; }
+.泳道头 .h2 { background:#eff6ff; color:#1d4ed8; }
+.泳道头 .h3 { background:#f8fafc; color:#475569; }
+.泳道行 { display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid #f1f5f9; }
+.泳道格 { padding:8px 6px; border-right:1px solid #f1f5f9; min-height:8px; }
+.泳道格:last-child { border-right:none; }
+.泳道块 { display:inline-block; padding:5px 8px; border-radius:6px; font-size:12px; font-weight:700; line-height:1.5; }
+.泳道块.g { background:#ecfdf3; color:#15803d; border:1px solid #86efac; }
+.泳道块.b { background:#eff6ff; color:#1d4ed8; border:1px solid #93c5fd; }
+.泳道块.s { background:#f8fafc; color:#475569; border:1px solid #cbd5e1; }
+.泳道块.可点 { cursor:pointer; }
+.泳道块.可点:hover { filter:brightness(.96); text-decoration:underline; }
+
+.菜单区 { background:#fff; border-right:1px solid #e2e8f0; overflow-y:auto; }
+.菜单品牌 { padding:18px 18px 14px; border-bottom:1px solid #eef2f7; }
+.菜单品牌名 { font-size:16px; font-weight:700; color:#172033; line-height:1.4; }
+.菜单品牌小 { font-size:11px; color:#94a3b8; margin-top:3px; letter-spacing:.5px; }
+.菜单父 { padding:16px 18px 4px; font-size:12px; color:#15803d; font-weight:700; letter-spacing:.5px; }
+.菜单叶子 { display:flex; align-items:center; gap:8px; color:#334155; font-size:13px; cursor:pointer; user-select:none; border-left:3px solid transparent; padding:8px 18px 8px 30px; }
+.菜单叶子:hover { background:#f1f5f9; color:#0f172a; }
+.菜单叶子.激活 { background:var(--主色浅); color:var(--主色深); border-left-color:var(--主色); font-weight:600; }
+.菜单号 { font-family:Consolas,monospace; font-size:11px; color:#94a3b8; min-width:26px; }
+.菜单叶子.激活 .菜单号 { color:var(--主色); }
+
+.内容区 { overflow-y:auto; background:#f1f5f9; }
+.页面面板 { display:none; padding:22px 26px 48px; }
+.页面面板.激活 { display:block; }
+.页面卡 { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:20px 24px; box-shadow:0 1px 3px rgba(15,35,52,.04); margin-bottom:18px; }
+.页面头 { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+.页面头 h2 { margin:0; font-size:19px; color:#172033; }
+.页面头 .右侧 { display:flex; gap:8px; align-items:center; }
+</style>
+<style id="css-组件">
+.流程信息卡 { border:1px solid #bbf7d0; border-left:4px solid #16a34a; border-radius:8px; background:linear-gradient(180deg,#f8fffb,#f1fdf6); margin-bottom:16px; overflow:hidden; }
+.流程信息卡-头部 { display:flex; align-items:center; gap:8px; padding:9px 14px; border-bottom:1px solid #dcfce7; }
+.流程步骤号 { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:#16a34a; color:#fff; font-size:12px; font-weight:700; flex-shrink:0; }
+.流程信息卡-环节名 { font-size:13.5px; font-weight:600; color:#166534; }
+.流程信息卡-正文 { padding:8px 14px 10px; display:flex; flex-direction:column; gap:5px; }
+.流程信息卡-行 { display:flex; align-items:flex-start; gap:8px; font-size:12.5px; line-height:1.7; }
+.流程信息卡-标签 { flex-shrink:0; display:inline-block; padding:1px 8px; border-radius:4px; font-size:11.5px; font-weight:600; }
+.流程信息卡-标签.路径 { background:#f1f5f9; color:#475569; }
+.流程信息卡-标签.影响 { background:#fef3c7; color:#92400e; }
+.流程信息卡-值 { color:#334155; }
+.流程信息卡-值 .路径分段 { color:#64748b; }
+.流程信息卡-值 .路径末段 { color:#1e293b; font-weight:600; }
+.工具栏 { display:flex; align-items:center; gap:10px; padding:12px 0; margin-bottom:12px; border-bottom:1px solid #e2e8f0; flex-wrap:wrap; }
+.搜索框 { display:flex; align-items:center; gap:6px; padding:6px 12px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; flex:1; max-width:280px; }
+.搜索图标 { font-size:14px; } .搜索输入 { border:none; outline:none; font-size:13px; flex:1; color:#1e293b; background:transparent; } .搜索输入::placeholder { color:#94a3b8; }
+.筛选区 { display:flex; align-items:center; gap:8px; flex-wrap:wrap; } .筛选标签 { font-size:12px; color:#64748b; font-weight:500; }
+.筛选下拉 { padding:5px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; color:#334155; background:#fff; cursor:pointer; }
+.表格滚动 { overflow-x:auto; }
+.数据表格 { width:100%; border-collapse:collapse; font-size:12.5px; }
+.列表表头 { background:#f8fafc; padding:9px 10px; text-align:left; font-weight:600; color:#475569; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
+.列表表头.操作列 { text-align:center; width:170px; position:sticky; right:0; z-index:2; background:#f8fafc; box-shadow:-10px 0 10px -8px rgba(15,23,42,.14); }
+.表头字段名 { display:block; font-size:12.5px; margin-bottom:2px; }
+.列表单元格 { padding:9px 10px; border-bottom:1px solid #f1f5f9; color:#334155; vertical-align:middle; }
+.列表单元格.操作列 { text-align:center; white-space:nowrap; position:sticky; right:0; z-index:1; background:#fff; box-shadow:-10px 0 10px -8px rgba(15,23,42,.12); }
+.数据行:hover .列表单元格.操作列 { background:#f8fafc; }
+.数据行:hover { background:#f8fafc; }
+.帖子标题 { font-weight:600; color:#1e293b; display:block; max-width:144px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.帖子编号 { font-size:11px; color:#94a3b8; font-family:Consolas,monospace; }
+.封面图 { width:46px; height:46px; border-radius:6px; object-fit:cover; border:1px solid #e2e8f0; display:block; }
+.内容格 { display:flex; align-items:center; gap:9px; }
+.内容文字 { min-width:0; }
+.互动数 { font-size:11.5px; color:#64748b; line-height:1.7; white-space:nowrap; }
+.互动数 b { color:#1e293b; }
+.互动数.总 { color:#15803d; font-weight:700; }
+.时间格 { font-size:12px; color:#475569; line-height:1.55; white-space:nowrap; }
+.时间次 { font-size:11px; color:#94a3b8; }
+.主按钮 { padding:7px 16px; border:1px solid var(--主色); border-radius:6px; background:var(--主色); color:#fff; font-size:13px; cursor:pointer; white-space:nowrap; font-family:inherit; }
+.主按钮:hover { background:var(--主色深); }
+.次按钮 { padding:7px 16px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; color:#475569; font-size:13px; cursor:pointer; white-space:nowrap; font-family:inherit; }
+.次按钮:hover { background:#f8fafc; }
+.详情按钮 { padding:3px 9px; border:1px solid #3b82f6; border-radius:4px; background:#fff; color:#3b82f6; font-size:12px; cursor:pointer; margin-right:3px; font-family:inherit; }
+.详情按钮:hover { background:#3b82f6; color:#fff; }
+.删除按钮 { padding:3px 9px; border:1px solid #ef4444; border-radius:4px; background:#fff; color:#ef4444; font-size:12px; cursor:pointer; font-family:inherit; }
+.删除按钮:hover { background:#ef4444; color:#fff; }
+.删除按钮:disabled { opacity:.4; cursor:not-allowed; border-color:#cbd5e1; color:#94a3b8; background:#f8fafc; }
+.列表脚注 { margin-top:8px; font-size:12px; color:#94a3b8; text-align:right; }
+.类型标签 { display:inline-block; padding:1px 6px; border-radius:4px; font-size:10.5px; font-weight:500; margin-left:5px; }
+.类型标签.string { background:#dbeafe; color:#1d4ed8; } .类型标签.number { background:#dcfce7; color:#15803d; }
+.类型标签.enum { background:#fef3c7; color:#b45309; } .类型标签.date { background:#f3e8ff; color:#7c3aed; }
+.类型标签.组合字段 { background:#f1f5f9; color:#64748b; } .类型标签.image { background:#ffe4e6; color:#be123c; }
+.状态徽章 { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; }
+.状态徽章.上架 { background:#ecfdf3; color:#027a48; }
+.状态徽章.下架 { background:#f1f5f9; color:#94a3b8; }
+.状态徽章.已删除 { background:#fef2f2; color:#dc2626; }
+.状态徽章.启用 { background:#ecfdf3; color:#027a48; }
+.状态徽章.停用 { background:#f1f5f9; color:#94a3b8; }
+.提示条 { border-radius:8px; padding:9px 14px; font-size:12.5px; line-height:1.8; margin-bottom:12px; }
+.提示条.g { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; }
+.提示条.b { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+.提示条.w { background:#fffbeb; border:1px solid #fcd34d; color:#92400e; }
+.编辑卡片区 { display:flex; flex-direction:column; gap:16px; }
+.field-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+.field-card-header { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:11px 16px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
+.field-card-header h4 { margin:0; font-size:14.5px; color:#1e293b; }
+.field-card-body { padding:6px 16px 12px; }
+.field-row { display:grid; grid-template-columns:132px 1fr; gap:12px; align-items:start; padding:9px 0; border-bottom:1px solid #f1f5f9; }
+.field-row:last-child { border-bottom:none; }
+.field-label { font-size:13px; font-weight:500; color:#475569; padding-top:7px; }
+.field-control { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.field-input { padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; color:#1e293b; width:100%; max-width:360px; font-family:inherit; background:#fff; }
+textarea.field-input { max-width:100%; min-height:96px; line-height:1.7; resize:vertical; }
+.field-input:disabled,.field-input[readonly] { background:#f8fafc; color:#64748b; }
+.field-select { padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; color:#1e293b; background:#fff; min-width:180px; font-family:inherit; }
+.field-readonly { font-size:13px; color:#64748b; padding-top:6px; }
+.field-hint { display:block; font-size:11.5px; color:#94a3b8; line-height:1.65; margin-top:2px; }
+.field-type-tag { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10.5px; font-weight:500; color:#64748b; background:#f1f5f9; }
+.tag-new { display:inline-block; padding:0 5px; margin-left:5px; border-radius:3px; font-size:10.5px; font-weight:700; color:#15803d; background:#dcfce7; vertical-align:1px; }
+.tag-chg { display:inline-block; padding:0 5px; margin-left:5px; border-radius:3px; font-size:10.5px; font-weight:700; color:#b45309; background:#fef3c7; vertical-align:1px; }
+.分类标签 { display:inline-block; padding:1px 7px; border-radius:4px; font-size:11px; font-weight:600; color:#0369a1; background:#e0f2fe; margin:1px 3px 1px 0; white-space:nowrap; }
+.排序格 { color:#94a3b8; }
+.多选组 { display:flex; gap:6px; flex-wrap:wrap; }
+.多选项 { display:inline-flex; align-items:center; gap:5px; padding:5px 11px; border:1px solid #cbd5e1; border-radius:999px; font-size:12.5px; color:#334155; background:#fff; cursor:pointer; user-select:none; }
+.多选项 input { margin:0; accent-color:#15803d; }
+.多选项:has(input:checked) { border-color:#15803d; background:#ecfdf5; color:#065f46; font-weight:600; }
+.多选项:has(input:disabled) { opacity:.55; cursor:not-allowed; background:#f8fafc; }
+.图片组 { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-start; }
+.图片项 { position:relative; width:74px; height:74px; border-radius:8px; overflow:hidden; border:1px solid #e2e8f0; }
+.图片项 img { width:100%; height:100%; object-fit:cover; }
+.图片项 .封面标 { position:absolute; left:0; bottom:0; right:0; background:rgba(21,128,61,.9); color:#fff; font-size:10px; text-align:center; padding:1px 0; }
+.图片加 { width:74px; height:74px; border:1px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:22px; color:#94a3b8; cursor:pointer; background:#f8fafc; }
+.分享预览 { max-width:360px; border:1px solid #e2e8f0; border-radius:8px; padding:12px; background:#f8fafc; display:flex; gap:10px; align-items:center; }
+.分享预览 .txt { flex:1; min-width:0; }
+.分享预览 .logo { font-size:11px; color:#94a3b8; margin-bottom:3px; }
+.分享预览 .ttl { font-size:13px; font-weight:600; color:#1e293b; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.分享预览 .foot { font-size:11px; color:#94a3b8; margin-top:4px; }
+.分享预览 img { width:64px; height:64px; border-radius:6px; object-fit:cover; flex-shrink:0; }
+.状态切换组 { display:inline-flex; border:1px solid #cbd5e1; border-radius:6px; overflow:hidden; }
+.状态切换组 button { padding:5px 18px; border:none; background:#fff; color:#64748b; font-size:12.5px; cursor:pointer; font-family:inherit; }
+.状态切换组 button.on { background:#15803d; color:#fff; font-weight:600; }
+.状态切换组 button.off.on { background:#94a3b8; }
+.提示容器 { position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:200; display:flex; flex-direction:column; gap:8px; align-items:center; }
+.提示 { padding:9px 18px; border-radius:8px; font-size:13px; box-shadow:0 6px 20px rgba(15,23,42,.16); opacity:0; transition:.2s; background:#fff; color:#334155; border:1px solid #e2e8f0; }
+.提示.显示 { opacity:1; transform:translateY(2px); }
+.提示.消失 { opacity:0; }
+.提示.成功 { background:#ecfdf3; color:#027a48; border-color:#a7f3d0; }
+.提示.信息 { background:#eff6ff; color:#1e40af; border-color:#bfdbfe; }
+.提示.警告 { background:#fffbeb; color:#92400e; border-color:#fcd34d; }
+.overlay { position:fixed; inset:0; display:none; background:rgba(15,23,42,.36); z-index:80; }
+.overlay.show { display:block; }
+.drawer { position:fixed; top:0; right:0; width:520px; max-width:94vw; height:100vh; background:#f8fafc; transform:translateX(100%); transition:.22s ease; z-index:90; box-shadow:-16px 0 42px rgba(15,23,42,.18); display:flex; flex-direction:column; }
+.drawer.show { transform:translateX(0); }
+.panel-head { height:60px; padding:0 22px; border-bottom:1px solid #d9e2ec; display:flex; align-items:center; justify-content:space-between; flex:0 0 auto; background:#fff; }
+.panel-title { font-size:17px; font-weight:700; color:#172033; }
+.btn-close { width:32px; height:32px; border:0; border-radius:6px; background:#f2f4f7; color:#596274; font-size:18px; cursor:pointer; }
+.panel-body { padding:18px 22px; overflow:auto; flex:1; }
+.panel-foot { display:flex; justify-content:flex-end; gap:10px; padding:14px 22px; border-top:1px solid #d9e2ec; background:#fff; }
+.开关 { display:inline-block; width:40px; height:22px; border-radius:999px; background:#cbd5e1; position:relative; cursor:pointer; vertical-align:middle; transition:background .18s; flex:none; }
+.开关 i { position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .18s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+.开关.on { background:#22c55e; }
+.开关.on i { left:21px; }
+.开关文字 { margin-left:8px; font-size:12.5px; font-weight:600; color:#94a3b8; vertical-align:middle; }
+.开关文字.on { color:#027a48; }
+.头像行 { display:flex; align-items:center; gap:12px; }
+.头像圆 { width:56px; height:56px; border-radius:50%; background:#ecfdf3; border:1px solid #bbf7d0; display:flex; align-items:center; justify-content:center; font-size:26px; }
+.列表头像 { width:32px; height:32px; border-radius:50%; background:#ecfdf3; border:1px solid #bbf7d0; display:flex; align-items:center; justify-content:center; font-size:16px; margin-right:6px; vertical-align:middle; }
+</style>
+</head>
+<body>
+<div class="应用壳">
+
+<!-- ============ 左：多方业务泳道图 ============ -->
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<div class="泳道简介">
+<div class="li-row"><strong>功能简介</strong>
+<div style="padding:2px 0 0 2px;">① 运营配置发布人、分类、帖子内容</div>
+<div style="padding:2px 0 0 2px;">② C 端三个 tab 浏览，详情页点赞/收藏/转发/不喜欢</div>
+<div style="padding:2px 0 0 2px;">③ 总互动 = 起始 + 真实，回传后台只读</div>
+<div style="padding:2px 0 0 2px;">④ 运营下架/删除，C 端过滤并走缺省</div>
+</div>
+<div class="li-row"><strong>后台页面</strong>
+<div style="padding:3px 0 0 2px;">① <a onclick="switchPage('3.1')">帖子管理</a>：列表、筛选、批量上架下架</div>
+<div style="padding:2px 0 0 2px;">② <a onclick="switchPage('3.2')">帖子编辑</a>：主图轮播、正文、地点、发布时间</div>
+<div style="padding:2px 0 0 2px;">③ <a onclick="switchPage('3.3')">发布人设置</a>：头像、名称、状态</div>
+<div style="padding:2px 0 0 2px;">④ <a onclick="switchPage('3.4')">分类管理</a>：名称、排序、状态</div>
+</div>
+</div>
+
+<div class="泳道图">
+<div class="泳道头"><div class="h1">运营后台（SaaS）</div><div class="h2">C 端用户</div><div class="h3">系统</div></div>
+
+<div class="泳道行">
+  <div class="泳道格"><span class="泳道块 g 可点" onclick="switchPage('3.3')">① 配置发布人</span> <span class="泳道块 g 可点" onclick="switchPage('3.4')">配置分类</span></div>
+  <div class="泳道格"></div>
+  <div class="泳道格"></div>
+</div>
+
+<div class="泳道行">
+  <div class="泳道格"><span class="泳道块 g 可点" onclick="switchPage('3.2')">② 新建帖子：主图轮播 / 正文 / 地点 / 发布时间</span></div>
+  <div class="泳道格"></div>
+  <div class="泳道格"></div>
+</div>
+
+<div class="泳道行">
+  <div class="泳道格"><span class="泳道块 g 可点" onclick="switchPage('3.1')">③ 保存即上架</span></div>
+  <div class="泳道格"><span class="泳道块 b">C 端 feed 三个 tab</span></div>
+  <div class="泳道格"><span class="泳道块 s">美食＝发布时间倒序 · 发现＝打乱 · 种草＝收藏</span></div>
+</div>
+
+<div class="泳道行">
+  <div class="泳道格"></div>
+  <div class="泳道格"><span class="泳道块 b">详情页：点赞 / 收藏 / 转发 / 不喜欢</span></div>
+  <div class="泳道格"><span class="泳道块 s">总互动 = 起始 + 真实，只读回传</span></div>
+</div>
+
+<div class="泳道行">
+  <div class="泳道格"><span class="泳道块 g 可点" onclick="switchPage('3.1')">④ 下架 / 删除</span></div>
+  <div class="泳道格"><span class="泳道块 b">三个 tab + 点赞/种草列表过滤；旧链接 → 缺省</span></div>
+  <div class="泳道格"><span class="泳道块 s">已下架/已删除不进 feed</span></div>
+</div>
+
+<div class="泳道行">
+  <div class="泳道格"><span class="泳道块 g 可点" onclick="switchPage('3.1')">⑤ 查看互动数据 · 上下架</span></div>
+  <div class="泳道格"></div>
+  <div class="泳道格"></div>
+</div>
+</div>
+</aside>
+
+<!-- ============ 中：左侧菜单 ============ -->
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">美食内容社区</div><div class="菜单品牌小">B 端运营后台 · 原型</div></div>
+
+<div class="菜单父"><span>内容管理</span></div>
+<div class="菜单叶子 激活" data-menu-page="3.1" onclick="switchPage('3.1')"><span class="菜单号">3.1</span><span>帖子管理</span></div>
+<div class="菜单叶子" data-menu-page="3.2" onclick="switchPage('3.2')"><span class="菜单号">3.2</span><span>帖子编辑</span></div>
+
+<div class="菜单父"><span>基础配置</span></div>
+<div class="菜单叶子" data-menu-page="3.3" onclick="switchPage('3.3')"><span class="菜单号">3.3</span><span>发布人设置</span></div>
+<div class="菜单叶子" data-menu-page="3.4" onclick="switchPage('3.4')"><span class="菜单号">3.4</span><span>分类管理</span></div>
+</nav>
+
+<!-- ============ 右：内容区 ============ -->
+<main class="内容区" id="内容区">
+
+<!-- ===== 3.1 帖子管理 ===== -->
+<section class="页面面板 激活" id="面_3_1" data-page="3.1">
+<div class="页面卡">
+<div class="页面头"><h2>帖子管理</h2>
+<div class="右侧"><span style="font-size:12px;color:#94a3b8;" id="postCount">共 6 篇</span><button class="主按钮" onclick="openPost(null)">+ 新建帖子</button></div>
+</div>
+
+<div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">②</span><span class="流程信息卡-环节名">当前环节：② 配置帖子内容</span></div><div class="流程信息卡-正文">
+<div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 内容管理 &gt;</span> <span class="路径末段">帖子管理</span></span></div>
+<div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">三个 tab 的 feed 顺序、详情页内容、分享卡片全部由本页数据驱动；起始互动数决定 C 端展示基数，总互动数由系统计算只读</span></div>
+</div></div>
+
+<div class="提示条 g">总点赞 / 总收藏 / 总转发 = <strong>起始数 + C 端真实增量</strong>，后台只读不可编辑；下架或删除后，C 端三个 tab、我的-点赞、我的-种草同步过滤，旧分享链接进入「帖子已删除」缺省。</div>
+
+<div class="工具栏">
+<div class="搜索框"><span class="搜索图标">🔍</span><input class="搜索输入" id="postSearch" type="text" placeholder="搜索标题或帖子 ID" oninput="applyPostFilter()"></div>
+<div class="筛选区">
+<span class="筛选标签">状态：</span><select class="筛选下拉" id="postStatusFilter" onchange="applyPostFilter()"><option value="all">全部（不含已删除）</option><option value="上架">上架</option><option value="下架">下架</option><option value="已删除">已删除</option></select>
+<span class="筛选标签">分类：</span><select class="筛选下拉" id="postCatFilter" onchange="applyPostFilter()"><option value="all">全部</option><option>推荐</option><option>活动</option><option>美食</option><option>新热打卡</option><option>周末出行</option></select>
+<span class="筛选标签">发布人：</span><select class="筛选下拉" id="postAuthorFilter" onchange="applyPostFilter()"><option value="all">全部</option><option>钰涵环游记</option><option>草莓公主</option><option>Sukie阿</option><option>小方</option></select>
+<button class="次按钮" onclick="batchStatus('上架')">批量上架</button>
+<button class="次按钮" onclick="batchStatus('下架')">批量下架</button>
+</div>
+</div>
+
+<div class="表格滚动">
+<table class="数据表格">
+<thead><tr>
+<th class="列表表头" style="width:34px;"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
+<th class="列表表头"><span class="表头字段名">封面 · 标题 / 帖子 ID<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">分类<span class="类型标签 enum">enum</span></span></th>
+<th class="列表表头"><span class="表头字段名">发布人<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">互动 起始 → 总<span class="类型标签 number">number</span></span></th>
+<th class="列表表头"><span class="表头字段名">排序<span class="类型标签 number">number</span><span class="tag-chg">已停用</span></span></th>
+<th class="列表表头"><span class="表头字段名">发布时间<span class="类型标签 date">date</span></span></th>
+<th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span></th>
+<th class="列表表头 操作列">操作</th>
+</tr></thead>
+<tbody id="postBody"></tbody>
+</table>
+</div>
+<div class="列表脚注" id="postFoot">共 6 篇帖子 · 列表默认不展示已删除</div>
+</div>
+</section>
+
+<!-- ===== 3.2 帖子编辑 ===== -->
+<section class="页面面板" id="面_3_2" data-page="3.2">
+<div class="页面卡">
+<div class="页面头"><h2 id="postEditTitle">新建帖子</h2>
+<div class="右侧"><button class="次按钮" onclick="switchPage('3.1')">返回列表</button><button class="主按钮" onclick="savePost()">保存</button></div>
+</div>
+
+<div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">②</span><span class="流程信息卡-环节名">当前环节：② 配置帖子内容（页面编辑类）</span></div><div class="流程信息卡-正文">
+<div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 内容管理 &gt;</span> <span class="路径末段">帖子编辑</span></span></div>
+<div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">主图第 1 张 = feed 封面 = 分享缩略图；发布时间即创帖时间，决定「美食」tab 倒序；排序为老字段，逻辑已停用、不参与任何排序</span></div>
+</div></div>
+
+<div class="提示条 b"><strong>字段标识：</strong><span class="tag-new">新增</span> 本次新增字段　<span class="tag-chg">变更</span> 沿用但形态变化　未标注 = 原有字段</div>
+
+<div class="编辑卡片区">
+
+<!-- 基本信息 -->
+<div class="field-card">
+<div class="field-card-header"><h4>基本信息</h4></div>
+<div class="field-card-body">
+<div class="field-row"><div class="field-label">标题</div><div class="field-control"><input class="field-input" id="f-title" maxlength="30" placeholder="≤ 30 字，兼作分享标题"><span class="field-type-tag">string</span></div></div>
+<div class="field-row"><div class="field-label">主图<span class="tag-chg">变更</span></div><div class="field-control" style="flex-direction:column;align-items:stretch;">
+  <div class="图片组" id="f-imgs">
+    <div class="图片项"><img src="资源/img/r2.png" alt=""><span class="封面标">封面</span></div>
+    <div class="图片项"><img src="资源/img/r1.png" alt=""></div>
+    <div class="图片项"><img src="资源/img/r3.png" alt=""></div>
+    <div class="图片加" onclick="toast('演示环境：上传入口不落库','信息')">+</div>
+  </div>
+  <span class="field-hint">1~9 张轮播图；第 1 张为封面（feed 卡 + 分享缩略图），详情页按序轮播。单图改为轮播。</span>
+</div></div>
+<div class="field-row"><div class="field-label">发布人</div><div class="field-control"><select class="field-select" id="f-author"><option value="钰涵环游记">钰涵环游记</option><option value="草莓公主">草莓公主</option><option value="Sukie阿">Sukie阿</option><option value="小方">小方（已停用）</option></select><span class="field-type-tag">enum</span><span class="field-hint">只可选「启用」状态的发布人</span></div></div>
+<div class="field-row"><div class="field-label">分类<span class="tag-new">新增</span></div><div class="field-control" style="flex-direction:column;align-items:stretch;">
+  <div class="多选组" id="f-cats"></div>
+  <span class="field-hint">可多选，至少选 1 个；只可选「启用」状态分类，对应 C 端分类栏，任一分分类栏命中即展示该帖。</span>
+</div></div>
+<div class="field-row"><div class="field-label">排序<span class="tag-chg">已停用</span></div><div class="field-control"><input class="field-input" id="f-sort" type="number" value="0" readonly style="max-width:140px;"><span class="field-type-tag">number</span><span class="field-hint">老字段，排序逻辑已不再生效：不参与「美食」「发现」「种草」任何 tab 的排序，仅保留历史值只读展示。</span></div></div>
+<div class="field-row"><div class="field-label">地点文案<span class="tag-new">新增</span></div><div class="field-control"><input class="field-input" id="f-loc" maxlength="20" placeholder="如：广州·天河区" style="max-width:260px;"><span class="field-type-tag">string</span><span class="field-hint">选填 ≤20 字；为空则 C 端详情页不展示 📍 行（整行隐藏，不留空位）</span></div></div>
+<div class="field-row"><div class="field-label">发布时间<span class="tag-new">新增</span></div><div class="field-control"><input class="field-input" id="f-time" type="text" readonly style="max-width:200px;"><span class="field-type-tag">date</span><span class="field-hint">创帖时间，保存时自动生成，不可编辑；「美食」tab 按此时间倒序，详情页日期取此值</span></div></div>
+</div>
+</div>
+
+<!-- 互动数据 -->
+<div class="field-card">
+<div class="field-card-header"><h4>互动数据</h4><span style="font-size:11.5px;color:#94a3b8;">总数只读，= 起始 + 真实</span></div>
+<div class="field-card-body">
+<div class="field-row"><div class="field-label">起始点赞数</div><div class="field-control"><input class="field-input" id="f-startLike" type="number" value="0" style="max-width:140px;" oninput="calcTotals()"><span class="field-type-tag">number</span></div></div>
+<div class="field-row"><div class="field-label">起始收藏数</div><div class="field-control"><input class="field-input" id="f-startCollect" type="number" value="0" style="max-width:140px;" oninput="calcTotals()"><span class="field-type-tag">number</span></div></div>
+<div class="field-row"><div class="field-label">起始转发数<span class="tag-new">新增</span></div><div class="field-control"><input class="field-input" id="f-startShare" type="number" value="0" style="max-width:140px;" oninput="calcTotals()"><span class="field-type-tag">number</span></div></div>
+<div class="field-row"><div class="field-label">总点赞数</div><div class="field-control"><input class="field-input" id="f-totalLike" type="number" readonly style="max-width:140px;"><span class="field-hint">起始 + 真实增量，不可编辑</span></div></div>
+<div class="field-row"><div class="field-label">总收藏数</div><div class="field-control"><input class="field-input" id="f-totalCollect" type="number" readonly style="max-width:140px;"><span class="field-hint">起始 + 真实增量，不可编辑</span></div></div>
+<div class="field-row"><div class="field-label">总转发数</div><div class="field-control"><input class="field-input" id="f-totalShare" type="number" readonly style="max-width:140px;"><span class="field-hint">起始 + 真实增量，不可编辑</span></div></div>
+<div class="field-row"><div class="field-label">不喜欢数<span class="tag-new">新增</span></div><div class="field-control"><input class="field-input" id="f-dislike" type="number" readonly style="max-width:140px;"><span class="field-hint">C 端不展示，用于观察推荐降噪效果</span></div></div>
+</div>
+</div>
+
+<!-- 正文 -->
+<div class="field-card">
+<div class="field-card-header"><h4>正文内容</h4><span style="font-size:11.5px;color:#94a3b8;" id="bodyCount">0 / 500</span></div>
+<div class="field-card-body">
+<div class="field-row" style="grid-template-columns:132px 1fr;"><div class="field-label">正文</div><div class="field-control"><textarea class="field-input" id="f-body" maxlength="500" placeholder="≤ 500 字，支持换行" oninput="countBody()"></textarea></div></div>
+</div>
+</div>
+
+<!-- 分享预览 -->
+<div class="field-card">
+<div class="field-card-header"><h4>分享预览（派生，不单独配置）</h4></div>
+<div class="field-card-body">
+<div class="field-row" style="grid-template-columns:132px 1fr;"><div class="field-label">微信卡片</div><div class="field-control">
+  <div class="分享预览">
+    <div class="txt"><div class="logo">🍚 小餐AI</div><div class="ttl" id="shareTitle">广州最推荐的自助！！！！</div><div class="foot">小程序</div></div>
+    <img id="shareImg" src="资源/img/r2.png" alt="">
+  </div>
+  <span class="field-hint">分享标题 = 帖子标题；分享图 = 主图第 1 张。无需单独设置。</span>
+</div></div>
+</div>
+</div>
+
+<!-- 状态与系统 -->
+<div class="field-card">
+<div class="field-card-header"><h4>帖子状态与系统信息</h4></div>
+<div class="field-card-body">
+<div class="field-row"><div class="field-label">帖子状态<span class="tag-new">新增</span></div><div class="field-control">
+  <div class="状态切换组" id="f-statusGroup"><button type="button" class="on" data-v="上架" onclick="pickStatus(this)">上架</button><button type="button" data-v="下架" onclick="pickStatus(this)">下架</button></div>
+  <span class="field-hint">下架后 C 端三个 tab、绑定列表同步隐藏；旧分享链接进入「帖子已删除」缺省</span>
+</div></div>
+<div class="field-row"><div class="field-label">帖子 ID<span class="tag-new">新增</span></div><div class="field-control"><span class="field-readonly" id="f-id">保存后自动生成</span></div></div>
+<div class="field-row"><div class="field-label">更新时间<span class="tag-new">新增</span></div><div class="field-control"><span class="field-readonly" id="f-updated">—</span><span class="field-hint">创建时间同「发布时间」，不重复设字段</span></div></div>
+</div>
+</div>
+
+</div>
+</div>
+</section>
+
+<!-- ===== 3.3 发布人设置 ===== -->
+<section class="页面面板" id="面_3_3" data-page="3.3">
+<div class="页面卡">
+<div class="页面头"><h2>发布人设置</h2><button class="主按钮" onclick="openAuthor(null)">+ 新增发布人</button></div>
+
+<div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置内容作者</span></div><div class="流程信息卡-正文">
+<div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 基础配置 &gt;</span> <span class="路径末段">发布人设置</span></span></div>
+<div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">C 端 feed 卡底部的作者名、详情页顶栏的头像与昵称；发布人停用后新建帖子不可再选，已引用的帖子照常展示</span></div>
+</div></div>
+
+<div class="提示条 w">发布人被帖子引用时<strong>只能停用、不能删除</strong>，避免历史帖子的作者信息变空白；删除校验在点击删除时判引用数（引用数不作为列表字段展示）。</div>
+
+<div class="表格滚动">
+<table class="数据表格">
+<thead><tr>
+<th class="列表表头"><span class="表头字段名">头像<span class="类型标签 image">image</span></span></th>
+<th class="列表表头"><span class="表头字段名">名称<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span></th>
+<th class="列表表头"><span class="表头字段名">创建时间<span class="类型标签 date">date</span></span></th>
+<th class="列表表头 操作列">操作</th>
+</tr></thead>
+<tbody id="authorBody"></tbody>
+</table>
+</div>
+<div class="列表脚注" id="authorFoot">共 4 个发布人</div>
+</div>
+</section>
+
+<!-- ===== 3.4 分类管理 ===== -->
+<section class="页面面板" id="面_3_4" data-page="3.4">
+<div class="页面卡">
+<div class="页面头"><h2>分类管理</h2><button class="主按钮" onclick="openCat(null)">+ 新增分类</button></div>
+
+<div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 配置分类（新增模块）</span></div><div class="流程信息卡-正文">
+<div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">SaaS 总后台 &gt; 基础配置 &gt;</span> <span class="路径末段">分类管理</span></span></div>
+<div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">C 端首页分类栏的文案、顺序与过滤结果；「全部」固定第一位，不占排序</span></div>
+</div></div>
+
+<div class="提示条 g">分类<strong>停用后分类栏隐藏，但该分类下的帖子仍在「全部」里可见</strong>（不是一起隐藏）；有引用的分类只能停用不能删除；至少保留 1 个启用分类。</div>
+
+<div class="表格滚动">
+<table class="数据表格">
+<thead><tr>
+<th class="列表表头"><span class="表头字段名">分类名称<span class="类型标签 string">string</span></span></th>
+<th class="列表表头"><span class="表头字段名">分类排序<span class="类型标签 number">number</span></span></th>
+<th class="列表表头"><span class="表头字段名">分类状态<span class="类型标签 enum">enum</span></span></th>
+<th class="列表表头"><span class="表头字段名">C 端展示<span class="类型标签 enum">enum</span></span></th>
+<th class="列表表头 操作列">操作</th>
+</tr></thead>
+<tbody id="catBody"></tbody>
+</table>
+</div>
+<div class="列表脚注" id="catFoot">共 5 个分类 · 分类栏顺序按排序值从大到小</div>
+</div>
+</section>
+
+</main>
+</div>
+
+<!-- ===== 抽屉 ===== -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+<div class="panel-head"><span class="panel-title" id="drawerTitle">编辑</span><button class="btn-close" onclick="closeDrawer()">✕</button></div>
+<div class="panel-body" id="drawerBody"></div>
+<div class="panel-foot" id="drawerFoot"></div>
+</div>
+
+<div class="提示容器" id="toastBox"></div>
+
+<script>
+/* ============ 数据 ============ */
+var POSTS = [
+  {id:'P20251127001',cover:'资源/img/r2.png',title:'广州最推荐的自助！！！！',cats:['美食','新热打卡'],author:'草莓公主',sLike:1200,sCol:600,sSha:100,rLike:175,rCol:90,rSha:20,dislike:3,sort:0,time:'2025-11-27 18:20',status:'上架',loc:'广州·天河区',body:'200块真的值！！带朋友来过生日她太开心了！',imgs:3},
+  {id:'P20251127002',cover:'资源/img/r1.png',title:'广州地图攻略',cats:['推荐','周末出行'],author:'钰涵环游记',sLike:980,sCol:520,sSha:64,rLike:132,rCol:41,rSha:9,dislike:1,sort:10,time:'2025-11-27 12:05',status:'上架',loc:'广州·越秀区',body:'一条线走完老城区，边走边吃，全程不踩雷。',imgs:3},
+  {id:'P20251126003',cover:'资源/img/r3.png',title:'小厨娘日常',cats:['活动','美食'],author:'Sukie阿',sLike:430,sCol:210,sSha:38,rLike:66,rCol:24,rSha:5,dislike:0,sort:0,time:'2025-11-26 19:40',status:'上架',loc:'广州·海珠区',body:'今天做了三菜一汤，成本不到 40 块。',imgs:4},
+  {id:'P20251125004',cover:'资源/img/m1.png',title:'摆摊第一天',cats:['新热打卡'],author:'小方',sLike:260,sCol:140,sSha:30,rLike:48,rCol:19,rSha:4,dislike:2,sort:0,time:'2025-11-25 21:10',status:'上架',loc:'广州·白云区',body:'第一次摆摊卖麻辣烫，晚上九点就卖空了。',imgs:2},
+  {id:'P20251124005',cover:'资源/img/b1.png',title:'周末探店合集',cats:['周末出行','推荐'],author:'Sukie阿',sLike:150,sCol:80,sSha:12,rLike:22,rCol:9,rSha:2,dislike:0,sort:0,time:'2025-11-24 10:00',status:'下架',loc:'广州·荔湾区',body:'周末三家店，人均 60 以内。',imgs:3},
+  {id:'P20251120006',cover:'资源/img/c1.png',title:'（已删除示例）肥宅快乐水测评',cats:['美食'],author:'小方',sLike:0,sCol:0,sSha:0,rLike:0,rCol:0,rSha:0,dislike:0,sort:0,time:'2025-11-20 16:00',status:'已删除',loc:'',body:'本条为已删除示例，C 端旧分享链接进入「帖子已删除」缺省页。',imgs:1}
+];
+
+var AUTHORS = [
+  {id:'A001',avatar:'🧭',name:'钰涵环游记',status:'启用',ref:1,created:'2026-10-20 10:12'},
+  {id:'A002',avatar:'🍓',name:'草莓公主',status:'启用',ref:1,created:'2026-10-20 10:15'},
+  {id:'A003',avatar:'🌿',name:'Sukie阿',status:'启用',ref:2,created:'2026-10-21 09:30'},
+  {id:'A004',avatar:'🍜',name:'小方',status:'停用',ref:2,created:'2026-10-22 15:44'}
+];
+
+var CATS = [
+  {id:'C01',name:'推荐',sort:50,status:'启用',ref:1,created:'2026-10-18'},
+  {id:'C02',name:'活动',sort:40,status:'启用',ref:1,created:'2026-10-18'},
+  {id:'C03',name:'美食',sort:30,status:'启用',ref:2,created:'2026-10-18'},
+  {id:'C04',name:'新热打卡',sort:20,status:'启用',ref:1,created:'2026-10-18'},
+  {id:'C05',name:'周末出行',sort:10,status:'停用',ref:1,created:'2026-10-18'}
+];
+
+var editPostId = null;
+var editAuthorIdx = null;
+var editCatIdx = null;
+
+/* ============ 页面切换 ============ */
+function switchPage(p){
+  document.querySelectorAll('.页面面板').forEach(function(el){ el.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(p).replace('.','_'));
+  if(panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单叶子').forEach(function(el){ el.classList.remove('激活'); });
+  var leaf = document.querySelector('[data-menu-page="' + p + '"]');
+  if(leaf) leaf.classList.add('激活');
+  var c = document.getElementById('内容区'); if(c) c.scrollTop = 0;
+}
+
+/* ============ 提示 ============ */
+function toast(msg, type, dur){
+  type = type || '信息'; dur = dur || 2200;
+  var box = document.getElementById('toastBox');
+  var el = document.createElement('div');
+  el.className = '提示 ' + type;
+  el.textContent = msg;
+  box.appendChild(el);
+  requestAnimationFrame(function(){ el.classList.add('显示'); });
+  setTimeout(function(){ el.classList.remove('显示'); setTimeout(function(){ el.remove(); }, 300); }, dur);
+}
+
+/* ============ 3.1 帖子列表 ============ */
+function total(p,kind){
+  if(kind==='like') return p.sLike + p.rLike;
+  if(kind==='col') return p.sCol + p.rCol;
+  return p.sSha + p.rSha;
+}
+function renderPosts(){
+  var body = document.getElementById('postBody');
+  var html = '';
+  POSTS.forEach(function(p, i){
+    html += '<tr class="数据行" data-status="' + p.status + '" data-cats="' + p.cats.join(',') + '" data-author="' + p.author + '" data-key="' + (p.title + p.id) + '">' +
+      '<td class="列表单元格"><input type="checkbox" class="rowCheck"></td>' +
+      '<td class="列表单元格"><div class="内容格"><img class="封面图" src="' + p.cover + '" alt=""><div class="内容文字"><span class="帖子标题" title="' + p.title + '">' + p.title + '</span><span class="帖子编号">' + p.id + '</span></div></div></td>' +
+      '<td class="列表单元格">' + p.cats.map(function(c){ return '<span class="分类标签">' + c + '</span>'; }).join('') + '</td>' +
+      '<td class="列表单元格">' + p.author + '</td>' +
+      '<td class="列表单元格"><div class="互动数">起始 ' + p.sLike + ' / ' + p.sCol + ' / ' + p.sSha + '</div><div class="互动数 总">总 ' + total(p,'like') + ' / ' + total(p,'col') + ' / ' + total(p,'sha') + '</div></td>' +
+      '<td class="列表单元格 排序格">' + p.sort + '</td>' +
+      '<td class="列表单元格 时间格">' + p.time.split(' ')[0] + '<br><span class="时间次">' + (p.time.split(' ')[1] || '') + '</span></td>' +
+      '<td class="列表单元格"><span class="状态徽章 ' + p.status + '">' + p.status + '</span></td>' +
+      '<td class="列表单元格 操作列">' +
+        '<button class="详情按钮" onclick="openPost(' + i + ')">编辑</button>' +
+        (p.status === '已删除'
+          ? '<button class="详情按钮" onclick="toast(\'已删除帖子不可恢复\',\'警告\')">恢复</button>'
+          : '<button class="详情按钮" onclick="togglePostStatus(' + i + ')">' + (p.status === '上架' ? '下架' : '上架') + '</button>' +
+            '<button class="删除按钮" onclick="delPost(' + i + ')">删除</button>') +
+      '</td></tr>';
+  });
+  body.innerHTML = html;
+  document.getElementById('postCount').textContent = '共 ' + POSTS.length + ' 篇';
+  applyPostFilter();
+}
+function togglePostStatus(i){
+  var p = POSTS[i];
+  p.status = (p.status === '上架') ? '下架' : '上架';
+  renderPosts();
+  toast('「' + p.title + '」已' + p.status + (p.status === '下架' ? '，C 端三个 tab 与绑定列表同步隐藏' : '，已恢复至 C 端 feed'), p.status === '上架' ? '成功' : '信息', 2600);
+}
+function delPost(i){
+  var p = POSTS[i];
+  if(!confirm('确认删除「' + p.title + '」？\n\n删除后 C 端三个 tab、我的-点赞、我的-种草同步过滤；用户从旧分享链接进入会看到「帖子已删除」缺省页。\n\n此操作不可恢复。')) return;
+  p.status = '已删除';
+  renderPosts();
+  toast('「' + p.title + '」已删除，C 端旧链接进入缺省页', '信息', 2600);
+}
+function applyPostFilter(){
+  var kw = (document.getElementById('postSearch').value || '').trim().toLowerCase();
+  var st = document.getElementById('postStatusFilter').value;
+  var ct = document.getElementById('postCatFilter').value;
+  var au = document.getElementById('postAuthorFilter').value;
+  var rows = document.querySelectorAll('#postBody .数据行');
+  var shown = 0;
+  rows.forEach(function(tr){
+    var okKw = !kw || (tr.getAttribute('data-key') || '').toLowerCase().indexOf(kw) > -1;
+    var okSt = st === 'all' ? tr.getAttribute('data-status') !== '已删除' : tr.getAttribute('data-status') === st;
+    var okCt = ct === 'all' || (tr.getAttribute('data-cats') || '').split(',').indexOf(ct) > -1;
+    var okAu = au === 'all' || tr.getAttribute('data-author') === au;
+    var show = okKw && okSt && okCt && okAu;
+    tr.style.display = show ? '' : 'none';
+    if(show) shown++;
+  });
+  document.getElementById('postFoot').textContent = '共 ' + shown + ' 篇帖子 · 总互动 = 起始 + 真实（只读）';
+}
+function toggleAll(cb){
+  document.querySelectorAll('#postBody .rowCheck').forEach(function(c){ c.checked = cb.checked; });
+}
+function batchStatus(target){
+  var checked = document.querySelectorAll('#postBody .rowCheck:checked');
+  if(!checked.length){ toast('请先勾选要操作的帖子', '警告'); return; }
+  var n = 0;
+  checked.forEach(function(c){
+    var tr = c.closest('.数据行');
+    var key = tr.getAttribute('data-key');
+    POSTS.forEach(function(p){ if(p.title + p.id === key && p.status !== '已删除'){ p.status = target; n++; } });
+  });
+  renderPosts();
+  document.getElementById('checkAll').checked = false;
+  toast('已批量' + target + ' ' + n + ' 篇帖子（已删除帖自动跳过）', '成功', 2600);
+}
+
+/* ============ 3.2 帖子编辑 ============ */
+function openPost(i){
+  editPostId = i;
+  var p = (i === null) ? {id:'',cover:'资源/img/r2.png',title:'',cats:['推荐'],author:'钰涵环游记',sLike:0,sCol:0,sSha:0,rLike:0,rCol:0,rSha:0,dislike:0,sort:0,time:'',status:'上架',loc:'',body:'',imgs:1} : POSTS[i];
+  document.getElementById('postEditTitle').textContent = (i === null) ? '新建帖子' : '编辑帖子 · ' + p.id;
+  document.getElementById('f-title').value = p.title;
+  document.getElementById('f-author').value = p.author;
+  document.getElementById('f-cats').innerHTML = CATS.map(function(c){
+    var on = p.cats.indexOf(c.name) > -1;
+    var stopped = (c.status === '停用');
+    var dis = (stopped && !on) ? ' disabled' : '';
+    return '<label class="多选项"><input type="checkbox" value="' + c.name + '"' + (on ? ' checked' : '') + dis + '>' + c.name + (stopped ? '（已停用）' : '') + '</label>';
+  }).join('');
+  document.getElementById('f-sort').value = p.sort;
+  document.getElementById('f-loc').value = p.loc;
+  document.getElementById('f-time').value = (i === null) ? '保存时自动生成' : p.time;
+  document.getElementById('f-startLike').value = p.sLike;
+  document.getElementById('f-startCollect').value = p.sCol;
+  document.getElementById('f-startShare').value = p.sSha;
+  document.getElementById('f-dislike').value = p.dislike;
+  document.getElementById('f-body').value = p.body;
+  document.getElementById('f-id').textContent = p.id || '保存后自动生成';
+  document.getElementById('f-updated').textContent = (i === null) ? '—' : '2026-10-27 18:20';
+  document.getElementById('bodyCount').textContent = p.body.length + ' / 500';
+  document.getElementById('shareImg').src = p.cover;
+  document.getElementById('shareTitle').textContent = p.title || '帖子标题';
+  var pool = ['资源/img/r1.png','资源/img/r3.png','资源/img/b1.png','资源/img/m1.png','资源/img/c1.png'].filter(function(x){ return x !== p.cover; });
+  var pics = [p.cover].concat(pool).slice(0, p.imgs || 1);
+  var imgHtml = '';
+  pics.forEach(function(src, idx){
+    imgHtml += '<div class="图片项"><img src="' + src + '" alt="">' + (idx === 0 ? '<span class="封面标">封面</span>' : '') + '</div>';
+  });
+  imgHtml += '<div class="图片加" onclick="toast(\'演示环境：上传入口不落库\',\'信息\')">+</div>';
+  document.getElementById('f-imgs').innerHTML = imgHtml;
+  pickStatusValue(p.status);
+  calcTotals();
+  switchPage('3.2');
+}
+function pickStatusValue(v){
+  document.querySelectorAll('#f-statusGroup button').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-v') === v);
+  });
+}
+function pickStatus(btn){
+  document.querySelectorAll('#f-statusGroup button').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+}
+function currentStatus(){
+  var on = document.querySelector('#f-statusGroup button.on');
+  return on ? on.getAttribute('data-v') : '上架';
+}
+function calcTotals(){
+  var real = (editPostId === null) ? {like:0,col:0,sha:0} : {like:POSTS[editPostId].rLike,col:POSTS[editPostId].rCol,sha:POSTS[editPostId].rSha};
+  document.getElementById('f-totalLike').value = Number(document.getElementById('f-startLike').value || 0) + real.like;
+  document.getElementById('f-totalCollect').value = Number(document.getElementById('f-startCollect').value || 0) + real.col;
+  document.getElementById('f-totalShare').value = Number(document.getElementById('f-startShare').value || 0) + real.sha;
+}
+function countBody(){
+  document.getElementById('bodyCount').textContent = document.getElementById('f-body').value.length + ' / 500';
+}
+function savePost(){
+  var title = document.getElementById('f-title').value.trim();
+  if(!title){ toast('标题必填', '警告'); return; }
+  var cats = [];
+  document.querySelectorAll('#f-cats input[type=checkbox]:checked').forEach(function(cb){ cats.push(cb.value); });
+  if(!cats.length){ toast('分类至少选 1 个', '警告'); return; }
+  calcTotals();
+  if(editPostId === null){
+    var d = new Date();
+    var pad = function(n){ return (n < 10 ? '0' : '') + n; };
+    POSTS.unshift({
+      id:'P' + Date.now().toString().slice(-9), cover:'资源/img/r2.png', title:title,
+      cats:cats, author:document.getElementById('f-author').value,
+      sLike:Number(document.getElementById('f-startLike').value || 0),
+      sCol:Number(document.getElementById('f-startCollect').value || 0),
+      sSha:Number(document.getElementById('f-startShare').value || 0),
+      rLike:0, rCol:0, rSha:0, dislike:0,
+      sort:Number(document.getElementById('f-sort').value || 0),
+      time:d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()),
+      status:currentStatus(), loc:document.getElementById('f-loc').value,
+      body:document.getElementById('f-body').value, imgs:1
+    });
+    toast('帖子已创建并' + currentStatus() + '（演示环境，不落库）', '成功', 2400);
+  }else{
+    var p = POSTS[editPostId];
+    p.title = title; p.cats = cats; p.author = document.getElementById('f-author').value;
+    p.sort = Number(document.getElementById('f-sort').value || 0);
+    p.loc = document.getElementById('f-loc').value;
+    p.sLike = Number(document.getElementById('f-startLike').value || 0);
+    p.sCol = Number(document.getElementById('f-startCollect').value || 0);
+    p.sSha = Number(document.getElementById('f-startShare').value || 0);
+    p.body = document.getElementById('f-body').value;
+    p.status = currentStatus();
+    toast('帖子已保存（演示环境，不落库）', '成功', 2400);
+  }
+  renderPosts();
+  switchPage('3.1');
+}
+
+/* ============ 3.3 发布人 ============ */
+function renderAuthors(){
+  var html = '';
+  AUTHORS.forEach(function(a, i){
+    html += '<tr class="数据行">' +
+      '<td class="列表单元格"><span class="列表头像">' + a.avatar + '</span></td>' +
+      '<td class="列表单元格"><strong>' + a.name + '</strong><div style="font-size:11px;color:#94a3b8;">' + a.id + '</div></td>' +
+      '<td class="列表单元格"><span class="状态徽章 ' + a.status + '">' + a.status + '</span></td>' +
+      '<td class="列表单元格" style="white-space:nowrap;">' + a.created + '</td>' +
+      '<td class="列表单元格 操作列">' +
+        '<button class="详情按钮" onclick="openAuthor(' + i + ')">编辑</button>' +
+        '<button class="详情按钮" onclick="toggleAuthor(' + i + ')">' + (a.status === '启用' ? '停用' : '启用') + '</button>' +
+        '<button class="删除按钮" ' + (a.ref > 0 ? 'disabled title="已被 ' + a.ref + ' 篇帖子引用，只能停用"' : '') + ' onclick="delAuthor(' + i + ')">删除</button>' +
+      '</td></tr>';
+  });
+  document.getElementById('authorBody').innerHTML = html;
+  document.getElementById('authorFoot').textContent = '共 ' + AUTHORS.length + ' 个发布人 · 有引用只能停用';
+}
+function toggleAuthor(i){
+  var a = AUTHORS[i];
+  a.status = (a.status === '启用') ? '停用' : '启用';
+  renderAuthors();
+  toast('发布人「' + a.name + '」已' + a.status + (a.status === '停用' ? '，新建帖子不可再选，已有帖照常展示' : ''), a.status === '启用' ? '成功' : '信息', 2600);
+}
+function delAuthor(i){
+  var a = AUTHORS[i];
+  if(a.ref > 0){ toast('「' + a.name + '」已被 ' + a.ref + ' 篇帖子引用，只能停用', '警告', 2800); return; }
+  if(!confirm('确认删除发布人「' + a.name + '」？')) return;
+  AUTHORS.splice(i,1); renderAuthors(); toast('发布人已删除', '信息');
+}
+function openAuthor(i){
+  editAuthorIdx = i;
+  var a = (i === null) ? {id:'',avatar:'🍚',name:'',status:'启用',ref:0} : AUTHORS[i];
+  document.getElementById('drawerTitle').textContent = (i === null) ? '新增发布人' : '编辑发布人';
+  document.getElementById('drawerBody').innerHTML =
+    '<div class="编辑卡片区"><div class="field-card"><div class="field-card-header"><h4>发布人信息</h4></div><div class="field-card-body">' +
+    '<div class="field-row"><div class="field-label">头像</div><div class="field-control"><div class="头像行"><div class="头像圆" id="a-avatar">' + a.avatar + '</div><button class="次按钮" onclick="toast(\'演示环境：上传入口不落库\',\'信息\')">上传头像</button><span class="field-type-tag">image</span></div><span class="field-hint">1:1 比例，C 端 feed 卡与详情页顶栏使用</span></div></div>' +
+    '<div class="field-row"><div class="field-label">名称</div><div class="field-control"><input class="field-input" id="a-name" maxlength="12" value="' + a.name + '" placeholder="≤ 12 字"><span class="field-type-tag">string</span></div></div>' +
+    '<div class="field-row"><div class="field-label">状态<span class="tag-new">新增</span></div><div class="field-control"><span class="开关 ' + (a.status === '启用' ? 'on' : '') + '" id="a-switch" onclick="toggleSwitch(this,\'a-switch-label\')"><i></i></span><span class="开关文字 ' + (a.status === '启用' ? 'on' : '') + '" id="a-switch-label">' + a.status + '</span></div></div>' +
+    (a.ref > 0 ? '<div class="提示条 w" style="margin:10px 0 0;">该发布人已被 <strong>' + a.ref + ' 篇帖子引用</strong>，只能停用、不可删除；停用后新建帖子不可再选，已有帖子照常展示。</div>' : '') +
+    '</div></div></div>';
+  document.getElementById('drawerFoot').innerHTML = '<button class="次按钮" onclick="closeDrawer()">取消</button><button class="主按钮" onclick="saveAuthor()">保存</button>';
+  openDrawer();
+}
+function toggleSwitch(el, labelId){
+  el.classList.toggle('on');
+  var on = el.classList.contains('on');
+  var label = document.getElementById(labelId);
+  if(label){ label.textContent = on ? '启用' : '停用'; label.classList.toggle('on', on); }
+}
+function saveAuthor(){
+  var name = document.getElementById('a-name').value.trim();
+  if(!name){ toast('名称必填', '警告'); return; }
+  var on = document.getElementById('a-switch').classList.contains('on');
+  if(editAuthorIdx === null){
+    AUTHORS.push({id:'A' + String(AUTHORS.length + 1).padStart(3,'0'), avatar:'🍚', name:name, status:on?'启用':'停用', ref:0, created:'2026-10-27'});
+  }else{
+    AUTHORS[editAuthorIdx].name = name;
+    AUTHORS[editAuthorIdx].status = on ? '启用' : '停用';
+  }
+  renderAuthors(); closeDrawer(); toast('发布人已保存（演示环境，不落库）', '成功');
+}
+
+/* ============ 3.4 分类 ============ */
+function renderCats(){
+  var html = '';
+  CATS.forEach(function(c){
+    c.ref = POSTS.filter(function(p){ return p.cats.indexOf(c.name) > -1; }).length;
+  });
+  CATS.slice().sort(function(a,b){ return b.sort - a.sort; }).forEach(function(c){
+    var i = CATS.indexOf(c);
+    html += '<tr class="数据行">' +
+      '<td class="列表单元格"><strong>' + c.name + '</strong></td>' +
+      '<td class="列表单元格">' + c.sort + '</td>' +
+      '<td class="列表单元格"><span class="状态徽章 ' + c.status + '">' + c.status + '</span></td>' +
+      '<td class="列表单元格">' + (c.status === '启用' ? '分类栏可见' : '分类栏隐藏 · 帖子仍在「全部」') + '</td>' +
+      '<td class="列表单元格 操作列">' +
+        '<button class="详情按钮" onclick="openCat(' + i + ')">编辑</button>' +
+        '<button class="详情按钮" onclick="toggleCat(' + i + ')">' + (c.status === '启用' ? '停用' : '启用') + '</button>' +
+        '<button class="删除按钮" ' + (c.ref > 0 ? 'disabled title="已被 ' + c.ref + ' 篇帖子引用，只能停用"' : '') + ' onclick="delCat(' + i + ')">删除</button>' +
+      '</td></tr>';
+  });
+  document.getElementById('catBody').innerHTML = html;
+  document.getElementById('catFoot').textContent = '共 ' + CATS.length + ' 个分类 · 「全部」固定首位，不占排序';
+}
+function toggleCat(i){
+  var c = CATS[i];
+  var enabled = CATS.filter(function(x){ return x.status === '启用'; }).length;
+  if(c.status === '启用' && enabled <= 1){ toast('至少保留 1 个启用分类', '警告'); return; }
+  c.status = (c.status === '启用') ? '停用' : '启用';
+  renderCats();
+  toast('分类「' + c.name + '」已' + c.status + (c.status === '停用' ? '，分类栏隐藏，该分类帖子仍在「全部」可见' : ''), c.status === '启用' ? '成功' : '信息', 2800);
+}
+function delCat(i){
+  var c = CATS[i];
+  if(c.ref > 0){ toast('分类「' + c.name + '」已被 ' + c.ref + ' 篇帖子引用，只能停用', '警告', 2800); return; }
+  if(!confirm('确认删除分类「' + c.name + '」？')) return;
+  CATS.splice(i,1); renderCats(); toast('分类已删除', '信息');
+}
+function openCat(i){
+  editCatIdx = i;
+  var c = (i === null) ? {name:'',sort:0,status:'启用',ref:0} : CATS[i];
+  document.getElementById('drawerTitle').textContent = (i === null) ? '新增分类' : '编辑分类';
+  document.getElementById('drawerBody').innerHTML =
+    '<div class="编辑卡片区"><div class="field-card"><div class="field-card-header"><h4>分类信息<span class="tag-new">新增模块</span></h4></div><div class="field-card-body">' +
+    '<div class="field-row"><div class="field-label">分类名称</div><div class="field-control"><input class="field-input" id="c-name" maxlength="6" value="' + c.name + '" placeholder="≤ 6 字，唯一"><span class="field-type-tag">string</span><span class="field-hint">对应 C 端分类栏文案</span></div></div>' +
+    '<div class="field-row"><div class="field-label">分类排序</div><div class="field-control"><input class="field-input" id="c-sort" type="number" value="' + c.sort + '" style="max-width:140px;"><span class="field-type-tag">number</span><span class="field-hint">数值越大越靠前；「全部」固定第一位，不占排序</span></div></div>' +
+    '<div class="field-row"><div class="field-label">分类状态</div><div class="field-control"><span class="开关 ' + (c.status === '启用' ? 'on' : '') + '" id="c-switch" onclick="toggleSwitch(this,\'c-switch-label\')"><i></i></span><span class="开关文字 ' + (c.status === '启用' ? 'on' : '') + '" id="c-switch-label">' + c.status + '</span></div></div>' +
+    (c.ref > 0 ? '<div class="提示条 w" style="margin:10px 0 0;">该分类已被 <strong>' + c.ref + ' 篇帖子引用</strong>，只能停用、不可删除。</div>' : '') +
+    '</div></div></div>';
+  document.getElementById('drawerFoot').innerHTML = '<button class="次按钮" onclick="closeDrawer()">取消</button><button class="主按钮" onclick="saveCat()">保存</button>';
+  openDrawer();
+}
+function saveCat(){
+  var name = document.getElementById('c-name').value.trim();
+  if(!name){ toast('分类名称必填', '警告'); return; }
+  var on = document.getElementById('c-switch').classList.contains('on');
+  var sort = Number(document.getElementById('c-sort').value || 0);
+  if(editCatIdx === null){
+    CATS.push({id:'C' + String(CATS.length + 1).padStart(2,'0'), name:name, sort:sort, status:on?'启用':'停用', ref:0, created:'2026-10-27'});
+  }else{
+    CATS[editCatIdx].name = name;
+    CATS[editCatIdx].sort = sort;
+    CATS[editCatIdx].status = on ? '启用' : '停用';
+  }
+  renderCats(); closeDrawer(); toast('分类已保存（演示环境，不落库）', '成功');
+}
+
+/* ============ 抽屉 ============ */
+function openDrawer(){
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('drawer').classList.add('show');
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+/* ============ 初始化 ============ */
+renderPosts();
+renderAuthors();
+renderCats();
+</script>
+</body>
+</html>
