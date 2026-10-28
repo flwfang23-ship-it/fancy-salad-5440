@@ -658,11 +658,8 @@
       {
         "label": "分状态 · 我的视角（共用帧 5）",
         "states": [
-          "author-new",
-          "author-live",
           "author-win",
-          "author-lose",
-          "author-archive"
+          "author-lose"
         ]
       },
       {

@@ -2929,6 +2929,14 @@ function renderTabs(){
   const name = (spec && spec.name) || pageNameOf(pvPage);
   const pill = s => '<button class="st-pill' + (s === pvState ? ' cur' : '') + '" data-st="' + s + '">' + labelOf(s) + '</button>';
   const groups = (spec && spec.stateGroups) || null;
+  // 头部计数只统计「实际展示」的状态：主状态 + 分组内状态（分组外状态不展示）
+  let shownCount = allStates.length;
+  if(groups){
+    const set = new Set();
+    if(main && allStates.includes(main)) set.add(main);
+    groups.forEach(g => g.states.forEach(s => { if(allStates.includes(s)) set.add(s); }));
+    if(set.size) shownCount = set.size;
+  }
   let subHtml = '';
   if(groups){
     subHtml = groups.map(g =>
@@ -2951,7 +2959,7 @@ function renderTabs(){
     : '';
   document.getElementById('stateTabs').innerHTML =
     '<div class="st-head"><span class="st-page">' + name + '</span>' +
-      '<span class="st-key">page.' + pvPage + ' · ' + allStates.length + ' 个状态对象' +
+      '<span class="st-key">page.' + pvPage + ' · ' + shownCount + ' 个状态对象' +
         (pops.length ? ' · ' + pops.length + ' 个弹窗' : '') + '</span></div>' +
     (main ? '<div class="st-row"><span class="st-row-lb st-row-main">主状态</span>' + pill(main) + '</div>' : '') +
     subHtml + popHtml;
