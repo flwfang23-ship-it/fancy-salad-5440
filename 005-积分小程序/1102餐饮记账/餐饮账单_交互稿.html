@@ -1,0 +1,3588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>餐饮账单 · 路由拆分版交互稿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FFFEFA; --paper-dim:#F6F2E8; --ink:#1E1B16; --ink-soft:#6E685B;
+    --line:#E7E0CF; --dash:#C8C0AC; --seal:#C4392F; --seal-deep:#A02B23; --green:#2E7D4F;
+    --mono:'JetBrains Mono', monospace; --sans:'Noto Sans SC', sans-serif;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  [hidden]{ display:none !important; }
+  body{ height:100vh; overflow:hidden; background:#EDE9DF; font-family:var(--sans); color:var(--ink); }
+  .app{ display:grid; grid-template-columns:236px 318px minmax(0,1fr); height:100vh; }
+
+  /* 左栏：帧列表 */
+  .rail{ background:#fff; border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+  .rail-h{ padding:18px 16px 12px; border-bottom:1px solid var(--line); }
+  .rail-h .k{ font-size:10px; letter-spacing:.22em; color:var(--seal); font-weight:700; }
+  .rail-h .t{ margin-top:8px; font-size:16px; font-weight:900; letter-spacing:.12em; }
+  .rail-h .s{ margin-top:6px; font-size:11px; color:var(--ink-soft); letter-spacing:.06em; }
+  .rail-body{ flex:1; overflow-y:auto; padding:10px 10px 20px; }
+  .rg{ margin-bottom:2px; }
+  .rg-h{ display:flex; align-items:center; gap:7px; padding:14px 8px 7px; font-size:12px; font-weight:900; letter-spacing:.08em; }
+  .rg-h i{ width:6px; height:6px; background:var(--seal); transform:rotate(45deg); flex-shrink:0; }
+  .rg-h em{ margin-left:auto; font-family:var(--mono); font-size:10px; font-style:normal; color:var(--ink-soft); }
+  .ri{ display:flex; align-items:center; gap:9px; padding:10px 11px; border-radius:9px; cursor:pointer; font-size:12.5px; color:#4A453D; }
+  .ri:hover{ background:var(--paper-dim); }
+  .ri.on{ background:rgba(196,57,47,.09); color:var(--seal-deep); font-weight:700; }
+  .ri .n{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ri .ref{ font-family:var(--mono); font-size:9.5px; color:#A79F8D; flex-shrink:0; }
+  .ri .dot{ width:5px; height:5px; border-radius:50%; background:#D8D0BD; flex-shrink:0; }
+  .ri.on .dot{ background:var(--seal); }
+  .rf-row{ display:flex; align-items:center; gap:8px; padding:11px; border-radius:9px; cursor:pointer; font-size:12.5px; color:#4A453D; }
+  .rf-row:hover{ background:var(--paper-dim); }
+  .rf-row.on{ background:rgba(196,57,47,.09); color:var(--seal-deep); font-weight:700; }
+  .rf-row .rf-id{ font-family:var(--mono); font-size:9.5px; font-weight:800; color:var(--seal); flex-shrink:0; }
+  .rf-row .rf-n{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; letter-spacing:.04em; }
+  .rf-row.on .rf-n{ font-weight:900; }
+  .rf-row .rf-c{ font-family:var(--mono); font-size:9.5px; color:#A79F8D; flex-shrink:0; }
+  .rl-h{ padding:5px 10px 3px 24px; font-size:9.5px; font-weight:700; letter-spacing:.14em; color:#A79F8D; }
+  .rl-h.open{ padding:12px 4px 4px; font-size:10px; color:var(--seal); letter-spacing:.16em; }
+  /* 流程 / 页面 双轴切换 */
+  .mode-switch{ display:flex; gap:3px; margin-top:10px; padding:3px; background:var(--paper-dim); border-radius:8px; }
+  .ms{ flex:1; border:0; background:transparent; font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:.12em; color:var(--ink-soft); padding:5px 0; border-radius:6px; cursor:pointer; }
+  .ms.on{ background:#fff; color:var(--seal-deep); box-shadow:0 1px 2px rgba(30,27,22,.1); }
+  .ri .tag{ font-size:9px; letter-spacing:.08em; color:#A79F8D; border:1px solid var(--line); border-radius:3px; padding:1px 4px; flex-shrink:0; }
+  .rg-h.click{ cursor:pointer; }
+  .rg-h.click:hover{ color:var(--seal-deep); }
+  .rg-h .cv{ margin-left:auto; font-size:9px; font-weight:700; letter-spacing:.08em; color:var(--seal); border:1px solid rgba(196,57,47,.35); border-radius:3px; padding:1px 5px; }
+  .rg-h .cv + em{ margin-left:6px; }
+  .rg-fold{ padding:2px 8px 8px 21px; font-size:9.5px; letter-spacing:.08em; color:#A79F8D; }
+
+  /* 中栏：链路 + 字段 */
+  .fc-flow{ display:flex; align-items:baseline; gap:7px; padding:2px 4px 0; }
+  .fc-id{ font-family:var(--mono); font-size:10px; font-weight:800; color:var(--seal); }
+  .fc-n{ font-size:13px; font-weight:900; letter-spacing:.1em; }
+  .fc-g{ margin-left:auto; font-size:9px; letter-spacing:.12em; color:#A79F8D; border:1px solid var(--line); border-radius:4px; padding:2px 5px; flex-shrink:0; }
+  .fc-start{ margin:4px 4px 8px; font-size:10px; color:var(--ink-soft); letter-spacing:.05em; }
+  .fc-empty{ padding:16px 4px; font-size:11px; color:var(--ink-soft); letter-spacing:.06em; }
+  .flowcol{ background:#FAF7EF; border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+  .fc-h{ padding:16px 16px 10px; border-bottom:1px solid var(--line); }
+  .fc-h .t{ font-size:13px; font-weight:900; letter-spacing:.14em; }
+  .fc-h .s{ margin-top:5px; font-size:10.5px; color:var(--ink-soft); letter-spacing:.06em; }
+  .fc-body{ flex:1; overflow-y:auto; padding:12px 12px 24px; }
+  .step{ display:flex; gap:10px; cursor:pointer; padding:7px 8px; border-radius:9px; }
+  .step:hover{ background:#F1ECE0; }
+  .step.on{ background:#fff; box-shadow:0 0 0 1px var(--line); }
+  .step .idx{ width:22px; height:22px; border-radius:50%; border:1.5px solid var(--ink); display:grid; place-items:center; font-family:var(--mono); font-size:10px; font-weight:800; flex-shrink:0; }
+  .step.on .idx{ background:var(--ink); color:var(--paper); }
+  .step .t{ font-size:12.5px; font-weight:700; letter-spacing:.03em; }
+  .step .s{ margin-top:2px; font-size:10px; color:var(--ink-soft); letter-spacing:.03em; }
+  .arrow{ margin:0 0 0 18px; height:14px; border-left:1.5px dashed var(--dash); }
+
+  /* 右栏：手机 */
+  .stage{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:18px; min-width:0; position:relative; }
+  .annot{ width:392px; max-width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:10.5px; color:#6E6555; letter-spacing:.1em; }
+  .annot .fl{ display:flex; align-items:center; gap:7px; }
+  .annot .fl i{ width:6px; height:6px; background:var(--seal); transform:rotate(45deg); }
+  .fsel{ background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-family:var(--sans); font-size:10.5px; color:var(--ink); max-width:200px; outline:none; cursor:pointer; }
+  .phone{ width:392px; max-width:100%; height:min(820px, calc(100vh - 90px)); background:var(--paper-dim); border-radius:42px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 0 0 1px rgba(30,27,22,.14), 0 26px 58px rgba(30,27,22,.2); position:relative; }
+  .phone::before{ content:""; position:absolute; inset:0; z-index:0; opacity:.35; pointer-events:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.1'/></svg>"); }
+  .phone > *{ position:relative; z-index:1; }
+  .statusbar{ display:flex; justify-content:space-between; align-items:center; padding:15px 24px 0; font-family:var(--mono); font-size:11.5px; font-weight:700; flex-shrink:0; }
+  .statusbar .dots{ display:flex; gap:4px; align-items:center; }
+  .statusbar .dots b{ display:block; width:3px; height:3px; border-radius:50%; background:var(--ink); }
+  #screen{ flex:1; display:flex; flex-direction:column; min-height:0; }
+  .fade{ animation:fade .3s ease both; }
+  @keyframes fade{ from{ opacity:0; transform:translateY(6px); } }
+  .nav{ display:flex; align-items:center; gap:10px; padding:10px 16px 4px; flex-shrink:0; }
+  .nav .t{ font-size:15px; font-weight:900; letter-spacing:.1em; }
+
+  /* 底部 tab */
+  .tabbar{ flex-shrink:0; display:flex; border-top:1px solid var(--line); background:rgba(255,254,250,.95); padding:5px 8px 8px; }
+  .tab{ flex:1; min-height:50px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; font-weight:700; letter-spacing:.1em; color:#9A9385; cursor:pointer; position:relative; }
+  .tab svg{ width:20px; height:20px; }
+  .tab.on{ color:var(--ink); }
+  .tab.on::before{ content:""; position:absolute; top:-6px; width:14px; height:3px; background:var(--ink); }
+
+  /* 按钮：纯色 + 硬投影，无渐变 */
+  .cta{ border:0; border-radius:12px; background:var(--ink); color:var(--paper); min-height:50px; padding:14px 12px; font-family:var(--sans); font-size:14px; font-weight:900; letter-spacing:.16em; text-indent:.16em; cursor:pointer; box-shadow:0 4px 0 #000, 0 12px 20px -14px rgba(30,27,22,.6); transition:transform .15s, box-shadow .15s; }
+  .cta:active{ transform:translateY(3px); box-shadow:0 1px 0 #000; }
+  .cta.ghost{ background:transparent; color:var(--ink); border:1.5px solid var(--ink); box-shadow:0 4px 0 rgba(30,27,22,.85); }
+  .cta.ghost:active{ box-shadow:0 1px 0 rgba(30,27,22,.85); }
+  .cta.sm{ min-height:42px; font-size:12.5px; padding:10px 14px; border-radius:10px; letter-spacing:.1em; }
+
+  /* toast */
+  .toast{ position:absolute; left:50%; bottom:86px; transform:translate(-50%,12px); background:rgba(30,27,22,.94); color:var(--paper); font-size:12.5px; letter-spacing:.04em; padding:10px 16px; border-radius:9px; opacity:0; pointer-events:none; transition:.25s; z-index:99; max-width:82%; text-align:center; }
+  .toast.on{ opacity:1; transform:translate(-50%,0); }
+
+  /* ========== 首页 ========== */
+  .home{ flex:1; display:flex; flex-direction:column; min-height:0; position:relative; }
+  .scroll{ flex:1; overflow-y:auto; padding:2px 18px 18px; scrollbar-width:none; }
+  .scroll.has-float{ padding-top:58px; }
+  .scroll::-webkit-scrollbar{ display:none; }
+  .brand{ display:flex; justify-content:space-between; align-items:center; padding:9px 2px 0; animation:fade .4s .06s both; }
+  .brand .logo{ display:flex; align-items:center; font-size:14.5px; font-weight:900; letter-spacing:.28em; }
+  .brand .logo::before{ content:""; width:7px; height:7px; background:var(--ink); margin-right:8px; }
+  .brand .date{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); letter-spacing:.08em; }
+  /* 顶部：星期胶囊 + 头像 */
+  .wkcap{ display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:1px solid var(--line); border-radius:99px; background:var(--paper); font-size:11.5px; font-weight:700; letter-spacing:.04em; cursor:pointer; }
+  .wkcap .wkcap-ar{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); }
+  .wkcap .wkcap-lb{ color:var(--ink); }
+  .wkcap .wkcap-rg{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); letter-spacing:.02em; }
+  /* 账期箭头：到边界时禁用（不绑事件） */
+  .wkcap-ar.off{ opacity:.25; }
+  /* 月/周维度切换 pill：仅非当前侧可点 */
+  .mode-pill{ display:inline-flex; align-items:center; gap:2px; padding:3px; border:1px solid var(--line); border-radius:99px; background:var(--paper-dim); }
+  .mode-pill .mp-m, .mode-pill .mp-w{ padding:2px 9px; font-size:11px; font-weight:700; border-radius:99px; color:var(--ink-soft); transition:all .2s; cursor:pointer; }
+  .mode-pill .mp-m.on, .mode-pill .mp-w.on{ background:var(--ink); color:var(--paper); cursor:default; }
+  .ava{ width:34px; height:34px; border-radius:50%; background:var(--ink); color:var(--paper); display:grid; place-items:center; font-size:14px; font-weight:900; cursor:pointer; }
+  /* 三餐参考值网格 */
+  .refgrid{ display:grid; grid-template-columns:repeat(4,1fr); margin-top:10px; border:1px solid var(--line); border-radius:10px; background:#FFFCF4; overflow:hidden; }
+  .ref-cell{ padding:10px 4px 9px; text-align:center; }
+  .ref-cell + .ref-cell{ border-left:1px solid var(--line); }
+  .ref-cell .ref-k{ display:block; font-size:9.5px; color:var(--ink-soft); letter-spacing:.06em; }
+  .ref-cell .ref-a{ display:block; margin-top:2px; font-family:var(--mono); font-size:16px; font-weight:800; color:var(--ink); }
+  .ref-cell .ref-a::before{ content:"¥"; font-size:9px; font-weight:500; color:var(--ink-soft); margin-right:1px; }
+  .ref-cell em{ display:block; margin-top:3px; font-style:normal; font-size:9px; color:var(--ink-soft); letter-spacing:.01em; }
+  .ref-cell em.ok{ color:var(--green); font-weight:700; }
+  .ref-cell em.over{ color:var(--seal-deep); font-weight:700; }
+  .rc-sec .k-sub{ margin-left:6px; font-size:9.5px; font-weight:500; letter-spacing:.02em; color:var(--ink-soft); }
+  .rc-sec .rc-hint{ margin-left:auto; font-size:9px; font-weight:500; letter-spacing:.02em; color:var(--ink-soft); float:right; }
+  .rc-sec{ display:flex; align-items:baseline; }
+  /* 领券 / 订阅 双入口 */
+  .duo{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:13px; }
+  .entry{ position:relative; padding:12px 13px; border:1.5px solid var(--line); border-radius:12px; background:var(--paper); cursor:pointer; }
+  .entry:active{ transform:scale(.99); }
+  .entry b{ display:block; font-size:14px; font-weight:900; letter-spacing:.06em; }
+  .entry span{ display:block; margin-top:3px; font-size:10.5px; color:var(--ink-soft); letter-spacing:.02em; }
+  .entry .state{ margin-top:6px; font-size:9.5px; color:var(--ink-soft); }
+  .entry .go{ position:absolute; right:12px; top:50%; transform:translateY(-50%); font-family:var(--mono); font-size:14px; font-weight:800; color:var(--ink); margin:0; }
+  .entry.ticket{ border-color:var(--ink); }
+  .entry.sub{ background:#F7F4EC; }
+  /* 明细头补一笔 & 票尾 */
+  .lt-head{ display:flex; align-items:center; justify-content:space-between; }
+  .lt-head .add{ font-size:11px; color:var(--ink-soft); border-bottom:1px dashed var(--dash); cursor:pointer; }
+  .end-line{ margin-top:12px; padding-top:10px; border-top:1px dashed var(--line); font-size:10.5px; color:var(--ink-soft); letter-spacing:.02em; display:flex; align-items:center; gap:6px; }
+  .end-line .go{ margin-left:auto; color:var(--ink); border-bottom:1px dashed var(--dash); cursor:pointer; }
+  /* 餐段标（替代 emoji） */
+  .th.meal-早餐{ background:#FFF0DC; color:#B98A4E; border-color:#E8D4B8; }
+  .th.meal-午餐{ background:#E5F5EE; color:#3E8C74; border-color:#BFE0D0; }
+  .th.meal-晚餐{ background:#F3ECFA; color:#8B77B5; border-color:#D9CCEC; }
+  .th.meal-其他{ background:#F0EBE4; color:#8E8076; border-color:#DCD3C8; }
+
+  /* 7 日明细 */
+  .wt-day{ padding:9px 17px 10px; border-top:1px solid var(--line); animation:rowIn .45s cubic-bezier(.22,1,.36,1) both; }
+  .wt-day-top{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .wt-day-top .d{ display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:800; letter-spacing:.05em; }
+  .wt-day-top .d em{ font-style:normal; font-family:var(--mono); font-size:9.5px; font-weight:400; letter-spacing:.04em; color:var(--ink-soft); }
+  .wt-today{ font-size:9.5px; font-weight:700; letter-spacing:.06em; color:var(--ink-soft); }
+  .wt-day-top .sum{ font-family:var(--mono); font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .wt-orders{ margin-top:6px; }
+  .wt-o{ display:flex; align-items:center; gap:9px; padding:5px 0; }
+  .wt-o + .wt-o{ margin-top:2px; }
+  .wt-o .th{ width:36px; height:36px; border-radius:9px; background:var(--paper-dim); border:1px solid var(--line); display:grid; place-items:center; font-size:17px; flex-shrink:0; }
+  .wt-o .th.manual{ background:transparent; border:1.5px dashed var(--dash); font-family:var(--mono); font-size:13px; font-weight:700; color:var(--ink-soft); }
+  .wt-o .od{ flex:1; min-width:0; }
+  .wt-o .on{ font-size:12px; font-weight:700; letter-spacing:.02em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .wt-o .om{ margin-top:2px; display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:9px; color:var(--ink-soft); }
+  .wt-o .om .tag{ font-size:8.5px; padding:1px 5px; }
+  .wt-o .mo{ flex-shrink:0; font-family:var(--mono); font-size:11.5px; font-weight:800; font-variant-numeric:tabular-nums; color:#4A453C; }
+  .wt-none{ padding:18px 10px; text-align:center; font-size:10.5px; letter-spacing:.08em; color:#B6AE9C; }
+  .wt-del{ flex-shrink:0; min-height:32px; margin-left:2px; padding:0 6px; border:0; background:transparent; font-family:var(--sans); font-size:10px; letter-spacing:.06em; color:#A79F8D; cursor:pointer; }
+  .wt-del:active{ color:var(--seal); }
+
+  /* 订阅提醒悬浮条 */
+  .subfloat{ position:absolute; top:8px; left:14px; right:14px; z-index:6; min-height:44px; display:flex; align-items:center; gap:8px; padding:9px 15px; background:var(--paper); border:1px solid var(--line); border-radius:99px; box-shadow:0 8px 20px rgba(30,27,22,.15); font-size:11.5px; cursor:pointer; animation:fade .4s .05s both; }
+  .subfloat:active{ transform:scale(.99); }
+  .subfloat .tx{ font-weight:900; letter-spacing:.06em; white-space:nowrap; }
+  .subfloat .tm{ font-family:var(--mono); font-size:9px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .subfloat .ar{ margin-left:auto; font-family:var(--mono); font-weight:800; color:var(--seal); }
+
+
+  /* 参照层（V2 长票）：分段块语法 */
+  .rc-block{ position:relative; margin-top:13px; padding:12px 13px 11px; background:#FFFCF4; border:1px solid var(--line); border-radius:12px; }
+  .rc-sec{ margin:0 0 7px; text-align:left; font-size:10px; font-weight:700; letter-spacing:.14em; color:var(--ink-soft); animation:fade .4s .52s both; }
+  .rc-kv{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-top:8px; font-size:10.5px; letter-spacing:.04em; color:var(--ink-soft); animation:fade .4s .62s both; }
+  .rc-kv .v{ flex-shrink:0; font-family:var(--mono); font-size:12px; color:var(--ink); letter-spacing:0; }
+  .rc-dash.d2{ animation-delay:.42s; }
+  .rc-prog{ display:flex; align-items:center; gap:2px; margin-top:11px; animation:fade .4s .5s both; }
+  .rc-prog i{ flex:1; height:6px; background:rgba(30,27,22,.11); }
+  .rc-prog i.on{ background:var(--ink); }
+  .rc-prog i.over{ background:var(--seal); }
+  .rc-prog .pct{ margin-left:9px; flex-shrink:0; font-family:var(--mono); font-size:9.5px; color:var(--ink-soft); }
+  .rc-kv .v.word{ font-family:var(--sans); font-size:11px; letter-spacing:.04em; }
+  .rc-amt.neg{ color:var(--seal-deep); }
+
+  /* 首页 · 添加至桌面提示：右上角气泡，点任意处关闭 */
+  .dt-tip{ position:absolute; top:46px; right:12px; z-index:40; max-width:196px; padding:10px 13px; background:var(--ink); color:var(--paper); font-size:12px; line-height:1.55; letter-spacing:.03em; border-radius:10px; box-shadow:0 10px 24px rgba(28,26,23,.22); animation:fade .3s ease both; }
+  .dt-tip::after{ content:""; position:absolute; top:-4px; right:16px; width:9px; height:9px; background:var(--ink); transform:rotate(45deg); border-radius:2px; }
+
+  /* ========== 周首页独立块卡片样式 ========== */
+  .blk-card{ margin-top:14px; border:1px solid var(--line); border-radius:12px; background:var(--paper); padding:12px 13px 11px; }
+  .lead-card{ margin-top:14px; padding:12px 13px 11px; background:var(--paper); border:1px solid var(--line); border-left:3px solid var(--ink); border-radius:4px 12px 12px 4px; }
+  .lead-card .rc-lead{ margin-top:0; border-top:none; padding:0 0 8px; }
+
+  /* ========== 模块3：7 天支出柱状图 ========== */
+  .wkchart{ padding:0; }
+  .wkchart-head{ display:flex; align-items:baseline; justify-content:space-between; }
+  .wkchart-head .wk-title{ font-size:10px; font-weight:700; letter-spacing:.14em; color:var(--ink-soft); }
+
+  /* 柱子绘图区：固定高，只放柱子 + 参考线（绝对定位） */
+  .wkchart-area{ position:relative; margin-top:6px; height:80px; }
+  .wkchart-area .wk-ref{ position:absolute; left:0; right:0; border-top:1px dashed rgba(30,27,22,.35); }
+  .wkchart-area .wk-ref .wk-ref-label{ position:absolute; right:-1px; top:-11px; font-family:var(--mono); font-size:8.5px; color:rgba(30,27,22,.55); letter-spacing:.03em; padding:1px 4px 1px 5px; background:#FFFCF4; }
+  .wkbars{ position:absolute; inset:0; display:flex; align-items:flex-end; }
+  .wkbar-col-wrap{ flex:1; display:flex; justify-content:center; align-items:flex-end; height:100%; }
+  .wkbar-col{ width:62%; max-width:18px; background:var(--ink); border-radius:2px 2px 0 0; position:relative; }
+  .wkbar-col.empty{ height:0 !important; background:transparent; }
+  .wkbar-col.over{ background:#C4392F; }
+  .wkbar-col.over::after{ content:"▲"; position:absolute; top:-8px; left:50%; transform:translateX(-50%); font-size:7px; color:#C4392F; font-weight:900; }
+
+  /* 数值 + 日标：独立一行，正常文档流，与柱子一一对齐 */
+  .wkbars-foot{ display:flex; align-items:flex-start; margin-top:4px; }
+  .wkbar-foot{ flex:1; display:flex; flex-direction:column; align-items:center; }
+  .wkbar-foot .wkbar-val{ font-family:var(--mono); font-size:8.5px; font-weight:700; color:var(--ink); letter-spacing:.02em; }
+  .wkbar-foot .wkbar-val.empty{ color:rgba(30,27,22,.25); }
+  .wkbar-foot .wkbar-lbl{ font-size:9px; color:var(--ink-soft); margin-top:2px; letter-spacing:.02em; }
+  .wkbar-foot.today .wkbar-lbl{ color:var(--ink); font-weight:800; }
+  .wkbar-foot.today .wkbar-lbl::after{ content:""; display:block; width:4px; height:4px; border-radius:50%; background:var(--ink); margin:1px auto 0; }
+
+  /* 引导语（"照这样分，本周不会超"）：放在柱状图和明细之间的小条 */
+  .rc-lead{ padding:8px 13px; margin-top:12px; border-top:1px dashed var(--line); font-size:10px; letter-spacing:.03em; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  .rc-lead .lead-t{ font-weight:700; color:var(--ink); font-size:11px; letter-spacing:.04em; }
+  .rc-lead .lead-h{ margin-left:auto; font-size:9px; color:var(--ink-soft); letter-spacing:.02em; }
+
+  /* 长票（V2）：小票与明细连成一张纸 · 悬浮微旋转对齐探索稿 */
+  @keyframes floatyFlat{ 0%,100%{ transform:rotate(-0.6deg) translateY(0); } 50%{ transform:rotate(-0.6deg) translateY(-6px); } }
+  .receipt.long{ transform:rotate(-0.6deg); animation:floatyFlat 5s 1.2s ease-in-out infinite; }
+  .lt-head{ margin:0 0 6px; text-align:left; animation:fade .4s 1.26s both; }
+  .lt-head .p-t{ font-size:10px; font-weight:700; letter-spacing:.2em; color:var(--ink-soft); }
+  .lt-act{ display:flex; align-items:center; gap:8px; min-height:40px; padding:0 2px; font-size:11px; letter-spacing:.02em; color:var(--ink); cursor:pointer; animation:fade .4s 1.32s both; }
+  .lt-act + .lt-act{ animation-delay:1.38s; }
+  .lt-act .ic{ width:14px; flex-shrink:0; text-align:center; font-family:var(--mono); font-weight:700; color:var(--ink-soft); }
+  .lt-act .ar{ margin-left:auto; font-family:var(--mono); font-weight:700; color:var(--ink-soft); }
+  .lt-act:active{ opacity:.5; }
+  .lt-act.mb{ margin-bottom:8px; }
+  /* 明细口径（走查标注，非产品 UI） */
+  .lt-filter{ margin:0 0 8px; padding:6px 8px; border-left:2px solid var(--seal); background:rgba(196,57,47,.06); font-size:9.5px; line-height:1.7; color:var(--seal-deep); letter-spacing:.02em; animation:fade .4s 1.3s both; }
+  .lt-filter b{ display:block; font-size:9.5px; font-weight:700; letter-spacing:.12em; color:var(--seal); margin-bottom:2px; }
+  .lt-filter span{ display:block; }
+  .receipt.long .rc-amt{ margin-top:4px; }
+
+  .receipt.long .rc-head{ font-size:9.5px; }
+  .receipt.long .rc-foot{ animation-delay:1.58s; }
+  .receipt.long .barcode{ animation-delay:1.64s; }
+  .receipt.long .wt-day{ margin-top:0; padding:0; border-top:0; }
+  .receipt.long .wt-day + .wt-day{ margin-top:11px; padding-top:11px; border-top:1px dotted var(--line); }
+  .receipt.long .rc-foot{ margin-top:19px; }
+  .subfloat.slim{ left:18px; right:18px; background:var(--paper); border:0; border-bottom:1px solid var(--line); border-radius:0; box-shadow:none; padding:9px 4px; }
+  .subfloat.slim .ar{ color:var(--ink); }
+  .receipt.long .wt-none{ padding:16px 4px; }
+
+  /* 明细区拆出小票后，行间距沿用长票口径 */
+  .lt-wrap .wt-day{ margin-top:0; padding:0; border-top:0; }
+  .lt-wrap .wt-day + .wt-day{ margin-top:11px; padding-top:11px; border-top:1px dotted var(--line); }
+  .lt-wrap .wt-none{ padding:16px 4px; }
+
+  /* 小票 */
+  .rc-wrap{ margin:14px 3px 0; filter:drop-shadow(0 12px 22px rgba(30,27,22,.14)); animation:printIn .7s cubic-bezier(.22,1,.36,1) both; }
+  .receipt{ position:relative; transform:rotate(-1.2deg); animation:floaty 5s 1.2s ease-in-out infinite; }
+  @keyframes printIn{ 0%{ opacity:0; transform:translateY(-64px) scale(.96); } 60%{ opacity:1; transform:translateY(6px) scale(1.004); } 100%{ opacity:1; transform:translateY(0) scale(1); } }
+  @keyframes floaty{ 0%,100%{ transform:rotate(-1.2deg) translateY(0); } 50%{ transform:rotate(-1.2deg) translateY(-6px); } }
+  .zz{ height:9px; background-repeat:repeat-x; background-size:12px 9px; }
+  .zz.t{ background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='9'><path d='M0 9 L6 0 L12 9 Z' fill='%23FFFEFA'/></svg>"); }
+  .zz.b{ background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='9'><path d='M0 0 L6 9 L12 0 Z' fill='%23FFFEFA'/></svg>"); }
+  .rc-body{ background:var(--paper); padding:15px 19px 13px; position:relative; }
+  .rc-head{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:9px; letter-spacing:.2em; color:var(--ink-soft); animation:fade .4s .2s both; }
+  .rc-label{ margin-top:13px; font-size:11px; font-weight:700; letter-spacing:.26em; color:var(--ink-soft); animation:fade .4s .28s both; }
+  .rc-amt{ margin-top:2px; font-family:var(--mono); font-size:44px; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums; animation:fade .4s .34s both; }
+  .rc-amt small{ font-size:18px; font-weight:700; }
+  .rc-dash{ border-top:1.5px dashed var(--dash); margin:12px 0; transform-origin:left; animation:dashIn .45s .5s both; }
+  .rc-dash.d2{ animation-delay:.74s; }
+  @keyframes dashIn{ from{ transform:scaleX(0); } }
+  .rc-foot{ display:flex; align-items:center; gap:12px; margin-top:11px; animation:fade .4s .9s both; }
+  .barcode{ height:30px; width:118px; flex-shrink:0; background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 4px,var(--ink) 4px 5px,transparent 5px 9px,var(--ink) 9px 12px,transparent 12px 14px); clip-path:inset(0 100% 0 0); animation:barIn .55s .98s ease-out both; }
+  @keyframes barIn{ to{ clip-path:inset(0 0 0 0); } }
+  .rc-meta{ display:flex; flex-direction:column; gap:3px; font-family:var(--mono); font-size:9px; letter-spacing:.1em; color:var(--ink-soft); }
+  .rc-meta .cn{ font-family:var(--sans); font-size:9.5px; }
+  .stamp{ position:absolute; right:14px; top:56px; width:78px; height:78px; border:2.5px solid var(--green); border-radius:50%; color:var(--green); display:grid; place-items:center; text-align:center; transform:rotate(-6deg); opacity:.92; mix-blend-mode:multiply; animation:stampIn .5s .62s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes stampIn{ 0%{ opacity:0; transform:rotate(-20deg) scale(2.4); } 100%{ opacity:.92; transform:rotate(-6deg) scale(1); } }
+  .stamp::before{ content:""; position:absolute; inset:5px; border:1px solid currentColor; border-radius:50%; opacity:.7; }
+  .stamp::after{ content:""; position:absolute; inset:-2.5px; border:2px solid currentColor; border-radius:50%; opacity:0; animation:echo .8s .66s ease-out both; }
+  @keyframes echo{ 0%{ opacity:.55; transform:scale(1); } 100%{ opacity:0; transform:scale(1.45); } }
+  .stamp .t{ font-size:9.5px; font-weight:900; letter-spacing:.02em; white-space:nowrap; }
+  .stamp .s{ margin-top:3px; font-family:var(--mono); font-size:7.5px; letter-spacing:.18em; }
+
+  /* 无单小票 */
+  @keyframes rowIn{ from{ opacity:0; transform:translateY(14px); } }
+  .p-t{ font-size:13.5px; font-weight:900; letter-spacing:.16em; display:flex; align-items:center; }
+  .p-t::before{ content:""; width:7px; height:7px; background:var(--ink); margin-right:7px; }
+
+  /* 积分页 */
+  .pg{ flex:1; overflow-y:auto; padding:6px 18px 18px; scrollbar-width:none; }
+  .pg::-webkit-scrollbar{ display:none; }
+  .pg-title{ margin-top:10px; font-size:23px; font-weight:900; letter-spacing:.14em; }
+  .pg-sub{ margin-top:5px; font-size:11.5px; color:var(--ink-soft); letter-spacing:.06em; }
+  .cp-hero{ margin-top:16px; border:1.5px solid var(--ink); border-radius:14px; background:var(--paper); padding:16px 17px; position:relative; overflow:hidden; }
+  .cp-hero .k{ font-family:var(--mono); font-size:9.5px; letter-spacing:.2em; color:var(--seal); }
+  .cp-hero .t{ margin-top:8px; font-size:17px; font-weight:900; letter-spacing:.08em; }
+  .cp-hero .s{ margin-top:6px; font-size:11.5px; color:var(--ink-soft); line-height:1.6; }
+  .cp-hero{ animation:rowIn .5s .1s cubic-bezier(.22,1,.36,1) both; }
+  .cp-deco{ position:absolute; right:-14px; top:-14px; width:78px; height:78px; border:2px dashed var(--dash); border-radius:50%; }
+  .cp-list{ margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+  .cp-card{ display:flex; align-items:center; gap:12px; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:13px 14px; animation:rowIn .5s cubic-bezier(.22,1,.36,1) both; }
+  .cp-card:nth-child(1){ animation-delay:.24s; }
+  .cp-card:nth-child(2){ animation-delay:.34s; }
+  .cp-logo{ width:44px; height:44px; border-radius:10px; display:grid; place-items:center; font-family:var(--mono); font-size:10px; font-weight:800; color:var(--paper); flex-shrink:0; }
+  .cp-logo.mt{ background:var(--ink); } .cp-logo.el{ background:var(--seal); }
+  .cp-info{ flex:1; min-width:0; }
+  .cp-info .n{ font-size:13.5px; font-weight:900; letter-spacing:.04em; }
+  .cp-info .v{ margin-top:3px; font-size:11.5px; color:var(--ink-soft); }
+  .cp-btn{ flex-shrink:0; min-height:44px; padding:0 16px; border-radius:9px; background:var(--ink); color:var(--paper); border:0; font-family:var(--sans); font-size:12.5px; font-weight:900; letter-spacing:.1em; box-shadow:0 3px 0 #000; cursor:pointer; }
+  .cp-note{ margin-top:14px; padding:11px 13px; border:1.5px dashed var(--dash); border-radius:10px; font-size:11px; color:var(--ink-soft); line-height:1.65; animation:rowIn .5s .46s cubic-bezier(.22,1,.36,1) both; }
+  .cp-note b{ color:var(--ink); }
+
+  /* 积分页：内容滚动 + 底部常驻提示条 + 吸底 tab */
+  .pgwrap{ flex:1; display:flex; flex-direction:column; min-height:0; }
+  .pts-sub{ flex-shrink:0; margin:0 14px 8px; display:flex; align-items:center; gap:9px; padding:10px 13px; border:1.5px dashed var(--dash); border-radius:11px; background:var(--paper); cursor:pointer; animation:fade .4s .5s both; }
+  .pts-sub:active{ background:var(--paper-dim); }
+  .pts-sub .ic{ font-size:13px; flex-shrink:0; }
+  .pts-sub .tx{ flex:1; min-width:0; }
+  .pts-sub .tx b{ display:block; font-size:11.5px; font-weight:900; letter-spacing:.04em; }
+  .pts-sub .tx small{ display:block; margin-top:2px; font-size:9.5px; color:var(--ink-soft); letter-spacing:.02em; }
+  .pts-sub .go{ flex-shrink:0; font-family:var(--mono); font-size:10.5px; font-weight:800; color:var(--seal); }
+
+  /* 外部下单 · 指示帧（纯文字，无按钮、无交互） */
+  .ext{ flex:1; overflow-y:auto; padding:6px 18px 20px; }
+  .ext-tag{ display:inline-block; margin-top:12px; padding:3px 8px; border:1px solid rgba(196,57,47,.45); border-radius:4px; font-family:var(--mono); font-size:9px; letter-spacing:.16em; color:var(--seal); }
+  .ext-title{ margin-top:13px; font-size:21px; font-weight:900; letter-spacing:.06em; line-height:1.35; }
+  .ext-sub{ margin-top:10px; font-size:12px; line-height:1.85; color:var(--ink-soft); letter-spacing:.02em; }
+  .ext-note{ margin-top:16px; padding-top:14px; border-top:1px dashed var(--line); font-size:12px; line-height:1.85; color:var(--ink-soft); letter-spacing:.02em; }
+  .ext-foot{ margin-top:22px; text-align:center; font-size:10px; letter-spacing:.14em; color:#B6AE9C; }
+
+  .tag{ font-size:9px; padding:2px 6px; border-radius:4px; border:1px solid var(--line); color:var(--ink-soft); letter-spacing:.04em; }
+  .tag.hl{ border-color:rgba(196,57,47,.45); color:var(--seal); }
+  .del-card{ border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fff; }
+  .del-row{ display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:11px; color:var(--ink-soft); }
+  /* 选周 / 选月抽屉：账期行列表 */
+  .wk-list{ margin-top:12px; display:flex; flex-direction:column; gap:8px; max-height:300px; overflow-y:auto; padding-right:2px; }
+  .wk-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid var(--line); border-radius:10px; padding:11px 12px; background:#fff; cursor:pointer; transition:border-color .15s ease, background .15s ease; }
+  .wk-row:hover{ border-color:var(--dash); background:var(--paper); }
+  .wk-row.on{ border-color:rgba(196,57,47,.45); background:rgba(196,57,47,.06); }
+  .wk-row .tl .n{ font-size:13px; font-weight:700; letter-spacing:.04em; color:var(--ink); }
+  .wk-row .tl .s{ margin-top:3px; font-size:10px; letter-spacing:.05em; color:var(--ink-soft); }
+  .wk-row .tr{ display:flex; align-items:baseline; gap:8px; flex-shrink:0; }
+  .wk-row .tr .v{ font-family:var(--mono); font-size:13px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .wk-row .tr .c{ font-size:9.5px; letter-spacing:.06em; color:var(--ink-soft); white-space:nowrap; }
+  .wk-row.on .tr .c{ color:var(--seal); }
+  /* 无订单的账期：选择器里置灰不可点 */
+  .wk-row.off{ opacity:.45; cursor:not-allowed; background:var(--paper); border-color:var(--line); }
+  .wk-row.off:hover{ border-color:var(--line); background:var(--paper); }
+  .wk-row.off .tr .v, .wk-row.off .tr .c{ color:var(--ink-soft); }
+  .wk-note{ margin-top:10px; font-size:10px; line-height:1.6; color:var(--ink-soft); letter-spacing:.03em; }
+  .del-row .v{ font-family:var(--mono); font-size:11.5px; color:var(--ink); text-align:right; }
+  .del-note{ margin-top:12px; font-size:10.5px; line-height:1.7; color:var(--ink-soft); letter-spacing:.03em; }
+
+  /* 改预算 · 二次确认抽屉：旧 → 新对比 */
+  .bc-rows{ margin:2px 0 2px; }
+  .bc-row{ display:flex; justify-content:space-between; align-items:baseline; padding:12px 0; border-bottom:1px solid var(--line); }
+  .bc-row:last-child{ border-bottom:none; }
+  .bc-row .k{ font-size:10.5px; letter-spacing:.14em; color:var(--ink-soft); }
+  .bc-row .v{ font-size:12.5px; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+  .bc-row .v i{ font-style:normal; margin:0 7px; }
+  .bc-row .v b{ font-size:14px; color:var(--ink); }
+
+  /* 抽屉 */
+  #sheet{ position:absolute; inset:0; z-index:30; pointer-events:none; }
+  #sheet .mask, #sheet .sheet{ pointer-events:auto; }
+  .mask{ position:absolute; inset:0; background:rgba(30,27,22,.42); animation:maskIn .22s ease both; }
+  @keyframes maskIn{ from{ opacity:0; } }
+  .sheet{ position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:392px; max-width:100%; background:var(--paper); border-radius:20px 20px 0 0; padding:9px 20px 22px; animation:sheetUp .3s cubic-bezier(.22,1,.36,1) both; box-shadow:0 -12px 34px rgba(30,27,22,.2); max-height:88%; overflow-y:auto; }
+  @keyframes sheetUp{ from{ transform:translate(-50%,100%); } }
+  .handle{ width:36px; height:4px; border-radius:99px; background:var(--dash); margin:3px auto 14px; }
+  .sh-title{ font-size:18px; font-weight:900; letter-spacing:.08em; }
+  .sh-sub{ margin-top:5px; font-size:11px; color:var(--ink-soft); letter-spacing:.04em; line-height:1.6; }
+  .sh-label{ margin-top:16px; font-size:10.5px; font-weight:700; letter-spacing:.12em; color:var(--ink-soft); }
+  .sh-note{ margin-top:9px; font-size:10.5px; line-height:1.65; color:var(--seal); letter-spacing:.03em; }
+  .input-row{ display:flex; align-items:center; gap:8px; margin-top:7px; border:1.5px solid var(--ink); border-radius:10px; padding:11px 13px; background:#fff; }
+  .input-row .pre{ font-family:var(--mono); font-size:15px; font-weight:800; }
+  .input-row .unit{ margin-left:auto; font-size:10.5px; color:var(--ink-soft); }
+  .input-row input{ flex:1; min-width:0; border:0; outline:none; font-family:var(--mono); font-size:18px; font-weight:800; color:var(--ink); background:transparent; }
+  .meal-inputs{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:10px; }
+  .meal-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
+  .meal-cell{ display:flex; flex-direction:column; gap:4px; border:1.5px solid var(--ink); border-radius:10px; padding:9px 11px; background:#fff; }
+  .meal-cell label{ font-size:10.5px; font-weight:700; letter-spacing:.1em; color:var(--ink-soft); }
+  .meal-cell input{ border:0; outline:none; font-family:var(--mono); font-size:18px; font-weight:800; color:var(--ink); background:transparent; width:100%; }
+  .meal-cell .mu{ font-size:10px; color:var(--ink-soft); align-self:flex-end; letter-spacing:.04em; }
+  .be-top{ display:flex; align-items:center; justify-content:space-between; padding:14px 22px 0; }
+  .be-back{ width:32px; height:32px; border-radius:50%; border:1px solid rgba(30,27,22,.12); display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--ink); cursor:pointer; }
+  .be-t{ font-size:13px; font-weight:600; letter-spacing:.08em; color:var(--ink); }
+  .be-ph{ width:32px; }
+  .ob-form-meals{ margin-top:10px; }
+  .ob-meals-tip{ margin-top:14px; font-size:11px; color:#A9A294; letter-spacing:.04em; }
+  .date-row{ display:flex; align-items:center; gap:10px; margin-top:7px; border:1.5px solid var(--ink); border-radius:10px; padding:8px 13px; background:#fff; }
+  .date-row input{ flex:1; min-width:0; border:0; outline:none; background:transparent; font-family:var(--mono); font-size:13px; font-weight:700; color:var(--ink); }
+  .date-row .hint{ font-size:10.5px; color:var(--ink-soft); letter-spacing:.06em; }
+  .chips{ display:flex; flex-wrap:wrap; gap:7px; margin-top:6px; }
+  .chip{ min-height:40px; padding:0 14px; border-radius:99px; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); font-family:var(--sans); font-size:12px; font-weight:700; letter-spacing:.04em; cursor:pointer; }
+  .chip.on{ background:var(--ink); border-color:var(--ink); color:var(--paper); }
+  .sh-actions{ display:flex; gap:9px; margin-top:18px; }
+  .sh-actions .cta{ flex:1; }
+  .toggle{ display:flex; align-items:center; gap:12px; margin-top:9px; padding:12px 13px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+  .toggle .tx{ flex:1; }
+  .toggle .tx .n{ font-size:13px; font-weight:700; }
+  .toggle .tx .s{ margin-top:2px; font-size:10.5px; color:var(--ink-soft); }
+  .sw{ width:46px; height:26px; border-radius:99px; background:#E3DDCC; border:0; position:relative; cursor:pointer; transition:.2s; flex-shrink:0; }
+  .sw::after{ content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.18); }
+  .sw.on{ background:var(--green); }
+  .sw.on::after{ left:23px; }
+
+  /* 日期订阅：整月日历多选，底部仅 +1 */
+  .ds-cal-title{ margin-top:14px; font-size:11px; font-weight:900; letter-spacing:.12em; text-align:center; color:var(--ink); }
+  .ds-cal-head{ display:grid; grid-template-columns:repeat(7,1fr); margin-top:9px; }
+  .ds-cal-head div{ text-align:center; font-size:9px; font-weight:700; color:var(--ink-soft); letter-spacing:.06em; padding:4px 0; }
+  .ds-cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:4px; }
+  .ds-cal-cell{ aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:9px;
+                border:1.5px solid var(--line); background:#fff; cursor:pointer; transition:.15s; }
+  .ds-cal-cell .d{ font-family:var(--mono); font-size:12px; font-weight:800; color:var(--ink); }
+  .ds-cal-cell.empty{ border:1.5px solid transparent; background:transparent; cursor:default; }
+  .ds-cal-cell.today{ border-color:var(--ink); }
+  .ds-cal-cell.on{ background:var(--ink); border-color:var(--ink); }
+  .ds-cal-cell.on .d{ color:var(--paper); }
+  .ds-count{ margin-top:12px; font-size:11px; color:var(--ink-soft); }
+  .ds-count b{ font-family:var(--mono); font-size:15px; font-weight:800; color:var(--seal); }
+  .ds-only{ margin-top:10px; }
+  .ds-only .cta{ width:100%; }
+
+  /* 成功抽屉 / 券 */
+  .cs-ticket{ margin-top:14px; border:1.5px dashed var(--seal); border-radius:12px; background:rgba(196,57,47,.045); padding:15px 16px; }
+  .cs-ticket .k{ font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; color:var(--seal); }
+  .cs-ticket .v{ margin-top:7px; font-size:19px; font-weight:900; letter-spacing:.08em; }
+  .cs-ticket .s{ margin-top:5px; font-size:11px; color:var(--ink-soft); }
+
+  /* 占位 */
+  .ph{ flex:1; display:grid; place-items:center; padding:24px; }
+  .ph-box{ border:1.5px dashed var(--dash); border-radius:13px; padding:24px 20px; text-align:center; max-width:250px; background:var(--paper); }
+  .ph-box .k{ font-family:var(--mono); font-size:9.5px; letter-spacing:.18em; color:var(--seal); border:1px solid rgba(196,57,47,.45); border-radius:4px; padding:3px 7px; display:inline-block; }
+  .ph-box .n{ margin-top:11px; font-size:15px; font-weight:900; }
+  .ph-box .s{ margin-top:6px; font-size:10.5px; color:var(--ink-soft); }
+
+  /* 订阅推送（微信服务通知 · 订阅消息模板） */
+  .nt{ flex:1; display:flex; flex-direction:column; background:#EDEDED; min-height:0; }
+  .nt-bar{ display:flex; align-items:center; padding:9px 16px 5px; font-size:14px; font-weight:700; color:#191919; flex-shrink:0; }
+  .nt-back{ width:22px; font-size:20px; line-height:1; color:#191919; }
+  .nt-title{ flex:1; text-align:center; letter-spacing:.02em; }
+  .nt-more{ width:22px; text-align:right; font-size:15px; letter-spacing:1px; color:#9A9A9A; }
+  .nt-date{ margin:8px 0 10px; text-align:center; font-size:10px; color:#B2B2B2; flex-shrink:0; }
+  .nt-msg{ margin:0 14px; padding:12px 14px 0; background:#fff; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.05); cursor:pointer; animation:fade .4s .12s both; }
+  .nt-msg:active{ background:#FAFAFA; }
+  .nt-app{ display:flex; align-items:center; gap:7px; }
+  .nt-logo{ width:18px; height:18px; border-radius:4px; background:var(--seal); color:#fff; display:grid; place-items:center; font-size:10px; font-weight:900; }
+  .nt-name{ font-size:11px; color:#8A8A8A; letter-spacing:.02em; }
+  .nt-badge{ margin-left:auto; font-size:9px; color:#B2B2B2; letter-spacing:.04em; }
+  .nt-t{ margin-top:9px; font-size:14.5px; font-weight:700; color:#191919; letter-spacing:.02em; line-height:1.4; }
+  .nt-box{ margin-top:9px; padding:9px 10px; background:#F7F7F7; border-radius:4px; }
+  .nt-row{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:3px 0; font-size:11px; color:#8A8A8A; letter-spacing:.02em; }
+  .nt-row .v{ flex-shrink:0; color:#191919; font-family:var(--mono); font-size:11px; }
+  .nt-row .v.long{ flex:1; min-width:0; text-align:right; font-family:var(--sans); font-size:11px; line-height:1.6; }
+  .nt-row.hot .v{ color:var(--seal); }
+  .nt-foot{ display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding:10px 0 11px; border-top:1px solid #F0F0F0; font-size:12px; color:#576B95; letter-spacing:.02em; }
+  .nt-foot .ar{ font-family:var(--mono); font-weight:700; }
+  .nt-hint{ margin-top:16px; text-align:center; font-size:10px; letter-spacing:.1em; color:#AFAFAF; }
+
+  /* 企微推广 · 演示帧（聊天页 + 小程序卡片） */
+  .wx{ flex:1; display:flex; flex-direction:column; background:#EDEDED; min-height:0; }
+  .wx-bar{ display:flex; align-items:center; padding:9px 16px 5px; font-size:14px; font-weight:700; color:#191919; flex-shrink:0; }
+  .wx-time{ margin:8px 0 12px; text-align:center; font-size:10px; color:#B2B2B2; flex-shrink:0; }
+  .wx-row{ display:flex; gap:9px; padding:0 14px; animation:fade .4s .1s both; }
+  .wx-av{ width:34px; height:34px; border-radius:5px; background:#2E7D4F; color:#fff; display:grid; place-items:center; font-size:12px; font-weight:900; flex-shrink:0; }
+  .wx-col{ flex:1; min-width:0; }
+  .wx-name{ font-size:10.5px; color:#8A8A8A; letter-spacing:.02em; }
+  .wx-bubble{ display:inline-block; margin-top:6px; max-width:100%; padding:8px 11px; background:#fff; border-radius:5px; font-size:12.5px; line-height:1.6; color:#191919; }
+  .mp-logo{ width:16px; height:16px; border-radius:3px; background:var(--seal); color:#fff; display:grid; place-items:center; font-size:9px; font-weight:900; }
+  .mp-nm{ font-size:10.5px; color:#8A8A8A; }
+  .mp-badge{ margin-left:auto; font-size:9px; color:#B2B2B2; }
+  /* 小程序卡片：宣传标题 + 主图 + 小程序名称 */
+  .wx-av.gray{ background:#B4B4B4; }
+  .mp-share{ margin-top:8px; max-width:250px; background:#fff; border-radius:5px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.05); cursor:pointer; }
+  .mp-share:active{ opacity:.92; }
+  .mp-title{ padding:9px 11px 8px; font-size:12.5px; font-weight:700; color:#191919; line-height:1.45; }
+  .mp-img{ height:132px; background:#E6E6E6; overflow:hidden; }
+  .mp-img img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .mp-bar{ display:flex; align-items:center; gap:6px; padding:9px 11px 10px; background:#fff; }
+  .wx-hint{ margin-top:auto; padding:14px 0 18px; text-align:center; font-size:10px; letter-spacing:.1em; color:#AFAFAF; }
+
+  /* 分享面板 */
+  .sh-row{ display:flex; align-items:center; gap:10px; margin-top:9px; padding:13px; border:1px solid var(--line); border-radius:10px; background:#fff; cursor:pointer; }
+  .sh-row:active{ background:var(--paper-dim); }
+  .sh-row .n{ flex:1; font-size:13px; font-weight:700; }
+  .sh-row .s{ font-size:10px; color:var(--ink-soft); }
+  .sh-row .ar{ font-family:var(--mono); font-size:13px; color:var(--seal); }
+  .sh-share-note{ margin-top:12px; padding:10px 12px; border:1.5px dashed var(--dash); border-radius:9px; font-size:10.5px; line-height:1.7; color:var(--ink-soft); }
+  .sh-share-note b{ color:var(--ink); }
+  .sh-preview{ margin-top:12px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--paper-dim); }
+  .sh-preview .k{ font-size:9px; letter-spacing:.16em; color:var(--ink-soft); }
+  .sh-preview .t{ margin-top:5px; font-size:15px; font-weight:700; line-height:1.4; }
+  .sh-preview .s{ margin-top:3px; font-size:10.5px; color:var(--ink-soft); }
+
+  /* 演示帧标识 */
+  .dmb{ display:inline-block; margin-left:6px; font-size:8.5px; font-weight:700; letter-spacing:.1em; color:var(--seal); border:1px solid rgba(196,57,47,.4); border-radius:3px; padding:1px 4px; vertical-align:1px; }
+  .brand-r{ display:flex; align-items:center; gap:10px; }
+  .sh-btn{ border:1px solid rgba(196,57,47,.35); border-radius:6px; background:transparent; color:var(--seal); font-family:var(--sans); font-size:10px; font-weight:700; letter-spacing:.1em; padding:3px 7px; cursor:pointer; }
+  .sh-btn:active{ background:rgba(196,57,47,.08); }
+
+  /* ========== 右栏：字段说明（走查层，可整体关闭） ========== */
+  .app.sp-on.sp-page{ grid-template-columns:236px 318px minmax(0,1fr) 324px; }
+  .specs-col{ display:none; flex-direction:column; min-height:0; background:#fff; border-left:1px solid var(--line); }
+  .app.sp-on.sp-page .specs-col{ display:flex; }
+  .specs-head{ padding:16px 15px 11px; border-bottom:1px solid var(--line); }
+  .specs-head .t{ font-size:13px; font-weight:900; letter-spacing:.14em; }
+  .specs-head .s{ margin-top:6px; font-size:10px; line-height:1.7; color:var(--ink-soft); letter-spacing:.04em; }
+  .specs-body{ flex:1; overflow-y:auto; padding:10px 11px 14px; scrollbar-width:thin; }
+  .specs-body::-webkit-scrollbar{ width:5px; }
+  .specs-body::-webkit-scrollbar-thumb{ background:rgba(30,27,22,.16); border-radius:3px; }
+  .specs-sep{ display:flex; align-items:center; gap:8px; margin:3px 2px 8px; font-size:9.5px; color:var(--ink-soft); letter-spacing:.12em; }
+  .specs-sep::after{ content:""; flex:1; height:1px; background:var(--line); }
+  .sp-card{ border:1px solid var(--line); border-radius:11px; padding:9px 10px 10px; margin-bottom:9px; background:#fff; }
+  .sp-card .sm-big{ display:flex; align-items:baseline; gap:7px; margin-bottom:7px; }
+  .sp-card .sm-big .v{ font-family:var(--mono); font-weight:800; font-size:15px; color:var(--ink); word-break:break-word; font-variant-numeric:tabular-nums; }
+  .sp-card .tag{ margin-left:auto; font-size:9.5px; letter-spacing:.1em; padding:1px 5px; border-radius:4px; border:1px solid var(--line); color:var(--ink-soft); flex-shrink:0; }
+  .sp-card .tag.s{ border-color:rgba(196,57,47,.38); color:var(--seal-deep); background:rgba(196,57,47,.06); }
+  .sp-row{ display:grid; grid-template-columns:52px 1fr; gap:6px; margin-top:5px; font-size:11px; line-height:1.7; }
+  .sp-row .k{ font-size:10px; color:#A79F8D; letter-spacing:.06em; }
+  .sp-row .v{ color:#5B554A; word-break:break-word; }
+  .specs-empty{ padding:20px 4px; font-size:10.5px; line-height:1.8; color:var(--ink-soft); letter-spacing:.06em; }
+  .sp-toggle{ display:none; margin-top:9px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink-soft); font-family:var(--sans); font-size:9.5px; font-weight:700; letter-spacing:.1em; padding:3px 8px; cursor:pointer; }
+  .app.sp-page .sp-toggle{ display:inline-block; }
+  .sp-toggle.on{ border-color:rgba(196,57,47,.4); color:var(--seal-deep); background:rgba(196,57,47,.07); }
+  .sp-toggle:active{ background:var(--paper-dim); }
+
+  /* SPECS 文字叙述版 */
+  .stage-annots{ position:absolute; inset:0; pointer-events:none; z-index:5; }
+  .stage-annot{ position:absolute; display:flex; align-items:center; gap:5px; left:calc(50% + 196px); transform:translateY(-50%); }
+  .stage-annot .num{ width:18px; height:18px; border-radius:50%; background:var(--seal); color:#fff; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; line-height:1; }
+  .stage-annot .lbl{ font-size:9.5px; color:var(--ink-soft); letter-spacing:.04em; white-space:nowrap; max-width:58px; overflow:hidden; text-overflow:ellipsis; }
+  .stage-annot .ln{ width:10px; height:1px; background:rgba(196,57,47,.45); }
+  .sp-h .sp-num{ display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; border-radius:50%; background:var(--seal); color:#fff; font-size:9.5px; font-weight:700; margin-right:5px; vertical-align:middle; }
+  .sp-block{ font-size:11px; line-height:1.85; color:#4A453C; }
+  .sp-block .sp-h{ font-size:11px; font-weight:700; color:var(--ink-soft); letter-spacing:.08em; margin:14px 0 5px; padding-bottom:3px; border-bottom:1px dashed var(--line); }
+  .sp-block .sp-h:first-child{ margin-top:0; }
+  .sp-block p{ margin:6px 0; word-break:break-word; }
+  .sp-block code{ font-family:var(--mono); font-size:10px; background:rgba(30,27,22,.06); padding:1px 4px; border-radius:3px; color:var(--ink); }
+  .sp-block .sp-red{ color:#C4392F; font-weight:700; font-style:normal; }
+  .sp-block .sp-inh{ color:var(--ink-soft); font-size:10.5px; background:rgba(30,27,22,.04); padding:4px 7px; border-radius:5px; margin-bottom:6px; }
+  .sp-badge{ font-size:9.5px; letter-spacing:.08em; padding:1px 6px; border-radius:4px; border:1px solid var(--line); }
+  .sp-badge.sp-main{ border-color:rgba(196,57,47,.4); color:var(--seal-deep); background:rgba(196,57,47,.08); font-weight:700; }
+  .sp-badge.sp-inh{ color:var(--ink-soft); }
+  .dmb.main{ background:rgba(196,57,47,.1); color:var(--seal-deep); border-color:rgba(196,57,47,.35); font-weight:700; }
+
+  /* 订阅被拒 · 开启引导（底部抽屉） */
+  .guide-mask{ top:34px; }
+  .guide-sheet{ max-height:80%; }
+  .wx-capwrap{ position:absolute; top:38px; right:12px; z-index:12; pointer-events:none; }
+  .wx-cap{ display:flex; align-items:center; height:26px; padding:0 9px; border-radius:14px; background:#fff; border:1px solid rgba(30,27,22,.18); box-shadow:0 2px 8px rgba(0,0,0,.18); font-size:12px; color:#191919; letter-spacing:1px; }
+  .wx-cap .sep{ width:1px; height:13px; background:rgba(30,27,22,.16); margin:0 8px; }
+  .wx-cap .o{ width:14px; height:14px; border-radius:50%; border:1.4px solid #191919; }
+  .wx-cap-ring{ position:absolute; inset:-3px; border-radius:16px; border:2px solid var(--seal); animation:capPulse 1.6s ease-in-out infinite; }
+  .wx-cap-tag{ position:absolute; top:-19px; right:0; font-size:9px; color:#fff; background:var(--seal); padding:1px 7px; border-radius:7px; white-space:nowrap; letter-spacing:.06em; }
+  @keyframes capPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(196,57,47,.4); } 50%{ box-shadow:0 0 0 6px rgba(196,57,47,0); } }
+  .gd-why{ margin-top:13px; font-size:10.5px; line-height:1.75; color:var(--ink-soft); background:rgba(196,57,47,.055); border-left:2px solid var(--seal); padding:8px 10px; border-radius:0 6px 6px 0; }
+  .gd-why b{ color:var(--seal-deep); }
+  .gd-pick{ margin-top:8px; font-size:10px; color:var(--ink-soft); letter-spacing:.03em; }
+  .gd-step{ margin-top:13px; }
+  .gd-step .hd{ display:flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:var(--ink); }
+  .gd-step .hd i{ width:17px; height:17px; border-radius:50%; background:var(--seal); color:#fff; font-style:normal; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .gd-menu{ margin:8px 0 0 24px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff; box-shadow:0 6px 16px rgba(30,27,22,.06); }
+  .gd-menu .mi{ display:flex; justify-content:space-between; padding:8px 12px; font-size:11px; color:#191919; border-bottom:1px solid var(--line); }
+  .gd-menu .mi:last-child{ border-bottom:0; }
+  .gd-menu .mi.hit{ background:rgba(196,57,47,.07); color:var(--seal-deep); font-weight:700; }
+  .gd-menu .mi.hit::after{ content:"← 点这一行"; font-size:9.5px; color:var(--seal); }
+  .gd-tog{ margin:8px 0 0 24px; border:1px solid var(--line); border-radius:10px; padding:4px 12px; background:#fff; }
+  .gd-tog .tg{ display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:11px; color:#191919; }
+  .gd-tog .tg .sw2{ width:30px; height:16px; border-radius:99px; background:#D8D4CA; position:relative; flex-shrink:0; }
+  .gd-tog .tg .sw2::after{ content:""; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:#fff; }
+  .gd-tog .tg .sw2.on{ background:var(--seal); }
+  .gd-tog .tg .sw2.on::after{ left:16px; }
+  .gd-hint{ margin-top:16px; padding-top:11px; border-top:1px dashed var(--line); font-size:10px; color:var(--ink-soft); letter-spacing:.03em; text-align:center; }
+  .entry.sub.warn .state{ color:var(--seal); font-weight:700; }
+
+  /* 仿微信原生订阅授权弹窗 */
+  .auth-mask{ position:absolute; inset:0; z-index:20; pointer-events:auto; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:0 30px; animation:maskIn .2s ease both; }
+  .auth-box{ width:100%; background:#fff; border-radius:10px; overflow:hidden; animation:authPop .26s cubic-bezier(.22,1,.36,1) both; }
+  @keyframes authPop{ from{ transform:scale(.92); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .auth-hd{ padding:18px 18px 4px; font-size:14px; font-weight:700; color:#191919; text-align:center; }
+  .auth-bd{ padding:6px 18px 10px; }
+  .auth-li{ display:flex; gap:7px; font-size:11.5px; line-height:1.9; color:#4A453C; }
+  .auth-li i{ color:#B9B4AA; font-style:normal; }
+  .auth-note{ padding:0 18px 14px; font-size:10px; line-height:1.65; color:#9A9A9A; }
+  .auth-ft{ display:flex; border-top:1px solid #E8E5DE; }
+  .auth-ft button{ flex:1; padding:12px 0; border:0; background:#fff; font-size:14px; color:#576B95; }
+  .auth-ft button + button{ border-left:1px solid #E8E5DE; }
+  .auth-ft .deny{ color:#191919; }
+
+  /* ========== 新手引导 · 全屏三步（极简） ========== */
+  .ob{ flex:1; display:flex; flex-direction:column; min-height:0; background:#FAFAF8; padding:0 26px 22px; }
+  .ob-top{ display:flex; align-items:center; justify-content:space-between; padding:16px 2px 0; flex-shrink:0; }
+  .ob-step{ font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.18em; color:#9A958C; }
+  .ob-dots{ display:flex; align-items:center; gap:5px; }
+  .ob-dots i{ width:5px; height:5px; border-radius:50%; background:rgba(30,27,22,.14); }
+  .ob-dots i.on{ background:var(--ink); }
+  .ob-body{ flex:1; display:flex; flex-direction:column; justify-content:center; min-height:0; padding-bottom:5vh; }
+  .ob-body-budget{ justify-content:center; padding-top:0; padding-bottom:2vh; }
+  .ob-title{ font-size:38px; line-height:1.18; font-weight:700; letter-spacing:-.045em; color:var(--ink); }
+  .ob-title em{ font-style:normal; display:block; }
+  .ob-art{ display:flex; justify-content:center; flex-shrink:0; margin-top:30px; }
+  .ob-art img{ width:248px; max-width:100%; height:auto; display:block; mix-blend-mode:multiply; }
+  .ob-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .ob-head-txt{ flex:1; min-width:0; }
+  .ob-body-budget .ob-art{ margin-top:0; }
+  .ob-body-budget .ob-art img{ width:132px; }
+  .ob-title.sm{ font-size:30px; line-height:1.24; font-weight:600; letter-spacing:-.02em; }
+  .ob-sub{ margin-top:18px; font-size:15px; line-height:1.6; color:#7A756C; letter-spacing:.01em; }
+  .ob-body-budget .ob-sub{ margin-top:12px; font-size:14px; line-height:1.6; color:#8B8478; letter-spacing:.005em; }
+  .ob-body-budget .ob-form{ margin-top:34px; border-top:1px solid rgba(30,27,22,.08); }
+  .ob-row{ display:flex; align-items:center; gap:12px; padding:18px 0; border-bottom:1px solid rgba(30,27,22,.07); transition:border-color .15s ease; }
+  .ob-row > span{ flex:1; font-size:14.5px; font-weight:500; color:#3F3A32; letter-spacing:.02em; transition:color .15s ease; }
+  .ob-month-v{ display:inline-flex; align-items:baseline; justify-content:flex-end; gap:2px; font-family:var(--mono); font-size:26px; font-weight:700; letter-spacing:-.01em; font-variant-numeric:tabular-nums; color:var(--ink); }
+  .ob-month-v i{ font-style:normal; font-size:14px; color:#A9A294; margin-right:2px; }
+  .ob-row em{ font-style:normal; font-size:10.5px; color:#A9A294; width:42px; text-align:right; letter-spacing:.03em; }
+  .ob-month{ padding-top:24px; }
+  .ob-meals{ margin-top:14px; font-size:10.5px; color:#B0A99A; letter-spacing:.02em; line-height:1.6; }
+  .ob-result{ margin-top:26px; }
+  .ob-daily{ display:flex; align-items:baseline; justify-content:space-between; }
+  .ob-daily span{ font-size:10.5px; font-weight:500; letter-spacing:.06em; color:#A09A8D; }
+  .ob-daily b{ font-family:var(--mono); font-size:14px; font-weight:600; color:#6F675C; font-variant-numeric:tabular-nums; }
+  .ob-daily b i{ font-style:normal; font-size:10.5px; font-weight:600; color:#A09A8D; margin-right:1px; }
+  .ob-week{ display:flex; align-items:baseline; justify-content:space-between; margin-top:14px; }
+  .ob-week span{ font-size:12.5px; font-weight:600; letter-spacing:.08em; color:var(--ink); }
+  .ob-week b{ font-family:var(--mono); font-size:34px; font-weight:700; letter-spacing:-.03em; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .ob-week b i{ font-style:normal; font-size:16px; font-weight:600; color:#6F675C; margin-right:3px; }
+  .ob-note{ margin-top:7px; text-align:right; font-size:10px; letter-spacing:.02em; color:#B0A99A; }
+  .ob-btn{ flex-shrink:0; width:100%; min-height:54px; border:0; border-radius:27px; background:var(--ink); color:#fff; font-family:var(--sans); font-size:16px; font-weight:700; letter-spacing:.08em; cursor:pointer; transition:transform .15s ease, opacity .15s ease; }
+  .ob-btn:active{ transform:scale(.985); opacity:.9; }
+
+  @media (max-width:1400px){ .app.sp-on.sp-page{ grid-template-columns:212px 286px minmax(0,1fr) 300px; } }
+  @media (max-width:1180px){ .app, .app.sp-on, .app.sp-on.sp-page{ grid-template-columns:210px 1fr; } .flowcol{ display:none; } .specs-col{ display:none !important; } }
+  @media (max-width:880px){ .app{ grid-template-columns:1fr; } .rail{ display:none; } .stage{ padding:10px; } .phone{ height:calc(100vh - 60px); } }
+
+  /* 剩余预算进度条（B 案）：首页·有单 长票内 */
+  .pb{ display:flex; align-items:center; gap:8px; }
+  .pb-track{ flex:1; height:4px; background:rgba(30,27,22,.1); border-radius:2px; overflow:hidden; }
+  .pb-track i{ display:block; height:100%; border-radius:2px; transition:width .45s cubic-bezier(.22,.9,.3,1); }
+  .pb.ok   .pb-track i{ background:#3D8B5F; }
+  .pb.warn .pb-track i{ background:#D97706; }
+  .pb.low  .pb-track i{ background:var(--seal-deep); }
+  .pb.over .pb-track{ background:rgba(196,57,47,.18); }
+  .pb.over .pb-track i{ display:none; }
+  .pb-b-wrap{ margin-top:11px; padding-top:10px; border-top:1px dashed var(--line); font-size:10px; letter-spacing:.04em; color:var(--ink-soft); animation:fade .4s .72s both; }
+  .pb-b-row1{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:7px; }
+  .pb-b-row1 b{ font-family:var(--mono); font-weight:700; font-size:11px; color:var(--ink); }
+  .pb-b-row1 .over-amt{ color:var(--seal-deep); }
+  .pb-b-row2{ display:flex; justify-content:space-between; align-items:baseline; margin-top:7px; }
+  .pb-b-row2 b{ font-family:var(--mono); font-weight:700; font-size:11px; color:var(--ink); }
+  .pb-b-row2 .go{ color:var(--ink); cursor:pointer; border-bottom:1px dashed var(--dash); padding-bottom:1px; }
+
+  /* ===== 月报版新增：月历 ===== */
+  .cal-wrap{ margin-top:16px; border:1px solid var(--line); border-radius:12px; background:var(--paper); padding:13px 13px 11px; }
+  .cal-title{ font-size:10px; font-weight:700; letter-spacing:.14em; color:var(--ink-soft); text-align:center; }
+  .cal-head{ display:grid; grid-template-columns:repeat(7,1fr); margin-top:10px; }
+  .cal-head div{ text-align:center; font-size:9px; font-weight:700; color:var(--ink-soft); letter-spacing:.06em; padding:4px 0; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-top:4px; }
+  .cal-cell{ aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+             padding:5px 1px 2px; border-radius:6px; background:var(--paper);
+             border:1px solid transparent; position:relative; cursor:pointer; }
+  .cal-cell.empty{ background:transparent; border:transparent; cursor:default; }
+  .cal-cell .d{ font-family:var(--mono); font-size:10px; font-weight:700; color:var(--ink-soft); line-height:1; }
+  .cal-cell.has-data{ border-color:var(--line); }
+  .cal-cell .v{ margin-top:auto; font-family:var(--mono); font-size:9px; font-weight:700; color:var(--ink); line-height:1; padding-bottom:2px; }
+  .cal-cell.today{ border:1.5px solid var(--ink); background:#FFFEFA; }
+  .cal-cell.today .d{ color:var(--ink); font-weight:900; }
+  .cal-cell.weekend .d{ color:var(--seal); }
+  /* 金额越深底越深 */
+  .cal-cell.l1{ background:#F7F4EC; }
+  .cal-cell.l2{ background:#F0EAD8; }
+  .cal-cell.l3{ background:#E8DFC8; }
+  .cal-cell.l4{ background:#DCD0B2; }
+
+  /* ===== 月报版新增：本周焦点卡 ===== */
+  .wcard{ margin-top:14px; padding:13px 13px 11px; background:var(--paper);
+          border:1px solid var(--line); border-left:3px solid var(--ink); border-radius:4px 12px 12px 4px; }
+  .wcard-head{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .wcard-head .wc-l{ font-size:10px; font-weight:700; letter-spacing:.14em; color:var(--ink-soft); }
+  .wcard-head .wc-r{ font-family:var(--mono); font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+  .wcard-head .wc-r i{ font-style:normal; font-size:9.5px; font-weight:400; color:var(--ink-soft); }
+  .wc-now{ margin-top:7px; display:flex; align-items:baseline; gap:4px;
+           font-size:9.5px; color:var(--ink-soft); letter-spacing:.03em; }
+  .wc-now b{ font-family:var(--mono); font-size:14px; font-weight:800; color:var(--ink); }
+  .wc-now .sep{ margin:0 2px; }
+
+  /* ===== 月报版新增：明细周 Tab ===== */
+  .lt-tabs{ display:flex; gap:0; border-bottom:1px solid var(--line); margin-bottom:4px; overflow-x:auto; scrollbar-width:none; }
+  .lt-tabs::-webkit-scrollbar{ display:none; }
+  .lt-tab{ flex-shrink:0; padding:6px 10px; font-size:10.5px; font-weight:700; letter-spacing:.04em;
+           color:var(--ink-soft); border-bottom:2px solid transparent; cursor:pointer; }
+  .lt-tab.on{ color:var(--ink); border-bottom-color:var(--ink); }
+  .wt-day-top .wk{ font-size:9px; color:var(--ink-soft); letter-spacing:.06em; margin-left:4px; }
+  .wt-day-top .wk.now{ color:var(--seal); font-weight:700; }
+</style>
+</head>
+<body>
+<div class="app sp-on" id="app">
+  <aside class="rail">
+    <div class="rail-h">
+      <div class="k">MONTHLY+WEEKLY · 路由拆分版</div>
+      <div class="t">餐饮账单 · 路由拆分版</div>
+      <div class="s">36 帧 · 6 个演示帧</div>
+      <button class="sp-toggle on" id="spToggle">字段 开</button>
+      <div class="mode-switch"><button class="ms on" data-mode="flow">流 程</button><button class="ms" data-mode="page">页 面</button></div>
+    </div>
+    <div class="rail-body" id="railBody"></div>
+  </aside>
+  <aside class="flowcol">
+    <div class="fc-h">
+      <div class="t" id="midTitle">流程链路</div>
+      <div class="s" id="midSub">点左栏流程 · 点帧跳转不改流程</div>
+    </div>
+    <div class="fc-body">
+      <div id="flowBody"></div>
+    </div>
+  </aside>
+  <main class="stage">
+    <div class="annot">
+      <div class="fl"><i></i><span id="annotLabel">帧 0 · 企微推广</span></div>
+      <select class="fsel" id="frameSel"></select>
+    </div>
+    <div class="stage-annots" id="stageAnnots"></div>
+    <div class="phone" id="phone">
+      <div class="statusbar"><span id="clock">12:30</span><span class="dots"><b></b><b></b><b></b><b></b></span></div>
+      <div id="screen"></div>
+      <div id="sheet"></div>
+    </div>
+  </main>
+  <aside class="specs-col" id="specsCol">
+    <div class="specs-head">
+      <div class="t">字段说明</div>
+      <div class="s" id="specsSub">—</div>
+    </div>
+    <div class="specs-body" id="specsBody"></div>
+  </aside>
+</div>
+<script>
+(function(){
+  "use strict";
+  function $(id){ return document.getElementById(id); }
+
+  function mkDay(w, mm, iso, orders, today){
+    return { w: w, mm: mm, iso: iso, orders: orders || [], today: !!today };
+  }
+  const WEEKS = {
+    cur: {
+      tab: "本周", range: "10.27 — 11.02", no: "1021", week: "W44",
+      start: "2026-10-27", end: "2026-11-02",
+      days: [
+        mkDay("周一", "10.27", "2026-10-27", [
+          { time: "12:36", name: "麦当劳", item: "板烧鸡腿堡套餐", emoji: "🍔", tag: "美团", meal: "午餐", amt: 28, saved: 8 }
+        ]),
+        mkDay("周二", "10.28", "2026-10-28"),
+        mkDay("周三", "10.29", "2026-10-29", [
+          { time: "21:05", name: "全家便利店", tag: "外部", meal: "其他", amt: 24, manual: true }
+        ]),
+        mkDay("周四", "10.30", "2026-10-30"),
+        mkDay("周五", "10.31", "2026-10-31", [
+          { time: "12:18", name: "老乡鸡", item: "肥西老母鸡汤套餐", emoji: "🐔", tag: "美团", meal: "午餐", amt: 32, saved: 6 },
+          { time: "18:42", name: "湘辣小馆", item: "剁椒鱼头套餐", emoji: "🐟", tag: "饿了么", meal: "晚餐", amt: 36, saved: 4 }
+        ]),
+        mkDay("周六", "11.01", "2026-11-01", [
+          { time: "12:40", name: "沙县小吃", item: "蒸饺配炖罐", emoji: "🥟", tag: "美团", meal: "午餐", amt: 15, saved: 3 }
+        ], true),
+        mkDay("周日", "11.02", "2026-11-02")
+      ]
+    },
+    prev: {
+      tab: "上周", range: "10.20 — 10.26", no: "1020", week: "W43",
+      start: "2026-10-20", end: "2026-10-26",
+      days: [
+        mkDay("周一", "10.20", "2026-10-20", [
+          { time: "12:30", name: "兰州拉面", item: "牛肉拉面", emoji: "🍜", tag: "美团", meal: "午餐", amt: 22, saved: 5 }
+        ]),
+        mkDay("周二", "10.21", "2026-10-21"),
+        mkDay("周三", "10.22", "2026-10-22", [
+          { time: "12:40", name: "肯德基", item: "香辣鸡腿堡套餐", emoji: "🍗", tag: "饿了么", meal: "午餐", amt: 39, saved: 7 }
+        ]),
+        mkDay("周四", "10.23", "2026-10-23", [
+          { time: "18:20", name: "沙县小吃", tag: "外部", meal: "晚餐", amt: 18, manual: true }
+        ]),
+        mkDay("周五", "10.24", "2026-10-24", [
+          { time: "12:10", name: "老乡鸡", item: "肥西老母鸡汤套餐", emoji: "🐔", tag: "美团", meal: "午餐", amt: 31, saved: 4 }
+        ]),
+        mkDay("周六", "10.25", "2026-10-25", [
+          { time: "19:30", name: "烧烤摊", tag: "外部", meal: "晚餐", amt: 38, manual: true }
+        ]),
+        mkDay("周日", "10.26", "2026-10-26")
+      ]
+    },
+    older: {
+      tab: "更早", range: "10.13 — 10.19", no: "1013", week: "W42", closed: true,
+      start: "2026-10-13", end: "2026-10-19",
+      days: [
+        mkDay("周一", "10.13", "2026-10-13"),
+        mkDay("周二", "10.14", "2026-10-14"),
+        mkDay("周三", "10.15", "2026-10-15"),
+        mkDay("周四", "10.16", "2026-10-16"),
+        mkDay("周五", "10.17", "2026-10-17"),
+        mkDay("周六", "10.18", "2026-10-18"),
+        mkDay("周日", "10.19", "2026-10-19")
+      ]
+    },
+    older2: {
+      tab: "更早", range: "10.06 — 10.12", no: "1006", week: "W41", closed: true,
+      start: "2026-10-06", end: "2026-10-12",
+      days: [
+        mkDay("周一", "10.06", "2026-10-06", [
+          { time: "12:28", name: "麦当劳", item: "板烧鸡腿堡套餐", emoji: "🍔", tag: "美团", meal: "午餐", amt: 26, saved: 7 }
+        ]),
+        mkDay("周二", "10.07", "2026-10-07"),
+        mkDay("周三", "10.08", "2026-10-08", [
+          { time: "12:45", name: "老乡鸡", item: "肥西老母鸡汤套餐", emoji: "🐔", tag: "饿了么", meal: "午餐", amt: 30, saved: 5 }
+        ]),
+        mkDay("周四", "10.09", "2026-10-09"),
+        mkDay("周五", "10.10", "2026-10-10", [
+          { time: "20:10", name: "全家便利店", tag: "外部", meal: "晚餐", amt: 22, manual: true }
+        ]),
+        mkDay("周六", "10.11", "2026-10-11"),
+        mkDay("周日", "10.12", "2026-10-12")
+      ]
+    },
+    newweek: {
+      tab: "本周", range: "11.03 — 11.09", no: "1103", week: "W45", fresh: true,
+      start: "2026-11-03", end: "2026-11-09",
+      days: [
+        mkDay("周一", "11.03", "2026-11-03", [], true),
+        mkDay("周二", "11.04", "2026-11-04"),
+        mkDay("周三", "11.05", "2026-11-05"),
+        mkDay("周四", "11.06", "2026-11-06"),
+        mkDay("周五", "11.07", "2026-11-07"),
+        mkDay("周六", "11.08", "2026-11-08"),
+        mkDay("周日", "11.09", "2026-11-09")
+      ]
+    }
+  };
+
+  /* ===== 月报版新增：月数据（独立于 WEEKS） ===== */
+  const MONTH = {
+    y: 2026, m: 10,            // JS 0-based, 10 = 11月
+    daysInMonth: 30,
+    firstDay: 0,               // 2026-11-01 是周日
+    today: 4,                  // 演示日 11.04（周三）
+    prevAmount: 1720,          // 上月已花（演示）
+    olderAmount: 1540,         // 更早月已花（演示）
+    overSpent: 1810,           // 月超支演示值（预算 1,800，超 10）
+    /* 11月每天消费额（0=无单） */
+    dayAmount: {
+      1:68, 2:68, 3:47, 4:15,
+      10:18, 11:35, 13:28, 14:38,
+      16:12, 18:45, 20:26, 22:32,
+      24:38, 26:32, 27:15, 28:18, 29:42, 30:12
+    },
+    /* 月内周视角（与 WEEKS 独立） */
+    weeks: [
+      { n:"第1周", range:"11.02 — 11.08", budget:420, state:"cur" },
+      { n:"第2周", range:"11.09 — 11.15", budget:420, state:"future" },
+      { n:"第3周", range:"11.16 — 11.22", budget:420, state:"future" },
+      { n:"第4周", range:"11.23 — 11.29", budget:420, state:"future" },
+      { n:"第5周", range:"11.30 — 12.06", budget:360, state:"future" }  // 仅 1 天属本月
+    ]
+  };
+  /* 月历史帧：按目标总额等比缩放本月日额，新账期返回空 */
+  function monthAmountsFor(stType){
+    stType = stType || "cur";
+    const base = MONTH.dayAmount;
+    if (stType === "cur") return base;
+    if (stType === "new") return {};
+    const target = stType === "over" ? MONTH.overSpent
+      : (viewMonth === "older" ? MONTH.olderAmount : MONTH.prevAmount);   // past：按选中的往期月出数
+    let baseTotal = 0;
+    Object.keys(base).forEach(function(k){ baseTotal += base[k]; });
+    const f = baseTotal > 0 ? target / baseTotal : 1;
+    const out = {};
+    Object.keys(base).forEach(function(k){ out[k] = Math.round(base[k] * f); });
+    return out;
+  }
+  /* 月统计：按帧态出数，日均 = 有单天数的平均支出 */
+  function monthStats(stType){
+    stType = stType || "cur";
+    const dayAmount = monthAmountsFor(stType);
+    const vals = Object.keys(dayAmount).map(function(k){ return dayAmount[k]; });
+    let total = vals.reduce(function(s, v){ return s + v; }, 0);
+    if (stType === "over") total = MONTH.overSpent;
+    else if (stType === "past") total = (viewMonth === "older" ? MONTH.olderAmount : MONTH.prevAmount);
+    const count = vals.filter(function(v){ return v > 0; }).length;
+    const noCount = MONTH.daysInMonth - count;
+    const dailyAvg = count ? Math.round(total / count) : 0;
+    return {
+      total: total,
+      count: count,
+      noCount: noCount,
+      remain: budget.monthAmount - total,
+      daysLeft: stType === "cur" ? MONTH.daysInMonth - MONTH.today : 0,
+      daysInMonth: MONTH.daysInMonth,
+      dailyAvg: dailyAvg,
+      percent: budget.monthAmount > 0 ? Math.round(total / budget.monthAmount * 100) : 0,
+      dayAmount: dayAmount,
+      amounts: vals.filter(function(v){ return v > 0; }).sort(function(a, b){ return a - b; })
+    };
+  }
+  /* 本周卡统计（从 MONTH + WEEKS.cur 取数） */
+  function weekCardStats(){
+    const w = WEEKS.cur;
+    const st = weekStats(w);
+    const remain = Math.max(0, budget.weekAmount - st.total);
+    const daysPassed = w.days.filter(function(d){ return d.start || true; }).length; // 简单用 cur.days.length 中已到的天
+    /* 本周已过天数 = 今天是周几（周一=1..周日=7），演示 cur 是 10.27—11.02，today 是 11.04 应落在 prev 周，但演示用 cur 周展示本月第一个完整周 */
+    const passed = 3; // 演示：周一/二/三已过
+    const daysLeft = 7 - passed;
+    const todayAvail = daysLeft > 0 ? Math.floor(Math.max(0, remain) / daysLeft) : 0;
+    return {
+      weekSpent: st.total,
+      weekRemain: remain,
+      daysLeft: daysLeft,
+      todayAvail: todayAvail,
+      weekAvg: Math.round(st.total / 7),
+      weekBudget: budget.weekAmount
+    };
+  }
+
+  function dayTotal(d){ return d.orders.reduce(function(s, o){ return s + o.amt; }, 0); }
+  /* 周统计：日均 = 有单天数的平均支出（不是 ÷7） */
+  function weekStats(w){
+    const count = w.days.reduce(function(s, d){ return s + d.orders.length; }, 0);
+    const total = w.days.reduce(function(s, d){ return s + dayTotal(d); }, 0);
+    const dayCount = w.days.filter(function(d){ return d.orders.length > 0; }).length;
+    const dailyAvg = dayCount ? Math.round(total / dayCount) : 0;
+    return { total: total, count: count, avg: count ? total / count : 0, dailyAvg: dailyAvg, dayCount: dayCount };
+  }
+  function firstManualTarget(w){
+    for (let di = 0; di < w.days.length; di++){
+      const d = w.days[di];
+      for (let oi = 0; oi < d.orders.length; oi++){
+        if (d.orders[oi].manual) return { di: di, oi: oi };
+      }
+    }
+    return null;
+  }
+  function defaultAddDate(){
+    const w = WEEKS[viewWeek], t = todayStr();
+    if (t < w.start) return w.start;
+    if (t > w.end) return w.end;
+    return t;
+  }
+  const MEAL = { breakfast: "早餐", lunch: "午餐", dinner: "晚餐", other: "其他" };
+  // 外部单只记「日期 + 餐段 + 金额」，时间按餐段自动落到固定点
+  const MEAL_TIME = { "早餐": "09:00", "午餐": "11:00", "晚餐": "17:00", "其他": "/" };
+  const MEAL_ORDER = ["breakfast", "lunch", "dinner", "other"];
+
+  /* 月/周各 4 个首页帧：cur / past（往期，不分多久以前）/ over / new；无空态，选择器里拦截没有订单的账期 */
+  const HOME_MONTH_FRAMES = {
+    cur: "home-month", past: "home-month-past",
+    over: "home-month-over", new: "home-month-new"
+  };
+  const HOME_WEEK_FRAMES = {
+    cur: "home-week", past: "home-week-past",
+    over: "home-week-over", new: "home-week-new"
+  };
+  const HOME_FRAME_KEYS = Object.keys(HOME_MONTH_FRAMES).map(function(k){ return HOME_MONTH_FRAMES[k]; })
+    .concat(Object.keys(HOME_WEEK_FRAMES).map(function(k){ return HOME_WEEK_FRAMES[k]; }));
+
+  /* 账期左右箭头：按当前帧态决定去哪一帧，空字符串表示该方向已到边界 */
+  const MONTH_NAV = {
+    cur:   { prev: "home-month-past",  next: "" },
+    past:  { prev: "",                 next: "home-month" },
+    over:  { prev: "home-month-past",  next: "" },
+    new:   { prev: "",                 next: "" }
+  };
+  const WEEK_NAV = {
+    cur:   { prev: "home-week-past",   next: "" },
+    past:  { prev: "",                 next: "home-week" },
+    over:  { prev: "home-week-past",   next: "" },
+    new:   { prev: "",                 next: "" }
+  };
+
+  const ROUTES = {
+    "wework-promo":    { id: 0,  n: "企微推广",            ref: "wework/promo",       kind: "page",     demo: true },
+    "tab-points":      { id: 1,  n: "积分页（领券）",        ref: "tab/points",         kind: "page",     demo: true },
+    "guide-pain":      { id: 2,  n: "引导 ①（痛点）",        ref: "guide/pain",         kind: "page" },
+    "guide-feature":   { id: 3,  n: "引导 ②（功能）",        ref: "guide/feature",      kind: "page" },
+    "guide-budget":    { id: 4,  n: "引导 ③（预算）",        ref: "guide/budget",       kind: "page" },
+    "coupon-success":  { id: 5,  n: "领券成功",             ref: "drawer/coupon",      kind: "sheet",    demo: true },
+    "external-order":  { id: 6,  n: "外部下单（指示）",       ref: "external/order",     kind: "page",     demo: true },
+    "points-subscribe":{ id: 7,  n: "积分到账订阅",          ref: "notice/points",      kind: "notice" },
+    "home-month":      { id: 8,  n: "账单-本月",             ref: "home/month",         kind: "page" },
+    "home-month-past": { id: 9,  n: "账单-本月（往期）",      ref: "home/month-past",    kind: "page" },
+    "home-month-over": { id: 10, n: "账单-本月（超支）",      ref: "home/month-over",    kind: "page" },
+    "home-month-new":  { id: 11, n: "账单-本月（新账期）",    ref: "home/month-new",     kind: "page" },
+    "home-week":       { id: 12, n: "账单-本周",             ref: "home/week",          kind: "page" },
+    "home-week-past":  { id: 13, n: "账单-本周（往期）",      ref: "home/week-past",     kind: "page" },
+    "home-week-over":  { id: 14, n: "账单-本周（超支）",      ref: "home/week-over",     kind: "page" },
+    "home-week-new":   { id: 15, n: "账单-本周（新账期）",    ref: "home/week-new",      kind: "page" },
+    "add-order":       { id: 16, n: "补卡",                 ref: "drawer/add-order",   kind: "sheet" },
+    "budget-edit":     { id: 17, n: "改预算（全屏）",          ref: "budget/edit",        kind: "page" },
+    "subscribe-sheet": { id: 18, n: "订阅",                 ref: "drawer/subscribe",   kind: "sheet" },
+    "date-sub":        { id: 19, n: "日期订阅",              ref: "drawer/date-sub",    kind: "sheet" },
+    "push-noon":       { id: 20, n: "订阅推送（午餐）",        ref: "push/noon",          kind: "notice" },
+    "push-noon-over":  { id: 21, n: "订阅推送（午餐超支）",    ref: "push/noon-over",     kind: "notice" },
+    "push-eve":        { id: 22, n: "订阅推送（晚餐）",        ref: "push/eve",           kind: "notice" },
+    "push-eve-over":   { id: 23, n: "订阅推送（晚餐超支）",    ref: "push/eve-over",      kind: "notice" },
+    "push-week":       { id: 24, n: "订阅推送（周一）",        ref: "push/week",          kind: "notice" },
+    "delete-confirm":  { id: 25, n: "删除确认",              ref: "drawer/delete",      kind: "sheet" },
+    "share-sheet":     { id: 26, n: "分享",                 ref: "drawer/share",       kind: "sheet" },
+    "share-friend-month": { id: 27, n: "好友会话（收到月分享）", ref: "share/friend-month", kind: "page" },
+    "share-friend-week":  { id: 28, n: "好友会话（收到周分享）", ref: "share/friend-week",  kind: "page" },
+    "tab-mall":        { id: 29, n: "积分商城",              ref: "tab/mall",           kind: "skeleton", demo: true },
+    "tab-me":          { id: 30, n: "我的",                 ref: "tab/me",             kind: "skeleton", demo: true },
+    "sub-refused":     { id: 31, n: "订阅被拒（开启引导）",    ref: "drawer/sub-refused", kind: "sheet" },
+    "week-picker":     { id: 32, n: "选择周账单",             ref: "drawer/week-picker", kind: "sheet" },
+    "month-picker":    { id: 33, n: "选择月账单",             ref: "drawer/month-picker", kind: "sheet" },
+    "home-month-desktop": { id: 34, n: "账单-本月（加桌面提示）", ref: "home/month-desktop", kind: "page" },
+    "budget-confirm":  { id: 35, n: "二次确认（改预算）",      ref: "drawer/budget-confirm", kind: "sheet" }
+  };
+  const FLOWS = [
+    { g: "主流程", flows: [
+      { id: "1", n: "新人首单", start: "企微推广 / 积分页", lanes: [
+        { g: "主链路", steps: [
+          { t: "企微推广", s: "11:00 · 群内推小程序卡片", k: "wework-promo" },
+          { t: "积分页（领券）", s: "点卡片 · 落地积分页", k: "tab-points" },
+          { t: "引导 ①（痛点）", s: "点「首页」· 触发全屏引导", k: "guide-pain" },
+          { t: "引导 ②（功能）", s: "下一步 · 自动记账", k: "guide-feature" },
+          { t: "引导 ③（预算）", s: "下一步 · 设月预算", k: "guide-budget" },
+          { t: "账单-本月（新账期）", s: "预算已生效 · 30 天 0 单", k: "home-month-new" },
+          { t: "积分页（领券）", s: "首页「领券」· 去领券", k: "tab-points" },
+          { t: "领券成功", s: "券已领 · 去下单", k: "coupon-success" },
+          { t: "外部下单（指示）", s: "美团 / 饿了么 App 内下单", k: "external-order" },
+          { t: "积分到账订阅", s: "订阅消息 · 积分到账提醒", k: "points-subscribe" },
+          { t: "账单-本月", s: "首单回流 · 预算已设", k: "home-month" }
+        ]},
+        { g: "支线 · 补卡", steps: [
+          { t: "账单-本月", s: "首单后 · 拉不到 CPS 单", k: "home-month" },
+          { t: "补卡", s: "手动补录外部单", k: "add-order" },
+          { t: "账单-本月", s: "补卡后统计立即更新", k: "home-month" }
+        ]}
+      ]},
+      { id: "2", n: "订阅触达", start: "月 / 周首页", lanes: [
+        { g: "主链路", steps: [
+          { t: "账单-本月", s: "点「订阅」入口", k: "home-month" },
+          { t: "日期订阅", s: "先选本周要推的日期", k: "date-sub" },
+          { t: "订阅", s: "勾要开的提醒 · 首次授权", k: "subscribe-sheet" },
+          { t: "日期订阅", s: "授权后补选 · 不再弹窗", k: "date-sub" }
+        ]},
+        { g: "支线-1 · 午餐", steps: [
+          { t: "订阅推送（午餐）", s: "10:30 · 午餐提醒", k: "push-noon" },
+          { t: "账单-本月", s: "点推送回流", k: "home-month" }
+        ]},
+        { g: "支线-2 · 晚餐", steps: [
+          { t: "订阅推送（晚餐）", s: "17:00 · 晚餐提醒", k: "push-eve" },
+          { t: "账单-本周", s: "点推送回流", k: "home-week" }
+        ]},
+        { g: "支线-3 · 周通知", steps: [
+          { t: "订阅推送（周一）", s: "10:30 · 新账期提醒", k: "push-week" },
+          { t: "账单-本周（新账期）", s: "周预算 ¥420 生效 · 0 单", k: "home-week-new" }
+        ]}
+      ]},
+    ]},
+    { g: "支线", flows: [
+      { id: "3", n: "分享账单", start: "月 / 周首页", lanes: [
+        { g: "主链路 · 公共段", steps: [
+          { t: "分享", s: "转发给朋友 · 按入口出月 / 周卡片", k: "share-sheet" }
+        ]},
+        { g: "支线 · 月分享", steps: [
+          { t: "好友会话（收到月分享）", s: "月账单卡片 · 点卡片进本月账单", k: "share-friend-month" }
+        ]},
+        { g: "支线 · 周分享", steps: [
+          { t: "好友会话（收到周分享）", s: "周账单卡片 · 点卡片进本周账单", k: "share-friend-week" }
+        ]}
+      ]},
+      { id: "4", n: "查询-周数据", start: "账单-本周", lanes: [
+        { g: "主链路 · 选周器", steps: [
+          { t: "账单-本周", s: "点胶囊中部 · 打开选周器", k: "home-week" },
+          { t: "选择周账单", s: "本周 / 上周 / 10月两段 · 无单周置灰不可点", k: "week-picker" },
+          { t: "账单-本周（往期）", s: "落到所选那一周 · 只读", k: "home-week-past" }
+        ]}
+      ]},
+      { id: "5", n: "查询-月数据", start: "账单-本月", lanes: [
+        { g: "主链路 · 选月器", steps: [
+          { t: "账单-本月", s: "点胶囊中部 · 打开选月器", k: "home-month" },
+          { t: "选择月账单", s: "本月 / 10月 / 9月 · 无单月置灰不可点", k: "month-picker" },
+          { t: "账单-本月（往期）", s: "落到所选那一月 · 只读", k: "home-month-past" }
+        ]}
+      ]},
+      { id: "6", n: "改预算", start: "月 / 周首页 · 改预算入口", lanes: [
+        { g: "主链路", steps: [
+          { t: "首页（改预算入口）", s: "月 / 周小票底部「改预算 ›」· 同一入口", k: "home-month" },
+          { t: "改预算", s: "全屏 · 只改三餐四类，月预算自动派生", k: "budget-edit" },
+          { t: "二次确认", s: "底部抽屉 · 旧 → 新对比", k: "budget-confirm" },
+          { t: "回到首页", s: "提示「修改成功」· 剩余额度重算", k: "home-month" }
+        ]}
+      ]},
+    ]},
+    { g: "异常", flows: [
+      { id: "7", n: "删除外部订单", start: "月 / 周首页 · 明细", lanes: [
+        { g: "主链路 · 月", steps: [
+          { t: "账单-本月", s: "外部单行尾「删」", k: "home-month" },
+          { t: "删除确认", s: "只露日期 / 餐段 / 金额", k: "delete-confirm" },
+          { t: "账单-本月", s: "统计回滚", k: "home-month" }
+        ]},
+        { g: "支线 · 周", steps: [
+          { t: "账单-本周", s: "外部单行尾「删」", k: "home-week" },
+          { t: "删除确认", s: "只露日期 / 餐段 / 金额", k: "delete-confirm" },
+          { t: "账单-本周", s: "统计回滚", k: "home-week" }
+        ]}
+      ]},
+      { id: "8", n: "周更新（月账期）", start: "推送 / 首页", lanes: [
+        { g: "主链路", steps: [
+          { t: "订阅推送（周一）", s: "10:30 · 新账期提醒", k: "push-week" },
+          { t: "账单-本月（新账期）", s: "月预算 ¥1,800 生效", k: "home-month-new" }
+        ]}
+      ]},
+      { id: "9", n: "预算超支", start: "月 / 周首页", lanes: [
+        { g: "主链路 · 月", steps: [
+          { t: "账单-本月", s: "本月已花 1,810 · 预算 1,800", k: "home-month" },
+          { t: "账单-本月（超支）", s: "已超 10 · 金额标红 · 无进度条", k: "home-month-over" }
+        ]},
+        { g: "支线 · 周", steps: [
+          { t: "账单-本周", s: "本周已花 135 · 预算 120", k: "home-week" },
+          { t: "账单-本周（超支）", s: "已超 15 · 金额标红", k: "home-week-over" }
+        ]},
+        { g: "支线 2 · 午餐超支", steps: [
+          { t: "订阅推送（午餐超支）", s: "本周剩余 -- · 建议少花", k: "push-noon-over" },
+          { t: "账单-本周（超支）", s: "点推送回流 · 仍是超支态", k: "home-week-over" }
+        ]},
+        { g: "支线 3 · 晚餐超支", steps: [
+          { t: "订阅推送（晚餐超支）", s: "本周剩余 -- · 建议少花", k: "push-eve-over" },
+          { t: "账单-本周（超支）", s: "点推送回流 · 仍是超支态", k: "home-week-over" }
+        ]}
+      ]},
+      { id: "10", n: "订阅被拒", start: "月 / 周首页", lanes: [
+        { g: "主链路", steps: [
+          { t: "账单-本月", s: "点「订阅」入口", k: "home-month" },
+          { t: "订阅被拒（开启引导）", s: "授权被拒 · 右上角手动开", k: "sub-refused" },
+          { t: "账单-本月", s: "订阅卡「去开启」入口", k: "home-month" }
+        ]}
+      ]},
+      { id: "11", n: "添加至桌面", start: "账单-本月", lanes: [
+        { g: "主链路", steps: [
+          { t: "账单-本月", s: "首单回流后的首页", k: "home-month" },
+          { t: "首页（加桌面提示）", s: "右上角气泡「添加至桌面，每天快速记账」· 点任意处关闭", k: "home-month-desktop" }
+        ]}
+      ]}
+    ]}
+  ];
+
+  /* 页面轴：36 帧按「本月 / 本周 / 通用」三模块重组 */
+  const PAGE_TREE = [
+    { g: "一级页面", items: [
+      { n: "新手引导", k: "guide", tag: "全屏引导", frames: [
+        { k: "guide-pain",    t: "① 痛点",  s: "外卖，越点越贵？" },
+        { k: "guide-feature", t: "② 功能",  s: "不用记，也会记。" },
+        { k: "guide-budget",  t: "③ 预算",  s: "先定个数。" }
+      ], sheets: []},
+      { n: "账单-本月", k: "home-month", tag: "一级页面", frames: [
+        { k: "home-month", t: "本期", s: "月总支出 + 月历 + 本周卡" },
+        { k: "home-month-desktop", t: "加桌面提示", s: "右上角气泡 · 点任意处关闭" }
+      ], sheets: [], errors: [
+        { k: "home-month-past",  t: "往期",   s: "已结算 · 只读 · 不分多久以前" },
+        { k: "home-month-over",  t: "超支",   s: "预算 1,800 · 已花 1,810 · 已超 10" },
+        { k: "home-month-new",   t: "新账期", s: "月预算生效 · 订单归零" }
+      ]},
+      { n: "账单-本周", k: "home-week", tag: "一级页面", frames: [
+        { k: "home-week", t: "本期", s: "周总支出 + 7 天柱图 + 三餐参考" }
+      ], sheets: [], errors: [
+        { k: "home-week-past",  t: "往期",   s: "已结算 · 只读 · 不分多久以前" },
+        { k: "home-week-over",  t: "超支",   s: "预算 120 · 已花 135 · 已超 15" },
+        { k: "home-week-new",   t: "新账期", s: "周预算生效 · 订单归零" }
+      ]},
+      { n: "账单-通用", k: "home-common", tag: "共用抽屉", frames: [
+        { k: "budget-edit",     t: "改预算",    s: "全屏 · 只改三餐四类，月预算自动派生" }
+      ], sheets: [
+        { k: "budget-confirm",   t: "二次确认",  s: "旧 → 新对比 · 确认后保存" },
+        { k: "add-order",       t: "补卡",      s: "日期 / 餐段 / 金额" },
+        { k: "subscribe-sheet", t: "订阅",      s: "午 / 晚 / 周更 三个开关" },
+        { k: "date-sub",        t: "日期订阅",  s: "本周 7 天可多选" },
+        { k: "sub-refused",     t: "订阅被拒（开启引导）", s: "右上角 ··· → 设置 → 订阅消息" },
+        { k: "delete-confirm",  t: "删除确认",  s: "外部单二次确认" },
+        { k: "share-sheet",     t: "分享",      s: "转发给朋友 · 月 / 周卡片" },
+        { k: "week-picker",     t: "选择周账单", s: "本周 / 上周 / 上上周 / 10月两段" },
+        { k: "month-picker",    t: "选择月账单", s: "本月 / 10月 / 9月 / 8月" }
+      ]}
+    ]},
+    { g: "外部页", items: [
+      { n: "好友会话", k: "share-friend", tag: "外部", frames: [
+        { k: "share-friend-month", t: "分享月账单", s: "月总支出 · 点卡片进本月账单" },
+        { k: "share-friend-week",  t: "分享周账单", s: "周总支出 · 点卡片进本周账单" }
+      ], sheets: []}
+    ]},
+    { g: "通知 / 推送", items: [
+      { n: "积分到账订阅", k: "points-subscribe", tag: "服务通知", frames: [
+        { k: "points-subscribe", t: "积分到账提醒", s: "模板三字段 · 点卡片即订阅" }
+      ], sheets: []},
+      { n: "订阅推送", k: "push-noon", tag: "服务通知", frames: [
+        { k: "push-noon", t: "午餐（正常）", s: "10:30 · 本周剩余 / 建议先领券" },
+        { k: "push-eve",  t: "晚餐（正常）", s: "17:00 · 本周剩余 / 建议先领券" },
+        { k: "push-week", t: "周一（正常）", s: "10:30 · 新账期 / 预算 / 上周已花" }
+      ], sheets: [], errors: [
+        { k: "push-noon-over", t: "午餐（超支）", s: "本周剩余 -- · 剩余几天少花" },
+        { k: "push-eve-over",  t: "晚餐（超支）", s: "本周剩余 -- · 剩余几天少花" }
+      ]}
+    ]},
+    { g: "演示页", fold: "demo", items: [
+      { n: "企微推广", k: "wework-promo", tag: "演示", frames: [
+        { k: "wework-promo", t: "群内推小程序卡片", s: "11:00 · 入口示意" }
+      ], sheets: []},
+      { n: "积分页", k: "tab-points", tag: "演示", frames: [
+        { k: "tab-points", t: "领券", s: "券列表 + 底部推送条" }
+      ], sheets: [
+        { k: "coupon-success", t: "领券成功", s: "去下单 → 外部指示帧" }
+      ]},
+      { n: "外部下单", k: "external-order", tag: "演示", frames: [
+        { k: "external-order", t: "指示帧", s: "纯文字 · 无交互" }
+      ], sheets: []},
+      { n: "积分商城", k: "tab-mall", tag: "骨架", frames: [
+        { k: "tab-mall", t: "骨架占位", s: "不挂流程" }
+      ], sheets: []},
+      { n: "我的", k: "tab-me", tag: "骨架", frames: [
+        { k: "tab-me", t: "骨架占位", s: "不挂流程" }
+      ], sheets: []}
+    ]}
+  ];
+
+  /* ========== 字段说明 SPECS：页面通用 + 状态差异 + 抽屉差异 ========== */
+  const SPECS = {
+    "guide": {
+      frames: {
+        "guide-pain": {
+          main: true,
+          summary:
+`<div class="sp-block">
+<p>用户必须连续跑完 3 个引导页（① 痛点 → ② 功能 → ③ 预算）才能进入首页；中途退出则下次仍需重新跑完整引导流程。</p>
+</div>`
+        },
+        "guide-feature": {
+          summary:
+`<div class="sp-block">
+<div class="sp-h" data-sp-anchor=".ob-top">顶部进度</div>
+<p>「02 / 03」+ 三个进度点，第二个实心。</p>
+<div class="sp-h" data-sp-anchor=".ob-art">插图</div>
+<p>小猫手持手机 + 「自动记账」勾选清单卡片，位于副标题下方、居中 248px，白底融入米白背景；原小票虚线已移除。</p>
+<div class="sp-h" data-sp-anchor=".ob-title">主标题</div>
+<p>「不用记，也会记。」38px、700，两行排版。</p>
+<div class="sp-h" data-sp-anchor=".ob-sub">副标题</div>
+<p>「领券下单，账单自动回来。」15px 次级灰。</p>
+<div class="sp-h" data-sp-anchor=".ob-btn">唯一按钮</div>
+<p>「下一步」点击到「引导 ③ · 预算」。</p>
+</div>`
+        },
+        "guide-budget": {
+          summary:
+`<div class="sp-block">
+<div class="sp-h" data-sp-anchor=".ob-top">顶部进度</div>
+<p>「03 / 03」+ 三个进度点，第三个实心。</p>
+<div class="sp-h" data-sp-anchor=".ob-art">插图</div>
+<p>小猫记账 + 「本月外卖预算」卡片，位于「先定个数」右侧、垂直居中，132px。</p>
+<div class="sp-h" data-sp-anchor=".ob-title">主标题</div>
+<p>「先定个数。」32px、700；副标「每天各餐，愿意花多少。」</p>
+<div class="sp-h" data-sp-anchor=".ob-form">月预算展示行</div>
+<p>单行只读展示：左侧「月预算」、右侧大号金额（默认 ¥1,800）与单位「元/月」，不可编辑。</p>
+<div class="sp-h" data-sp-anchor=".ob-result">派生金额</div>
+<p>默认早 ¥10 / 午 ¥20 / 晚 ¥20 / 其他 ¥10 →「每天约 ¥60」= 四类之和；「每周约 ¥420」= 每天约 × 7；两行只读，随三餐四类实时更新。</p>
+<p><em class="sp-red">早餐 / 午餐 / 晚餐 / 其他四行是唯一可编辑项</em>：改任一类 → 每天约 = 四类之和、每周约 = 每天约 × 7、月预算 = 每天约 × 当月天数（11 月 30 天，写死 12 个月的天数）；这三项均不可编辑。</p>
+<div class="sp-h" data-sp-anchor=".ob-btn">唯一按钮</div>
+<p>「下一步」保存月预算并派生周预算 / 日均 / 三餐建议，进入「账单-本月 · 新账期」（0 单、预算已生效），再从首页「领券」入口去「积分页 · 领券」；本帧之后不再出现预算未设态。</p>
+</div>`
+        }
+      }
+    },
+    "home-month": {
+      frames: {
+        "home-month": {
+          main: true,
+          summary:
+`<div class="sp-block">
+<p><em class="sp-red">本期 / 往期 / 超支 / 新账期共用此结构；状态切换只改变月小票，其余模块的异常逻辑不变（往期隐藏本周卡），故本期完整说明一次，其他状态只补小票差异。</em></p>
+<div class="sp-h" data-sp-anchor=".brand">① 月份胶囊</div>
+<p>点胶囊打开月份选择器。</p>
+<p>同排右侧可切换「月 / 周」视角；点头像进「我的」。</p>
+<div class="sp-h" data-sp-anchor=".rc-amt">② 月小票</div>
+<p><b>左侧文案</b>「本月总支出」，不显示账期、不显示右侧时间。</p>
+<p><b>总支出口径</b>：当月 1 号至次月 1 号 0 点，所有联盟订单 + 外部订单实付之和（示例 ¥589）。</p>
+<p><b>剩余</b> = 月预算 − 本月总支出（¥1,800 − ¥589 = ¥1,211）；结果小于 0 进入「超支」状态。</p>
+<p><b>月预算</b>取月份选择器中设置的数值（示例 ¥1,800）。</p>
+<p><b>日均消费</b> = 本月总支出 ÷ 有数据的天数（示例 ¥106）；一单都没有时按「新账期」样式（日均显示「-」）。</p>
+<div class="sp-h" data-sp-anchor=".duo">③ 领券 / 订阅双入口</div>
+<p><b>领券</b>：导航至积分页。</p>
+<p><b>订阅</b>：调起订阅。</p>
+<div class="sp-h" data-sp-anchor=".cal-wrap">④ 月历</div>
+<p>随顶部月份选择器同步切换；格内第一行日期、第二行当天消费金额；今天加粗边框。</p>
+<p>底部「X 天有餐 · Y 天未订」统计已取消。</p>
+<div class="sp-h" data-sp-anchor=".wcard">⑤ 本周卡</div>
+<p><b>汇总行</b>只显示「今天可花 ¥60」（= 每天约）。</p>
+<p><b>三餐四格</b> = 每格默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>餐段按订单支付时间划分</b>：早餐 6:00–9:59、午餐 10:00–13:59、晚餐 17:00–19:59，其余归「其他」。</p>
+<p><b>第三行两态</b>：没吃 / 已用 ¥X；按该餐段区间内用户实付求和回填。</p>
+<p>往期（该月）隐藏本周卡。</p>
+<div class="sp-h" data-sp-anchor=".lt-head">⑥ 明细区</div>
+<p><b>头部</b>「本月 N 单」按月数据统计；「补一笔」调起补卡，新增外部订单。</p>
+<p><b>排序</b>：① 日期倒序；② 同一天按 早 → 午 → 晚 → 其他；③ 同餐段内按支付时间升序；④ 外部订单固定在该餐段底部，不参与支付时间排序。</p>
+<p><b>过滤状态</b>：饿了么「已下单 / 已失效 / 已付款售中退款 / 已收货售后退款」；美团「已失效」。</p>
+<p><b>卡片字段</b>：周几、日期、今天标识、商品名称、支付时间、支付价、来源、餐段图标（4 个，对应早 / 午 / 晚 / 其他，与 ⑤ 同一支付时间归类）；今天标识仅当天显示「今天」小标签。</p>
+</div>`
+        },
+        "home-month-past": {
+          inherits: "home-month",
+          summary:
+`<div class="sp-block">
+<p class="sp-inh">继承「账单-本月（本期）」，往期只换时间区间（不分多久以前，由选月器承载）：</p>
+<p><b>主标题「该月总支出」</b>：金额取所选月份 1 号至次月 1 号 0 点，联盟订单 + 外部订单实付之和，口径与本期一致。</p>
+<p><b>日均消费</b> = 该月总支出 ÷ 该月有数据的天数；预算取该月生效的月预算值。</p>
+<p><b>月历</b>按所选月份铺满整月，只展示、不可点补单。</p>
+<p><b>本周卡</b>不显示；补一笔、改预算不显示；领券 / 订阅双入口照常保留。</p>
+<p><b>明细区</b>「该月 N 单」，按日期倒序排列，无「补一笔」。</p>
+</div>`
+        },
+        "home-month-over": {
+          inherits: "home-month",
+          summary:
+`<div class="sp-block">
+<p>继承「账单-本月（本期）」，仅小票主标题为「本月已支出」，金额标红，其余与本期一致。</p>
+</div>`
+        },
+        "home-month-desktop": {
+          inherits: "home-month",
+          summary:
+`<div class="sp-block">
+<p class="sp-inh">继承「账单-本月（本期）」，只多一层引导：</p>
+<p><b>触发</b>：进入本期首页时，右上角弹出气泡「添加至桌面，每天快速记账」。</p>
+<p><b>已添加至桌面</b>：不再出现该提示。</p>
+<p><b>展示时长</b>：无操作时 5 秒后自动消失，不阻断页面的展示与操作。</p>
+<p><b>频次</b>：未添加至桌面的用户，每天登录首次进入本期首页弹一次。</p>
+<p><b>关闭</b>：点页面任意处立即消失，不跳转，关闭后停在当前首页。</p>
+</div>`
+        },
+        "home-month-new": {
+          inherits: "home-month",
+          summary:
+`<div class="sp-block">
+<p>新账期缺省态，界面如图所示；无消费数据，其余与本期一致。</p>
+</div>`
+        }
+      }
+    },
+    "home-week": {
+      frames: {
+        "home-week": {
+          main: true,
+          summary:
+`<div class="sp-block">
+<p><em class="sp-red">本期 / 往期 / 超支 / 新一周共用此结构；状态切换只改变周小票，其余模块的异常逻辑不变（往期隐藏三餐参考值），故本期完整说明一次，其他状态只补小票差异。</em></p>
+<div class="sp-h" data-sp-anchor=".brand">① 周胶囊</div>
+<p>格式「‹ 本周 10.27—11.02 ›」，左右箭头切换上一周 / 下一周，到边界置灰。</p>
+<p>点中间打开「选择周账单」抽屉；右侧「月 | 周」pill 点另一侧跳到语义对应帧。</p>
+<div class="sp-h" data-sp-anchor=".rc-amt">② 周小票</div>
+<p><b>左侧文案</b>「本周总支出」，不显示日期范围（日期只在周胶囊展示）。</p>
+<p><b>总支出口径</b>：本周一 0 点至下周一 0 点，联盟订单 + 外部订单实付之和。</p>
+<p><b>剩余</b> = 周预算 − 本周总支出；结果小于 0 进入「超支」状态。</p>
+<p><b>周预算</b> = 每天约 × 7（每天约 = 三餐四类之和）。</p>
+<p><b>日均消费</b> = 本周总支出 ÷ 有数据的天数（不是 ÷7）；一单都没有时按「新一周」样式（日均显示「-」）。</p>
+<div class="sp-h" data-sp-anchor=".duo">③ 领券 / 订阅双入口</div>
+<p><b>领券</b>：导航至积分页。</p>
+<p><b>订阅</b>：调起订阅。</p>
+<div class="sp-h" data-sp-anchor=".wkchart">④ 7 天柱状图</div>
+<p>7 根柱子，参考线 = 周预算 ÷ 7；超线柱变红并带 ▲。</p>
+<p>柱底显示日期 + 当天消费金额，今天加粗。</p>
+<p>不在图表上重复展示「本周已花 / 日均」，这两项只在周小票出现。</p>
+<div class="sp-h" data-sp-anchor=".lead-card">⑤ 引导语 + 三餐参考值</div>
+<p><b>引导语</b>：今天可花 ≥ 三餐合计 →「照着这样点，不会超」，否则「按预设吃会超 ¥X」。</p>
+<p><b>三餐四格</b> = 每格默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>餐段按订单支付时间划分</b>：早餐 6:00–9:59、午餐 10:00–13:59、晚餐 17:00–19:59，其余归「其他」。</p>
+<p><b>第三行仅两态</b>：没吃 / 已用 ¥X（按该餐段区间内用户实付求和回填）。</p>
+<p>往期隐藏该模块。</p>
+<div class="sp-h" data-sp-anchor=".lt-head">⑥ 明细区</div>
+<p><b>头部</b>「本周 N 单」+ 补一笔；无周 Tab，直接按天倒序。</p>
+<p><b>排序</b>：① 日期倒序；② 同一天按 早 → 午 → 晚 → 其他；③ 同餐段内按支付时间升序；④ 外部订单固定在该餐段底部。</p>
+<p><b>过滤状态</b>：饿了么「已下单 / 已失效 / 已付款售中退款 / 已收货售后退款」；美团「已失效」。</p>
+<p><b>卡片字段</b>：周几、日期、今天标识、商品名称、支付时间、支付价、来源、餐段图标（4 个，支付时间归类同 ⑤）。</p>
+<p><b>票尾</b>「N 单 · M 单手动补 ✿ 分享本周账单」。</p>
+</div>`
+        },
+        "home-week-past": {
+          inherits: "home-week",
+          summary:
+`<div class="sp-block">
+<p class="sp-inh">继承「账单-本周（本期）」，往期只换时间区间（不分多久以前，由选周器承载）：</p>
+<p><b>主标题「该周总支出」</b>：金额取所选周区间，联盟订单 + 外部订单实付之和，口径与本期一致。</p>
+<p><b>日均消费</b> = 该周总支出 ÷ 该周有数据的天数；周预算取该周生效值。</p>
+<p><b>柱图</b>按所选周展示；三餐参考值、补一笔、改预算不显示。</p>
+<p>领券 / 订阅双入口照常保留。</p>
+<p><b>明细区</b>「该周 N 单」，按日期倒序排列。</p>
+</div>`
+        },
+        "home-week-over": {
+          inherits: "home-week",
+          summary:
+`<div class="sp-block">
+<p>继承「账单-本周（本期）」，仅小票主标题为「本周已支出」，金额标红，其余与本期一致。</p>
+</div>`
+        },
+        "home-week-new": {
+          inherits: "home-week",
+          summary:
+`<div class="sp-block">
+<p>新一周缺省态，界面如图所示；无消费数据，其余与本期一致。</p>
+</div>`
+        }
+      }
+    },
+    "home-common": {
+      frames: {
+        "budget-edit": {
+          summary:
+`<div class="sp-block">
+<p>标题「改预算」，副标题「只改每天各餐，月预算自动跟着变」。入口：月 / 周首页小票底部「改预算 ›」。</p>
+<p>月预算为只读展示行（默认取当前月预算 ¥1,800）；每天约 = 四类之和、每周约 = 每天约 × 7，随三餐四类实时更新。</p>
+<p><em class="sp-red">早餐 / 午餐 / 晚餐 / 其他四行是唯一可编辑项</em>：改任一类 → 每天约、每周约、月预算（每天约 × 当月天数）自动更新；这三项不可编辑。</p>
+<p>按钮「保存」：四类全为 0 →「三餐四类至少填一项」；通过后弹半屏抽屉「确认修改预算？」（每天 / 每周 / 月预算 三行「旧 → 新」对比，按钮「再改改」「确认修改」）。</p>
+<p>确认后保存并回到进入前的首页（月 / 周同一入口、同一链路，不区分入口），底部提示「修改成功 · 月预算 ¥X」，剩余额度 / 本周剩余 / 每天可花同步重算。</p>
+</div>`
+        }
+      },
+      drawers: {
+        "budget-confirm": {
+          summary:
+`<div class="sp-block">
+<p>标题「确认修改预算？」，副标题「改完立即生效，首页额度同步刷新」。</p>
+<p>三行对比：每天约、每周约、月预算；每行左边是改前数值，右边是改后数值（演示为午餐 +¥3：¥60 → ¥63、¥420 → ¥441、¥1,800 → ¥1,890）。</p>
+<p>每天约 = 三餐四类之和；每周约 = 每天约 × 7；月预算 = 每天约 × 当月天数。左边取保存前的预算，右边按当前三餐四类实时重算。</p>
+<p>按钮「再改改」返回改预算页；「确认修改」保存后回进入前的首页，底部提示「修改成功 · 月预算 ¥X」。</p>
+</div>`
+        },
+        "add-order": {
+          summary:
+`<div class="sp-block">
+<p>标题「增加外部订单」，副标题「默认今天，可改成这一周内的日期；跨周补录请先切换周」。</p>
+<p>日期：默认今天，<em class="sp-red">限制在当前查看周起止范围内</em>，下方提示（今天/昨天/前天/月-日）。餐段：早/午/晚/其他 4 选 1，默认午餐。金额：数字，最小 0，步长 0.01，整数不带小数。</p>
+<p>按钮「取消」「记一笔」。校验：金额 ≤0 或非数字 →「请输入大于 0 的金额」；日期不在当前查看周 →「只能记到当前查看的这一周」。</p>
+</div>`
+        },
+        "week-picker": {
+          summary:
+`<div class="sp-block">
+<p>标题「选择周账单」，副标题「每周一张小票，周一切换新账期」。入口：周首页胶囊中部（周标签 + 日期范围）点击滑出。</p>
+<p>交互：类似微信账单选择器，抽屉中部为可滚动列表，上下滑动查看更早的周，首屏约露 5 行；当前查看的周默认高亮。</p>
+<p>行字段三列：① 周标签 + 日期范围（带年份）——本周「本周（2026.10.27–11.02）」、上周「上周（2026.10.20–10.26）」，更早的周不再写「上上周」这类相对标签，直接用日期范围作标题，如「2026.10.13–10.19」；② 该周总支出，两位小数；③ 该周订单笔数，显示「N 笔」。</p>
+<p>跳转：本周 → 账单-本周（本期）；上周与更早周 → 账单-本周（往期），按所点那一周取数。</p>
+<p><em class="sp-red">没有一笔订单的区间无法点击：整行置灰，右侧显示「无账单 · 不可进入」，不绑任何跳转，点击无响应，只能继续往下滚动</em>。</p>
+</div>`
+        },
+        "month-picker": {
+          summary:
+`<div class="sp-block">
+<p>标题「选择月账单」，副标题「每月一张小票，1 号切换新账期」。入口：月首页胶囊中部（月份标签）点击滑出。</p>
+<p>交互：与选周器一致，类似微信账单选择器，列表可上下滚动，首屏约露 5 行；当前查看的月默认高亮。</p>
+<p>行字段三列：① 月份（本月 · 2026年11月 / 2026年10月 / 2026年9月）；② 该月总支出，两位小数；③ 该月订单笔数，显示「N 笔订单」，不再出现「进行中」「已结算」。</p>
+<p>跳转：本月 → 账单-本月（本期）；更早的月 → 账单-本月（往期），按所点那一月取数。</p>
+<p><em class="sp-red">没有一笔订单的区间无法点击：整行置灰，右侧显示「无账单 · 不可进入」，不绑任何跳转，点击无响应</em>。</p>
+</div>`
+        },
+        "subscribe-sheet": {
+          summary:
+`<div class="sp-block">
+<p>标题「订阅提醒」，副标题「到点提醒你这顿能花多少，先领券再下单」。</p>
+<p>三行开关：午餐「每天 10:30 · 提醒你午餐预算 ¥X」（取 budget.meals.lunch）；晚餐「每天 17:00 · 提醒你晚餐预算 ¥Y」（取 budget.meals.dinner）；周更新「每周一 10:30 · 本周预算 ¥W + 上周结算」（取 budget.weekAmount）。</p>
+<p><em class="sp-red">三个开关默认全关，独立控制</em>；从流程 3 进入时按链路默认开一档。</p>
+<p>按钮「取消」「订阅」。校验：全关 →「至少打开一个提醒」。</p>
+</div>`
+        },
+        "date-sub": {
+          summary:
+`<div class="sp-block">
+<p>标题「日期订阅」，副标题「连得越多，越不容易超预算」；主体为整月日历（2026 年 11 月，周一至周日 7 列，1—30 日），今天格加粗边框。</p>
+<p>点日期格切换选中（选中反白为墨底），可多选；下方显示「已选 N 天」。</p>
+<p>底部只有一个「+1」按钮，无取消按钮：点击按所选日期各加 1 次提醒并进入授权流程；点遮罩可关闭抽屉。</p>
+<p>日期选择与过往日历形式一致，此处不再赘述；连续多天订阅的能力过往已实现，本次沿用。</p>
+<p><em class="sp-red">确认后先弹仿微信原生授权弹窗（允许 / 取消），不再直接成功；点「取消」= 拒绝，滑出「订阅被拒 · 开启引导」抽屉</em>。</p>
+</div>`
+        },
+        "sub-refused": {
+          summary:
+`<div class="sp-block">
+<p>标题「订阅提醒没打开」，副标题「微信不允许小程序二次弹窗，需要你手动开一次」。</p>
+<p><em class="sp-red">入口两条：① 微信授权弹窗点「取消」后自动滑出；② 拒绝后首页订阅卡固定为「订阅未开启 · 去开启 ›」，点击直接进本抽屉，不再弹订阅抽屉</em>。</p>
+<div class="sp-h" data-sp-anchor=".gd-why">说明条</div>
+<p>「为什么不能直接再弹？微信订阅消息一旦被拒绝，小程序就不能再次主动弹窗。只能你到右上角手动打开一次。」浅底 + 红左边框。</p>
+<div class="sp-h" data-sp-anchor=".gd-menu">步骤 ② · 先点「···」再选「设置」</div>
+<p>菜单示意图三行：转发给朋友 / <em class="sp-red">设置（红底高亮，行尾标「← 点这一行」）</em> / 取消。</p>
+<div class="sp-h" data-sp-anchor=".gd-tog">步骤 ③ · 打开「订阅消息」开关</div>
+<p>开关示意图三项：午餐提醒 10:30 / 晚餐提醒 17:00 / 周更新 · 周一 10:30，全部置于开启态（示意目标状态，非当前真实状态）。</p>
+<p><em class="sp-red">步骤 ②③ 是微信原生设置页，其菜单与开关样式不赘述，本帧只做路径示意；本帧只做通知，不放底部按钮，点遮罩空白处关闭并回首页，订阅卡保持「订阅未开启 · 去开启」，之后可再点卡进本抽屉</em>。</p>
+</div>`
+        },
+        "delete-confirm": {
+          summary:
+`<div class="sp-block">
+<p>标题「删除这笔外部订单」，副标题「确认后统计立即回滚」。</p>
+<p>只露三要素：日期（10.29 周三）、餐段、金额（两位小数）；删除后本周合计、剩余额度与每天可用同步回滚。美团 / 饿了么回流订单不可删除。</p>
+<p>按钮「取消」「确认删除」。已失效态（目标为空）显「这笔订单已不存在」，仅保留「关闭」；成功后轻提示「已删除 ¥X.XX，统计已回滚」。</p>
+<p><em class="sp-red">常规二次确认，交互形态与动效不赘述，沿用全局抽屉规范</em>。</p>
+</div>`
+        },
+        "share-sheet": {
+          summary:
+`<div class="sp-block">
+<p>标题「分享账单」，副标题「发给朋友，对方也能算自己的」。</p>
+<p>只有「转发给朋友」一个入口：点击后<em class="sp-red">直接调用微信原生分享面板</em>（会话 / 群聊由微信提供），<em class="sp-red">不是自写弹窗</em>；面板样式、好友列表、会话选择一律不赘述。</p>
+<p>本稿只负责两件事：按入口生成月 / 周卡片预览；落地口径为卡片固定落「积分页」，带 inviter 参数，新用户先落积分页、点「首页」再进新手引导，老用户直接进自己的账单，不覆盖、不清空对方账期。</p>
+<p><em class="sp-red">微信原生分享面板不赘述，本稿不复刻其 UI，只标注唤起时机与落地页规则</em>。</p>
+</div>`
+        }
+      }
+    },
+    "tab-points": {
+      frames: {
+        "tab-points": {
+          summary: "<div class='sp-block'><p class='sp-inh'>演示帧 · 不录入字段逻辑</p></div>"
+        }
+      },
+      drawers: {
+        "coupon-success": {
+          summary: "<div class='sp-block'><p class='sp-inh'>演示帧 · 不录入字段逻辑</p></div>"
+        }
+      }
+    },
+    "points-subscribe": {
+      frames: {
+        "points-subscribe": {
+          summary:
+`<div class="sp-block">
+<p>通知时间「11月1日  10:32」（月日+双空格+时:分）。标题「积分到账提醒」。</p>
+<p>行一「积分来源：订单积分」。行二「积分数量：10」（整数）。行三「温馨提示：已为你统计本周外卖支出，当前预算还剩 ¥250」（=预算−本周已花，取整；预算≤已花显 ¥0）。</p>
+<p>底部「允许通知 ›」。跳转首页·有单，同时轻提示「已订阅积分到账提醒」。辅助提示「点卡片 → 订阅积分到账提醒，然后回首页」。</p>
+</div>`
+        }
+      }
+    },
+    "push-noon": {
+      frames: {
+        "push-noon": {
+          main: true,
+          summary:
+`<div class="sp-block">
+<div class="sp-h">① 类目</div>
+<p>记账类目，用于下发午餐打卡提醒。</p>
+<div class="sp-h">② 模板信息（记账类目）</div>
+<p><b>模板名称</b>：打卡提醒</p>
+<p><b>模板 ID</b>：xxxxxx（申请后回填）</p>
+<p><b>模板编号</b>：xxxxxx（申请后回填）</p>
+<div class="sp-h">③ 字段映射</div>
+<p><b>打卡名称</b>（<code>{{thing6.DATA}}</code>）：午餐打卡（自动记账）</p>
+<p><b>备注</b>（<code>{{thing3.DATA}}</code>）：今天午餐建议 ≤ ¥20</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「打卡提醒」；第一行显示打卡名称，第二行显示备注。</p>
+<div class="sp-h">⑤ 跳转</div>
+<p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（本期）</em>。</p>
+<div class="sp-h">⑥ 正常 / 异常判定</div>
+<p><b>正常</b>：月总支出 &lt; 月预算时推送本帧；备注中的 ¥20 取午餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>异常</b>：月总支出 ≥ 月预算时改推超支版，备注中的「已超 ¥10」直接取月超支金额。</p>
+<div class="sp-h">⑦ 下发时间</div>
+<p>每天 10:30 定时下发。</p>
+</div>`
+        },
+        "push-eve": {
+          inherits: "push-noon",
+          summary:
+`<div class="sp-block">
+<div class="sp-h">① 类目</div>
+<p>备忘录类目，用于下发晚餐打卡提醒。</p>
+<div class="sp-h">② 模板</div>
+<p><b>模板名称</b>：日程提醒</p>
+<p><b>模板 ID</b>：xxxxxx（类目申请后回填）</p>
+<div class="sp-h">③ 字段映射</div>
+<p><b>提醒内容</b>（<code>{{thing2.DATA}}</code>）：晚餐打卡（自动记账）</p>
+<p><b>备注</b>（<code>{{thing11.DATA}}</code>）：今天晚餐建议 ≤ ¥20</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「日程提醒」；第一行显示提醒内容，第二行显示备注。</p>
+<div class="sp-h">⑤ 跳转</div>
+<p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（本期）</em>。</p>
+<div class="sp-h">⑥ 正常 / 异常判定</div>
+<p><b>正常</b>：月总支出 &lt; 月预算时推送本帧；备注中的 ¥20 取晚餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>异常</b>：月总支出 ≥ 月预算时改推超支版，备注中的「已超 ¥10」直接取月超支金额。</p>
+<div class="sp-h">⑦ 下发时间</div>
+<p>每天 17:00 定时下发。</p>
+</div>`
+        },
+        "push-week": {
+          inherits: "push-noon",
+          summary:
+`<div class="sp-block">
+<div class="sp-h">① 类目</div>
+<p>记账类目，用于下发上周账单总结。</p>
+<div class="sp-h">② 模板信息（记账类目）</div>
+<p><b>模板名称</b>：每周记账提醒</p>
+<p><b>模板 ID</b>：xxxxxx（申请后回填）</p>
+<p><b>模板编号</b>：10562</p>
+<div class="sp-h">③ 字段映射</div>
+<p><b>上周支出</b>（<code>{{amount6.DATA}}</code>）：¥148.00</p>
+<p><b>温馨提示</b>（<code>{{thing8.DATA}}</code>）：上周支出未超预算，继续保持！</p>
+<p>若上周已超支，温馨提示改为「上周已超预算 ¥X，本周注意」。</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「每周记账提醒」；第一行显示上周支出，第二行显示温馨提示。</p>
+<div class="sp-h">⑤ 跳转</div>
+<p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（本期）</em>。</p>
+<div class="sp-h">⑥ 数据口径</div>
+<p><b>上周支出</b>为上周总支出（上周一 0 点至本周一 0 点，联盟订单 + 外部订单实付之和）；预算取上周生效的周预算。</p>
+<p>只做上周总结，不推本周无数据 / 新一周内容。</p>
+<div class="sp-h">⑦ 下发时间</div>
+<p>每周一 10:30 定时下发。</p>
+</div>`
+        },
+        "push-noon-over": {
+          inherits: "push-noon",
+          summary:
+`<div class="sp-block">
+<div class="sp-h">① 类目</div>
+<p>记账类目，用于下发午餐打卡提醒。</p>
+<div class="sp-h">② 模板信息（记账类目）</div>
+<p><b>模板名称</b>：打卡提醒</p>
+<p><b>模板 ID</b>：xxxxxx（申请后回填）</p>
+<p><b>模板编号</b>：xxxxxx（申请后回填）</p>
+<div class="sp-h">③ 字段映射</div>
+<p><b>打卡名称</b>（<code>{{thing6.DATA}}</code>）：午餐打卡（本周已超支）</p>
+<p><b>备注</b>（<code>{{thing3.DATA}}</code>）：已超 ¥10，后面几天少花点</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「打卡提醒」；第一行显示打卡名称，第二行显示备注。</p>
+<div class="sp-h">⑤ 跳转</div>
+<p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（超支）</em>。</p>
+<div class="sp-h">⑥ 正常 / 异常判定</div>
+<p><b>异常</b>：月总支出 ≥ 月预算时推送本帧，备注中的「已超 ¥10」直接取月超支金额。</p>
+<p><b>正常</b>：月总支出 &lt; 月预算时改推正常版，备注中的金额取午餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<div class="sp-h">⑦ 下发时间</div>
+<p>每天 10:30 定时下发。</p>
+</div>`
+        },
+        "push-eve-over": {
+          inherits: "push-noon",
+          summary:
+`<div class="sp-block">
+<div class="sp-h">① 类目</div>
+<p>备忘录类目，用于下发晚餐打卡提醒。</p>
+<div class="sp-h">② 模板</div>
+<p><b>模板名称</b>：日程提醒</p>
+<p><b>模板 ID</b>：xxxxxx（类目申请后回填）</p>
+<div class="sp-h">③ 字段映射</div>
+<p><b>提醒内容</b>（<code>{{thing2.DATA}}</code>）：晚餐打卡（本周已超支）</p>
+<p><b>备注</b>（<code>{{thing11.DATA}}</code>）：已超 ¥10，明天少花点</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「日程提醒」；第一行显示提醒内容，第二行显示备注。</p>
+<div class="sp-h">⑤ 跳转</div>
+<p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（超支）</em>。</p>
+<div class="sp-h">⑥ 正常 / 异常判定</div>
+<p><b>异常</b>：月总支出 ≥ 月预算时推送本帧，备注中的「已超 ¥10」直接取月超支金额。</p>
+<p><b>正常</b>：月总支出 &lt; 月预算时改推正常版，备注中的金额取晚餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<div class="sp-h">⑦ 下发时间</div>
+<p>每天 17:00 定时下发。</p>
+</div>`
+        }
+      }
+    },
+    "share-friend": {
+      frames: {
+        "share-friend-month": {
+          summary:
+`<div class="sp-block">
+<p>模拟微信好友会话页收到小程序卡片。会话标题「王小明」，时间「12:20」，头像字「王」。</p>
+<p><em class="sp-red">卡片结构自上而下：宣传标题 → 主图（一桌外卖实拍）→ 小程序名称「饭扫光」+ 角标「小程序」</em>。</p>
+<p>月分享宣传标题「这个月外卖花了 ¥X.XX，你也来记账吧」，金额取该月总支出并动态更新；不再有副标，也不再出现「封面占位」</p>
+<p>卡片下方提示「点卡片：新人 → 积分页 · 领券（点首页进引导，老用户进 本月账单）」。</p>
+</div>`
+        },
+        "share-friend-week": {
+          summary:
+`<div class="sp-block">
+<p>模拟微信好友会话页收到小程序卡片。会话标题「王小明」，时间「12:20」，头像字「王」。</p>
+<p><em class="sp-red">卡片结构自上而下：宣传标题 → 主图（一桌外卖实拍）→ 小程序名称「饭扫光」+ 角标「小程序」</em>。</p>
+<p>周分享宣传标题「这周外卖花了 ¥X.XX，你也来记账吧」，金额取该周总支出并动态更新；不再有副标，也不再出现「封面占位」</p>
+<p>卡片下方提示「点卡片：新人 → 积分页 · 领券（点首页进引导，老用户进 本周账单）」。</p>
+</div>`
+        }
+      }
+    },
+    "wework-promo": {
+      frames: {
+        "wework-promo": {
+          summary: "<div class='sp-block'><p class='sp-inh'>演示帧 · 不录入字段逻辑</p></div>"
+        }
+      }
+    },
+    "external-order": {
+      frames: {
+        "external-order": {
+          summary: "<div class='sp-block'><p class='sp-inh'>演示帧 · 不录入字段逻辑</p></div>"
+        }
+      }
+    },
+    "tab-mall": {
+      frames: {
+        "tab-mall": {
+          summary: "<div class='sp-block'><p class='sp-inh'>演示帧 · 不录入字段逻辑</p></div>"
+        }
+      }
+    },
+    "tab-me": {
+      frames: {
+        "tab-me": {
+          summary: "<div class='sp-block'><p class='sp-inh'>演示帧 · 不录入字段逻辑</p></div>"
+        }
+      }
+    }
+  };
+
+  let railMode = "flow";
+  let activePage = "home-month";
+  let demoOpen = false;   // 页面轴「演示页」组默认收起
+  let current = "home-month";
+  let guideDone = false;  // 完成引导 ③ 后，点「首页」不再触发引导
+  let viewWeek = "cur";
+  let viewMonth = "prev";   // 往期月帧取数口径：prev = 10月 / older = 9月（选月器点行时更新）
+  let sheet = null;
+  let sheetOrigin = null;
+  let addDraft = { date: todayStr(), meal: "lunch", amount: "32" };
+  let claimCoupon = null;
+  let subDraft = { lunch: false, dinner: false, week: false };
+  let dateSel = [];
+  let subRefused = false;                        // 微信授权被拒绝，订阅卡转「去开启」
+  let authPop = false;                           // 仿微信原生订阅授权弹窗
+  let subAuthorized = false;                     // 已授权过：之后补日期不再弹授权
+  let dateMode = "first";                        // first = 首次选日期（需授权）/ refill = 已授权补选
+  let shareInfo = null;                          // 分享卡片快照：{ scope, title, sub, total, label }
+  let pendingSub = { lunch: false, dinner: false, week: false };  // 被拒前的勾选快照
+  let pendingLane = -1;
+  let pendingDays = 0;
+  function mealsSum(m){ return (Number(m.breakfast)||0) + (Number(m.lunch)||0) + (Number(m.dinner)||0) + (Number(m.other)||0); }
+  /* ===== 预算模型：三餐四类为主字段，每天 / 每周 / 月预算全部派生 ===== */
+  const MONTH_DAYS = [31,28,31,30,31,30,31,31,30,31,30,31];   // 2026 年各月天数（写死）
+  function budgetDaily(meals){ return mealsSum(meals); }
+  function budgetWeek(meals){ return mealsSum(meals) * 7; }
+  function budgetMonth(meals){ return mealsSum(meals) * MONTH_DAYS[MONTH.m]; }
+  function saveBudgetFromMeals(meals){
+    budget.meals = Object.assign({}, meals);
+    budget.dailyAmount = budgetDaily(budget.meals);
+    budget.weekAmount = budgetWeek(budget.meals);
+    budget.monthAmount = budgetMonth(budget.meals);
+  }
+  /* ===== 改预算全屏帧草稿：只改三餐四类，月预算 / 周 / 日均全部派生 ===== */
+  let bDraft = null;   // { month, meals }
+  let bFrom = null;    // 进入改预算前的首页帧
+  function resetBDraft(){
+    const meals = Object.assign({}, budget.meals);
+    bDraft = { month: budgetMonth(meals), meals: meals };
+  }
+  function openBudgetEdit(){
+    bFrom = isHomeFrame(current) ? current : "home-month";
+    resetBDraft();
+    go("budget-edit");
+  }
+  /* 预算保存成功后的去向：引导③ → 新账期；改预算 → 回来源帧（超支态同步刷新参照额度） */
+  function afterBudgetSaved(){
+    if (current === "guide-budget"){
+      bDraft = null;
+      go("home-month-new");
+      return;
+    }
+    if (bFrom === "home-week-over" || bFrom === "home-month-over") overWeekBudget = budget.weekAmount;
+    const back = (bFrom && isHomeFrame(bFrom)) ? bFrom : "home-month";
+    bDraft = null; bFrom = null;
+    go(back);
+    toast("修改成功 · 月预算 ¥" + budget.monthAmount);
+  }
+  const DEFAULT_MEALS = { breakfast: 10, lunch: 20, dinner: 20, other: 10 };
+  let budget = {
+    meals: Object.assign({}, DEFAULT_MEALS),
+    dailyAmount: budgetDaily(DEFAULT_MEALS),
+    weekAmount: budgetWeek(DEFAULT_MEALS),
+    monthAmount: budgetMonth(DEFAULT_MEALS)
+  };
+  let overWeekBudget = 120;    // 超支态单独一份参照额度，不改全局预算
+  let toastTimer = null;
+  let delTarget = null;
+  let activeFlowId = "1";
+  let activeStep = null;   // { f: 流程编号, l: 链路下标, i: 步骤下标 } —— 只高亮被点过的那一条
+
+  function fmt(n){ return Number(n).toFixed(2); }
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function dayLabel(str){
+    if (!str) return "今天";
+    const parts = str.split("-").map(Number);
+    const t = new Date(parts[0], parts[1] - 1, parts[2]);
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    const diff = Math.round((now - t) / 86400000);
+    if (diff === 0) return "今天";
+    if (diff === 1) return "昨天";
+    if (diff === 2) return "前天";
+    return parts[1] + "-" + String(parts[2]).padStart(2, "0");
+  }
+  function ic(name){
+    const paths = {
+      home: "<path d='M3 10.5 12 3l9 7.5V21H3z'/><path d='M9 21v-7h6v7'/>",
+      gift: "<rect x='3' y='8' width='18' height='13' rx='2'/><path d='M3 12h18M12 8v13M8.5 8C6 8 5 6.6 5 5.2 5 3.8 6.2 3 7.6 3 10 3 12 8 12 8s2-5 4.4-5c1.4 0 2.6.8 2.6 2.2C19 6.6 18 8 15.5 8'/>",
+      bag: "<path d='M4 7h16l-1.2 14H5.2z'/><path d='M8 7V5a4 4 0 0 1 8 0v2'/>",
+      user: "<circle cx='12' cy='8' r='4'/><path d='M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7'/>"
+    };
+    return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linejoin='round'>" + (paths[name] || "") + "</svg>";
+  }
+
+  function tabbar(active){
+    const items = [
+      { k: "home", n: "首页", ic: "home" },
+      { k: "points", n: "积分", ic: "gift" },
+      { k: "mall", n: "积分商城", ic: "bag" },
+      { k: "me", n: "我的", ic: "user" }
+    ];
+    return "<nav class='tabbar'>" + items.map(function(it){
+      return "<div class='tab " + (it.k === active ? "on" : "") + "' data-tab='" + it.k + "'>" + ic(it.ic) + "<span>" + it.n + "</span></div>";
+    }).join("") + "</nav>";
+  }
+
+  /* 周首页顶部胶囊：‹ 上周 / 本周 / 更早月 ›，中间点开「选择周账单」抽屉 */
+  function brand(){
+    const st = weekFrameType();
+    const w = WEEKS[weekViewOf(st)];
+    let label = "本周";
+    if (st === "past") label = w.tab;
+    else if (st === "new") label = "新一周";
+    const prevTo = WEEK_NAV[st] && WEEK_NAV[st].prev;
+    const nextTo = WEEK_NAV[st] && WEEK_NAV[st].next;
+    return "<div class='brand'>" +
+      "<div class='wkcap'>" +
+        "<span class='wkcap-ar" + (prevTo ? "" : " off") + "'" + (prevTo ? " data-act='week-prev'" : "") + ">‹</span>" +
+        "<span class='wkcap-lb' data-act='open-weeks'>" + label + "</span>" +
+        "<span class='wkcap-rg' data-act='open-weeks'>" + w.range + "</span>" +
+        "<span class='wkcap-ar" + (nextTo ? "" : " off") + "'" + (nextTo ? " data-act='week-next'" : "") + ">›</span>" +
+      "</div>" +
+      dimPill("week") +
+      "<span class='ava' data-tab='me'>小</span>" +
+    "</div>";
+  }
+
+  function dayRows(w){
+    const rows = w.days.map(function(d, di){ return { d: d, di: di }; })
+      .filter(function(x){ return x.d.orders.length > 0; })
+      .reverse();
+    return rows.length ? rows.map(function(x, i){
+      const d = x.d;
+      const sum = dayTotal(d);
+      const orders = "<div class='wt-orders'>" + d.orders.map(function(o, oi){
+        if (o.manual) {
+          // 外部单：餐段标 + 名称 + 时间(未填时间)·手动 + 金额 + 删
+          return "<div class='wt-o'>" +
+            "<span class='th manual'>" + (o.meal || "其他").charAt(0) + "</span>" +
+            "<div class='od'><div class='on'>" + (o.name || "外部订单") + "</div><div class='om'>" + (MEAL_TIME[o.meal] || "未填时间") + " · 手动</div></div>" +
+            "<span class='mo'>¥" + fmt(o.amt) + "</span>" +
+            "<button class='wt-del' data-act='ask-delete' data-di='" + x.di + "' data-oi='" + oi + "'>删</button></div>";
+        }
+        const mealTag = (o.meal || "其他").charAt(0);
+        return "<div class='wt-o'>" +
+          "<span class='th meal-" + (o.meal || "其他") + "'>" + mealTag + "</span>" +
+          "<div class='od'><div class='on'>" + o.name + (o.item ? " · " + o.item : "") + "</div>" +
+          "<div class='om'>" + o.time + " · " + o.tag + "</div></div>" +
+          "<span class='mo'>¥" + fmt(o.amt) + "</span></div>";
+      }).join("") + "</div>";
+      return "<div class='wt-day' style='animation-delay:" + (1.36 + i * 0.05).toFixed(2) + "s'>" +
+        "<div class='wt-day-top'><div class='d'>" + d.w + "<em>" + d.mm + "</em>" + (d.today ? "<span class='wt-today'>今天</span>" : "") + "</div>" +
+        "<div class='sum'>¥" + fmt(sum) + "</div></div>" + orders + "</div>";
+    }).join("") : "<div class='wt-none'>本周还没有订单</div>";
+  }
+
+  /* 三餐参考值：每格 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5；第三行仅「没吃 / 已用 ¥X」 */
+  function mealRefs(curWeek, mealVals){
+    const MEAL_KEYS = ["早餐", "午餐", "晚餐", "其他"];
+    const MEAL_MAP = { "早餐":"breakfast", "午餐":"lunch", "晚餐":"dinner", "其他":"other" };
+    const todayDay = curWeek.days.find(function(d){ return d.today; });
+    const used = { "早餐":0, "午餐":0, "晚餐":0, "其他":0 };
+    if (todayDay) todayDay.orders.forEach(function(o){ used[o.meal] += o.amt; });
+
+    /* 按餐段统计本周每天的消费，用于求「有数据天的均值」 */
+    const sums = { "早餐":0, "午餐":0, "晚餐":0, "其他":0 };
+    const days = { "早餐":0, "午餐":0, "晚餐":0, "其他":0 };
+    curWeek.days.forEach(function(d){
+      const ds = {};
+      d.orders.forEach(function(o){ ds[o.meal] = (ds[o.meal] || 0) + o.amt; });
+      Object.keys(ds).forEach(function(m){
+        if (sums[m] != null){ sums[m] += ds[m]; days[m]++; }
+      });
+    });
+
+    return MEAL_KEYS.map(function(m){
+      const base = Number(mealVals[MEAL_MAP[m]]) || 0;
+      const avg = days[m] > 0 ? sums[m] / days[m] : 0;
+      const ref = days[m] > 0 ? Math.round(base + (avg - base) * 0.5) : base;
+      const u = used[m];
+      return { key:m, amt:ref, used:u, st: u > 0 ? "已用 ¥" + u : "没吃" };
+    });
+  }
+
+  /* ========== 模块3：7 天支出柱状图 ========== */
+  function wkChart(w, opts){
+    opts = opts || {};
+    const overspend = !!opts.overspend;
+    const amount = overspend ? overWeekBudget : budget.weekAmount;
+    const refDaily = Math.round(amount / 7);         // 单日预算参考线
+    const totals = w.days.map(function(d){ return dayTotal(d); });
+
+    // 显示上限取 max(参考线, 实际最大)，保证柱子不被截断
+    const dataMax = Math.max.apply(null, totals.concat([refDaily]));
+    const refTop = Math.round((1 - refDaily / dataMax) * 100);   // 参考线距顶部 %
+
+    // 柱子层（只含柱体，wkchart-area 绝对定位）
+    const colsHtml = w.days.map(function(d, i){
+      const t = totals[i];
+      const over = t > refDaily;
+      let colCls = "wkbar-col";
+      if (t === 0) colCls += " empty";
+      if (over) colCls += " over";
+      const hPct = t > 0 ? Math.round(t / dataMax * 100) : 0;
+      return "<div class='wkbar-col-wrap'><div class='" + colCls + "' style='height:" + hPct + "%'></div></div>";
+    }).join("");
+
+    // 数值 + 日标层（独立 flex row，正常文档流）
+    const footHtml = w.days.map(function(d, i){
+      const t = totals[i];
+      const today = !!d.today;
+      const valCls = t === 0 ? "wkbar-val empty" : "wkbar-val";
+      const dayLabel = d.w ? d.w.charAt(1) : ["一","二","三","四","五","六","日"][i];
+      const todayCls = today ? " today" : "";
+      return "<div class='wkbar-foot" + todayCls + "'>" +
+        "<div class='" + valCls + "'>" + (t > 0 ? t : "—") + "</div>" +
+        "<div class='wkbar-lbl'>" + dayLabel + "</div>" +
+      "</div>";
+    }).join("");
+
+    const refLine = "<div class='wk-ref' style='top:" + refTop + "%'>" +
+      "<span class='wk-ref-label'>¥" + refDaily + " 参考线</span></div>";
+
+    return "<div class='rc-block blk-card'><div class='wkchart'>" +
+      "<div class='wkchart-head'>" +
+        "<span class='wk-title'>本 周 7 天 支 出</span>" +
+      "</div>" +
+      "<div class='wkchart-area'>" + refLine +
+        "<div class='wkbars'>" + colsHtml + "</div>" +
+      "</div>" +
+      "<div class='wkbars-foot'>" + footHtml + "</div>" +
+    "</div></div>";
+  }
+
+  /* ===== 帧判定：月/周各一套（cur / past / over / new） ===== */
+  function inPool(key, pool){
+    key = key || current;
+    return Object.keys(pool).some(function(k){ return pool[k] === key; });
+  }
+  function frameTypeOf(key, pool){
+    key = key || current;
+    let hit = "";
+    Object.keys(pool).forEach(function(k){ if (pool[k] === key) hit = k; });
+    return hit || "cur";
+  }
+  function isMonthFrame(key){ key = key || current; return inPool(key, HOME_MONTH_FRAMES) || key === "home-month-desktop"; }
+  function isWeekFrame(key){ return inPool(key, HOME_WEEK_FRAMES); }
+  function isHomeFrame(key){ return isMonthFrame(key) || isWeekFrame(key); }
+  function monthFrameType(key){ return frameTypeOf(key, HOME_MONTH_FRAMES); }
+  function weekFrameType(key){ return frameTypeOf(key, HOME_WEEK_FRAMES); }
+  /* 月/周维度切换 pill：仅非当前侧可点，点击跳语义对应帧（cur↔cur、prev↔prev…） */
+  function dimPill(dim){
+    return "<span class='mode-pill'>" +
+      "<span class='mp-m" + (dim === "month" ? " on" : "") + "'" + (dim === "month" ? "" : " data-act='dim-switch'") + ">月</span>" +
+      "<span class='mp-w" + (dim === "week" ? " on" : "") + "'" + (dim === "week" ? "" : " data-act='dim-switch'") + ">周</span>" +
+    "</span>";
+  }
+  /* 周帧态 → 周数据 key：往期跟随 viewWeek（上周或 10月8—14日） */
+  function weekViewOf(stType){
+    if (stType === "past") return (viewWeek === "older2") ? "older2" : "prev";
+    return { cur:"cur", over:"cur", new:"newweek" }[stType] || "cur";
+  }
+  /* 帧跳转时把周数据指针同步到对应账期，供补卡 / 删除 / 选周抽屉使用 */
+  function syncView(key){
+    if (isMonthFrame(key)){
+      const st = monthFrameType(key);
+      if (st === "past") { if (viewWeek !== "prev" && viewWeek !== "older2") viewWeek = "prev"; }
+      else viewWeek = "cur";
+    } else if (isWeekFrame(key)){
+      const st = weekFrameType(key);
+      if (st === "past") { if (viewWeek !== "prev" && viewWeek !== "older2") viewWeek = "prev"; }
+      else viewWeek = weekViewOf(st);
+    }
+  }
+
+  /* ===== 月胶囊 brand：‹ 往期月 / 下月 ›，往期按选中的月份出 label ===== */
+  function monthBrand(){
+    const st = monthFrameType();
+    let label = "2026年11月";
+    if (st === "past") label = (viewMonth === "older" ? "2026年9月" : "2026年10月");
+    if (st === "new") label = "2026年12月";
+    const prevOn = st !== "new";
+    const nextOn = (st === "past");
+    return "<div class='brand'>" +
+      "<div class='wkcap'>" +
+        "<span class='wkcap-ar" + (prevOn ? "" : " off") + "'" + (prevOn ? " data-act='month-prev'" : "") + ">‹</span>" +
+        "<span class='wkcap-lb' data-act='open-months'>" + label + "</span>" +
+        "<span class='wkcap-ar" + (nextOn ? "" : " off") + "'" + (nextOn ? " data-act='month-next'" : "") + ">›</span>" +
+      "</div>" +
+      dimPill("month") +
+      "<span class='ava' data-tab='me'>小</span>" +
+    "</div>";
+  }
+
+  /* ===== 月历：金额按帧态传入，只有本期才标今天 ===== */
+  function monthCal(amounts, showToday){
+    const y = MONTH.y, m = MONTH.m;
+    const firstDay = MONTH.firstDay, daysInMonth = MONTH.daysInMonth;
+    const today = showToday ? MONTH.today : 0;
+    const dayAmount = amounts || MONTH.dayAmount;
+
+    /* 金额分档 */
+    const sorted = Object.values(dayAmount).filter(function(v){ return v > 0; }).sort(function(a,b){ return a-b; });
+    const quartile = Math.floor(sorted.length / 4);
+    const q1 = sorted[quartile] || 20, q2 = sorted[quartile*2] || 30, q3 = sorted[quartile*3] || 40;
+
+    let cells = "";
+    /* 前置空白格 */
+    for (let i = 0; i < firstDay; i++){
+      cells += "<div class='cal-cell empty'></div>";
+    }
+    /* 每一天 */
+    for (let d = 1; d <= daysInMonth; d++){
+      const dow = new Date(y, m, d).getDay();
+      const amt = dayAmount[d] || 0;
+      let cls = "cal-cell";
+      if (amt > 0) cls += " has-data";
+      if (d === today) cls += " today";
+      if (dow === 0 || dow === 6) cls += " weekend";
+      if (amt > 0){
+        if (amt <= q1) cls += " l1";
+        else if (amt <= q2) cls += " l2";
+        else if (amt <= q3) cls += " l3";
+        else cls += " l4";
+      }
+      cells += "<div class='" + cls + "' data-cal-day='" + d + "'>" +
+        "<span class='d'>" + d + "</span>" +
+        (amt > 0 ? "<span class='v'>¥" + amt + "</span>" : "") +
+      "</div>";
+    }
+    /* 底部统计已取消 */
+    return "<div class='cal-wrap'>" +
+      "<div class='cal-title'>" + (showToday ? "本 月 订 餐 日 历" : "该 月 订 餐 日 历") + "</div>" +
+      "<div class='cal-head'><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div>" +
+      "<div class='cal-grid'>" + cells + "</div>" +
+    "</div>";
+  }
+
+  /* ===== 月报版新增：本周焦点卡 ===== */
+  function monthWeekCard(isNew){
+    /* 新账期：无消费数据，今天可花=日均预算、本周剩=周预算全额、还有 7 天，参考值按预算显示 */
+    const w = isNew ? WEEKS.newweek : WEEKS.cur;
+    const wc = isNew
+      ? { todayAvail: budget.dailyAmount, weekRemain: budget.weekAmount, daysLeft: 7 }
+      : weekCardStats();
+
+    /* 三餐参考值（复用 mealRefs 输出结构） */
+    const refs = mealRefs(w, budget.meals);
+    const refHtml = "<div class='refgrid'>" + refs.map(function(r){
+      const cls = (r.st.indexOf("超") >= 0) ? "over" : (r.st.indexOf("已用") >= 0 ? "ok" : "");
+      return "<div class='ref-cell'><span class='ref-k'>" + r.key + "</span><b class='ref-a'>" + r.amt + "</b><em class='" + cls + "'>" + r.st + "</em></div>";
+    }).join("") + "</div>";
+
+    return "<div class='wcard'>" +
+      "<div class='wc-now'>今天可花 <b>¥" + wc.todayAvail + "</b></div>" +
+      refHtml +
+    "</div>";
+  }
+
+  /* ===== 小票顶部卡片：月/周统一结构，口径由调用方传入 ===== */
+  function rcTop(p){
+    const head = "<div class='rc-sec'>" + p.title + (p.period ? "<span class='k-sub'>· " + p.period + "</span>" : "") + "</div>";
+    const amt = "<div class='rc-amt" + (p.neg ? " neg" : "") + "'><small>¥</small><span id='amtMain'>0</span></div>";
+    let foot = "";
+    if (p.mode === "cur" || p.mode === "over"){
+      const over = p.remain <= 0;
+      const barCls = over ? "over" : (p.pct <= 10 ? "low" : (p.pct <= 30 ? "warn" : "ok"));
+      const bar = p.mode === "cur"
+        ? "<div class='pb pb-b " + barCls + "'><div class='pb-track'><i style='width:" + p.pct + "%'></i></div></div>"
+        : "";
+      const avg = p.dailyAvg > 0 ? "¥" + p.dailyAvg : "-";
+      foot = "<div class='pb-b-wrap'>" +
+        "<div class='pb-b-row1'><span>" + (over ? "已超 <b class='over-amt'>" + Math.abs(Math.round(p.remain)) + "</b>" : "剩 <b>" + Math.round(p.remain) + "</b>") + "</span>" +
+          "<span>预算 <b>" + p.budget + "</b></span></div>" +
+        bar +
+        "<div class='pb-b-row2'><span>日均消费 <b>" + avg + "</b></span>" +
+          (p.canEdit ? "<span class='go' data-act='open-budget'>改预算 ›</span>" : "") + "</div>" +
+      "</div>";
+    } else if (p.mode === "past"){
+      foot = "<div class='pb-b-wrap'>" +
+        "<div class='pb-b-row1'><span>日均消费 <b>¥" + p.dailyAvg + "</b></span><span>预算 <b>" + p.budget + "</b></span></div>" +
+      "</div>";
+    }
+    return head + amt + foot;
+  }
+
+  /* ===== 月首页：按帧 key 分发 4 态（cur / past / over / new）；无空态 ===== */
+  function monthHome(opts){
+    opts = opts || {};
+    const stType = monthFrameType();
+    const ms = monthStats(stType);
+    const isCur = stType === "cur";
+    const isPast = stType === "past";
+    const isOver = stType === "over";
+    const isNewMonth = stType === "new";
+    const pastOlder = isPast && viewMonth === "older";
+
+    const noStr = isNewMonth ? "12" : (isPast ? (pastOlder ? "09" : "10") : "11");
+
+    /* 小票顶部：新账期 = 本期的空数据态（0 单、¥0.00、日均 -）；月小票不显示账期 */
+    const top = rcTop({
+      title: isCur || isNewMonth ? "本月总支出" : (isPast ? "该月总支出" : "本月已支出"),
+      period: "",
+      mode: isOver ? "over" : (isPast ? "past" : "cur"),
+      amount: isOver ? MONTH.overSpent : ms.total,
+      remain: budget.monthAmount - ms.total,
+      budget: budget.monthAmount,
+      dailyAvg: ms.dailyAvg,
+      pct: budget.monthAmount > 0 ? Math.min(100, Math.round(ms.total / budget.monthAmount * 100)) : 0,
+      canEdit: !isPast,
+      neg: isOver,
+      daysLeft: ms.daysLeft
+    });
+
+    /* 双入口：四态都渲染，手动补单数按当前展示的账期取 */
+    const duoWeek = isNewMonth ? WEEKS.newweek : (isPast ? (pastOlder ? WEEKS.older2 : WEEKS.prev) : WEEKS.cur);
+    const manualCount = duoWeek.days.reduce(function(s, d){ return s + d.orders.filter(function(o){ return o.manual; }).length; }, 0);
+    const subNames = [subDraft.lunch ? "午餐" : "", subDraft.dinner ? "晚餐" : "", subDraft.week ? "周更新" : ""].filter(Boolean);
+    const subOn = subNames.length > 0;
+    const duo = "<div class='duo'>" +
+      "<div class='entry ticket' data-act='to-points'><b>领券</b><span>领券后自动记账</span><span class='state'>" + (isPast ? "该月 " : "本月 ") + manualCount + " 单手动补</span><span class='go'>›</span></div>" +
+      "<div class='entry sub" + (subRefused ? " warn" : "") + "' data-act='" + (subRefused ? "open-sub-refused" : "open-subscribe") + "'><b>订阅</b><span>到点提醒这顿能花多少</span><span class='state'>" + (subRefused ? "订阅未开启 · 去开启" : (subOn ? (subNames[0] + " 已开启") : "未开提醒")) + "</span><span class='go'>›</span></div>" +
+    "</div>";
+
+    /* 当前账期（本期 / 超支 / 新账期）统一渲染月历 + 本周卡；往期只读月历 */
+    const isThisMonth = isCur || isOver || isNewMonth;
+    const cal = monthCal(ms.dayAmount, !isPast);
+    const wcard = isThisMonth ? monthWeekCard(isNewMonth) : "";
+
+    /* 明细：当前账期与往期都完整渲染，新账期为 0 单空态 */
+    let listBlock = "";
+    if (isThisMonth || isPast){
+      const lw = isNewMonth ? WEEKS.newweek : (isPast ? (pastOlder ? WEEKS.older2 : WEEKS.prev) : WEEKS.cur);
+      const lst = weekStats(lw);
+      const manualCount = lw.days.reduce(function(s, d){ return s + d.orders.filter(function(o){ return o.manual; }).length; }, 0);
+      const listHead = "<div class='lt-head'><span class='p-t'>" + (isPast ? "该月 " : "本月 ") + lst.count + " 单</span>" +
+        (isPast ? "" : "<span class='add' data-act='open-add'>补一笔</span>") + "</div>";
+      const tabs = isPast ? "" : "<div class='lt-tabs'>" + ["全部","第1周","第2周","第3周","第4周","第5周"].map(function(t, i){
+        return "<div class='lt-tab" + (i === 0 ? " on" : "") + "'>" + t + "</div>";
+      }).join("") + "</div>";
+      const endLine = lst.count > 0
+        ? "<div class='end-line'>" + lst.count + " 单" + (manualCount > 0 ? " · " + manualCount + " 单手动补" : "") + " ✿" +
+          "<span class='go' data-act='open-share'>" + (isPast ? "分享该月账单" : "分享本月账单") + "</span></div>"
+        : "";
+      const emptyBody = isNewMonth ? "<div class='wt-none'>还没有订单</div>" : dayRows(lw);
+      listBlock = "<div class='rc-block lt-wrap'>" + listHead + tabs + emptyBody + endLine + "</div>";
+    }
+
+    const stampText = isCur || isNewMonth ? "本月自动记账" : (isPast ? "已结算" : "已超支");
+
+    return "<div class='rc-wrap'><div class='receipt'>" +
+      "<div class='zz t'></div><div class='rc-body'>" +
+        "<div class='rc-dash d2'></div>" +
+        "<div class='rc-head'><span>NO." + noStr + "</span></div>" +
+        top +
+        "<div class='stamp'><div><div class='t'>AUTO LOGGED</div><div class='s'>" + stampText + "</div></div></div>" +
+      "</div><div class='zz b'></div></div></div>" +
+      duo + cal + wcard + listBlock +
+      (opts.deskTip ? "<div class='dt-tip' id='deskTip'>添加至桌面，每天快速记账</div>" : "");
+  }
+
+  /* ===== 周首页：按帧 key 分发 4 态（cur / past / over / new）；无空态 ===== */
+  function weekHome(opts){
+    opts = opts || {};
+    const stType = weekFrameType();
+    const w = WEEKS[weekViewOf(stType)];
+    const st = weekStats(w);
+    const isCur = stType === "cur";
+    const isPast = stType === "past";
+    const isOver = stType === "over";
+    const isNewWeek = stType === "new";
+
+    const amount = isOver ? overWeekBudget : budget.weekAmount;
+    const remain = amount - st.total;
+    const pct = amount > 0 ? Math.min(100, Math.round(st.total / amount * 100)) : 0;
+
+    let ti = -1;
+    w.days.forEach(function(d, i){ if (d.today) ti = i; });
+    /* 新账期：无消费数据，今天可花=日均预算、还有 7 天 */
+    const daysLeft = isNewWeek ? 7 : (ti >= 0 ? 7 - ti : 0);
+    const todayAvail = isNewWeek ? budget.dailyAmount : ((isPast || isOver) ? Math.abs(remain) : (daysLeft > 0 ? Math.floor(Math.max(0, remain) / daysLeft) : 0));
+    const refs = (isCur || isOver || isNewWeek) ? mealRefs(w, budget.meals) : [];
+    const manualCount = w.days.reduce(function(s, d){ return s + d.orders.filter(function(o){ return o.manual; }).length; }, 0);
+    const subNames = [subDraft.lunch ? "午餐" : "", subDraft.dinner ? "晚餐" : "", subDraft.week ? "周更新" : ""].filter(Boolean);
+    const subOn = subNames.length > 0;
+
+    /* 小票顶部：新账期 = 本期的空数据态（0 单、¥0.00、日均 -）；周小票不显示日期范围 */
+    const top = rcTop({
+      title: isCur || isNewWeek ? "本周总支出" : (isPast ? "该周总支出" : "本周已支出"),
+      period: "",
+      mode: isOver ? "over" : (isPast ? "past" : "cur"),
+      amount: st.total,
+      remain: remain,
+      budget: amount,
+      dailyAvg: st.dailyAvg,
+      pct: pct,
+      canEdit: !isPast,
+      neg: isOver
+    });
+
+    /* 双入口：四态都渲染，手动补单数按当前展示的周取 */
+    const subState = subRefused ? "订阅未开启 · 去开启" : (subOn ? (subNames[0] + " 已开") : "未开提醒");
+    const subAct = subRefused ? "open-sub-refused" : "open-subscribe";
+    const duo = "<div class='duo'>" +
+      "<div class='entry ticket' data-act='to-points'><b>领券</b><span>领券后自动记账</span><span class='state'>" + (isPast ? "该周 " : "本周 ") + manualCount + " 单手动补</span><span class='go'>›</span></div>" +
+      "<div class='entry sub" + (subRefused ? " warn" : "") + "' data-act='" + subAct + "'><b>订阅</b><span>到点提醒这顿能花多少</span><span class='state'>" + subState + "</span><span class='go'>›</span></div>" +
+    "</div>";
+
+    /* 柱图：新账期保留骨架，7 天全空 */
+    const chart = wkChart(w, { overspend: isOver });
+
+    /* 引导语 + 三餐参考值（本期 / 超支 / 新账期） */
+    let leadBlock = "";
+    if (isCur || isOver || isNewWeek){
+      const mealSum = mealsSum(budget.meals);
+      let hint, lead;
+      if (isOver){ hint = "按当前预算折算"; lead = "超支只标红已用项"; }
+      else { hint = "你的每日参考值"; lead = todayAvail >= mealSum ? "照着这样点，不会超" : "按预设吃会超 ¥" + (mealSum - todayAvail); }
+      leadBlock = "<div class='rc-block lead-card'>" +
+        "<div class='rc-lead'><span class='lead-t'>" + lead + "</span><span class='lead-h'>" + hint + "</span></div>" +
+        "<div class='refgrid'>" + refs.map(function(r){
+          const cls = (r.st.indexOf("超") >= 0) ? "over" : (r.st.indexOf("已用") >= 0 ? "ok" : "");
+          return "<div class='ref-cell'><span class='ref-k'>" + r.key + "</span><b class='ref-a'>" + r.amt + "</b><em class='" + cls + "'>" + r.st + "</em></div>";
+        }).join("") + "</div>" +
+      "</div>";
+    }
+
+    /* 明细：新账期保留骨架，0 单空态 */
+    const listHead = "<div class='lt-head'><span class='p-t'>" + (isPast ? "该周 " : "本周 ") + st.count + " 单</span>" +
+      (isCur || isNewWeek ? "<span class='add' data-act='open-add'>补一笔</span>" : "") + "</div>";
+    const endLine = st.count > 0
+      ? "<div class='end-line'>" + st.count + " 单" + (manualCount > 0 ? " · " + manualCount + " 单手动补" : "") + " ✿" +
+        "<span class='go' data-act='open-share'>" + (isPast ? "分享这周账单" : "分享本周账单") + "</span></div>" : "";
+    const listBlock = "<div class='rc-block lt-wrap'>" + listHead + dayRows(w) + endLine + "</div>";
+
+    const stampText = isCur || isNewWeek ? "自动记账" : (isPast ? "已结算" : "已超支");
+
+    return "<div class='rc-wrap'><div class='receipt'>" +
+      "<div class='zz t'></div><div class='rc-body'>" +
+        "<div class='rc-dash d2'></div>" +
+        "<div class='rc-head'><span>NO." + w.no + "</span></div>" +
+        top +
+        "<div class='stamp'><div><div class='t'>AUTO LOGGED</div><div class='s'>" + stampText + "</div></div></div>" +
+      "</div><div class='zz b'></div></div></div>" +
+      duo + chart + leadBlock + listBlock;
+  }
+
+  /* 首页入口分叉：按帧 key 分发月 / 周路由 */
+  function homeView(opts){
+    opts = opts || {};
+    if (isWeekFrame(current)) return "<div class='home fade'><div class='scroll'>" + brand() + weekHome(opts) + "</div>" + tabbar("home") + "</div>";
+    return "<div class='home fade'><div class='scroll'>" + monthBrand() + monthHome(opts) + "</div>" + tabbar("home") + "</div>";
+  }
+
+  /* 新手引导 · 全屏三步：痛点 → 功能 → 预算 */
+  const OB_STEPS = ["guide-pain", "guide-feature", "guide-budget"];
+  function obTop(step){
+    let dots = "";
+    for (let i = 0; i < OB_STEPS.length; i++) dots += "<i class='" + (i < step ? "on" : "") + "'></i>";
+    return "<div class='ob-top'><span class='ob-step'>0" + step + " / 03</span>" +
+      "<span class='ob-dots'>" + dots + "</span></div>";
+  }
+  /* 预算表单：只改三餐四类，月 / 周 / 日均全部派生，引导③与改预算全屏帧共用 */
+  function budgetFormHTML(){
+    if (!bDraft) resetBDraft();
+    const d = bDraft;
+    const cells = [["breakfast","早餐"],["lunch","午餐"],["dinner","晚餐"],["other","其他"]].map(function(x){
+      return "<div class='meal-cell'><label>" + x[1] + "</label>" +
+        "<input class='bMeal' data-meal='" + x[0] + "' type='number' min='0' step='1' inputmode='numeric' value='" + d.meals[x[0]] + "'>" +
+        "<span class='mu'>元 / 天</span></div>";
+    }).join("");
+    return "<div class='ob-form'>" +
+        "<div class='ob-row ob-month'><span>月预算</span>" +
+          "<b class='ob-month-v'><i>¥</i><span id='bMonth'>" + d.month + "</span></b>" +
+          "<em>元/月</em></div>" +
+      "</div>" +
+      "<div class='ob-result'>" +
+        "<div class='ob-daily'><span>每天约</span><b><i>¥</i><span id='g-daily'>" + budgetDaily(d.meals) + "</span></b></div>" +
+        "<div class='ob-week'><span>每周约</span><b><i>¥</i><span id='g-week'>" + budgetWeek(d.meals) + "</span></b></div>" +
+      "</div>" +
+      "<div class='meal-grid'>" + cells + "</div>" +
+      "<div class='ob-meals-tip'>填每天愿意花多少，月预算和每周、每天金额自动算好。</div>";
+  }
+  /* 改预算 · 二次确认（半屏抽屉）：旧 → 新对比，确认后保存并回首页 */
+  function budgetConfirmSheet(){
+    const oldM = budget.monthAmount, oldW = budget.weekAmount, oldD = budget.dailyAmount;
+    const meals = bDraft ? bDraft.meals : budget.meals;
+    const newD = budgetDaily(meals), newW = budgetWeek(meals), newM = budgetMonth(meals);
+    const row = function(k, a, b){
+      return "<div class='bc-row'><span class='k'>" + k + "</span><span class='v'>¥" + fmt(a) +
+        "<i>→</i><b>¥" + fmt(b) + "</b></span></div>";
+    };
+    const inner = "<div class='bc-rows'>" +
+        row("每 天", oldD, newD) +
+        row("每 周", oldW, newW) +
+        row("月 预 算", oldM, newM) +
+      "</div>" +
+      "<div class='sh-actions'><button class='cta ghost' data-act='close-sheet'>再改改</button>" +
+        "<button class='cta' data-act='confirm-budget'>确认修改</button></div>";
+    return sheetShell("确认修改预算？", "改完立即生效，首页额度同步刷新", inner);
+  }
+
+  /* 改预算 · 全屏帧（与引导③共用表单，CTA 为保存） */
+  function budgetEditView(){
+    return "<div class='ob fade'>" +
+      "<div class='be-top'><span class='be-back' data-act='budget-back'>‹</span><span class='be-t'>改预算</span><span class='be-ph'></span></div>" +
+      "<div class='ob-body ob-body-budget'>" +
+        "<div class='ob-head'><div class='ob-head-txt'>" +
+          "<div class='ob-title sm'>改预算。</div>" +
+          "<div class='ob-sub'>只改每天各餐，月预算自动跟着变。</div>" +
+        "</div></div>" +
+        budgetFormHTML() +
+      "</div>" +
+      "<button class='ob-btn' data-act='save-budget'>保存</button>" +
+    "</div>";
+  }
+  function guideView(){
+    if (current === "guide-budget"){
+      return "<div class='ob fade'>" + obTop(3) +
+        "<div class='ob-body ob-body-budget'>" +
+          "<div class='ob-head'>" +
+            "<div class='ob-head-txt'>" +
+              "<div class='ob-title sm'>先定个数。</div>" +
+              "<div class='ob-sub'>每天各餐，愿意花多少。</div>" +
+            "</div>" +
+            "<div class='ob-art'><img src='肥猫/帧3.png' alt=''></div>" +
+          "</div>" +
+          budgetFormHTML() +
+        "</div>" +
+        "<button class='ob-btn' data-act='save-budget'>下一步</button>" +
+      "</div>";
+    }
+    if (current === "guide-feature"){
+      return "<div class='ob fade'>" + obTop(2) +
+        "<div class='ob-body'>" +
+          "<div class='ob-title'>不用记，<br>也会记。</div>" +
+          "<div class='ob-sub'>领券下单，账单自动回来。</div>" +
+          "<div class='ob-art'><img src='肥猫/帧2.png' alt=''></div>" +
+        "</div>" +
+        "<button class='ob-btn' data-go='guide-budget'>下一步</button>" +
+      "</div>";
+    }
+    return "<div class='ob fade'>" + obTop(1) +
+      "<div class='ob-body'>" +
+        "<div class='ob-title'>外卖，<br>越点越贵？</div>" +
+        "<div class='ob-sub'>算不清，就管不住。</div>" +
+        "<div class='ob-art'><img src='肥猫/帧1.png' alt=''></div>" +
+      "</div>" +
+      "<button class='ob-btn' data-go='guide-feature'>下一步</button>" +
+    "</div>";
+  }
+
+  /* 订阅推送（微信服务通知）：午餐 / 晚餐 / 周一 各一帧，午晚各带一个超支变体 */
+  const NOTICE = {
+    "push-noon":      { at: "11月1日  10:30", meal: "午餐", time: "10:30", over: false, to: "home-week" },
+    "push-noon-over": { at: "11月1日  10:30", meal: "午餐", time: "10:30", over: true,  to: "home-week-over" },
+    "push-eve":       { at: "11月1日  17:00", meal: "晚餐", time: "17:00", over: false, to: "home-week" },
+    "push-eve-over":  { at: "11月1日  17:00", meal: "晚餐", time: "17:00", over: true,  to: "home-week-over" },
+    "push-week":      { at: "11月3日  10:30", week: true, to: "home-week-new" }
+  };
+
+  function noticeView(){
+    const c = NOTICE[current] || NOTICE["push-noon"];
+    const w = WEEKS.cur;
+    const st = weekStats(w);
+    const remain = Math.max(0, Math.round(budget.weekAmount - st.total));
+    const m = budget.meals;
+    const mealKey = c.meal === "午餐" ? "lunch" : "dinner";
+    const mealBudget = m[mealKey] || 0;
+    let title = "", rows = [], hint = "";
+    if (c.week){
+      title = "周一了，新一周的预算已就位";
+      rows = [["本周预算", "¥" + budget.weekAmount], ["本周账期", WEEKS.newweek.range], ["上周已花", "¥" + Math.round(weekStats(WEEKS.prev).total)]];
+      hint = "点卡片 → 新月账单";
+    } else if (c.over){
+      title = c.meal + "时间到，本周已超支";
+      rows = [["本周剩余", "--"], ["提醒时间", c.time], ["建议", "今天" + c.meal + "悠着点"]];
+      hint = "超支态 · 点卡片 → 月预算超支";
+    } else {
+      title = c.meal + "时间到，今天" + c.meal + "预算 ¥" + mealBudget;
+      rows = [["本周剩余", "¥" + remain], [c.meal + "预算", "¥" + mealBudget], ["建议", "先领券再点，别超 ¥" + mealBudget]];
+      hint = "点卡片 → 进入首页";
+    }
+    const body = rows.map(function(r){
+      return "<div class='nt-row" + (r[1] === "--" ? " hot" : "") + "'><span>" + r[0] + "</span><span class='v'>" + r[1] + "</span></div>";
+    }).join("");
+    return "<div class='nt fade'>" +
+      "<div class='nt-bar'><span class='nt-back'>‹</span><span class='nt-title'>服务通知</span><span class='nt-more'>···</span></div>" +
+      "<div class='nt-date'>" + c.at + "</div>" +
+      "<div class='nt-msg' data-act='open-notice' data-to='" + c.to + "'>" +
+        "<div class='nt-app'><span class='nt-logo'>餐</span><span class='nt-name'>餐饮账单</span><span class='nt-badge'>订阅消息</span></div>" +
+        "<div class='nt-t'>" + title + "</div>" +
+        "<div class='nt-box'>" + body + "</div>" +
+        "<div class='nt-foot'><span>进入小程序</span><span class='ar'>›</span></div>" +
+      "</div>" +
+      "<div class='nt-hint'>" + hint + "</div>" +
+    "</div>";
+  }
+
+  function pointsView(){
+    return "<div class='pgwrap fade'>" +
+      "<div class='pg'>" +
+        "<div class='pg-title'>领 券 中 心</div>" +
+        "<div class='pg-sub'>先领券，再下单，订单自动记账</div>" +
+        "<div class='cp-hero'><div class='cp-deco'></div><div class='k'>STEP 01 / 02</div><div class='t'>今天这顿，先领券</div><div class='s'>券由美团 / 饿了么提供<br>只有用这里的券下单，订单才会回流</div></div>" +
+        "<div class='cp-list'>" +
+          couponCard("mt", "美 团", "全品类外卖券", "美团 App 内下单") +
+          couponCard("el", "饿 了 么", "午晚时段券", "午餐 / 晚餐可用") +
+        "</div>" +
+        "<div class='cp-note'>直接去平台下单不会入账。<b>领券 → 下单</b>，订单才会自动记到本期；拉不到单可回首页<b>手动补卡</b>。</div>" +
+      "</div>" +
+      "<div class='pts-sub' data-act='toast-existing'>" +
+        "<span class='ic'>🔔</span>" +
+        "<span class='tx'><b>积分到账提醒</b><small>下单积分到账时，微信通知你</small></span>" +
+        "<span class='go'>开通 ›</span>" +
+      "</div>" +
+      tabbar("points") +
+    "</div>";
+  }
+
+  /* 企微推广 · 演示帧：群内 11:00 推小程序卡片，点卡片进首页 */
+  function weworkView(){
+    return "<div class='wx fade'>" +
+      "<div class='wx-bar'><span class='nt-back'>‹</span><span class='nt-title'>餐饮账单福利群</span><span class='nt-more'>···</span></div>" +
+      "<div class='wx-time'>11:00</div>" +
+      "<div class='wx-row'>" +
+        "<div class='wx-av'>餐</div>" +
+        "<div class='wx-col'>" +
+          "<div class='wx-name'>餐饮账单 · 福利官（企微）</div>" +
+          "<div class='wx-bubble'>11 点了，午饭先领券再点，订单自动记账 👇</div>" +
+          "<div class='mp-share' data-act='mp-open'>" +
+            "<div class='mp-title'>本周外卖花了多少，一目了然</div>" +
+            "<div class='mp-img'><span>分 享 图 封 面</span></div>" +
+            "<div class='mp-bar'><span class='mp-logo'>餐</span><span class='mp-nm'>餐饮账单</span><span class='mp-badge'>小程序</span></div>" +
+          "</div>" +
+        "</div>" +
+      "</div>" +
+      "<div class='wx-hint'>企微推广 · 演示帧：点小程序卡片 → 积分页 · 领券（落地页）</div>" +
+    "</div>";
+  }
+
+  /* 分享卡片主图：一桌外卖实拍，作为小程序卡片封面 */
+  const SHARE_COVER = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=top%20down%20flat%20lay%20of%20a%20cozy%20chinese%20takeout%20meal%2C%20rice%20bowl%2C%20fried%20chicken%2C%20milk%20tea%2C%20chopsticks%2C%20wooden%20desk%2C%20warm%20evening%20light%2C%20realistic%20food%20photography&image_size=landscape_16_9";
+  /* 分享卡片文案：月 / 周各一条，金额按实际账单动态取数 */
+  function buildShareInfo(scope){
+    if (!scope) scope = isWeekFrame(current) ? "week" : "month";
+    if (scope === "week"){
+      const w = WEEKS[viewWeek] || WEEKS.cur;
+      const st = weekStats(w);
+      return {
+        scope: "week",
+        title: "这周外卖花了 ¥" + fmt(st.total) + "，你也来记账吧"
+      };
+    }
+    const st = isMonthFrame(current) ? monthFrameType() : "cur";
+    const isPast = st === "past";
+    const ms = monthStats(isPast ? "past" : "cur");
+    return {
+      scope: "month",
+      title: "这个月外卖花了 ¥" + fmt(ms.total) + "，你也来记账吧"
+    };
+  }
+
+  /* 分享落地 · 逻辑帧：好友会话收到小程序卡片，月 / 周两张不同卡片 */
+  function shareFriendView(){
+    const scope = current === "share-friend-week" ? "week" : "month";
+    const si = (shareInfo && shareInfo.scope === scope) ? shareInfo : buildShareInfo(scope);
+    const hint = scope === "week"
+      ? "点卡片：新人 → 积分页 · 领券（点首页进引导，老用户进 本周账单）"
+      : "点卡片：新人 → 积分页 · 领券（点首页进引导，老用户进 本月账单）";
+    return "<div class='wx fade'>" +
+      "<div class='wx-bar'><span class='nt-back'>‹</span><span class='nt-title'>王小明</span><span class='nt-more'>···</span></div>" +
+      "<div class='wx-time'>12:20</div>" +
+      "<div class='wx-row'>" +
+        "<div class='wx-av gray'>王</div>" +
+        "<div class='wx-col'>" +
+          "<div class='wx-name'>王小明</div>" +
+          "<div class='mp-share' data-act='share-card-open'>" +
+            "<div class='mp-title'>" + si.title + "</div>" +
+            "<div class='mp-img'><img src='" + SHARE_COVER + "' alt='饭扫光'></div>" +
+            "<div class='mp-bar'><span class='mp-logo'>饭</span><span class='mp-nm'>饭扫光</span><span class='mp-badge'>小程序</span></div>" +
+          "</div>" +
+        "</div>" +
+      "</div>" +
+      "<div class='wx-hint'>" + hint + "</div>" +
+    "</div>";
+  }
+
+  /* 外部下单 · 指示帧：纯文字，无按钮、无交互 */
+  function externalView(){
+    return "<div class='ext fade'>" +
+      "<div class='ext-tag'>EXTERNAL · 范围外</div>" +
+      "<div class='ext-title'>去美团 / 饿了么下单</div>" +
+      "<div class='ext-sub'>领完券后，打开美团或饿了么 App，选餐、用券、支付。这一步发生在小程序外，本页只是流程指示。</div>" +
+      "<div class='ext-note'>下单后订单通过 CPS 回流，几分钟内自动记进本周账单，不用手动记。拉不到单时，回首页可以手动补卡。</div>" +
+      "<div class='ext-foot'>指示帧 · 无按钮、无交互</div>" +
+    "</div>";
+  }
+  function couponCard(kind, name, value, desc){
+    return "<div class='cp-card'><div class='cp-logo " + kind + "'>" + (kind === "mt" ? "MT" : "ELM") + "</div>" +
+      "<div class='cp-info'><div class='n'>" + name + "</div><div class='v'>" + value + " · " + desc + "</div></div>" +
+      "<button class='cp-btn' data-act='claim' data-name='" + name + "' data-value='" + value + "'>领券</button></div>";
+  }
+
+  function placeholderView(title, tab){
+    return "<div class='home fade'><div class='nav'><div class='t'>" + title + "</div></div>" +
+      "<div class='ph'><div class='ph-box'><span class='k'>仅骨架 · 二期</span><div class='n'>" + title + "暂不做内容</div><div class='s'>首版只跑新人链路，这里只保留 tab 入口</div></div></div>" +
+      tabbar(tab) + "</div>";
+  }
+
+  function sheetShell(title, sub, inner){
+    return "<div class='mask' data-mask='1'></div><div class='sheet'><div class='handle'></div>" +
+      "<div class='sh-title'>" + title + "</div><div class='sh-sub'>" + sub + "</div>" + inner + "</div>";
+  }
+
+  function addSheet(){
+    const d = addDraft;
+    const w = WEEKS[viewWeek];
+    const inner = "<div class='sh-label'>日 期</div>" +
+      "<div class='date-row'><input id='addDate' type='date' value='" + d.date + "' min='" + w.start + "' max='" + w.end + "'><span class='hint' id='addDateHint'>" + dayLabel(d.date) + "</span></div>" +
+      "<div class='sh-label'>餐 段</div><div class='chips'>" + MEAL_ORDER.map(function(k){
+      return "<button class='chip " + (d.meal === k ? "on" : "") + "' data-meal='" + k + "'>" + MEAL[k] + "</button>";
+    }).join("") + "</div>" +
+      "<div class='sh-label'>金 额</div><div class='input-row'><span class='pre'>¥</span><input id='addAmt' type='number' min='0' step='0.01' inputmode='decimal' value='" + d.amount + "'><span class='unit'>元</span></div>" +
+      "<div class='sh-actions'><button class='cta ghost' data-act='close-sheet'>取消</button><button class='cta' data-act='save-add'>记一笔</button></div>";
+    return sheetShell("增加外部订单", "默认今天，可改成这一周内的日期；跨周补录请先切换周", inner);
+  }
+
+  function subscribeSheet(){
+    const d = subDraft;
+    const m = budget.meals;
+    const inner = "<div class='toggle'><div class='tx'><div class='n'>午餐提醒</div><div class='s'>每天 10:30 · 提醒你午餐预算 ¥" + m.lunch + "</div></div><button class='sw " + (d.lunch ? "on" : "") + "' data-sub='lunch'></button></div>" +
+      "<div class='toggle'><div class='tx'><div class='n'>晚餐提醒</div><div class='s'>每天 17:00 · 提醒你晚餐预算 ¥" + m.dinner + "</div></div><button class='sw " + (d.dinner ? "on" : "") + "' data-sub='dinner'></button></div>" +
+      "<div class='toggle'><div class='tx'><div class='n'>周更新提醒</div><div class='s'>每周一 10:30 · 本周预算 ¥" + budget.weekAmount + " + 上周结算</div></div><button class='sw " + (d.week ? "on" : "") + "' data-sub='week'></button></div>" +
+      "<div class='sh-actions'><button class='cta ghost' data-act='close-sheet'>取消</button><button class='cta' data-act='save-sub'>" + (subAuthorized ? "订阅" : "订阅并授权") + "</button></div>";
+    return sheetShell("订阅提醒", "选好日期后，打开要收的提醒", inner);
+  }
+
+  /* 日期订阅：整月日历多选，选中的日期各加一次提醒，底部只留「+1」 */
+  function dateSheet(){
+    const heads = ["一","二","三","四","五","六","日"].map(function(t){ return "<div>" + t + "</div>"; }).join("");
+    /* 2026-11-01 为周日，月历从周一起排 → 前置 6 个空位 */
+    let cells = "";
+    for (let i = 0; i < 6; i++) cells += "<div class='ds-cal-cell empty'></div>";
+    for (let d = 1; d <= 30; d++){
+      const iso = "2026-11-" + (d < 10 ? "0" + d : d);
+      const on = dateSel.indexOf(iso) >= 0;
+      const today = d === 2;
+      cells += "<div class='ds-cal-cell" + (on ? " on" : "") + (today ? " today" : "") + "' data-date='" + iso + "'>" +
+        "<div class='d'>" + d + "</div></div>";
+    }
+    const n = dateSel.length;
+    const inner = "<div class='ds-cal-title'>2026 年 11 月</div>" +
+      "<div class='ds-cal-head'>" + heads + "</div>" +
+      "<div class='ds-cal-grid'>" + cells + "</div>" +
+      "<div class='ds-count'>已选 <b>" + n + "</b> 天</div>" +
+      "<div class='ds-only'><button class='cta' data-act='confirm-dates'>+1</button></div>";
+    return sheetShell("日期订阅", "连得越多，越不容易超预算", inner);
+  }
+
+  /* 仿微信原生订阅授权弹窗：允许 / 取消（取消即拒绝，进入开启引导） */
+  function authPopView(){
+    const p = pendingSub;
+    const items = [
+      p.lunch ? "午餐提醒 · 每天 10:30" : "",
+      p.dinner ? "晚餐提醒 · 每天 17:00" : "",
+      p.week ? "周更新提醒 · 每周一 10:30" : ""
+    ].filter(Boolean);
+    return "<div class='auth-mask'>" +
+      "<div class='auth-box'>" +
+        "<div class='auth-hd'>餐饮账单 申请订阅消息</div>" +
+        "<div class='auth-bd'>" + items.map(function(x){
+          return "<div class='auth-li'><i>·</i><span>" + x + "</span></div>";
+        }).join("") + "</div>" +
+        "<div class='auth-note'>允许后，我们会在对应时间给你发一条服务通知。随时可在右上角「···」→ 设置 中关闭。</div>" +
+        "<div class='auth-ft'><button class='deny' data-act='auth-deny'>取消</button><button data-act='auth-allow'>允许</button></div>" +
+      "</div></div>";
+  }
+
+  /* 订阅被拒 · 开启引导：遮罩从状态栏下沿起，右上角胶囊不压暗并高亮 */
+  function subRefusedSheet(){
+    const p = pendingSub;
+    const picked = [
+      p.lunch ? "午餐 10:30" : "",
+      p.dinner ? "晚餐 17:00" : "",
+      p.week ? "周更新 周一 10:30" : ""
+    ].filter(Boolean);
+    const inner =
+      "<div class='gd-why'><b>为什么不能直接再弹？</b><br>微信订阅消息一旦被拒绝，小程序就不能再次主动弹窗。只能你到右上角手动打开一次。</div>" +
+      (picked.length ? "<div class='gd-pick'>你刚刚想开的是：" + picked.join(" / ") + "</div>" : "") +
+      "<div class='gd-step'><div class='hd'><i>②</i>点「···」后，选「设置」</div>" +
+        "<div class='gd-menu'>" +
+          "<div class='mi'>转发给朋友<span>›</span></div>" +
+          "<div class='mi hit'>设置<span>›</span></div>" +
+          "<div class='mi'>取消</div>" +
+        "</div>" +
+      "</div>" +
+      "<div class='gd-step'><div class='hd'><i>③</i>在设置页打开「订阅消息」</div>" +
+        "<div class='gd-tog'>" +
+          "<div class='tg'><span>午餐提醒 10:30</span><span class='sw2 on'></span></div>" +
+          "<div class='tg'><span>晚餐提醒 17:00</span><span class='sw2 on'></span></div>" +
+          "<div class='tg'><span>周更新 · 周一 10:30</span><span class='sw2 on'></span></div>" +
+        "</div>" +
+      "</div>" +
+      "<div class='gd-hint'>点空白处关闭 · 之后想开，点首页订阅卡再来这里</div>";
+    return "<div class='mask guide-mask' data-mask='1'></div>" +
+      "<div class='wx-capwrap'>" +
+        "<div class='wx-cap-tag'>① 点这里</div>" +
+        "<div class='wx-cap'><span>⋯</span><span class='sep'></span><span class='o'></span></div>" +
+        "<div class='wx-cap-ring'></div>" +
+      "</div>" +
+      "<div class='sheet guide-sheet'><div class='handle'></div>" +
+        "<div class='sh-title'>订阅提醒没打开</div>" +
+        "<div class='sh-sub'>微信不允许小程序二次弹窗，需要你手动开一次</div>" +
+        inner +
+      "</div>";
+  }
+
+  /* 积分到账提醒 · 订阅入口（与「订阅推送」同一套微信服务通知样式） */
+  function pointsNoticeView(){
+    const remain = Math.max(0, Math.round(budget.weekAmount - weekStats(WEEKS.cur).total));
+    return "<div class='nt fade'>" +
+      "<div class='nt-bar'><span class='nt-back'>‹</span><span class='nt-title'>服务通知</span><span class='nt-more'>···</span></div>" +
+      "<div class='nt-date'>11月1日  10:32</div>" +
+      "<div class='nt-msg' data-act='points-sub-ok'>" +
+        "<div class='nt-app'><span class='nt-logo'>餐</span><span class='nt-name'>餐饮账单</span><span class='nt-badge'>订阅消息</span></div>" +
+        "<div class='nt-t'>积分到账提醒</div>" +
+        "<div class='nt-box'>" +
+          "<div class='nt-row'><span>积分来源</span><span class='v'>订单积分</span></div>" +
+          "<div class='nt-row'><span>积分数量</span><span class='v'>10</span></div>" +
+          "<div class='nt-row'><span>温馨提示</span><span class='v long'>已为你统计本周外卖支出，当前预算还剩 ¥" + remain + "</span></div>" +
+        "</div>" +
+        "<div class='nt-foot'><span>允许通知</span><span class='ar'>›</span></div>" +
+      "</div>" +
+      "<div class='nt-hint'>点卡片 → 订阅积分到账提醒，然后回首页</div>" +
+    "</div>";
+  }
+
+  function couponSheet(){
+    const c = claimCoupon || { name: "美 团", value: "全品类外卖券" };
+    const inner = "<div class='cs-ticket'><div class='k'>COUPON CLAIMED</div><div class='v'>" + c.name + " · " + c.value + "</div><div class='s'>下单后自动记账，不用手动记</div></div>" +
+      "<div class='sh-actions'><button class='cta ghost' data-act='close-sheet'>再领一张</button><button class='cta' data-act='demo-order'>去下单</button></div>";
+    return sheetShell("领券成功", "下一步：用这张券在外部平台下单", inner);
+  }
+
+  /* 分享 · 单抽屉：只保留「转发给朋友」，卡片文案由入口的月 / 周决定 */
+  function shareSheet(){
+    const si = shareInfo || buildShareInfo();
+    const inner =
+      "<div class='sh-preview'><div class='k'>转 发 预 览</div><div class='t'>" + si.title + "</div></div>" +
+      "<div class='sh-row' data-act='share-send'><div><div class='n'>转发给朋友</div><div class='s'>微信会话 / 群聊 · 卡片落积分页</div></div><span class='ar'>›</span></div>" +
+      "<div class='sh-share-note'><b>落地规则</b>：卡片固定落「积分页」，带 <b>inviter</b> 参数；新用户点卡片先进积分页，点「首页」再进「新手引导」；老用户直接进自己的账单，<b>不覆盖、不清空</b>对方账期。</div>" +
+      "<div class='sh-actions'><button class='cta ghost' data-act='close-sheet'>取消</button></div>";
+    return sheetShell("分享账单", "发给朋友，对方也能算自己的", inner);
+  }
+
+  /* 周日期范围：带年份，同年只在开头写一次（2026.10.27–11.02） */
+  function weekRangeLabel(w){
+    const sy = w.start.slice(0,4), sm = w.start.slice(5,7), sd = w.start.slice(8,10);
+    const ey = w.end.slice(0,4), em = w.end.slice(5,7), ed = w.end.slice(8,10);
+    return sy + "." + sm + "." + sd + "–" + (ey === sy ? "" : ey + ".") + em + "." + ed;
+  }
+  function weeksSheet(){
+    /* 行配置：k = 周数据 key（空串 = 仅作历史占位），to = 点行跳转帧；没有一笔订单的行置灰不可点 */
+    const rows = [
+      { k: "cur",    label: "本周", w: WEEKS.cur,    to: "home-week" },
+      { k: "prev",   label: "上周", w: WEEKS.prev,   to: "home-week-past" },
+      { k: "older",  label: "",     w: WEEKS.older,  to: "" },
+      { k: "older2", label: "",     w: WEEKS.older2, to: "home-week-past" },
+      { k: "",       label: "",     t: "2026.09.29–10.05", to: "" },
+      { k: "",       label: "",     t: "2026.09.22–09.28", to: "" }
+    ];
+    const inner = "<div class='wk-list'>" + rows.map(function(r){
+      const w = r.w;
+      const st = w ? weekStats(w) : null;
+      const hasBills = !!(st && st.count > 0);
+      const cls = "wk-row" + (r.k && viewWeek === r.k ? " on" : "") + (hasBills ? "" : " off");
+      const attr = hasBills ? " data-week='" + r.k + "' data-to='" + r.to + "'" : "";
+      const name = r.label ? r.label + "（" + weekRangeLabel(w) + "）" : (w ? weekRangeLabel(w) : r.t);
+      const right = hasBills
+        ? "<span class='v'>¥" + fmt(st.total) + "</span><span class='c'>" + st.count + " 笔</span>"
+        : "<span class='v'>无账单</span><span class='c'>不可进入</span>";
+      return "<div class='" + cls + "'" + attr + "><div class='tl'><div class='n'>" + name + "</div></div>" +
+        "<div class='tr'>" + right + "</div></div>";
+    }).join("") + "</div>" +
+      "<div class='wk-note'>没有一笔订单的区间无法点击；上下滑动可查看更早的周</div>";
+    return sheetShell("选择周账单", "每周一张小票，周一切换新账期", inner);
+  }
+
+  function monthsSheet(){
+    const stNow = isMonthFrame(current) ? monthFrameType(current) : "";
+    /* 当前行高亮口径：往期按 viewMonth 细分，超支/新账期归到「本月」 */
+    const curVm = stNow === "past" ? viewMonth : (stNow === "over" || stNow === "new" ? "cur" : stNow);
+    const cur = monthStats("cur");
+    /* 笔数与各月首页明细的单数同源，避免两处数字打架 */
+    const curC = weekStats(WEEKS.cur).count;
+    const prevC = weekStats(WEEKS.prev).count;
+    const olderC = weekStats(WEEKS.older2).count;
+    /* vm = 往期取数口径（点行时写入 viewMonth），to = 点行跳转帧，total = null 表示无账单（置灰） */
+    const rows = [
+      { vm: "cur",   t: "本 月",       s: "2026年11月", total: cur.total,         count: curC,   to: "home-month" },
+      { vm: "prev",  t: "2026年10月",  s: "",           total: MONTH.prevAmount,  count: prevC,  to: "home-month-past" },
+      { vm: "older", t: "2026年9月",   s: "",           total: MONTH.olderAmount, count: olderC, to: "home-month-past" },
+      { vm: "",      t: "2026年8月",   s: "",           total: null, count: 0, to: "" },
+      { vm: "",      t: "2026年7月",   s: "",           total: null, count: 0, to: "" },
+      { vm: "",      t: "2026年6月",   s: "",           total: null, count: 0, to: "" }
+    ];
+    const inner = "<div class='wk-list'>" + rows.map(function(r){
+      const hasBills = r.total !== null;
+      const cls = "wk-row" + (r.vm && curVm === r.vm ? " on" : "") + (hasBills ? "" : " off");
+      const attr = hasBills ? " data-month='" + r.vm + "' data-to='" + r.to + "'" : "";
+      const right = hasBills
+        ? "<span class='v'>¥" + fmt(r.total) + "</span><span class='c'>" + r.count + " 笔订单</span>"
+        : "<span class='v'>无账单</span><span class='c'>不可进入</span>";
+      return "<div class='" + cls + "'" + attr + "><div class='tl'><div class='n'>" + r.t + "</div><div class='s'>" + r.s + "</div></div>" +
+        "<div class='tr'>" + right + "</div></div>";
+    }).join("") + "</div>" +
+      "<div class='wk-note'>没有一笔订单的区间无法点击；上下滑动可查看更早的月</div>";
+    return sheetShell("选择月账单", "每月一张小票，1 号切换新账期", inner);
+  }
+
+  function deleteSheet(){
+    const w = WEEKS[viewWeek];
+    const t = delTarget || { di: -1, oi: -1 };
+    const d = w.days[t.di];
+    const o = d && d.orders[t.oi];
+    if (!o) {
+      return sheetShell("删除这笔订单", "这笔订单已不存在", "<div class='sh-actions'><button class='cta' data-act='close-sheet'>关闭</button></div>");
+    }
+    const inner = "<div class='del-card'>" +
+        "<div class='del-row'><span>日 期</span><span class='v'>" + d.mm + " " + d.w + "</span></div>" +
+        "<div class='del-row'><span>餐 段</span><span class='v'>" + o.meal + "</span></div>" +
+        "<div class='del-row'><span>金 额</span><span class='v'>¥" + fmt(o.amt) + "</span></div>" +
+      "</div>" +
+      "<div class='del-note'>删除后本周合计、剩余额度与每天可用会同步回滚。美团 / 饿了么回流订单不可删除。</div>" +
+      "<div class='sh-actions'><button class='cta ghost' data-act='close-sheet'>取消</button><button class='cta' data-act='confirm-delete'>确认删除</button></div>";
+    return sheetShell("删除这笔外部订单", "确认后统计立即回滚", inner);
+  }
+
+  function currentSheetView(){
+    if (sheet === "add") return addSheet();
+    if (sheet === "subscribe") return subscribeSheet();
+    if (sheet === "date-sub") return dateSheet();
+    if (sheet === "sub-refused") return subRefusedSheet();
+    if (sheet === "coupon") return couponSheet();
+    if (sheet === "weeks") return weeksSheet();
+    if (sheet === "months") return monthsSheet();
+    if (sheet === "delete") return deleteSheet();
+    if (sheet === "share") return shareSheet();
+    if (sheet === "budget-confirm") return budgetConfirmSheet();
+    return "";
+  }
+
+  function countUp(id, val, dur, delay, fmtFn){
+    fmtFn = fmtFn || function(v){ return fmt(v); };
+    setTimeout(function(){
+      const el = $(id);
+      if (!el) return;
+      let t0 = null;
+      function step(ts){
+        if (!el.isConnected) return;
+        if (!t0) t0 = ts;
+        const p = Math.min(1, (ts - t0) / dur);
+        const e = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmtFn(val * e);
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }, delay);
+  }
+
+  let screenKey = "";
+  function renderScreen(force){
+    const key = current + "|" + viewWeek + "|" + (subRefused ? "refused" : "");
+    if (!force && key === screenKey) return;
+    screenKey = key;
+    let html = "";
+    if (current === "guide-pain" || current === "guide-feature" || current === "guide-budget") html = guideView();
+    else if (current === "budget-edit") html = budgetEditView();
+    else if (current === "home-month-desktop") html = homeView({ deskTip: true });
+    else if (isHomeFrame(current)) html = homeView({});
+    else if (NOTICE[current]) html = noticeView();
+    else if (current === "points-subscribe") html = pointsNoticeView();
+    else if (current === "wework-promo") html = weworkView();
+    else if (current === "share-friend-month" || current === "share-friend-week") html = shareFriendView();
+    else if (current === "tab-points") html = pointsView();
+    else if (current === "external-order") html = externalView();
+    else if (current === "tab-mall") html = placeholderView("积分商城", "mall");
+    else if (current === "tab-me") html = placeholderView("我的", "me");
+    $("screen").innerHTML = html;
+
+    /* 小票大字金额：月/周各自按当前帧态取口径 */
+    if (isMonthFrame(current)) {
+      const st = monthFrameType(current);
+      let target;
+      if (st === "over") target = MONTH.overSpent;
+      else target = monthStats(st).total;
+      countUp("amtMain", target, 1100, 300);
+    } else if (isWeekFrame(current)) {
+      const st = weekFrameType(current);
+      const w = WEEKS[weekViewOf(st)];
+      const target = weekStats(w).total;
+      countUp("amtMain", target, 1100, 300);
+    }
+
+    /* 加桌面提示：5 秒无操作自动消失 */
+    if (current === "home-month-desktop") {
+      setTimeout(function(){ const t = $("deskTip"); if (t) t.remove(); }, 5000);
+    }
+  }
+
+  function renderRail(){
+    if (railMode === "page") return renderRailPages();
+    let html = "";
+    FLOWS.forEach(function(grp){
+      html += "<div class='rg'><div class='rg-h'><i></i>" + grp.g + "<em>" + grp.flows.length + "</em></div>";
+      grp.flows.forEach(function(f){
+        const keys = [];
+        f.lanes.forEach(function(l){ l.steps.forEach(function(s){ if (keys.indexOf(s.k) < 0) keys.push(s.k); }); });
+        const on = activeFlowId === f.id;
+        html += "<div class='rf-row " + (on ? "on" : "") + "' data-flow='" + f.id + "'><span class='rf-id'>" + f.id + "</span><span class='rf-n'>" + f.n + "</span><span class='rf-c'>" + keys.length + " 帧</span></div>";
+      });
+      html += "</div>";
+    });
+    $("railBody").innerHTML = html;
+  }
+
+  function flowById(id){
+    for (let gi = 0; gi < FLOWS.length; gi++){
+      for (let fi = 0; fi < FLOWS[gi].flows.length; fi++){
+        const f = FLOWS[gi].flows[fi];
+        if (f.id === id) return { g: FLOWS[gi].g, f: f };
+      }
+    }
+    return null;
+  }
+
+  function inFlow(f, key){
+    return f.lanes.some(function(l){ return l.steps.some(function(s){ return s.k === key; }); });
+  }
+
+  function parseStep(v){
+    const p = String(v).split("|");
+    return { f: p[0], l: Number(p[1]), i: Number(p[2]) };
+  }
+
+  // 只认「流程 + 链路 + 序号」这一条，同名帧不互相牵连
+  function markStep(fid, key){
+    const hit = flowById(fid);
+    activeStep = null;
+    if (!hit) return;
+    for (let l = 0; l < hit.f.lanes.length; l++){
+      const steps = hit.f.lanes[l].steps;
+      for (let i = 0; i < steps.length; i++){
+        if (steps[i].k === key) { activeStep = { f: fid, l: l, i: i }; return; }
+      }
+    }
+  }
+
+  function currentFlow(){
+    for (let gi = 0; gi < FLOWS.length; gi++){
+      for (let fi = 0; fi < FLOWS[gi].flows.length; fi++){
+        const f = FLOWS[gi].flows[fi];
+        if (inFlow(f, current)) return { g: FLOWS[gi].g, f: f };
+      }
+    }
+    return null;
+  }
+
+  function renderFlow(){
+    const act = flowById(activeFlowId);
+    const cur = (act && inFlow(act.f, current)) ? act : currentFlow();
+    if (!cur) {
+      $("flowBody").innerHTML = "<div class='fc-empty'>当前是骨架帧，不挂流程</div>";
+      return;
+    }
+    let html = "<div class='fc-flow'><span class='fc-id'>" + cur.f.id + "</span><span class='fc-n'>" + cur.f.n + "</span><span class='fc-g'>" + cur.g + "</span></div>" +
+      "<div class='fc-start'>起点 · " + cur.f.start + "</div>";
+    cur.f.lanes.forEach(function(lane, li){
+      html += "<div class='rl-h open'>" + lane.g + "</div>";
+      lane.steps.forEach(function(s, i){
+        const active = !sheet && activeStep && activeStep.f === cur.f.id && activeStep.l === li && activeStep.i === i;
+        const demo = ROUTES[s.k] && ROUTES[s.k].demo;
+        const cond = s.cond ? "<span class='dmb'>条件</span>" : "";
+        html += "<div class='step " + (active ? "on" : "") + "' data-go='" + s.k + "' data-keep='1' data-step='" + cur.f.id + "|" + li + "|" + i + "'" + (s.v ? " data-v='" + s.v + "'" : "") + "><div class='idx'>" + (i + 1) + "</div><div><div class='t'>" + s.t + cond + (demo ? "<span class='dmb'>演示</span>" : "") + "</div><div class='s'>" + s.s + "</div></div></div>";
+        if (i < lane.steps.length - 1) html += "<div class='arrow'></div>";
+      });
+    });
+    $("flowBody").innerHTML = html;
+  }
+
+  /* ===== 页面轴：左栏页面树 · 中栏状态 / 抽屉清单 ===== */
+  function pagesOf(){
+    const out = [];
+    PAGE_TREE.forEach(function(g){ g.items.forEach(function(p){ out.push(p); }); });
+    return out;
+  }
+  function pageById(k){
+    const arr = pagesOf();
+    for (let i = 0; i < arr.length; i++) if (arr[i].k === k) return arr[i];
+    return arr[0];
+  }
+  function pageOfFrame(key){
+    const arr = pagesOf();
+    for (let i = 0; i < arr.length; i++){
+      const all = arr[i].frames.concat(arr[i].sheets || [], arr[i].errors || []);
+      for (let z = 0; z < all.length; z++) if (all[z].k === key) return arr[i].k;
+    }
+    return "home-month";
+  }
+  function isDemoPage(k){
+    const g = PAGE_TREE.filter(function(x){ return x.fold === "demo"; })[0];
+    return !!g && g.items.some(function(p){ return p.k === k; });
+  }
+  function flowsOf(key){
+    const out = [];
+    FLOWS.forEach(function(grp){
+      grp.flows.forEach(function(f){ if (inFlow(f, key) && out.indexOf(f.id) < 0) out.push(f.id); });
+    });
+    return out;
+  }
+
+  function renderRailPages(){
+    let html = "";
+    PAGE_TREE.forEach(function(grp){
+      const n = grp.items.reduce(function(a, p){ return a + p.frames.length + (p.sheets || []).length + (p.errors || []).length; }, 0);
+      const fold = grp.fold === "demo";
+      const open = !fold || demoOpen;
+      html += "<div class='rg'><div class='rg-h" + (fold ? " click" : "") + "'" + (fold ? " data-grp='demo'" : "") + "><i></i>" + grp.g +
+        (fold ? "<span class='cv'>" + (open ? "收起" : "展开") + "</span>" : "") + "<em>" + n + "</em></div>";
+      if (open) {
+        grp.items.forEach(function(p){
+          const on = activePage === p.k;
+          html += "<div class='ri " + (on ? "on" : "") + "' data-page='" + p.k + "'><span class='dot'></span><span class='n'>" + p.n + "</span><span class='tag'>" + p.tag + "</span></div>";
+        });
+      } else {
+        html += "<div class='rg-fold'>演示稿 · 不参与开发</div>";
+      }
+      html += "</div>";
+    });
+    $("railBody").innerHTML = html;
+  }
+
+  function isMainFrame(key){
+    const page = pageOfFrame(key);
+    const sp = SPECS[page];
+    if (!sp) return false;
+    const r = ROUTES[key];
+    const isSheet = !!r && r.kind === "sheet";
+    const pool = isSheet ? (sp.drawers || {}) : (sp.frames || {});
+    const f = pool[key];
+    return !!(f && f.main);
+  }
+  function pageStep(x){
+    const r = ROUTES[x.k];
+    const on = sheet ? frameKeyOf(sheet) === x.k : current === x.k;
+    const mainBadge = isMainFrame(x.k) ? "<span class='dmb main'>主</span>" : "";
+    return "<div class='step " + (on ? "on" : "") + "' data-go='" + x.k + "'>" +
+      "<div class='idx'>" + (r ? r.id : "-") + "</div><div><div class='t'>" + x.t +
+      mainBadge +
+      (r && r.demo ? "<span class='dmb'>演示</span>" : "") + "</div></div></div>";
+  }
+
+  function renderPageCol(){
+    const p = pageById(activePage);
+    const errs = p.errors || [];
+    const sheets = p.sheets || [];
+    const all = p.frames.concat(sheets, errs);
+    const ids = [];
+    all.forEach(function(x){ flowsOf(x.k).forEach(function(id){ if (ids.indexOf(id) < 0) ids.push(id); }); });
+    let html = "<div class='fc-flow'><span class='fc-id'>页面</span><span class='fc-n'>" + p.n + "</span><span class='fc-g'>" + p.tag + "</span></div>" +
+      "<div class='fc-start'>" + all.length + " 帧" + (ids.length ? " · 出现在流程 " + ids.join(" / ") : " · 不挂流程") + "</div>";
+    if (p.frames.length){
+      html += "<div class='rl-h open'>页 面 状 态</div>" + p.frames.map(pageStep).join("");
+    }
+    if (sheets.length){
+      html += "<div class='rl-h open'>抽 屉 & 弹 层</div>" + sheets.map(pageStep).join("");
+    }
+    if (errs.length){
+      html += "<div class='rl-h open'>异 常</div>" + errs.map(pageStep).join("");
+    }
+    $("flowBody").innerHTML = html;
+  }
+
+  function renderMiddle(){
+    $("midTitle").textContent = railMode === "page" ? "页面状态" : "流程链路";
+    $("midSub").textContent = railMode === "page" ? "左栏选页面 · 点行跳帧" : "点左栏流程 · 点帧跳转不改流程";
+    if (railMode === "page") renderPageCol(); else renderFlow();
+  }
+
+  function renderAnnot(){
+    const key = sheet ? frameKeyOf(sheet) : current;
+    const r = ROUTES[key];
+    const label = (r ? r.n : "本帧") + (r && r.demo ? " · 演示帧" : "");
+    $("annotLabel").textContent = "帧 " + (r ? r.id : "-") + " · " + label;
+    $("frameSel").value = key;
+  }
+
+  function renderSheet(){
+    if (authPop) { $("sheet").innerHTML = authPopView(); return; }
+    $("sheet").innerHTML = sheet ? currentSheetView() : "";
+  }
+
+  /* ========== 字段说明栏 ========== */
+  function specKey(){
+    return sheet ? frameKeyOf(sheet) : current;
+  }
+  /* SPECS 采用 frames/drawers 结构，每帧一个 { main, inherits, summary } */
+  function frameLabel(key){
+    const r = ROUTES[key];
+    return r ? r.n : key;
+  }
+  function specOf(key){
+    const page = pageOfFrame(key);
+    const sp = SPECS[page];
+    if (!sp) return null;
+    const r = ROUTES[key];
+    const isSheet = !!r && r.kind === "sheet";
+    const pool = isSheet ? (sp.drawers || {}) : (sp.frames || {});
+    return pool[key] || null;
+  }
+  function renderSpecs(){
+    const body = $("specsBody"), sub = $("specsSub");
+    if (!body) return;
+    const key = specKey(), r = ROUTES[key];
+    const lab = (r ? "帧 " + r.id + " · " + r.n : key);
+    const annots = $("stageAnnots");
+    if (annots) annots.innerHTML = "";
+    if (railMode !== "page") { body.innerHTML = ""; sub.textContent = "切到「页面」后显示"; return; }
+    if (!$("app").classList.contains("sp-on")) { body.innerHTML = ""; sub.textContent = "已收起"; return; }
+    const sp = specOf(key);
+    if (!sp) { sub.textContent = lab + " · 未录入"; body.innerHTML = "<div class='specs-empty'>本帧未录入字段说明</div>"; return; }
+    let badge = "";
+    if (sp.main) badge = "<span class='sp-badge sp-main'>主帧</span>";
+    else if (sp.inherits) badge = "<span class='sp-badge sp-inh'>继承 " + frameLabel(sp.inherits) + "</span>";
+    sub.innerHTML = lab + (badge ? " · " + badge : "");
+    body.innerHTML = sp.summary;
+    // 给章节编号，并在手机壳右侧生成对应标注（对准模块）
+    const circled = "①②③④⑤⑥⑦⑧⑨⑩";
+    const hs = body.querySelectorAll(".sp-h");
+    if (hs.length && annots) {
+      const stage = annots.parentElement;
+      const stageRect = stage.getBoundingClientRect();
+      const phone = $("phone");
+      const ahtml = [];
+      hs.forEach(function(h, i){
+        const n = circled[i] || (i + 1);
+        h.innerHTML = "<span class='sp-num'>" + n + "</span>" + h.innerHTML;
+        const sel = h.getAttribute("data-sp-anchor");
+        let target = sel ? phone.querySelector(sel) : null;
+        let top = -9999;
+        if (target) {
+          const tr = target.getBoundingClientRect();
+          top = tr.top - stageRect.top + tr.height / 2;
+        }
+        const label = h.textContent.replace(/^[①②③④⑤⑥⑦⑧⑨⑩\s]+/, "").slice(0, 5);
+        ahtml.push("<div class='stage-annot' data-i='" + i + "' style='top:" + top + "px'>" +
+          "<span class='ln'></span><span class='num'>" + n + "</span><span class='lbl'>" + label + "</span></div>");
+      });
+      annots.innerHTML = ahtml.join("");
+    }
+  }
+  function toggleSpecs(){
+    const on = !$("app").classList.contains("sp-on");
+    $("app").classList.toggle("sp-on", on);
+    const b = $("spToggle");
+    b.classList.toggle("on", on);
+    b.textContent = on ? "字段 开" : "字段";
+    renderSpecs();
+  }
+
+  function renderAll(force){
+    if (railMode === "page") {
+      activePage = pageOfFrame(sheet ? frameKeyOf(sheet) : current);
+      if (isDemoPage(activePage)) demoOpen = true;   // 跳到演示页时自动展开，免得高亮看不见
+    }
+    renderScreen(force);
+    renderRail();
+    renderMiddle();
+    renderAnnot();
+    renderSheet();
+    $("app").classList.toggle("sp-page", railMode === "page");
+    renderSpecs();
+    document.querySelectorAll(".ms").forEach(function(b){ b.classList.toggle("on", b.dataset.mode === railMode); });
+  }
+
+  function go(key, keepFlow){
+    current = key;
+    sheet = null;
+    syncView(key);
+    if (!keepFlow) {
+      const act = flowById(activeFlowId);
+      if (!(act && inFlow(act.f, key))) {
+        const hit = currentFlow();
+        activeFlowId = hit ? hit.f.id : "";
+      }
+      markStep(activeFlowId, key);
+    }
+    renderAll(true);
+  }
+
+  function openSheet(kind, origin){
+    sheet = kind;
+    sheetOrigin = origin || current;
+    if (kind === "add") addDraft = { date: defaultAddDate(), meal: "lunch", amount: "32" };
+    if (kind === "date-sub") dateSel = [];
+    renderAll();
+  }
+
+  function closeSheet(force){
+    sheet = null;
+    authPop = false;
+    renderAll(force);
+  }
+
+  function toast(msg){
+    let el = $("toast");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "toast"; el.className = "toast";
+      $("phone").appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.classList.remove("on"); }, 1900);
+  }
+
+  function frameKeyOf(kind){
+    return { add: "add-order", subscribe: "subscribe-sheet", coupon: "coupon-success", delete: "delete-confirm", share: "share-sheet", weeks: "week-picker", months: "month-picker" }[kind] || kind;
+  }
+
+  function selectFrame(key, mode){
+    /* 抽屉/子页从哪里来：沿用当前所在的月/周路由，不在首页时默认落月首页 */
+    const backHome = function(){ return isWeekFrame(current) ? "home-week" : "home-month"; };
+    if (key === "coupon-success") {
+      activeFlowId = "1"; activeStep = { f: "1", l: 0, i: 7 };
+      current = "tab-points";
+      openSheet("coupon", "tab-points");
+    } else if (key === "add-order") {
+      activeFlowId = "1"; markStep("1", key);
+      current = backHome(); syncView(current);
+      openSheet("add", current);
+    } else if (key === "subscribe-sheet") {
+      activeFlowId = "2"; markStep("2", key);
+      current = backHome(); syncView(current);
+      openSheet("subscribe", current);
+    } else if (key === "date-sub") {
+      activeFlowId = "2"; markStep("2", key);
+      current = backHome(); syncView(current);
+      dateMode = mode || "first";
+      openSheet("date-sub", current);
+    } else if (key === "sub-refused") {
+      activeFlowId = "10"; markStep("10", key);
+      current = backHome(); syncView(current);
+      subRefused = true;
+      pendingSub = { lunch: true, dinner: false, week: false };
+      openSheet("sub-refused", current);
+    } else if (key === "budget-edit") {
+      activeFlowId = "6"; markStep("6", key);
+      bFrom = isHomeFrame(current) ? current : "home-month";
+      resetBDraft();
+      go("budget-edit", true);
+    } else if (key === "budget-confirm") {
+      activeFlowId = "6"; markStep("6", key);
+      bFrom = isHomeFrame(current) ? current : "home-month";
+      resetBDraft();
+      /* 演示用：给午餐加 ¥3，抽屉里能看到「旧 → 新」差异 */
+      bDraft.meals.lunch += 3;
+      bDraft.month = budgetMonth(bDraft.meals);
+      go("budget-edit", true);
+      openSheet("budget-confirm", "budget-edit");
+    } else if (key === "delete-confirm") {
+      activeFlowId = "7"; markStep("7", key);
+      current = backHome(); syncView(current);
+      delTarget = firstManualTarget(WEEKS[viewWeek]);
+      openSheet("delete", current);
+    } else if (key === "share-sheet") {
+      activeFlowId = "3"; markStep("3", key);
+      current = backHome(); syncView(current);
+      shareInfo = buildShareInfo();
+      openSheet("share", current);
+    } else if (key === "week-picker") {
+      activeFlowId = "4"; markStep("4", key);
+      current = isWeekFrame(current) ? current : "home-week"; syncView(current);
+      openSheet("weeks", current);
+    } else if (key === "month-picker") {
+      activeFlowId = "5"; markStep("5", key);
+      current = isMonthFrame(current) ? current : "home-month"; syncView(current);
+      openSheet("months", current);
+    } else {
+      go(key);
+    }
+  }
+
+  document.addEventListener("click", function(e){
+    const t = e.target;
+    if (t.closest("#spToggle")) { toggleSpecs(); return; }
+    if (t.dataset && t.dataset.mask) { closeSheet(); return; }
+
+    /* 首页 · 加桌面提示：点任意处关闭（不跳转） */
+    if (current === "home-month-desktop") {
+      const tip = $("deskTip");
+      if (tip && !t.closest("#frameSel, .rail, .annot")) tip.remove();
+    }
+
+    const actEl = t.closest("[data-act]");
+    if (actEl) {
+      const act = actEl.dataset.act;
+      if (act === "to-points") {
+        const fromNewWeek = (current === "home-month-new" && activeFlowId === "1");
+        go("tab-points");
+        if (fromNewWeek) { activeStep = { f: "1", l: 0, i: 6 }; renderMiddle(); }
+      }
+      /* 月/周维度互切：语义对应跳（上月↔上周、超支月↔超支周…），不引入 mode 变量 */
+      if (act === "dim-switch") {
+        if (isWeekFrame(current)) go(HOME_MONTH_FRAMES[weekFrameType()]);
+        else if (isMonthFrame(current)) go(HOME_WEEK_FRAMES[monthFrameType()]);
+        return;
+      }
+      /* 账期左右切换：月/周各自独立，禁用态不渲染 data-act */
+      if (/^(month|week)-(prev|next)$/.test(act)) {
+        const isM = act.indexOf("month-") === 0;
+        const dir = act.slice(-4);
+        const st = isM ? monthFrameType() : weekFrameType();
+        const nav = isM ? MONTH_NAV : WEEK_NAV;
+        const target = nav[st] && nav[st][dir];
+        if (target) go(target);
+        return;
+      }
+      else if (act === "open-add") openSheet("add", current);
+      else if (act === "open-subscribe") { dateMode = "first"; openSheet("date-sub", current); }
+      else if (act === "open-budget") openBudgetEdit();
+      else if (act === "open-weeks") openSheet("weeks", current);
+      else if (act === "open-months") openSheet("months", current);
+      else if (act === "open-share") { shareInfo = buildShareInfo(); openSheet("share", current); }
+      else if (act === "open-notice") go(actEl.dataset.to || "home-month");
+      else if (act === "ask-delete") {
+        delTarget = { di: Number(actEl.dataset.di), oi: Number(actEl.dataset.oi) };
+        openSheet("delete", current);
+      }
+      else if (act === "confirm-delete") {
+        if (sheet !== "delete" || !delTarget) return;
+        const w = WEEKS[viewWeek];
+        const d = w.days[delTarget.di];
+        if (d && d.orders[delTarget.oi]) {
+          const removed = d.orders.splice(delTarget.oi, 1)[0];
+          delTarget = null;
+          sheet = null;
+          const back = isHomeFrame(current) ? current : (isWeekFrame(current) ? "home-week" : "home-month");
+          current = back;
+          syncView(back);
+          screenKey = "";
+          activeFlowId = "7";
+          activeStep = (back === "home-month" || back === "home-week") ? { f: "7", l: 0, i: 2 } : null;
+          renderAll(true);
+          toast("已删除 ¥" + fmt(removed.amt) + "，统计已回滚");
+        }
+        return;
+      }
+      else if (act === "claim") {
+        claimCoupon = { name: actEl.dataset.name, value: actEl.dataset.value };
+        current = "tab-points";
+        openSheet("coupon", "tab-points");
+      }
+      else if (act === "close-sheet") closeSheet();
+      else if (act === "save-add") {
+        if (sheet !== "add") return;
+        const amt = Number(addDraft.amount);
+        if (!isFinite(amt) || amt <= 0) { toast("请输入大于 0 的金额"); return; }
+        const w = WEEKS[viewWeek];
+        const day = w.days.filter(function(d){ return d.iso === addDraft.date; })[0];
+        if (!day) { toast("只能记到当前查看的这一周"); return; }
+        day.orders.push({ time: MEAL_TIME[MEAL[addDraft.meal]] || "/", name: "外部订单", tag: "外部", meal: MEAL[addDraft.meal], amt: amt, manual: true });
+        day.orders.sort(function(a, b){ return a.time.localeCompare(b.time); });
+        sheet = null;
+        const back = isHomeFrame(current) ? current : "home-month";
+        current = back;
+        syncView(back);
+        screenKey = "";
+        renderAll(true);
+        toast("已记入 " + day.mm + " · " + MEAL[addDraft.meal] + " ¥" + fmt(amt));
+      }
+      else if (act === "save-budget") {
+        if (!bDraft) resetBDraft();
+        if (mealsSum(bDraft.meals) <= 0) { toast("三餐四类至少填一项"); return; }
+        bDraft.month = budgetMonth(bDraft.meals);
+        if (current === "budget-edit") { openSheet("budget-confirm", current); return; }
+        saveBudgetFromMeals(bDraft.meals);
+        afterBudgetSaved();
+      }
+      else if (act === "confirm-budget") {
+        if (!bDraft) { closeSheet(); return; }
+        const meals = Object.assign({}, bDraft.meals);
+        sheet = null;
+        saveBudgetFromMeals(meals);
+        activeFlowId = "6"; activeStep = { f: "6", l: 0, i: 3 };
+        afterBudgetSaved();
+      }
+      else if (act === "budget-back") {
+        bDraft = null;
+        go((bFrom && isHomeFrame(bFrom)) ? bFrom : "home-month");
+      }
+      else if (act === "save-sub") {
+        const picked = [subDraft.lunch ? "午餐" : "", subDraft.dinner ? "晚餐" : "", subDraft.week ? "周更新" : ""].filter(Boolean);
+        if (!picked.length) { toast("至少打开一个提醒"); return; }
+        pendingSub = { lunch: !!subDraft.lunch, dinner: !!subDraft.dinner, week: !!subDraft.week };
+        pendingDays = dateSel.length;
+        /* 订阅触达=流程2：lane 0=主链路公共段 / 1=午餐 / 2=晚餐 / 3=周通知 → 推送种类 0/1/2 */
+        pendingLane = (activeFlowId === "2" && activeStep && activeStep.f === "2") ? Math.max(0, activeStep.l - 1) : -1;
+        if (subAuthorized) {
+          /* 已授权过：不弹授权，直接进补选日期 */
+          dateMode = "refill";
+          openSheet("date-sub", current);
+          return;
+        }
+        sheet = null;
+        authPop = true;
+        renderAll(true);
+      }
+      else if (act === "confirm-dates") {
+        if (sheet !== "date-sub") return;
+        if (!dateSel.length) { toast("先选至少一天的日期"); return; }
+        if (dateMode === "refill" && subAuthorized) {
+          /* 已授权：后续补日期直接生效，不再弹窗 */
+          const n = dateSel.length;
+          sheet = null;
+          if (pendingLane >= 0 && activeFlowId === "2") {
+            go(["push-noon", "push-eve", "push-week"][pendingLane] || "push-noon", true);
+            activeStep = { f: "2", l: pendingLane + 1, i: 0 };
+            renderMiddle();
+          } else {
+            renderAll(true);
+          }
+          toast("已加推 " + n + " 天");
+          return;
+        }
+        /* 首次：日期选完 → 去「订阅」打开要收的提醒 */
+        pendingSub = { lunch: !!subDraft.lunch, dinner: !!subDraft.dinner, week: !!subDraft.week };
+        if (!subDraft.lunch && !subDraft.dinner && !subDraft.week) subDraft = { lunch: true, dinner: false, week: false };
+        openSheet("subscribe", current);
+      }
+      else if (act === "auth-allow") {
+        authPop = false;
+        subRefused = false;
+        subAuthorized = true;                 // 授权一次，后续补日期不再弹窗
+        subDraft = { lunch: pendingSub.lunch, dinner: pendingSub.dinner, week: pendingSub.week };
+        const n = pendingDays;
+        dateMode = "refill";
+        if (activeFlowId === "2" && activeStep && activeStep.f === "2" && activeStep.l === 0) activeStep = { f: "2", l: 0, i: 3 };
+        openSheet("date-sub", current);       // 第三步：授权后补选日期
+        toast("已订阅 " + n + " 天");
+      }
+      else if (act === "auth-deny") {
+        authPop = false;
+        subRefused = true;
+        subDraft = { lunch: false, dinner: false, week: false };
+        openSheet("sub-refused", current);
+      }
+      else if (act === "open-sub-refused") openSheet("sub-refused", current);
+      else if (act === "demo-order") go("external-order");
+      else if (act === "mp-open") {
+        go("tab-points");
+        activeFlowId = "1"; markStep("1", "tab-points");
+        renderMiddle(); renderAnnot();
+      }
+      else if (act === "share-card-open") {
+        const scope = current === "share-friend-week" ? "week" : (current === "share-friend-month" ? "month" : ((shareInfo && shareInfo.scope) || "month"));
+        const land = !guideDone ? "tab-points" : (scope === "week" ? "home-week" : "home-month");
+        activeFlowId = "3"; markStep("3", "share-friend-" + scope);
+        go(land);
+      }
+      else if (act === "share-send") { closeSheet(); toast("已唤起微信转发面板 · 卡片落积分页"); }
+      else if (act === "toast-existing") toast("详见已有功能");
+      else if (act === "points-sub-ok") { guideDone = true; go("home-month"); toast("已订阅积分到账提醒"); }
+      return;
+    }
+
+    const weekEl = t.closest("[data-week]");
+    if (weekEl) {
+      const fromWeeks = (sheet === "weeks");
+      /* 行自带目标帧；有数据 key 才移动周数据指针 */
+      if (weekEl.dataset.week) viewWeek = weekEl.dataset.week;
+      current = weekEl.dataset.to || "home-week";
+      sheet = null;
+      screenKey = "";
+      syncView(current);
+      // 从选周抽屉里点行，流程高亮跟着落到结果帧
+      if (fromWeeks && activeFlowId) markStep(activeFlowId, current);
+      renderAll(true);
+      return;
+    }
+
+    const monthEl = t.closest("[data-month]");
+    if (monthEl) {
+      const fromMonths = (sheet === "months");
+      /* 往期月行：记录取数口径，月帧按它出 label 与金额 */
+      const vm = monthEl.dataset.month;
+      if (vm === "prev" || vm === "older") viewMonth = vm;
+      current = monthEl.dataset.to || "home-month";
+      sheet = null;
+      screenKey = "";
+      syncView(current);
+      if (fromMonths && activeFlowId) markStep(activeFlowId, current);
+      renderAll(true);
+      return;
+    }
+
+    const flowEl = t.closest("[data-flow]");
+    if (flowEl) {
+      const hit = flowById(flowEl.dataset.flow);
+      if (hit) {
+        activeFlowId = hit.f.id;
+        activeStep = { f: hit.f.id, l: 0, i: 0 };
+        go(hit.f.lanes[0].steps[0].k, true);
+      }
+      return;
+    }
+
+    const modeEl = t.closest("[data-mode]");
+    if (modeEl) {
+      railMode = modeEl.dataset.mode;
+      if (railMode === "page") activePage = pageOfFrame(current);
+      renderAll(true);
+      return;
+    }
+
+    const grpEl = t.closest("[data-grp]");
+    if (grpEl) {
+      demoOpen = !demoOpen;
+      renderRail();
+      return;
+    }
+
+    const pageEl = t.closest("[data-page]");
+    if (pageEl) {
+      activePage = pageEl.dataset.page;
+      const p = pageById(activePage);
+      const first = p.frames[0] || (p.sheets || [])[0];
+      if (first) {
+        /* 通用页只有抽屉：走抽屉打开路径，不能当页面帧直接 go */
+        if (ROUTES[first.k] && ROUTES[first.k].kind === "sheet") selectFrame(first.k);
+        else go(first.k);
+      } else { sheet = null; renderAll(true); }
+      return;
+    }
+
+    const goEl = t.closest("[data-go]");
+    if (goEl) {
+      const k = goEl.dataset.go;
+      const step = goEl.dataset.step;
+      if (step) activeStep = parseStep(step);
+      // 流程 10 第 1 步是拒绝前的正常首页，回到这步要把订阅卡还原
+      if (k === "home-month" && activeStep && activeStep.f === "10" && activeStep.i === 0) subRefused = false;
+      // 从哪条订阅链路进来，就把对应那档默认打开
+      if (k === "subscribe-sheet" && activeStep && activeStep.f === "2") {
+        subDraft = { lunch: activeStep.l <= 1, dinner: activeStep.l === 2, week: activeStep.l === 3 };   // 主链路默认勾午餐
+      }
+      // 订阅第三步（授权后补选日期）不弹授权；第一步是首次选日期
+      const dateModeArg = (k === "date-sub" && activeStep && activeStep.f === "2")
+        ? (activeStep.i === 3 ? "refill" : "first") : undefined;
+      if (ROUTES[k] && ROUTES[k].kind === "sheet") selectFrame(k, dateModeArg);
+      else go(k, goEl.dataset.keep === "1");
+      if (step) { activeFlowId = parseStep(step).f; activeStep = parseStep(step); renderMiddle(); }
+      return;
+    }
+
+    const tabEl = t.closest("[data-tab]");
+    if (tabEl) {
+      const k = tabEl.dataset.tab;
+      if (k === "home") {
+        if (!guideDone) { activeFlowId = "1"; go("guide-pain"); markStep("1", "guide-pain"); }
+        else go("home-month");
+      }
+      else if (k === "points") go("tab-points");
+      else if (k === "mall") go("tab-mall");
+      else if (k === "me") go("tab-me");
+      return;
+    }
+
+    const meal = t.closest("[data-meal]");
+    if (meal) { addDraft.meal = meal.dataset.meal; renderSheet(); return; }
+
+    const dateEl = t.closest("[data-date]");
+    if (dateEl) {
+      const iso = dateEl.dataset.date;
+      const i = dateSel.indexOf(iso);
+      if (i >= 0) dateSel.splice(i, 1); else dateSel.push(iso);
+      renderSheet();
+      return;
+    }
+
+    const sw = t.closest("[data-sub]");
+    if (sw) {
+      const k = sw.dataset.sub;
+      subDraft[k] = !subDraft[k];
+      renderSheet();
+      return;
+    }
+  });
+
+  document.addEventListener("input", function(e){
+    const t = e.target;
+    if (t.id === "addAmt") addDraft.amount = t.value;
+    if (t.id === "addDate") {
+      addDraft.date = t.value;
+      const h = $("addDateHint");
+      if (h) h.textContent = dayLabel(t.value);
+    }
+    /* 预算表单单向联动：只改三餐四类，月 / 周 / 日均全部派生（引导③ / 改预算共用） */
+    if (t.classList && t.classList.contains("bMeal")){
+      if (!bDraft) resetBDraft();
+      bDraft.meals[t.dataset.meal] = Math.max(0, Math.round(Number(t.value) || 0));
+      bDraft.month = budgetMonth(bDraft.meals);
+      const bm = $("bMonth"); if (bm) bm.textContent = bDraft.month;
+      const gw2 = $("g-week"); if (gw2) gw2.textContent = budgetWeek(bDraft.meals);
+      const gd2 = $("g-daily"); if (gd2) gd2.textContent = budgetDaily(bDraft.meals);
+    }
+  });
+
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && sheet) closeSheet();
+  });
+
+  function tick(){
+    const d = new Date();
+    $("clock").textContent = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  (function init(){
+    tick();
+    setInterval(tick, 30000);
+    const keys = Object.keys(ROUTES).sort(function(a, b){ return ROUTES[a].id - ROUTES[b].id; });
+    $("frameSel").innerHTML = keys.map(function(k){
+      return "<option value='" + k + "'>" + ROUTES[k].id + " · " + ROUTES[k].n + (ROUTES[k].demo ? "（演示）" : "") + "</option>";
+    }).join("");
+    $("frameSel").addEventListener("change", function(){ selectFrame(this.value); });
+    go("home-month");
+  })();
+})();
+</script>
+</body>
+</html>
