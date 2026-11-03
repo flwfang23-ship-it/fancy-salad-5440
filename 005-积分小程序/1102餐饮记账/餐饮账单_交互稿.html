@@ -378,6 +378,15 @@
   .wk-row.off:hover{ border-color:var(--line); background:var(--paper); }
   .wk-row.off .tr .v, .wk-row.off .tr .c{ color:var(--ink-soft); }
   .wk-note{ margin-top:10px; font-size:10px; line-height:1.6; color:var(--ink-soft); letter-spacing:.03em; }
+  /* 上周账单总结抽屉 */
+  .summary-sheet{ bottom:0; left:0; right:0; padding:28px 24px 36px; }
+  .summary-sheet .sh-body{ padding:8px 0 24px; }
+  .summary-sheet .sh-line{ display:flex; align-items:center; padding:10px 0; }
+  .summary-sheet .sh-line .lb{ font-size:13px; color:var(--ink-soft); }
+  .summary-sheet .sh-line .val{ font-size:17px; font-weight:700; color:var(--ink); }
+  .summary-sheet .sh-line .val.hot{ color:#e64340; }
+  .summary-sheet .sh-cta{ width:100%; height:46px; border-radius:23px; background:var(--ink); color:#fff; font-size:15px; font-weight:600; }
+  /* END 上周账单总结抽屉 */
   .del-row .v{ font-family:var(--mono); font-size:11.5px; color:var(--ink); text-align:right; }
   .del-note{ margin-top:12px; font-size:10.5px; line-height:1.7; color:var(--ink-soft); letter-spacing:.03em; }
 
@@ -730,7 +739,7 @@
     <div class="rail-h">
       <div class="k">MONTHLY+WEEKLY · 路由拆分版</div>
       <div class="t">餐饮账单 · 路由拆分版</div>
-      <div class="s">36 帧 · 6 个演示帧</div>
+      <div class="s">38 帧 · 6 个演示帧</div>
       <button class="sp-toggle on" id="spToggle">字段 开</button>
       <div class="mode-switch"><button class="ms on" data-mode="flow">流 程</button><button class="ms" data-mode="page">页 面</button></div>
     </div>
@@ -1031,6 +1040,7 @@
     "push-eve":        { id: 22, n: "订阅推送（晚餐）",        ref: "push/eve",           kind: "notice" },
     "push-eve-over":   { id: 23, n: "订阅推送（晚餐超支）",    ref: "push/eve-over",      kind: "notice" },
     "push-week":       { id: 24, n: "订阅推送（周一）",        ref: "push/week",          kind: "notice" },
+    "push-week-over":  { id: 36, n: "订阅推送（周一超支）",    ref: "push/week-over",     kind: "notice" },
     "delete-confirm":  { id: 25, n: "删除确认",              ref: "drawer/delete",      kind: "sheet" },
     "share-sheet":     { id: 26, n: "分享",                 ref: "drawer/share",       kind: "sheet" },
     "share-friend-month": { id: 27, n: "好友会话（收到月分享）", ref: "share/friend-month", kind: "page" },
@@ -1041,7 +1051,8 @@
     "week-picker":     { id: 32, n: "选择周账单",             ref: "drawer/week-picker", kind: "sheet" },
     "month-picker":    { id: 33, n: "选择月账单",             ref: "drawer/month-picker", kind: "sheet" },
     "home-month-desktop": { id: 34, n: "账单-本月（加桌面提示）", ref: "home/month-desktop", kind: "page" },
-    "budget-confirm":  { id: 35, n: "二次确认（改预算）",      ref: "drawer/budget-confirm", kind: "sheet" }
+    "budget-confirm":  { id: 35, n: "二次确认（改预算）",      ref: "drawer/budget-confirm", kind: "sheet" },
+    "push-week-summary": { id: 37, n: "上周账单总结（抽屉）", ref: "push/week-summary", kind: "sheet" }
   };
   const FLOWS = [
     { g: "主流程", flows: [
@@ -1078,11 +1089,13 @@
         ]},
         { g: "支线-2 · 晚餐", steps: [
           { t: "订阅推送（晚餐）", s: "17:00 · 晚餐提醒", k: "push-eve" },
-          { t: "账单-本周", s: "点推送回流", k: "home-week" }
+          { t: "账单-本月", s: "点推送回流", k: "home-month" }
         ]},
         { g: "支线-3 · 周通知", steps: [
-          { t: "订阅推送（周一）", s: "10:30 · 新账期提醒", k: "push-week" },
-          { t: "账单-本周（新账期）", s: "周预算 ¥420 生效 · 0 单", k: "home-week-new" }
+          { t: "订阅推送（周一）", s: "10:30 · 上周总结", k: "push-week" },
+          { t: "订阅推送（周一·超支）", s: "上周超支 ¥X · 本周注意", k: "push-week-over" },
+          { t: "上周账单总结", s: "半屏抽屉 · 两行文案 + 我知道了", k: "push-week-summary" },
+          { t: "账单-本周（新账期）", s: "关闭抽屉后跳 · 周预算 ¥420 生效", k: "home-week-new" }
         ]}
       ]},
     ]},
@@ -1134,13 +1147,7 @@
           { t: "账单-本周", s: "统计回滚", k: "home-week" }
         ]}
       ]},
-      { id: "8", n: "周更新（月账期）", start: "推送 / 首页", lanes: [
-        { g: "主链路", steps: [
-          { t: "订阅推送（周一）", s: "10:30 · 新账期提醒", k: "push-week" },
-          { t: "账单-本月（新账期）", s: "月预算 ¥1,800 生效", k: "home-month-new" }
-        ]}
-      ]},
-      { id: "9", n: "预算超支", start: "月 / 周首页", lanes: [
+      { id: "8", n: "预算超支", start: "月 / 周首页", lanes: [
         { g: "主链路 · 月", steps: [
           { t: "账单-本月", s: "本月已花 1,810 · 预算 1,800", k: "home-month" },
           { t: "账单-本月（超支）", s: "已超 10 · 金额标红 · 无进度条", k: "home-month-over" }
@@ -1150,22 +1157,22 @@
           { t: "账单-本周（超支）", s: "已超 15 · 金额标红", k: "home-week-over" }
         ]},
         { g: "支线 2 · 午餐超支", steps: [
-          { t: "订阅推送（午餐超支）", s: "本周剩余 -- · 建议少花", k: "push-noon-over" },
-          { t: "账单-本周（超支）", s: "点推送回流 · 仍是超支态", k: "home-week-over" }
+          { t: "订阅推送（午餐超支）", s: "本月已超支 · 建议少花", k: "push-noon-over" },
+          { t: "账单-本月（超支）", s: "点推送回流 · 仍是超支态", k: "home-month-over" }
         ]},
         { g: "支线 3 · 晚餐超支", steps: [
-          { t: "订阅推送（晚餐超支）", s: "本周剩余 -- · 建议少花", k: "push-eve-over" },
-          { t: "账单-本周（超支）", s: "点推送回流 · 仍是超支态", k: "home-week-over" }
+          { t: "订阅推送（晚餐超支）", s: "本月已超支 · 建议少花", k: "push-eve-over" },
+          { t: "账单-本月（超支）", s: "点推送回流 · 仍是超支态", k: "home-month-over" }
         ]}
       ]},
-      { id: "10", n: "订阅被拒", start: "月 / 周首页", lanes: [
+      { id: "9", n: "订阅被拒", start: "月 / 周首页", lanes: [
         { g: "主链路", steps: [
           { t: "账单-本月", s: "点「订阅」入口", k: "home-month" },
           { t: "订阅被拒（开启引导）", s: "授权被拒 · 右上角手动开", k: "sub-refused" },
           { t: "账单-本月", s: "订阅卡「去开启」入口", k: "home-month" }
         ]}
       ]},
-      { id: "11", n: "添加至桌面", start: "账单-本月", lanes: [
+      { id: "10", n: "添加至桌面", start: "账单-本月", lanes: [
         { g: "主链路", steps: [
           { t: "账单-本月", s: "首单回流后的首页", k: "home-month" },
           { t: "首页（加桌面提示）", s: "右上角气泡「添加至桌面，每天快速记账」· 点任意处关闭", k: "home-month-desktop" }
@@ -1174,7 +1181,7 @@
     ]}
   ];
 
-  /* 页面轴：36 帧按「本月 / 本周 / 通用」三模块重组 */
+  /* 页面轴：37 帧按「本月 / 本周 / 通用」三模块重组 */
   const PAGE_TREE = [
     { g: "一级页面", items: [
       { n: "新手引导", k: "guide", tag: "全屏引导", frames: [
@@ -1203,12 +1210,13 @@
         { k: "budget-confirm",   t: "二次确认",  s: "旧 → 新对比 · 确认后保存" },
         { k: "add-order",       t: "补卡",      s: "日期 / 餐段 / 金额" },
         { k: "subscribe-sheet", t: "订阅",      s: "午 / 晚 / 周更 三个开关" },
-        { k: "date-sub",        t: "日期订阅",  s: "本周 7 天可多选" },
+        { k: "date-sub",        t: "日期订阅",  s: "整月日历可多选 · +1" },
         { k: "sub-refused",     t: "订阅被拒（开启引导）", s: "右上角 ··· → 设置 → 订阅消息" },
         { k: "delete-confirm",  t: "删除确认",  s: "外部单二次确认" },
         { k: "share-sheet",     t: "分享",      s: "转发给朋友 · 月 / 周卡片" },
         { k: "week-picker",     t: "选择周账单", s: "本周 / 上周 / 上上周 / 10月两段" },
-        { k: "month-picker",    t: "选择月账单", s: "本月 / 10月 / 9月 / 8月" }
+        { k: "month-picker",    t: "选择月账单", s: "本月 / 10月 / 9月 / 8月" },
+        { k: "push-week-summary", t: "上周账单总结", s: "周一推送进来自动弹 · 两行文案 + 我知道了" }
       ]}
     ]},
     { g: "外部页", items: [
@@ -1224,10 +1232,11 @@
       { n: "订阅推送", k: "push-noon", tag: "服务通知", frames: [
         { k: "push-noon", t: "午餐（正常）", s: "10:30 · 本周剩余 / 建议先领券" },
         { k: "push-eve",  t: "晚餐（正常）", s: "17:00 · 本周剩余 / 建议先领券" },
-        { k: "push-week", t: "周一（正常）", s: "10:30 · 新账期 / 预算 / 上周已花" }
+        { k: "push-week", t: "周一（正常）", s: "10:30 · 上周支出 / 温馨提示" }
       ], sheets: [], errors: [
-        { k: "push-noon-over", t: "午餐（超支）", s: "本周剩余 -- · 剩余几天少花" },
-        { k: "push-eve-over",  t: "晚餐（超支）", s: "本周剩余 -- · 剩余几天少花" }
+        { k: "push-noon-over", t: "午餐（超支）", s: "本月已超支 · 建议少花" },
+        { k: "push-eve-over",  t: "晚餐（超支）", s: "本月已超支 · 建议少花" },
+        { k: "push-week-over", t: "周一（超支）", s: "上周超支 ¥X · 本周注意" }
       ]}
     ]},
     { g: "演示页", fold: "demo", items: [
@@ -1292,7 +1301,7 @@
 <p>默认早 ¥10 / 午 ¥20 / 晚 ¥20 / 其他 ¥10 →「每天约 ¥60」= 四类之和；「每周约 ¥420」= 每天约 × 7；两行只读，随三餐四类实时更新。</p>
 <p><em class="sp-red">早餐 / 午餐 / 晚餐 / 其他四行是唯一可编辑项</em>：改任一类 → 每天约 = 四类之和、每周约 = 每天约 × 7、月预算 = 每天约 × 当月天数（11 月 30 天，写死 12 个月的天数）；这三项均不可编辑。</p>
 <div class="sp-h" data-sp-anchor=".ob-btn">唯一按钮</div>
-<p>「下一步」保存月预算并派生周预算 / 日均 / 三餐建议，进入「账单-本月 · 新账期」（0 单、预算已生效），再从首页「领券」入口去「积分页 · 领券」；本帧之后不再出现预算未设态。</p>
+<p>「下一步」保存月预算并派生月预算 / 日均 / 三餐建议，进入「账单-本月 · 新账期」（0 单、预算已生效），再从首页「领券」入口去「积分页 · 领券」；本帧之后不再出现预算未设态。</p>
 </div>`
         }
       }
@@ -1322,8 +1331,8 @@
 <p>底部「X 天有餐 · Y 天未订」统计已取消。</p>
 <div class="sp-h" data-sp-anchor=".wcard">⑤ 本周卡</div>
 <p><b>汇总行</b>只显示「今天可花 ¥60」（= 每天约）。</p>
-<p><b>三餐四格</b> = 每格默认值 −（本周有数据天的均值 − 默认值）× 0.5。</p>
-<p><b>无有效数据时</b>：本周有数据天为 0 时，三餐四格直接采用预算填写的默认值（早餐 ¥10 / 午餐 ¥20 / 晚餐 ¥20 / 其他 ¥10），不再做浮动。</p>
+<p><b>三餐四格</b> = 每格默认值 −（本月有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>无有效数据时</b>：本月有数据天为 0 时，三餐四格直接采用预算填写的默认值（早餐 ¥10 / 午餐 ¥20 / 晚餐 ¥20 / 其他 ¥10），不再做浮动。</p>
 <p><b>参考值小于 0 时显示为「-」</b>。</p>
 <p><b>餐段按订单支付时间划分</b>：早餐 6:00–9:59、午餐 10:00–13:59、晚餐 17:00–19:59，其余归「其他」。</p>
 <p><b>第三行两态</b>：没吃 / 已用 ¥X；按该餐段区间内用户实付求和回填。</p>
@@ -1386,23 +1395,23 @@
 <p>格式「‹ 本周 10.27—11.02 ›」，左右箭头切换上一周 / 下一周，到边界置灰。</p>
 <p>点中间打开「选择周账单」抽屉；右侧「月 | 周」pill 点另一侧跳到语义对应帧。</p>
 <div class="sp-h" data-sp-anchor=".rc-amt">② 周小票</div>
-<p><b>左侧文案</b>「本周总支出」，不显示日期范围（日期只在周胶囊展示）。</p>
+<p><b>左侧文案</b>「本月总支出」，不显示日期范围（日期只在周胶囊展示）。</p>
 <p><b>总支出口径</b>：本周一 0 点至下周一 0 点，联盟订单 + 外部订单实付之和。</p>
 <p><b>剩余</b> = 周预算 − 本周总支出；结果小于 0 进入「超支」状态。</p>
 <p><b>周预算</b> = 每天约 × 7（每天约 = 三餐四类之和）。</p>
-<p><b>日均消费</b> = 本周总支出 ÷ 有数据的天数（不是 ÷7）；一单都没有时按「新一周」样式（日均显示「-」）。</p>
+<p><b>日均消费</b> = 本月总支出 ÷ 有数据的天数（不是 ÷7）；一单都没有时按「新一周」样式（日均显示「-」）。</p>
 <div class="sp-h" data-sp-anchor=".duo">③ 领券 / 订阅双入口</div>
 <p><b>领券</b>：主行「领券」，副行「领券后自动记账」；导航至积分页。</p>
 <p><b>订阅</b>：主行「订阅」，副行「到点提醒花了多少」；调起订阅。</p>
 <p>入口仅两行文案，不再显示「手动补单数 / 订阅状态」第三行。</p>
 <div class="sp-h" data-sp-anchor=".wkchart">④ 7 天柱状图</div>
-<p>7 根柱子，参考线 = 周预算 ÷ 7；超线柱变红并带 ▲。</p>
+<p>7 根柱子，参考线 = 三餐默认值合计 ¥63；超线柱变红并带 ▲。</p>
 <p>柱底显示日期 + 当天消费金额，今天加粗。</p>
 <p>不在图表上重复展示「本周已花 / 日均」，这两项只在周小票出现。</p>
 <div class="sp-h" data-sp-anchor=".lead-card">⑤ 引导语 + 三餐参考值</div>
 <p><b>引导语</b>：今天可花 ≥ 三餐合计 →「照着这样点，不会超」，否则「按预设吃会超 ¥X」。</p>
-<p><b>三餐四格</b> = 每格默认值 −（本周有数据天的均值 − 默认值）× 0.5。</p>
-<p><b>无有效数据时</b>：本周有数据天为 0 时，三餐四格直接采用预算填写的默认值（早餐 ¥10 / 午餐 ¥20 / 晚餐 ¥20 / 其他 ¥10），不再做浮动。</p>
+<p><b>三餐四格</b> = 每格默认值 −（本月有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>无有效数据时</b>：本月有数据天为 0 时，三餐四格直接采用预算填写的默认值（早餐 ¥10 / 午餐 ¥20 / 晚餐 ¥20 / 其他 ¥10），不再做浮动。</p>
 <p><b>参考值小于 0 时显示为「-」</b>。</p>
 <p><b>餐段按订单支付时间划分</b>：早餐 6:00–9:59、午餐 10:00–13:59、晚餐 17:00–19:59，其余归「其他」。</p>
 <p><b>第三行仅两态</b>：没吃 / 已用 ¥X（按该餐段区间内用户实付求和回填）。</p>
@@ -1498,7 +1507,7 @@
           summary:
 `<div class="sp-block">
 <p>标题「订阅提醒」，副标题「到点提醒你这顿能花多少，先领券再下单」。</p>
-<p>三行开关：午餐「每天 10:30 · 提醒你午餐预算 ¥X」（取 budget.meals.lunch）；晚餐「每天 17:00 · 提醒你晚餐预算 ¥Y」（取 budget.meals.dinner）；周更新「每周一 10:30 · 本周预算 ¥W + 上周结算」（取 budget.weekAmount）。</p>
+<p>三行开关：午餐「每天 10:30 · 提醒你午餐预算 ¥X」（取 budget.meals.lunch）；晚餐「每天 17:00 · 提醒你晚餐预算 ¥Y」（取 budget.meals.dinner）；周更新「每周一 10:30 · 周预算 ¥W + 上周结算」（取 budget.weekAmount）。</p>
 <p><em class="sp-red">三个开关默认全关，独立控制</em>；从流程 3 进入时按链路默认开一档。</p>
 <p>按钮「取消」「订阅」。校验：全关 →「至少打开一个提醒」。</p>
 </div>`
@@ -1579,20 +1588,21 @@
 `<div class="sp-block">
 <div class="sp-h">① 类目</div>
 <p>记账类目，用于下发午餐打卡提醒。</p>
-<div class="sp-h">② 模板信息（记账类目）</div>
+<div class="sp-h">② 模板</div>
 <p><b>模板名称</b>：打卡提醒</p>
-<p><b>模板 ID</b>：xxxxxx（申请后回填）</p>
-<p><b>模板编号</b>：xxxxxx（申请后回填）</p>
-<div class="sp-h">③ 卡片字段（按页面实际显示）</div>
-<p>标题「打卡提醒」，主标题「午餐时间到，今天午餐预算 ¥20」。</p>
-<p>内容三行：<b>本周剩余</b>「¥309」（= 周预算 − 本周已花，取整）；<b>午餐预算</b>「¥20」（取 budget.meals.lunch）；<b>建议</b>「先领券再点，别超 ¥20」。</p>
-<p>建议文案中的金额 = 午餐三餐参考值：每格默认值 −（本周有数据天均值 − 默认值）× 0.5；本周有数据天为 0 时直接用默认值 ¥20。</p>
-<div class="sp-h">④ 跳转</div>
+<p><b>模板 ID</b>：JvQeKX6RAaqRoQaL2SMVDM2ml-Gr6eV1mfrS11SSII</p>
+<p><b>模板编号</b>：37058</p>
+<div class="sp-h">③ 字段映射</div>
+<p><b>打卡名称</b>（<code>{{thing6.DATA}}</code>）：午餐打卡（自动记账）</p>
+<p><b>备注</b>（<code>{{thing3.DATA}}</code>）：今天午餐建议 ≤ ¥20</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「打卡提醒」，第一行是打卡名称，第二行是备注。</p>
+<div class="sp-h">⑤ 跳转</div>
 <p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（本期）</em>。</p>
-<div class="sp-h">⑤ 正常 / 异常判定</div>
-<p><b>正常</b>：本周总支出 &lt; 周预算时推送本帧。</p>
-<p><b>异常</b>：本周总支出 ≥ 周预算时改推超支版。</p>
-<div class="sp-h">⑥ 下发时间</div>
+<div class="sp-h">⑥ 正常 / 异常判定</div>
+<p><b>正常</b>：本月总支出 &lt; 月预算时推送本帧。</p>
+<p><b>异常</b>：本月总支出 ≥ 月预算时改推超支版。</p>
+<div class="sp-h">⑦ 下发时间</div>
 <p>每天 10:30 定时下发。</p>
 </div>`
         },
@@ -1604,17 +1614,18 @@
 <p>备忘录类目，用于下发晚餐打卡提醒。</p>
 <div class="sp-h">② 模板</div>
 <p><b>模板名称</b>：日程提醒</p>
-<p><b>模板 ID</b>：xxxxxx（类目申请后回填）</p>
-<div class="sp-h">③ 卡片字段（按页面实际显示）</div>
-<p>标题「日程提醒」，主标题「晚餐时间到，今天晚餐预算 ¥20」。</p>
-<p>内容三行：<b>本周剩余</b>「¥309」（= 周预算 − 本周已花，取整）；<b>晚餐预算</b>「¥20」（取 budget.meals.dinner）；<b>建议</b>「先领券再点，别超 ¥20」。</p>
-<p>建议文案中的金额 = 晚餐三餐参考值：每格默认值 −（本周有数据天均值 − 默认值）× 0.5；本周有数据天为 0 时直接用默认值 ¥20。</p>
-<div class="sp-h">④ 跳转</div>
+<p><b>模板 ID</b>：xxxxxx（申请后回填）</p>
+<div class="sp-h">③ 字段映射</div>
+<p><b>提醒内容</b>（<code>{{thing2.DATA}}</code>）：晚餐打卡（自动记账）</p>
+<p><b>备注</b>（<code>{{thing11.DATA}}</code>）：今天晚餐建议 ≤ ¥20</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「日程提醒」，第一行是提醒内容，第二行是备注。</p>
+<div class="sp-h">⑤ 跳转</div>
 <p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（本期）</em>。</p>
-<div class="sp-h">⑤ 正常 / 异常判定</div>
-<p><b>正常</b>：本周总支出 &lt; 周预算时推送本帧。</p>
-<p><b>异常</b>：本周总支出 ≥ 周预算时改推超支版。</p>
-<div class="sp-h">⑥ 下发时间</div>
+<div class="sp-h">⑥ 正常 / 异常判定</div>
+<p><b>正常</b>：本月总支出 &lt; 月预算时推送本帧。</p>
+<p><b>异常</b>：本月总支出 ≥ 月预算时改推超支版。</p>
+<div class="sp-h">⑦ 下发时间</div>
 <p>每天 17:00 定时下发。</p>
 </div>`
         },
@@ -1623,18 +1634,62 @@
           summary:
 `<div class="sp-block">
 <div class="sp-h">① 类目</div>
-<p>记账类目，用于每周一推送新一周预算 + 上周账单总结。</p>
-<div class="sp-h">② 模板信息（记账类目）</div>
+<p>记账类目，用于每周一推送上周账单总结。</p>
+<div class="sp-h">② 模板</div>
 <p><b>模板名称</b>：每周记账提醒</p>
-<p><b>模板 ID</b>：xxxxxx（申请后回填）</p>
+<p><b>模板 ID</b>：IURSEGoRYxBzk9LvBRpCofbyCv0pD7Wet6tIkovso</p>
 <p><b>模板编号</b>：10562</p>
-<div class="sp-h">③ 卡片字段（按页面实际显示）</div>
-<p>标题「每周记账提醒」，主标题「周一了，新一周的预算已就位」。</p>
-<p>内容三行：<b>本周预算</b>「¥420」（= budget.weekAmount）；<b>本周账期</b>「10.27–11.02」（本周一至本周日）；<b>上周已花</b>「¥148」（上周一 0 点至本周一 0 点，联盟订单 + 外部订单实付之和，取整）。</p>
-<div class="sp-h">④ 跳转</div>
-<p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（新账期）</em>。</p>
-<div class="sp-h">⑤ 下发时间</div>
+<div class="sp-h">③ 字段映射</div>
+<p><b>上周支出</b>（<code>{{amount6.DATA}}</code>）：上周支出：¥148.00</p>
+<p><b>温馨提示</b>（<code>{{thing8.DATA}}</code>）：温馨提示：上周支出未超预算，继续保持！（若上周超支，则改为「温馨提示：上周已超预算 ¥X，本周注意」）</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「每周记账提醒」，第一行显示上周支出金额，第二行显示温馨提示。</p>
+<div class="sp-h">⑤ 跳转</div>
+<p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（本期）</em>。</p>
+<div class="sp-h">⑥ 数据口径</div>
+<p>上周一 0 点至本周一 0 点，联盟订单与外部订单实付之和；不推送本周无数据或新一周内容。</p>
+<div class="sp-h">⑦ 下发时间</div>
 <p>每周一 10:30 定时下发。</p>
+</div>`
+        },
+        "push-week-over": {
+          inherits: "push-noon",
+          summary:
+`<div class="sp-block">
+<div class="sp-h">① 类目</div>
+<p>记账类目，用于每周一推送上周账单总结（超支版）。</p>
+<div class="sp-h">② 模板</div>
+<p><b>模板名称</b>：每周记账提醒</p>
+<p><b>模板 ID</b>：IURSEGoRYxBzk9LvBRpCofbyCv0pD7Wet6tIkovso</p>
+<p><b>模板编号</b>：10562</p>
+<div class="sp-h">③ 字段映射</div>
+<p><b>上周支出</b>（<code>{{amount6.DATA}}</code>）：上周支出：¥441.00</p>
+<p><b>温馨提示</b>（<code>{{thing8.DATA}}</code>）：温馨提示：上周已超预算 ¥21，本周注意</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「每周记账提醒」，第一行显示上周支出金额，第二行显示温馨提示（含超支金额）。</p>
+<div class="sp-h">⑤ 跳转</div>
+<p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（超支）</em>。</p>
+<div class="sp-h">⑥ 正常 / 异常判定</div>
+<p><b>异常</b>：上周总支出 ≥ 周预算时推送本帧（超支金额 = 上周总支出 − 周预算）。</p>
+<p><b>正常</b>：上周总支出 &lt; 周预算时改推正常版。</p>
+<div class="sp-h">⑦ 下发时间</div>
+<p>每周一 10:30 定时下发。</p>
+</div>`
+        },
+        "push-week-summary": {
+          inherits: "push-noon",
+          summary:
+`<div class="sp-block">
+<div class="sp-h">① 触发</div>
+<p>用户从周一推送（正常 / 超支版）点卡片进入小程序后，自动弹出本半屏抽屉。</p>
+<div class="sp-h">② 交互方式</div>
+<p>底部滑出的半屏抽屉。关闭方式：点击「我 知 道 了」按钮，或点击空白遮罩区。关闭后跳转到账单-本周（超支则跳超支态，否则跳本期）。</p>
+<div class="sp-h">③ 文案（动态计算，一个帧覆盖两种状态）</div>
+<p><b>第一行</b>：上周支出：<em>X</em> 元（<em>X</em> = 上周一 0 点至本周一 0 点总支出，单位元）</p>
+<p><b>第二行</b>：超支 ≥ 0 时 → <b>超预算</b>：<em>Y</em> 元（<em>Y</em> = max(0, 上周总支出 − 周预算)）</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;超支 = 0 时 → <b>没超预算，继续保持</b></p>
+<div class="sp-h">④ 底部按钮</div>
+<p>「我 知 道 了」（全宽胶囊形）。</p>
 </div>`
         },
         "push-noon-over": {
@@ -1642,21 +1697,22 @@
           summary:
 `<div class="sp-block">
 <div class="sp-h">① 类目</div>
-<p>记账类目，用于下发午餐打卡提醒。</p>
-<div class="sp-h">② 模板信息（记账类目）</div>
+<p>记账类目，用于下发午餐打卡提醒（超支版）。</p>
+<div class="sp-h">② 模板</div>
 <p><b>模板名称</b>：打卡提醒</p>
 <p><b>模板 ID</b>：xxxxxx（申请后回填）</p>
 <p><b>模板编号</b>：xxxxxx（申请后回填）</p>
-<div class="sp-h">③ 卡片字段（按页面实际显示）</div>
-<p>标题「打卡提醒」，主标题「午餐时间到，本周已超支 ¥10」。</p>
-<p>内容三行：<b>本周剩余</b>「--」（超支态固定显示双横线）；<b>午餐预算</b>「¥20」；<b>建议</b>「已超 ¥10，后面几天少花点」。</p>
-<p>建议文案中的超支金额 = 本周总支出 − 周预算。</p>
-<div class="sp-h">④ 跳转</div>
+<div class="sp-h">③ 字段映射</div>
+<p><b>打卡名称</b>（<code>{{thing6.DATA}}</code>）：午餐打卡（本月已超支）</p>
+<p><b>备注</b>（<code>{{thing3.DATA}}</code>）：已超 ¥10，后面几天少花点</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「打卡提醒」，第一行是打卡名称，第二行是备注。</p>
+<div class="sp-h">⑤ 跳转</div>
 <p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（超支）</em>。</p>
-<div class="sp-h">⑤ 正常 / 异常判定</div>
-<p><b>异常</b>：本周总支出 ≥ 周预算时推送本帧。</p>
-<p><b>正常</b>：本周总支出 &lt; 周预算时改推正常版。</p>
-<div class="sp-h">⑥ 下发时间</div>
+<div class="sp-h">⑥ 正常 / 异常判定</div>
+<p><b>异常</b>：本月总支出 ≥ 月预算时推送本帧。</p>
+<p><b>正常</b>：本月总支出 &lt; 月预算时改推正常版。</p>
+<div class="sp-h">⑦ 下发时间</div>
 <p>每天 10:30 定时下发。</p>
 </div>`
         },
@@ -1665,20 +1721,21 @@
           summary:
 `<div class="sp-block">
 <div class="sp-h">① 类目</div>
-<p>备忘录类目，用于下发晚餐打卡提醒。</p>
+<p>备忘录类目，用于下发晚餐打卡提醒（超支版）。</p>
 <div class="sp-h">② 模板</div>
 <p><b>模板名称</b>：日程提醒</p>
-<p><b>模板 ID</b>：xxxxxx（类目申请后回填）</p>
-<div class="sp-h">③ 卡片字段（按页面实际显示）</div>
-<p>标题「日程提醒」，主标题「晚餐时间到，本周已超支 ¥10」。</p>
-<p>内容三行：<b>本周剩余</b>「--」（超支态固定显示双横线）；<b>晚餐预算</b>「¥20」；<b>建议</b>「已超 ¥10，明天少花点」。</p>
-<p>建议文案中的超支金额 = 本周总支出 − 周预算。</p>
-<div class="sp-h">④ 跳转</div>
+<p><b>模板 ID</b>：xxxxxx（申请后回填）</p>
+<div class="sp-h">③ 字段映射</div>
+<p><b>提醒内容</b>（<code>{{thing2.DATA}}</code>）：晚餐打卡（本月已超支）</p>
+<p><b>备注</b>（<code>{{thing11.DATA}}</code>）：已超 ¥10，明天少花点</p>
+<div class="sp-h">④ 卡片展示</div>
+<p>标题「日程提醒」，第一行是提醒内容，第二行是备注。</p>
+<div class="sp-h">⑤ 跳转</div>
 <p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（超支）</em>。</p>
-<div class="sp-h">⑤ 正常 / 异常判定</div>
-<p><b>异常</b>：本周总支出 ≥ 周预算时推送本帧。</p>
-<p><b>正常</b>：本周总支出 &lt; 周预算时改推正常版。</p>
-<div class="sp-h">⑥ 下发时间</div>
+<div class="sp-h">⑥ 正常 / 异常判定</div>
+<p><b>异常</b>：本月总支出 ≥ 月预算时推送本帧。</p>
+<p><b>正常</b>：本月总支出 &lt; 月预算时改推正常版。</p>
+<div class="sp-h">⑦ 下发时间</div>
 <p>每天 17:00 定时下发。</p>
 </div>`
         }
@@ -1895,7 +1952,7 @@
     }).join("") : "<div class='wt-none'>本周还没有订单</div>";
   }
 
-  /* 三餐参考值：= 每格默认值 −（本周有数据天均值 − 默认值）× 0.5；本周有数据天为 0 时直接用默认值；第三行仅「没吃 / 已用 ¥X」 */
+  /* 三餐参考值：= 每格默认值 −（本月有数据天均值 − 默认值）× 0.5；本月有数据天为 0 时直接用默认值；第三行仅「没吃 / 已用 ¥X」 */
   function mealRefs(curWeek, mealVals){
     const MEAL_KEYS = ["早餐", "午餐", "晚餐", "其他"];
     const MEAL_MAP = { "早餐":"breakfast", "午餐":"lunch", "晚餐":"dinner", "其他":"other" };
@@ -1903,14 +1960,16 @@
     const used = { "早餐":0, "午餐":0, "晚餐":0, "其他":0 };
     if (todayDay) todayDay.orders.forEach(function(o){ used[o.meal] += o.amt; });
 
-    /* 按餐段统计本周每天的消费，用于求「有数据天的均值」 */
+    /* 按餐段统计本月每天的消费（合并所有周的数据），用于求「本月有数据天的均值」 */
     const sums = { "早餐":0, "午餐":0, "晚餐":0, "其他":0 };
     const days = { "早餐":0, "午餐":0, "晚餐":0, "其他":0 };
-    curWeek.days.forEach(function(d){
-      const ds = {};
-      d.orders.forEach(function(o){ ds[o.meal] = (ds[o.meal] || 0) + o.amt; });
-      Object.keys(ds).forEach(function(m){
-        if (sums[m] != null){ sums[m] += ds[m]; days[m]++; }
+    Object.keys(WEEKS).forEach(function(k){
+      WEEKS[k].days.forEach(function(d){
+        const ds = {};
+        d.orders.forEach(function(o){ ds[o.meal] = (ds[o.meal] || 0) + o.amt; });
+        Object.keys(ds).forEach(function(m){
+          if (sums[m] != null){ sums[m] += ds[m]; days[m]++; }
+        });
       });
     });
 
@@ -2080,7 +2139,7 @@
 
   /* ===== 月报版新增：本周焦点卡 ===== */
   function monthWeekCard(isNew){
-    /* 新账期：无消费数据，今天可花=日均预算、本周剩=周预算全额、还有 7 天，参考值按预算显示 */
+    /* 新账期：无消费数据，今天可花=日均预算、本周剩=月预算全额、还有 7 天，参考值按预算显示 */
     const w = isNew ? WEEKS.newweek : WEEKS.cur;
     const wc = isNew
       ? { todayAvail: budget.dailyAmount, weekRemain: budget.weekAmount, daysLeft: 7 }
@@ -2221,7 +2280,7 @@
     const manualCount = w.days.reduce(function(s, d){ return s + d.orders.filter(function(o){ return o.manual; }).length; }, 0);
     /* 小票顶部：新账期 = 本期的空数据态（0 单、¥0.00、日均 -）；周小票不显示日期范围 */
     const top = rcTop({
-      title: isCur || isNewWeek ? "本周总支出" : (isPast ? "该周总支出" : "本周已支出"),
+      title: isCur || isNewWeek ? "本月总支出" : (isPast ? "该周总支出" : "本周已支出"),
       period: "",
       mode: isOver ? "over" : (isPast ? "past" : "cur"),
       amount: st.total,
@@ -2386,50 +2445,63 @@
 
   /* 订阅推送（微信服务通知）：午餐 / 晚餐 / 周一 各一帧，午晚各带一个超支变体 */
   const NOTICE = {
-    "push-noon":      { at: "11月1日  10:30", meal: "午餐", time: "10:30", over: false, to: "home-week" },
-    "push-noon-over": { at: "11月1日  10:30", meal: "午餐", time: "10:30", over: true,  to: "home-week-over" },
-    "push-eve":       { at: "11月1日  17:00", meal: "晚餐", time: "17:00", over: false, to: "home-week" },
-    "push-eve-over":  { at: "11月1日  17:00", meal: "晚餐", time: "17:00", over: true,  to: "home-week-over" },
-    "push-week":      { at: "11月3日  10:30", week: true, to: "home-week-new" }
+    "push-noon":      { tpl: "打卡提醒", at: "11月1日  10:30", meal: "午餐", mealKey: "lunch", time: "10:30", over: false, to: "home-week" },
+    "push-noon-over": { tpl: "打卡提醒", at: "11月1日  10:30", meal: "午餐", mealKey: "lunch", time: "10:30", over: true,  to: "home-week-over" },
+    "push-eve":       { tpl: "日程提醒", at: "11月1日  17:00", meal: "晚餐", mealKey: "dinner", time: "17:00", over: false, to: "home-week" },
+    "push-eve-over":  { tpl: "日程提醒", at: "11月1日  17:00", meal: "晚餐", mealKey: "dinner", time: "17:00", over: true,  to: "home-week-over" },
+    "push-week":       { tpl: "每周记账提醒", at: "11月3日  10:30", week: true, over: false, to: "push-week-summary" },
+    "push-week-over":  { tpl: "每周记账提醒", at: "11月3日  10:30", week: true, over: true,  to: "push-week-summary" }
   };
-
   function noticeView(){
     const c = NOTICE[current] || NOTICE["push-noon"];
-    const w = WEEKS.cur;
-    const st = weekStats(w);
-    const remain = Math.max(0, Math.round(budget.weekAmount - st.total));
     const m = budget.meals;
-    const mealKey = c.meal === "午餐" ? "lunch" : "dinner";
-    const mealBudget = m[mealKey] || 0;
-    let title = "", rows = [], hint = "";
+    let line1 = "", line2 = "", hint = "";
     if (c.week){
-      title = "周一了，新一周的预算已就位";
-      rows = [["本周预算", "¥" + budget.weekAmount], ["本周账期", WEEKS.newweek.range], ["上周已花", "¥" + Math.round(weekStats(WEEKS.prev).total)]];
-      hint = "点卡片 → 账单-本周（新账期）";
+      const prevTotal = Math.round(weekStats(WEEKS.prev).total);
+      const overAmt = Math.max(0, prevTotal - budget.weekAmount);
+      line1 = "上周支出：¥" + prevTotal.toFixed(2);
+      line2 = overAmt > 0 ? "超预算：¥" + overAmt + ".00" : "没超预算，继续保持";
+      hint = "点卡片 → 上周账单总结（抽屉）";
     } else if (c.over){
-      const overAmt = Math.max(0, Math.round(budget.weekAmount - weekStats(WEEKS.cur).total));
-      const overStr = overAmt > 0 ? " ¥" + overAmt : "";
-      title = c.meal + "时间到，本周已超支" + overStr;
-      rows = [["本周剩余", "--"], [c.meal + "预算", "¥" + mealBudget], ["建议", overAmt > 0 ? "已超 ¥" + overAmt + "，" + (c.meal === "晚餐" ? "明天少花点" : "后面几天少花点") : "这周悠着点"]];
-      hint = "超支态 · 点卡片 → 账单-本周（超支）";
+      /* 超支判定口径：本月总支出 vs 月预算 */
+      const monthTotal = Math.round(monthStats("cur").total);
+      const overAmt = Math.max(0, monthTotal - budget.monthAmount);
+      line1 = c.meal + "打卡（本月已超支）";
+      line2 = overAmt > 0 ? "已超 ¥" + overAmt + "，" + (c.meal === "晚餐" ? "明天少花点" : "后面几天少花点") : "本月悠着点";
+      hint = "点卡片 → 账单-本月（超支）";
     } else {
-      title = c.meal + "时间到，今天" + c.meal + "预算 ¥" + mealBudget;
-      rows = [["本周剩余", "¥" + remain], [c.meal + "预算", "¥" + mealBudget], ["建议", "先领券再点，别超 ¥" + mealBudget]];
-      hint = "点卡片 → 进入首页";
+      const mealBudget = m[c.mealKey] || 0;
+      line1 = c.meal + "打卡（自动记账）";
+      line2 = "今天" + c.meal + "建议 ≤ ¥" + mealBudget;
+      hint = "点卡片 → 账单-本周（本期）";
     }
-    const body = rows.map(function(r){
-      return "<div class='nt-row" + (r[1] === "--" ? " hot" : "") + "'><span>" + r[0] + "</span><span class='v'>" + r[1] + "</span></div>";
-    }).join("");
+    const body = "<div class='nt-row'><span>" + line1 + "</span></div>" +
+                 "<div class='nt-row sub'><span>" + line2 + "</span></div>";
     return "<div class='nt fade'>" +
       "<div class='nt-bar'><span class='nt-back'>‹</span><span class='nt-title'>服务通知</span><span class='nt-more'>···</span></div>" +
       "<div class='nt-date'>" + c.at + "</div>" +
       "<div class='nt-msg' data-act='open-notice' data-to='" + c.to + "'>" +
-        "<div class='nt-app'><span class='nt-logo'>餐</span><span class='nt-name'>餐饮账单</span><span class='nt-badge'>订阅消息</span></div>" +
-        "<div class='nt-t'>" + title + "</div>" +
+        "<div class='nt-app'><span class='nt-logo'>餐</span><span class='nt-name'>" + c.tpl + "</span><span class='nt-badge'>订阅消息</span></div>" +
         "<div class='nt-box'>" + body + "</div>" +
         "<div class='nt-foot'><span>进入小程序</span><span class='ar'>›</span></div>" +
       "</div>" +
       "<div class='nt-hint'>" + hint + "</div>" +
+    "</div>";
+  }
+
+  /* 周一推送进来的上周账单总结抽屉（超支为0则正常，一个帧） */
+  function weekSummaryView(){
+    const prevTotal = Math.round(weekStats(WEEKS.prev).total);
+    const overAmt = Math.max(0, prevTotal - budget.weekAmount);
+    const line2 = overAmt > 0 ? "超预算：" + overAmt + " 元" : "没超预算，继续保持";
+    return "<div class='sheet-mask show' data-act='close-summary'>" +
+      "<div class='sheet summary-sheet' onclick='event.stopPropagation()'>" +
+        "<div class='sh-body'>" +
+          "<div class='sh-line'><span class='lb'>上周支出：</span><span class='val'>" + prevTotal + " 元</span></div>" +
+          "<div class='sh-line'><span class='lb'>" + (overAmt > 0 ? "超预算：" : "") + "</span><span class='val" + (overAmt > 0 ? " hot" : "") + "'>" + line2 + "</span></div>" +
+        "</div>" +
+        "<button class='sh-cta' data-act='close-summary'>我 知 道 了</button>" +
+      "</div>" +
     "</div>";
   }
 
@@ -2567,7 +2639,7 @@
     const m = budget.meals;
     const inner = "<div class='toggle'><div class='tx'><div class='n'>午餐提醒</div><div class='s'>每天 10:30 · 提醒你午餐预算 ¥" + m.lunch + "</div></div><button class='sw " + (d.lunch ? "on" : "") + "' data-sub='lunch'></button></div>" +
       "<div class='toggle'><div class='tx'><div class='n'>晚餐提醒</div><div class='s'>每天 17:00 · 提醒你晚餐预算 ¥" + m.dinner + "</div></div><button class='sw " + (d.dinner ? "on" : "") + "' data-sub='dinner'></button></div>" +
-      "<div class='toggle'><div class='tx'><div class='n'>周更新提醒</div><div class='s'>每周一 10:30 · 本周预算 ¥" + budget.weekAmount + " + 上周结算</div></div><button class='sw " + (d.week ? "on" : "") + "' data-sub='week'></button></div>" +
+      "<div class='toggle'><div class='tx'><div class='n'>周更新提醒</div><div class='s'>每周一 10:30 · 周预算 ¥" + budget.weekAmount + " + 上周结算</div></div><button class='sw " + (d.week ? "on" : "") + "' data-sub='week'></button></div>" +
       "<div class='sh-actions'><button class='cta ghost' data-act='close-sheet'>取消</button><button class='cta' data-act='save-sub'>" + (subAuthorized ? "订阅" : "订阅并授权") + "</button></div>";
     return sheetShell("订阅提醒", "选好日期后，打开要收的提醒", inner);
   }
@@ -2659,7 +2731,7 @@
       "<div class='nt-bar'><span class='nt-back'>‹</span><span class='nt-title'>服务通知</span><span class='nt-more'>···</span></div>" +
       "<div class='nt-date'>11月1日  10:32</div>" +
       "<div class='nt-msg' data-act='points-sub-ok'>" +
-        "<div class='nt-app'><span class='nt-logo'>餐</span><span class='nt-name'>餐饮账单</span><span class='nt-badge'>订阅消息</span></div>" +
+        "<div class='nt-app'><span class='nt-logo'>餐</span><span class='nt-name'>积分到账提醒</span><span class='nt-badge'>订阅消息</span></div>" +
         "<div class='nt-t'>积分到账提醒</div>" +
         "<div class='nt-box'>" +
           "<div class='nt-row'><span>积分来源</span><span class='v'>订单积分</span></div>" +
@@ -2816,6 +2888,7 @@
     else if (current === "home-month-desktop") html = homeView({ deskTip: true });
     else if (isHomeFrame(current)) html = homeView({});
     else if (NOTICE[current]) html = noticeView();
+    else if (current === "push-week-summary") html = weekSummaryView();
     else if (current === "points-subscribe") html = pointsNoticeView();
     else if (current === "wework-promo") html = weworkView();
     else if (current === "share-friend-month" || current === "share-friend-week") html = shareFriendView();
@@ -3300,6 +3373,13 @@
         openSheet("coupon", "tab-points");
       }
       else if (act === "close-sheet") closeSheet();
+      else if (act === "close-summary") {
+        /* 上周账单总结抽屉关闭：跳本周首页（超支则跳超支态） */
+        const prevTotal = Math.round(weekStats(WEEKS.prev).total);
+        const target = prevTotal >= budget.weekAmount ? "home-week-over" : "home-week";
+        go(target);
+        return;
+      }
       else if (act === "save-add") {
         if (sheet !== "add") return;
         const amt = Number(addDraft.amount);
