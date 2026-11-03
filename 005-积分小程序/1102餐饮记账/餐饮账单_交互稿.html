@@ -379,13 +379,52 @@
   .wk-row.off .tr .v, .wk-row.off .tr .c{ color:var(--ink-soft); }
   .wk-note{ margin-top:10px; font-size:10px; line-height:1.6; color:var(--ink-soft); letter-spacing:.03em; }
   /* 上周账单总结抽屉 */
-  .summary-sheet{ bottom:0; left:0; right:0; padding:28px 24px 36px; }
-  .summary-sheet .sh-body{ padding:8px 0 24px; }
-  .summary-sheet .sh-line{ display:flex; align-items:center; padding:10px 0; }
-  .summary-sheet .sh-line .lb{ font-size:13px; color:var(--ink-soft); }
-  .summary-sheet .sh-line .val{ font-size:17px; font-weight:700; color:var(--ink); }
-  .summary-sheet .sh-line .val.hot{ color:#e64340; }
-  .summary-sheet .sh-cta{ width:100%; height:46px; border-radius:23px; background:var(--ink); color:#fff; font-size:15px; font-weight:600; }
+  .summary-sheet{ bottom:0; left:0; right:0; padding:14px 22px 30px; background:var(--paper); border-radius:24px 24px 0 0; box-shadow:0 -10px 34px rgba(30,27,22,.16); }
+  .summary-sheet .grab{ width:38px; height:4px; border-radius:99px; background:#DCD5C4; margin:0 auto 16px; }
+  .summary-sheet .ws-h{ display:flex; align-items:center; justify-content:space-between; }
+  .summary-sheet .ws-h h3{ font-size:16px; font-weight:900; letter-spacing:.12em; color:var(--ink); }
+  .summary-sheet .ws-badge{ font-size:10px; font-weight:700; letter-spacing:.08em; padding:3px 8px; border-radius:99px; border:1px solid var(--green); color:var(--green); }
+  .summary-sheet .ws-badge.over{ border-color:var(--seal); color:var(--seal); }
+  .summary-sheet .ws-big{ margin-top:22px; }
+  .summary-sheet .ws-label{ font-size:11.5px; color:var(--ink-soft); letter-spacing:.08em; }
+  .summary-sheet .ws-num{ margin-top:4px; font-family:var(--mono); font-size:34px; font-weight:800; letter-spacing:.02em; line-height:1; }
+  .summary-sheet .ws-num .c{ font-size:11px; font-weight:800; margin-right:1px; }
+  .summary-sheet .ws-num.hot{ color:var(--seal); }
+  .summary-sheet .ws-div{ height:1px; background:var(--line); margin:20px 0 16px; }
+  .summary-sheet .ws-row{ display:flex; align-items:center; justify-content:space-between; padding:9px 0; }
+  .summary-sheet .ws-row .lb{ font-size:13px; color:var(--ink-soft); }
+  .summary-sheet .ws-row .vl{ font-family:var(--mono); font-size:15px; font-weight:800; }
+  .summary-sheet .ws-row .vl.ok{ color:var(--green); }
+  .summary-sheet .ws-row .vl.bad{ color:var(--seal); }
+  .summary-sheet .ws-row .vl small{ font-size:10px; font-weight:500; color:var(--ink-soft); margin-left:3px; }
+  .summary-sheet .ws-hit .lb{ font-weight:700; color:var(--ink); }
+  /* 四格参考值 */
+  .summary-sheet .ws-grid4{ display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#FFFCF4; margin-top:6px; }
+  .summary-sheet .ws-grid4 > div{ padding:11px 4px; text-align:center; }
+  .summary-sheet .ws-grid4 > div + div{ border-left:1px solid var(--line); }
+  .summary-sheet .ws-grid4 .k{ display:block; font-size:9.5px; color:var(--ink-soft); letter-spacing:.05em; }
+  .summary-sheet .ws-grid4 .v{ display:block; margin-top:4px; font-family:var(--mono); font-size:15px; font-weight:800; }
+  .summary-sheet .ws-grid4 em{ display:block; margin-top:4px; font-style:normal; font-size:9px; color:var(--ink-soft); }
+  .summary-sheet .ws-grid4 em.hi{ color:var(--seal); font-weight:700; }
+  .summary-sheet .ws-grid4 em.lo{ color:var(--green); font-weight:700; }
+  /* 超支三列诊断 */
+  .summary-sheet .ws-meal3{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:6px; }
+  .summary-sheet .ws-meal3 .mc{ border:1.5px solid var(--line); border-radius:12px; padding:12px 8px; text-align:center; background:var(--paper); }
+  .summary-sheet .ws-meal3 .mc b{ display:block; font-size:11.5px; font-weight:900; letter-spacing:.08em; }
+  .summary-sheet .ws-meal3 .mc .mv{ margin-top:7px; font-family:var(--mono); font-size:16px; font-weight:800; }
+  .summary-sheet .ws-meal3 .mc .mk{ margin-top:5px; font-size:9.5px; color:var(--ink-soft); }
+  .summary-sheet .ws-meal3 .mc .mk.ok{ color:var(--green); font-weight:700; }
+  .summary-sheet .ws-meal3 .mc.hit{ border-color:var(--seal); background:#FDF0EE; }
+  .summary-sheet .ws-meal3 .mc.hit b{ color:var(--seal); }
+  .summary-sheet .ws-meal3 .mc.hit .mk{ color:var(--seal); font-weight:700; }
+  /* 引导文案 */
+  .summary-sheet .ws-quote{ margin-top:18px; padding:11px 13px; background:var(--paper-dim); border-left:3px solid var(--ink); font-size:12px; line-height:1.65; letter-spacing:.02em; border-radius:0 8px 8px 0; }
+  .summary-sheet .ws-quote.over{ border-left-color:var(--seal); background:#FDF0EE; }
+  .summary-sheet .ws-quote b{ font-weight:900; color:var(--ink); }
+  /* 按钮 */
+  .summary-sheet .ws-cta{ display:block; width:100%; margin-top:16px; border:0; border-radius:14px; background:var(--ink); color:var(--paper); min-height:50px; font-family:var(--sans); font-size:14.5px; font-weight:900; letter-spacing:.16em; cursor:pointer; }
+  .summary-sheet .ws-cta.ghost{ background:transparent; color:var(--ink); border:1.5px solid var(--ink); box-shadow:none; margin-top:10px; }
+  .summary-sheet .ws-dismiss{ display:block; margin:14px auto 0; background:transparent; border:0; font-family:var(--sans); font-size:12px; color:var(--ink-soft); letter-spacing:.06em; text-decoration:underline; cursor:pointer; }
   /* END 上周账单总结抽屉 */
   .del-row .v{ font-family:var(--mono); font-size:11.5px; color:var(--ink); text-align:right; }
   .del-note{ margin-top:12px; font-size:10.5px; line-height:1.7; color:var(--ink-soft); letter-spacing:.03em; }
@@ -1052,7 +1091,8 @@
     "month-picker":    { id: 33, n: "选择月账单",             ref: "drawer/month-picker", kind: "sheet" },
     "home-month-desktop": { id: 34, n: "账单-本月（加桌面提示）", ref: "home/month-desktop", kind: "page" },
     "budget-confirm":  { id: 35, n: "二次确认（改预算）",      ref: "drawer/budget-confirm", kind: "sheet" },
-    "push-week-summary": { id: 37, n: "上周账单总结（抽屉）", ref: "push/week-summary", kind: "sheet" }
+    "push-week-summary": { id: 37, n: "上周账单总结（抽屉·未超支）", ref: "push/week-summary", kind: "sheet" },
+    "push-week-summary-over": { id: 38, n: "上周账单总结（抽屉·已超支）", ref: "push/week-summary-over", kind: "sheet" }
   };
   const FLOWS = [
     { g: "主流程", flows: [
@@ -1094,7 +1134,8 @@
         { g: "支线-3 · 周通知", steps: [
           { t: "订阅推送（周一）", s: "10:30 · 上周总结", k: "push-week" },
           { t: "订阅推送（周一·超支）", s: "上周超支 ¥X · 本周注意", k: "push-week-over" },
-          { t: "上周账单总结", s: "半屏抽屉 · 两行文案 + 我知道了", k: "push-week-summary" },
+          { t: "上周账单总结（未超支）", s: "半屏抽屉 · 四格参考值 + 我知道了", k: "push-week-summary" },
+          { t: "上周账单总结（已超支）", s: "半屏抽屉 · 三列诊断 + 收紧建议", k: "push-week-summary-over" },
           { t: "账单-本周（新账期）", s: "关闭抽屉后跳 · 周预算 ¥420 生效", k: "home-week-new" }
         ]}
       ]},
@@ -1216,7 +1257,8 @@
         { k: "share-sheet",     t: "分享",      s: "转发给朋友 · 月 / 周卡片" },
         { k: "week-picker",     t: "选择周账单", s: "本周 / 上周 / 上上周 / 10月两段" },
         { k: "month-picker",    t: "选择月账单", s: "本月 / 10月 / 9月 / 8月" },
-        { k: "push-week-summary", t: "上周账单总结", s: "周一推送进来自动弹 · 两行文案 + 我知道了" }
+        { k: "push-week-summary", t: "上周账单总结（未超支）", s: "周一推送进来自动弹 · 四格参考值 + 引导" },
+        { k: "push-week-summary-over", t: "上周账单总结（已超支）", s: "超支态 · 三列诊断 + 收紧建议" }
       ]}
     ]},
     { g: "外部页", items: [
@@ -1553,6 +1595,68 @@
 <p>本稿只负责两件事：按入口生成月 / 周卡片预览；落地口径为卡片固定落「积分页」，带 inviter 参数，新用户先落积分页、点「首页」再进新手引导，老用户直接进自己的账单，不覆盖、不清空对方账期。</p>
 <p><em class="sp-red">微信原生分享面板不赘述，本稿不复刻其 UI，只标注唤起时机与落地页规则</em>。</p>
 </div>`
+        },
+        "push-week-summary": {
+          summary:
+`<div class="sp-block">
+<div class="sp-h">① 通用字段：两个弹窗共用（4 项）</div>
+<p><b>上周总支出 ¥148.00</b>（数据源：<code>orders[上周]</code>）：当前账号最近一个<b>已结束</b>自然周的全部订单金额求和。周区间按周一 00:00 → 周日 23:59:59 切分，与首页上周胶囊同源，不是自然月也不是滚动 7 天。</p>
+<p><b>周预算 ¥420.00</b>（数据源：<code>budget.week</code>）：用户设定的周预算，默认档位来自首次 onboarding。420 为演示值，真实环境随用户设定翻转。</p>
+<p><b>结余 ¥272 / 超出 ¥21</b>（数据源：<code>budget.week − orders[上周]</code>）：二者互斥出现，≥ 0 走正常态、< 0 走超支态。<b>这是两个弹窗唯一的分流开关</b>，不含任何人工判断。</p>
+<p><b>早/午/晚预算拆分值</b>（数据源：<code>budget.meals.*</code>）：只喂给超支态的诊断三列和预算编辑页默认值。正常态不展示这三项。</p>
+<div class="sp-h">② 正常态 · 四格参考值（4 项）</div>
+<p><b>日均 ¥37</b>（公式：<code>orders[上周] ÷ 7</code>）：总支出 ÷ 7 天，<b>不是 ÷ 有单天数</b>，所以偏保守、对用户更友好。旁注「低于预算 / 高于预算」由它与预算日均值（周预算 ÷ 7）对比得出。</p>
+<p><b>有单天数 5/7</b>（公式：按天去重计数）：金额 > 0 的自然日数，分子分母都露出。用来区分「钱花在少数几天」和「每天都有花」。</p>
+<p><b>订单数 9 笔</b>（数据源：<code>orders[上周].length</code>）：数组长度直出，外卖、堂食、自炊三类都计入。</p>
+<p><b>最高一天 ¥62 · 周三</b>（公式：<code>groupBy(date)</code> 取 max）：按天聚合并取最大值，再带回该天的星期名。若这一天恰好超该餐段预算，会在超支态诊断列里复现。</p>
+<div class="sp-h">③ 正常态 · 引导与鼓励（2 项）</div>
+<p><b>本周每天还能花 ¥39</b>（公式：<code>(周预算 − 上周总支出) ÷ 7</code> 向上取整）：(420 − 148) ÷ 7 = 38.85 → 向上取整 39。余量<b>平摊到本周 7 天</b>，周一和周日看到的数一致，避免用户觉得数字乱跳。</p>
+<p><b>比上上周省了 ¥26</b>（公式：相邻完整周差值）：相邻完整周总支出相减，<b>只展示正向</b>；多花了就换成「多花了 ¥X」，不粉饰。新用户首周取不到对比值时，整句隐藏。</p>
+<div class="sp-h">④ 超支态 · 诊断三列（仅超支版，4 项）</div>
+<p><b>三列数值 42 / 118 / 281</b>（公式：<code>orders × mealType</code> 分组）：订单按 mealType 分组求和。早餐 42 < 预算 48 → 显示「✓ 省 ¥6」；午餐 118 < 120 →「✓ 余 ¥2」。</p>
+<p><b>✗ 超 ¥29</b>（公式：<code>实际 − budget.meals.*</code>）：仅晚餐 281 > 预算 252，差额 29，该格加 <b>.hit</b> 类变红底高亮，是全弹窗唯一被强调的异常点。</p>
+<p><b>晚餐占上周 64%</b>（公式：<code>281 ÷ 441</code>）：晚餐金额 ÷ 上周总支出 = 63.7% 四舍五入。若另有餐段超标，改为并列列出，按占比降序。</p>
+<p><b>晚餐预算收紧到 ¥55／餐</b>（公式：<code>ceil(252 × 1.1)</code>）：在原预算上上浮 10% 后向上取整，仅作为<b>建议值预填</b>进预算编辑页，<b>不会自动生效</b>，需用户确认。</p>
+<div class="sp-h">⑤ 按钮真实跳转（5 个）</div>
+<p><b>「看本周账单」</b>：关闭弹窗 → 跳本周首页（home-week），并滚动到本周账单明细首行，让用户接着往下记。</p>
+<p><b>「看超支明细」</b>：关闭弹窗 → 跳本周超支首页（home-week-over），并按餐段高亮晚餐那一行。</p>
+<p><b>「调整周预算」</b>：关闭弹窗 → 跳改预算全屏（budget-edit），输入框<b>预填 ¥420</b>；若为超支态，同时把超支差额 +¥21 算进去，给出「补到 ¥500」的一键选项。</p>
+<p><b>「调整三餐预算」</b>：关闭弹窗 → 跳改预算全屏（budget-edit），默认展开三餐面板，预填 48 / 120 / 252，超标项红框聚焦。保存时校验<b>三项之和 = 周预算</b>，不等则 toast 提示。</p>
+<p><b>「我知道了」</b>：仅关闭弹窗。按帧号固化目标：正常版 → home-week，超支版 → home-week-over。同时写 <code>localStorage.weekSummaryDismissed = 本周周一 00:00 时间戳</code>，<b>按周次屏蔽</b>而非永久屏蔽——下周一仍会再弹。点主按钮不算「已读」，不会写入该标记。</p>
+<div class="sp-h">⑥ 触发与边界（4 条）</div>
+<p><b>触发时机</b>：每周一 10:30 推送「你的上周账单已出」；点击推送或在周一首次冷启动打开 App，首页渲染完成 <b>600ms</b> 后自动弹出。本周内第二次进入不再弹。</p>
+<p><b>上周 0 笔订单</b>：→ <b>不弹此窗</b>，改为首页空态周报卡（「上周没记一笔，这周从早餐开始」），避免弹出 0 元账单显得尴尬。</p>
+<p><b>预算未设</b>：→ 隐藏「预算 ¥420」「结余/超出」两行与诊断三列，主视觉仅保留总支出 + 四格参考值，按钮换成「先设个周预算」。</p>
+<p><b>跨周恢复</b>：同周内不再二次弹出；跨周后时间戳失效，自动恢复。卸载重装会清空，属可接受范围。</p>
+<div class="sp-h">⑦ 口径统一</div>
+<p>金额均为<b>实付</b>（已扣券、已扣退款），与首页上周胶囊同源；按<b>下单时间</b>归入自然周，不按支付时间计。</p>
+</div>`
+        },
+        "push-week-summary-over": {
+          inherits: "push-week-summary",
+          summary:
+`<div class="sp-block">
+<div class="sp-h">① 分流逻辑</div>
+<p><b>正常 / 超支判定</b>：<b>上周总支出 ≥ 周预算</b> → 推本帧（已超支）；<b>上周总支出 < 周预算</b> → 改推正常版 37。<b>这是两个弹窗唯一的分流开关</b>，不含任何人工判断。</p>
+<p><b>触发链路</b>：周一超支版推送卡片 → 点卡片 → 本抽屉（半屏，底部滑出）→ 关闭后跳 <b>账单-本周（超支）</b>（home-week-over）。</p>
+<div class="sp-h">② 与 37 的结构差异</div>
+<p>徽章从绿色「未超支」改为红色「已超支」；大数字从黑色改为红色（<code>.hot</code> 类）。</p>
+<p>结余行 <b>+¥272</b>（绿色 .ok 类）→ 超出行 <b>+¥21</b>（红色 .bad 类）。</p>
+<p>四格参考值（日均 / 有单天数 / 订单数 / 最高一天）→ <b>「超支从哪来？」三列诊断</b>（早 / 午 / 晚餐段金额 + 省/超 差额），超标餐段红框高亮（<code>.hit</code> 类）。</p>
+<p>quote 从左侧黑边 → 左侧红边 + 红底（<code>.quote.over</code>）；文案从重灾区占比 + 预算收紧建议（上浮 10% 向上取整）。</p>
+<p>主按钮从「看本周账单」→「看超支明细」；次按钮从「调整周预算」→「调整三餐预算」。</p>
+<div class="sp-h">③ 字段数据源（继承 37 的 ①④，补充超支特有）</div>
+<p><b>三列诊断金额</b>（42 / 118 / 281）：订单按 <code>mealType</code> 分组求和（同 37 ④）。</p>
+<p><b>红框条件</b>：实际 − <code>budget.meals.*</code> > 0 → 该格加 <code>.hit</code> 类（红底 + 红边），是全弹窗唯一被强调的异常点。</p>
+<p><b>重灾区占比 64%</b>：超标餐段金额 ÷ 上周总支出 = 63.7% 四舍五入。若另有餐段超标，改为并列列出，按占比降序。</p>
+<p><b>收紧预算 ¥55／餐</b>：<code>ceil(原预算 × 1.1)</code>，仅预填进预算编辑页，不自动生效，需用户确认。</p>
+<div class="sp-h">④ 按钮跳转（与 37 对称）</div>
+<p><b>「看超支明细」</b>：关闭 → 跳本周超支首页（home-week-over），并按餐段高亮晚餐那一行。</p>
+<p><b>「调整三餐预算」</b>：关闭 → 跳改预算全屏（budget-edit），默认展开三餐面板，预填 48 / 120 / 252，超标项红框聚焦。</p>
+<p><b>「我知道了」</b>：仅关闭弹窗，<b>按帧号固化目标</b> → home-week-over（不做动态判断）。同时写 <code>localStorage.weekSummaryDismissed</code> 屏蔽逻辑同 37。</p>
+<div class="sp-h">⑤ 与 37 共用的数据源</div>
+<p>上周总支出、周预算、结余/超出公式、触发时机、边界条件、口径统一等，全部与 37 相同，不赘述。</p>
+</div>`
         }
       }
     },
@@ -1674,22 +1778,6 @@
 <p><b>正常</b>：上周总支出 &lt; 周预算时改推正常版。</p>
 <div class="sp-h">⑦ 下发时间</div>
 <p>每周一 10:30 定时下发。</p>
-</div>`
-        },
-        "push-week-summary": {
-          inherits: "push-noon",
-          summary:
-`<div class="sp-block">
-<div class="sp-h">① 触发</div>
-<p>用户从周一推送（正常 / 超支版）点卡片进入小程序后，自动弹出本半屏抽屉。</p>
-<div class="sp-h">② 交互方式</div>
-<p>底部滑出的半屏抽屉。关闭方式：点击「我 知 道 了」按钮，或点击空白遮罩区。关闭后跳转到账单-本周（超支则跳超支态，否则跳本期）。</p>
-<div class="sp-h">③ 文案（动态计算，一个帧覆盖两种状态）</div>
-<p><b>第一行</b>：上周支出：<em>X</em> 元（<em>X</em> = 上周一 0 点至本周一 0 点总支出，单位元）</p>
-<p><b>第二行</b>：超支 ≥ 0 时 → <b>超预算</b>：<em>Y</em> 元（<em>Y</em> = max(0, 上周总支出 − 周预算)）</p>
-<p>&nbsp;&nbsp;&nbsp;&nbsp;超支 = 0 时 → <b>没超预算，继续保持</b></p>
-<div class="sp-h">④ 底部按钮</div>
-<p>「我 知 道 了」（全宽胶囊形）。</p>
 </div>`
         },
         "push-noon-over": {
@@ -2450,7 +2538,7 @@
     "push-eve":       { tpl: "日程提醒", at: "11月1日  17:00", meal: "晚餐", mealKey: "dinner", time: "17:00", over: false, to: "home-week" },
     "push-eve-over":  { tpl: "日程提醒", at: "11月1日  17:00", meal: "晚餐", mealKey: "dinner", time: "17:00", over: true,  to: "home-week-over" },
     "push-week":       { tpl: "每周记账提醒", at: "11月3日  10:30", week: true, over: false, to: "push-week-summary" },
-    "push-week-over":  { tpl: "每周记账提醒", at: "11月3日  10:30", week: true, over: true,  to: "push-week-summary" }
+    "push-week-over":  { tpl: "每周记账提醒", at: "11月3日  10:30", week: true, over: true,  to: "push-week-summary-over" }
   };
   function noticeView(){
     const c = NOTICE[current] || NOTICE["push-noon"];
@@ -2490,17 +2578,105 @@
   }
 
   /* 周一推送进来的上周账单总结抽屉（超支为0则正常，一个帧） */
-  function weekSummaryView(){
-    const prevTotal = Math.round(weekStats(WEEKS.prev).total);
-    const overAmt = Math.max(0, prevTotal - budget.weekAmount);
-    const line2 = overAmt > 0 ? "超预算：" + overAmt + " 元" : "没超预算，继续保持";
+  function weekSummaryView(isOver){
+    const prev = WEEKS.prev;
+    const prevTotal = Math.round(weekStats(prev).total);
+    const prevDays = prev.days || {};
+    const budgetWeek = budget.weekAmount;
+    const overAmt = Math.max(0, prevTotal - budgetWeek);
+    const savedAmt = Math.max(0, budgetWeek - prevTotal);
+
+    /* 四格参考值（正常态） */
+    const dailyAvg = Math.round(prevTotal / 7);
+    const orderDays = Object.values(prevDays).filter(function(a){ return a > 0; }).length || 5;
+    const orderDaysStr = orderDays + "/7";
+    const orderCount = 9;
+    const maxDayAmt = 62;
+    const maxDayName = "周三";
+
+    /* 日均对比预算 */
+    const dayBudget = Math.round(budgetWeek / 7);
+    const belowBudget = dailyAvg < dayBudget;
+
+    /* 本周每天还能花多少 */
+    const perDayLeft = Math.ceil(savedAmt / 7);
+
+    /* 超支诊断（超支态） */
+    const mealTotal = { breakfast: 42, lunch: 118, dinner: 281 };
+    const mealBudget = { breakfast: 48, lunch: 120, dinner: 252 };
+    const mealKeys = ["breakfast", "lunch", "dinner"];
+    const mealName = { breakfast: "早餐", lunch: "午餐", dinner: "晚餐" };
+
+    /* 找重灾区 */
+    let worstKey = "dinner", worstOver = mealTotal.dinner - mealBudget.dinner;
+    mealKeys.forEach(function(k){
+      const o = mealTotal[k] - mealBudget[k];
+      if (o > worstOver){ worstOver = o; worstKey = k; }
+    });
+    const worstPct = Math.round(mealTotal[worstKey] / prevTotal * 100);
+    const newBudget = Math.ceil(mealBudget[worstKey] * 1.1);
+
+    const overStr = isOver;
+    const sheetClass = "sheet summary-sheet" + (overStr ? " over" : "");
+    const badgeClass = "ws-badge" + (overStr ? " over" : "");
+    const badgeText = overStr ? "已超支" : "未超支";
+    const numClass = "ws-num" + (overStr ? " hot" : "");
+
+    /* 大数字 */
+    const numLine = "<div class='ws-big'><div class='ws-label'>上周总支出</div>" +
+      "<div class='" + numClass + "'><span class='c'>¥</span>" + prevTotal.toFixed(2) + "</div></div>";
+
+    /* 分隔线 */
+    const divider = "<div class='ws-div'></div>";
+
+    /* 周预算 + 结余/超出 */
+    const row1 = "<div class='ws-row'><span class='lb'>周预算</span><span class='vl'>¥ " + budgetWeek.toFixed(2) + "</span></div>";
+    const row2 = overStr
+      ? "<div class='ws-row'><span class='lb'>超出</span><span class='vl bad'>+ ¥ " + overAmt.toFixed(2) + "</span></div>"
+      : "<div class='ws-row'><span class='lb'>结余</span><span class='vl ok'>+ ¥ " + savedAmt.toFixed(2) + "</span></div>";
+
+    /* 正常态：四格参考值 */
+    const grid4 = "<div class='ws-grid4'>" +
+      "<div><span class='k'>日均</span><span class='v'>" + dailyAvg + "</span>" +
+        "<em class='" + (belowBudget ? "lo" : "hi") + "'>" + (belowBudget ? "低于预算" : "高于预算") + "</em></div>" +
+      "<div><span class='k'>有单天数</span><span class='v'>" + orderDaysStr + "</span><em>" + orderDays + " 天有记录</em></div>" +
+      "<div><span class='k'>订单数</span><span class='v'>" + orderCount + "</span><em>笔</em></div>" +
+      "<div><span class='k'>最高一天</span><span class='v'>" + maxDayAmt + "</span><em>" + maxDayName + "</em></div>" +
+    "</div>";
+
+    /* 超支态：三列诊断 */
+    let meal3 = "<div class='ws-row ws-hit'><span class='lb'>超支从哪来？</span></div><div class='ws-meal3'>";
+    mealKeys.forEach(function(k){
+      const diff = mealTotal[k] - mealBudget[k];
+      const hit = diff > 0;
+      meal3 += "<div class='mc" + (hit ? " hit" : "") + "'><b>" + mealName[k] + "</b>" +
+        "<span class='mv'>" + mealTotal[k] + "</span>" +
+        "<span class='mk" + (hit ? "" : " ok") + "'>" +
+        (hit ? "✗ 超 ¥" + diff : "✓ 省 ¥" + Math.abs(diff)) +
+      "</span></div>";
+    });
+    meal3 += "</div>";
+
+    /* 引导文案 */
+    const quote = overStr
+      ? "<div class='ws-quote over'>" + mealName[worstKey] + "是重灾区，占上周 <b>" + worstPct + "%</b>。<br>本周" + mealName[worstKey] + "预算已自动收紧到 <b>¥" + newBudget + "</b>／餐。</div>"
+      : "<div class='ws-quote'>照这个节奏，本周每天还能花 <b>¥" + perDayLeft + "</b>。<br>比上上周省了 <b>¥26</b>，继续保持。</div>";
+
+    /* 按钮 */
+    const btnCta = overStr
+      ? "<button class='ws-cta' data-act='go-over-week'>看超支明细</button>" +
+        "<button class='ws-cta ghost' data-act='go-budget-edit'>调整三餐预算</button>"
+      : "<button class='ws-cta' data-act='go-week-home'>看本周账单</button>" +
+        "<button class='ws-cta ghost' data-act='go-budget-edit'>调整周预算</button>";
+
     return "<div class='sheet-mask show' data-act='close-summary'>" +
-      "<div class='sheet summary-sheet' onclick='event.stopPropagation()'>" +
-        "<div class='sh-body'>" +
-          "<div class='sh-line'><span class='lb'>上周支出：</span><span class='val'>" + prevTotal + " 元</span></div>" +
-          "<div class='sh-line'><span class='lb'>" + (overAmt > 0 ? "超预算：" : "") + "</span><span class='val" + (overAmt > 0 ? " hot" : "") + "'>" + line2 + "</span></div>" +
-        "</div>" +
-        "<button class='sh-cta' data-act='close-summary'>我 知 道 了</button>" +
+      "<div class='" + sheetClass + "' onclick='event.stopPropagation()'>" +
+        "<div class='grab'></div>" +
+        "<div class='ws-h'><h3>上周账单总结</h3><span class='" + badgeClass + "'>" + badgeText + "</span></div>" +
+        numLine + divider + row1 + row2 +
+        (overStr ? meal3 : grid4) +
+        quote + btnCta +
+        "<button class='ws-dismiss' data-act='close-summary'>我知道了</button>" +
       "</div>" +
     "</div>";
   }
@@ -2888,7 +3064,8 @@
     else if (current === "home-month-desktop") html = homeView({ deskTip: true });
     else if (isHomeFrame(current)) html = homeView({});
     else if (NOTICE[current]) html = noticeView();
-    else if (current === "push-week-summary") html = weekSummaryView();
+    else if (current === "push-week-summary") html = weekSummaryView(false);
+    else if (current === "push-week-summary-over") html = weekSummaryView(true);
     else if (current === "points-subscribe") html = pointsNoticeView();
     else if (current === "wework-promo") html = weworkView();
     else if (current === "share-friend-month" || current === "share-friend-week") html = shareFriendView();
@@ -3374,11 +3551,19 @@
       }
       else if (act === "close-sheet") closeSheet();
       else if (act === "close-summary") {
-        /* 上周账单总结抽屉关闭：跳本周首页（超支则跳超支态） */
-        const prevTotal = Math.round(weekStats(WEEKS.prev).total);
-        const target = prevTotal >= budget.weekAmount ? "home-week-over" : "home-week";
+        /* 上周账单总结抽屉关闭：按当前帧决定目标 */
+        const target = current === "push-week-summary-over" ? "home-week-over" : "home-week";
         go(target);
         return;
+      }
+      else if (act === "go-week-home") {
+        closeSheet(); go("home-week"); return;
+      }
+      else if (act === "go-over-week") {
+        closeSheet(); go("home-week-over"); return;
+      }
+      else if (act === "go-budget-edit") {
+        closeSheet(); go("budget-edit"); return;
       }
       else if (act === "save-add") {
         if (sheet !== "add") return;
