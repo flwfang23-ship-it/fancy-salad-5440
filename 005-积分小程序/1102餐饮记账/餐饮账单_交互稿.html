@@ -1314,14 +1314,16 @@
 <p><b>月预算</b>取月份选择器中设置的数值（示例 ¥1,800）。</p>
 <p><b>日均消费</b> = 本月总支出 ÷ 有数据的天数（示例 ¥106）；一单都没有时按「新账期」样式（日均显示「-」）。</p>
 <div class="sp-h" data-sp-anchor=".duo">③ 领券 / 订阅双入口</div>
-<p><b>领券</b>：导航至积分页。</p>
-<p><b>订阅</b>：调起订阅。</p>
+<p><b>领券</b>：主行「领券」，副行「领券后自动记账」；导航至积分页。</p>
+<p><b>订阅</b>：主行「订阅」，副行「到点提醒花了多少」；调起订阅。</p>
+<p>入口仅两行文案，不再显示「手动补单数 / 订阅状态」第三行。</p>
 <div class="sp-h" data-sp-anchor=".cal-wrap">④ 月历</div>
 <p>随顶部月份选择器同步切换；格内第一行日期、第二行当天消费金额；今天加粗边框。</p>
 <p>底部「X 天有餐 · Y 天未订」统计已取消。</p>
 <div class="sp-h" data-sp-anchor=".wcard">⑤ 本周卡</div>
 <p><b>汇总行</b>只显示「今天可花 ¥60」（= 每天约）。</p>
 <p><b>三餐四格</b> = 每格默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>无有效数据时</b>：本周有数据天为 0 时，三餐四格直接采用预算填写的默认值（早餐 ¥10 / 午餐 ¥20 / 晚餐 ¥20 / 其他 ¥10），不再做浮动。</p>
 <p><b>餐段按订单支付时间划分</b>：早餐 6:00–9:59、午餐 10:00–13:59、晚餐 17:00–19:59，其余归「其他」。</p>
 <p><b>第三行两态</b>：没吃 / 已用 ¥X；按该餐段区间内用户实付求和回填。</p>
 <p>往期（该月）隐藏本周卡。</p>
@@ -1389,8 +1391,9 @@
 <p><b>周预算</b> = 每天约 × 7（每天约 = 三餐四类之和）。</p>
 <p><b>日均消费</b> = 本周总支出 ÷ 有数据的天数（不是 ÷7）；一单都没有时按「新一周」样式（日均显示「-」）。</p>
 <div class="sp-h" data-sp-anchor=".duo">③ 领券 / 订阅双入口</div>
-<p><b>领券</b>：导航至积分页。</p>
-<p><b>订阅</b>：调起订阅。</p>
+<p><b>领券</b>：主行「领券」，副行「领券后自动记账」；导航至积分页。</p>
+<p><b>订阅</b>：主行「订阅」，副行「到点提醒花了多少」；调起订阅。</p>
+<p>入口仅两行文案，不再显示「手动补单数 / 订阅状态」第三行。</p>
 <div class="sp-h" data-sp-anchor=".wkchart">④ 7 天柱状图</div>
 <p>7 根柱子，参考线 = 周预算 ÷ 7；超线柱变红并带 ▲。</p>
 <p>柱底显示日期 + 当天消费金额，今天加粗。</p>
@@ -1398,6 +1401,7 @@
 <div class="sp-h" data-sp-anchor=".lead-card">⑤ 引导语 + 三餐参考值</div>
 <p><b>引导语</b>：今天可花 ≥ 三餐合计 →「照着这样点，不会超」，否则「按预设吃会超 ¥X」。</p>
 <p><b>三餐四格</b> = 每格默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>无有效数据时</b>：本周有数据天为 0 时，三餐四格直接采用预算填写的默认值（早餐 ¥10 / 午餐 ¥20 / 晚餐 ¥20 / 其他 ¥10），不再做浮动。</p>
 <p><b>餐段按订单支付时间划分</b>：早餐 6:00–9:59、午餐 10:00–13:59、晚餐 17:00–19:59，其余归「其他」。</p>
 <p><b>第三行仅两态</b>：没吃 / 已用 ¥X（按该餐段区间内用户实付求和回填）。</p>
 <p>往期隐藏该模块。</p>
@@ -1585,8 +1589,8 @@
 <div class="sp-h">⑤ 跳转</div>
 <p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（本期）</em>。</p>
 <div class="sp-h">⑥ 正常 / 异常判定</div>
-<p><b>正常</b>：月总支出 &lt; 月预算时推送本帧；备注中的 ¥20 取午餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
-<p><b>异常</b>：月总支出 ≥ 月预算时改推超支版，备注中的「已超 ¥10」直接取月超支金额。</p>
+<p><b>正常</b>：本周总支出 &lt; 周预算时推送本帧；备注中的 ¥20 取午餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>异常</b>：本周总支出 ≥ 周预算时改推超支版，备注中的「已超 ¥10」直接取本周超支金额（本周总支出 − 周预算）。</p>
 <div class="sp-h">⑦ 下发时间</div>
 <p>每天 10:30 定时下发。</p>
 </div>`
@@ -1608,8 +1612,8 @@
 <div class="sp-h">⑤ 跳转</div>
 <p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（本期）</em>。</p>
 <div class="sp-h">⑥ 正常 / 异常判定</div>
-<p><b>正常</b>：月总支出 &lt; 月预算时推送本帧；备注中的 ¥20 取晚餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
-<p><b>异常</b>：月总支出 ≥ 月预算时改推超支版，备注中的「已超 ¥10」直接取月超支金额。</p>
+<p><b>正常</b>：本周总支出 &lt; 周预算时推送本帧；备注中的 ¥20 取晚餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>异常</b>：本周总支出 ≥ 周预算时改推超支版，备注中的「已超 ¥10」直接取本周超支金额（本周总支出 − 周预算）。</p>
 <div class="sp-h">⑦ 下发时间</div>
 <p>每天 17:00 定时下发。</p>
 </div>`
@@ -1657,8 +1661,8 @@
 <div class="sp-h">⑤ 跳转</div>
 <p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（超支）</em>。</p>
 <div class="sp-h">⑥ 正常 / 异常判定</div>
-<p><b>异常</b>：月总支出 ≥ 月预算时推送本帧，备注中的「已超 ¥10」直接取月超支金额。</p>
-<p><b>正常</b>：月总支出 &lt; 月预算时改推正常版，备注中的金额取午餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>异常</b>：本周总支出 ≥ 周预算时推送本帧，备注中的「已超 ¥10」直接取本周超支金额（本周总支出 − 周预算）。</p>
+<p><b>正常</b>：本周总支出 &lt; 周预算时改推正常版，备注中的金额取午餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
 <div class="sp-h">⑦ 下发时间</div>
 <p>每天 10:30 定时下发。</p>
 </div>`
@@ -1680,8 +1684,8 @@
 <div class="sp-h">⑤ 跳转</div>
 <p>点卡片进入小程序，<em class="sp-red">跳转账单-本周（超支）</em>。</p>
 <div class="sp-h">⑥ 正常 / 异常判定</div>
-<p><b>异常</b>：月总支出 ≥ 月预算时推送本帧，备注中的「已超 ¥10」直接取月超支金额。</p>
-<p><b>正常</b>：月总支出 &lt; 月预算时改推正常版，备注中的金额取晚餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
+<p><b>异常</b>：本周总支出 ≥ 周预算时推送本帧，备注中的「已超 ¥10」直接取本周超支金额（本周总支出 − 周预算）。</p>
+<p><b>正常</b>：本周总支出 &lt; 周预算时改推正常版，备注中的金额取晚餐三餐参考值 = 默认值 +（本周有数据天的均值 − 默认值）× 0.5。</p>
 <div class="sp-h">⑦ 下发时间</div>
 <p>每天 17:00 定时下发。</p>
 </div>`
@@ -2157,14 +2161,10 @@
       daysLeft: ms.daysLeft
     });
 
-    /* 双入口：四态都渲染，手动补单数按当前展示的账期取 */
-    const duoWeek = isNewMonth ? WEEKS.newweek : (isPast ? (pastOlder ? WEEKS.older2 : WEEKS.prev) : WEEKS.cur);
-    const manualCount = duoWeek.days.reduce(function(s, d){ return s + d.orders.filter(function(o){ return o.manual; }).length; }, 0);
-    const subNames = [subDraft.lunch ? "午餐" : "", subDraft.dinner ? "晚餐" : "", subDraft.week ? "周更新" : ""].filter(Boolean);
-    const subOn = subNames.length > 0;
+    /* 双入口：四态都渲染，固定两行文案 */
     const duo = "<div class='duo'>" +
-      "<div class='entry ticket' data-act='to-points'><b>领券</b><span>领券后自动记账</span><span class='state'>" + (isPast ? "该月 " : "本月 ") + manualCount + " 单手动补</span><span class='go'>›</span></div>" +
-      "<div class='entry sub" + (subRefused ? " warn" : "") + "' data-act='" + (subRefused ? "open-sub-refused" : "open-subscribe") + "'><b>订阅</b><span>到点提醒这顿能花多少</span><span class='state'>" + (subRefused ? "订阅未开启 · 去开启" : (subOn ? (subNames[0] + " 已开启") : "未开提醒")) + "</span><span class='go'>›</span></div>" +
+      "<div class='entry ticket' data-act='to-points'><b>领券</b><span>领券后自动记账</span><span class='go'>›</span></div>" +
+      "<div class='entry sub" + (subRefused ? " warn" : "") + "' data-act='" + (subRefused ? "open-sub-refused" : "open-subscribe") + "'><b>订阅</b><span>到点提醒花了多少</span><span class='go'>›</span></div>" +
     "</div>";
 
     /* 当前账期（本期 / 超支 / 新账期）统一渲染月历 + 本周卡；往期只读月历 */
@@ -2226,9 +2226,6 @@
     const todayAvail = isNewWeek ? budget.dailyAmount : ((isPast || isOver) ? Math.abs(remain) : (daysLeft > 0 ? Math.floor(Math.max(0, remain) / daysLeft) : 0));
     const refs = (isCur || isOver || isNewWeek) ? mealRefs(w, budget.meals) : [];
     const manualCount = w.days.reduce(function(s, d){ return s + d.orders.filter(function(o){ return o.manual; }).length; }, 0);
-    const subNames = [subDraft.lunch ? "午餐" : "", subDraft.dinner ? "晚餐" : "", subDraft.week ? "周更新" : ""].filter(Boolean);
-    const subOn = subNames.length > 0;
-
     /* 小票顶部：新账期 = 本期的空数据态（0 单、¥0.00、日均 -）；周小票不显示日期范围 */
     const top = rcTop({
       title: isCur || isNewWeek ? "本周总支出" : (isPast ? "该周总支出" : "本周已支出"),
@@ -2243,12 +2240,11 @@
       neg: isOver
     });
 
-    /* 双入口：四态都渲染，手动补单数按当前展示的周取 */
-    const subState = subRefused ? "订阅未开启 · 去开启" : (subOn ? (subNames[0] + " 已开") : "未开提醒");
+    /* 双入口：四态都渲染，固定两行文案 */
     const subAct = subRefused ? "open-sub-refused" : "open-subscribe";
     const duo = "<div class='duo'>" +
-      "<div class='entry ticket' data-act='to-points'><b>领券</b><span>领券后自动记账</span><span class='state'>" + (isPast ? "该周 " : "本周 ") + manualCount + " 单手动补</span><span class='go'>›</span></div>" +
-      "<div class='entry sub" + (subRefused ? " warn" : "") + "' data-act='" + subAct + "'><b>订阅</b><span>到点提醒这顿能花多少</span><span class='state'>" + subState + "</span><span class='go'>›</span></div>" +
+      "<div class='entry ticket' data-act='to-points'><b>领券</b><span>领券后自动记账</span><span class='go'>›</span></div>" +
+      "<div class='entry sub" + (subRefused ? " warn" : "") + "' data-act='" + subAct + "'><b>订阅</b><span>到点提醒花了多少</span><span class='go'>›</span></div>" +
     "</div>";
 
     /* 柱图：新账期保留骨架，7 天全空 */
