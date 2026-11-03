@@ -2580,29 +2580,33 @@
   /* 周一推送进来的上周账单总结抽屉（超支为0则正常，一个帧） */
   function weekSummaryView(isOver){
     const prev = WEEKS.prev;
-    const prevTotal = Math.round(weekStats(prev).total);
-    const prevDays = prev.days || {};
     const budgetWeek = budget.weekAmount;
+
+    /* 根据 isOver 选数据源：正常态用真实 prev 数据，超支态用 demo 超支数据 */
+    const prevTotal = isOver ? 441 : Math.round(weekStats(prev).total);
     const overAmt = Math.max(0, prevTotal - budgetWeek);
     const savedAmt = Math.max(0, budgetWeek - prevTotal);
 
     /* 四格参考值（正常态） */
     const dailyAvg = Math.round(prevTotal / 7);
-    const orderDays = Object.values(prevDays).filter(function(a){ return a > 0; }).length || 5;
+    const prevDays = prev.days || {};
+    const orderDays = isOver ? 7 : (Object.values(prevDays).filter(function(a){ return a > 0; }).length || 5);
     const orderDaysStr = orderDays + "/7";
-    const orderCount = 9;
-    const maxDayAmt = 62;
-    const maxDayName = "周三";
+    const orderCount = isOver ? 14 : 9;
+    const maxDayAmt = isOver ? 89 : 62;
+    const maxDayName = isOver ? "周四" : "周三";
 
     /* 日均对比预算 */
     const dayBudget = Math.round(budgetWeek / 7);
     const belowBudget = dailyAvg < dayBudget;
 
-    /* 本周每天还能花多少 */
+    /* 本周每天还能花多少（正常态） */
     const perDayLeft = Math.ceil(savedAmt / 7);
 
     /* 超支诊断（超支态） */
-    const mealTotal = { breakfast: 42, lunch: 118, dinner: 281 };
+    const mealTotal = isOver
+      ? { breakfast: 42, lunch: 118, dinner: 281 }
+      : { breakfast: 22, lunch: 102, dinner: 44 };
     const mealBudget = { breakfast: 48, lunch: 120, dinner: 252 };
     const mealKeys = ["breakfast", "lunch", "dinner"];
     const mealName = { breakfast: "早餐", lunch: "午餐", dinner: "晚餐" };
