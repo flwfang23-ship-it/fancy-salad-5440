@@ -425,6 +425,17 @@
   .summary-sheet .ws-cta{ display:block; width:100%; margin-top:16px; border:0; border-radius:14px; background:var(--green); color:var(--paper); min-height:50px; font-family:var(--sans); font-size:14.5px; font-weight:900; letter-spacing:.16em; cursor:pointer; }
   .summary-sheet .ws-cta.ghost{ background:transparent; color:var(--ink); border:1.5px solid var(--ink); box-shadow:none; margin-top:10px; }
   .summary-sheet .ws-dismiss{ display:block; margin:14px auto 0; background:transparent; border:0; font-family:var(--sans); font-size:12px; color:var(--ink-soft); letter-spacing:.06em; text-decoration:underline; cursor:pointer; }
+  /* 空数据态：徽章 */
+  .summary-sheet.empty .ws-badge{ border-color:var(--ink-soft); color:var(--ink-soft); }
+  /* 空数据态：空周报提示卡 */
+  .summary-sheet .ws-empty-hint{ margin-top:14px; padding:18px 14px 16px; background:var(--paper-dim); border-radius:12px; text-align:center; }
+  .summary-sheet .ws-empty-emoji{ font-size:34px; line-height:1; }
+  .summary-sheet .ws-empty-title{ margin-top:10px; font-size:14px; font-weight:900; letter-spacing:.06em; color:var(--ink); }
+  .summary-sheet .ws-empty-sub{ margin-top:6px; font-size:11px; line-height:1.7; color:var(--ink-soft); letter-spacing:.02em; }
+  /* 空数据态：订阅引导卡 */
+  .summary-sheet .ws-sub-guide{ margin-top:12px; padding:12px 14px; background:#E5F5EE; border:1px solid rgba(93,190,149,.35); border-radius:12px; }
+  .summary-sheet .ws-sub-guide-k{ font-size:12px; font-weight:900; letter-spacing:.04em; color:#3E8C74; }
+  .summary-sheet .ws-sub-guide-v{ margin-top:5px; font-size:10.5px; line-height:1.7; color:#3E8C74; letter-spacing:.02em; }
   /* END 上周账单总结抽屉 */
   .del-row .v{ font-family:var(--mono); font-size:11.5px; color:var(--ink); text-align:right; }
   .del-note{ margin-top:12px; font-size:10.5px; line-height:1.7; color:var(--ink-soft); letter-spacing:.03em; }
@@ -778,7 +789,7 @@
     <div class="rail-h">
       <div class="k">MONTHLY+WEEKLY · 路由拆分版</div>
       <div class="t">餐饮账单 · 路由拆分版</div>
-      <div class="s">38 帧 · 6 个演示帧</div>
+      <div class="s">39 帧 · 6 个演示帧</div>
       <button class="sp-toggle on" id="spToggle">字段 开</button>
       <div class="mode-switch"><button class="ms on" data-mode="flow">流 程</button><button class="ms" data-mode="page">页 面</button></div>
     </div>
@@ -1092,7 +1103,8 @@
     "home-month-desktop": { id: 34, n: "账单-本月（加桌面提示）", ref: "home/month-desktop", kind: "page" },
     "budget-confirm":  { id: 35, n: "二次确认（改预算）",      ref: "drawer/budget-confirm", kind: "sheet" },
     "push-week-summary": { id: 37, n: "上周账单总结（抽屉·未超支）", ref: "push/week-summary", kind: "sheet" },
-    "push-week-summary-over": { id: 38, n: "上周账单总结（抽屉·已超支）", ref: "push/week-summary-over", kind: "sheet" }
+    "push-week-summary-over": { id: 38, n: "上周账单总结（抽屉·已超支）", ref: "push/week-summary-over", kind: "sheet" },
+    "push-week-summary-empty": { id: 39, n: "上周账单总结（抽屉·空数据）", ref: "push/week-summary-empty", kind: "sheet" }
   };
   const FLOWS = [
     { g: "主流程", flows: [
@@ -1132,10 +1144,11 @@
           { t: "账单-本月", s: "点推送回流", k: "home-month" }
         ]},
         { g: "支线-3 · 周通知", steps: [
-          { t: "订阅推送（周一）", s: "10:30 · 上周总结", k: "push-week" },
+          { t: "订阅推送（周一）", s: "11:00 · 上周总结", k: "push-week" },
           { t: "订阅推送（周一·超支）", s: "上周超支 ¥X · 本周注意", k: "push-week-over" },
           { t: "上周账单总结（未超支）", s: "半屏抽屉 · 四格参考值 + 我知道了", k: "push-week-summary" },
           { t: "上周账单总结（已超支）", s: "半屏抽屉 · 三列诊断 + 收紧建议", k: "push-week-summary-over" },
+          { t: "上周账单总结（空数据）", s: "上周 0 笔 · 空周报 + 订阅引导", k: "push-week-summary-empty" },
           { t: "账单-本周（新账期）", s: "关闭抽屉后跳 · 周预算 ¥420 生效", k: "home-week-new" }
         ]}
       ]},
@@ -1222,7 +1235,7 @@
     ]}
   ];
 
-  /* 页面轴：37 帧按「本月 / 本周 / 通用」三模块重组 */
+  /* 页面轴：39 帧按「本月 / 本周 / 通用」三模块重组 */
   const PAGE_TREE = [
     { g: "一级页面", items: [
       { n: "新手引导", k: "guide", tag: "全屏引导", frames: [
@@ -1257,8 +1270,9 @@
         { k: "share-sheet",     t: "分享",      s: "转发给朋友 · 月 / 周卡片" },
         { k: "week-picker",     t: "选择周账单", s: "本周 / 上周 / 上上周 / 10月两段" },
         { k: "month-picker",    t: "选择月账单", s: "本月 / 10月 / 9月 / 8月" },
-        { k: "push-week-summary", t: "上周账单总结（未超支）", s: "周一推送进来自动弹 · 四格参考值 + 引导" },
-        { k: "push-week-summary-over", t: "上周账单总结（已超支）", s: "超支态 · 三列诊断 + 收紧建议" }
+        { k: "push-week-summary", t: "上周账单总结（未超支）", s: "周一 11:00 自动弹 · 四格参考值 + 引导" },
+        { k: "push-week-summary-over", t: "上周账单总结（已超支）", s: "超支态 · 三列诊断 + 收紧建议" },
+        { k: "push-week-summary-empty", t: "上周账单总结（空数据）", s: "上周 0 笔订单 · 空周报 + 订阅引导" }
       ]}
     ]},
     { g: "外部页", items: [
@@ -1274,7 +1288,7 @@
       { n: "订阅推送", k: "push-noon", tag: "服务通知", frames: [
         { k: "push-noon", t: "午餐（正常）", s: "10:30 · 本周剩余 / 建议先领券" },
         { k: "push-eve",  t: "晚餐（正常）", s: "17:00 · 本周剩余 / 建议先领券" },
-        { k: "push-week", t: "周一（正常）", s: "10:30 · 上周支出 / 温馨提示" }
+        { k: "push-week", t: "周一（正常）", s: "11:00 · 上周支出 / 温馨提示" }
       ], sheets: [], errors: [
         { k: "push-noon-over", t: "午餐（超支）", s: "本月已超支 · 建议少花" },
         { k: "push-eve-over",  t: "晚餐（超支）", s: "本月已超支 · 建议少花" },
@@ -1549,7 +1563,7 @@
           summary:
 `<div class="sp-block">
 <p>标题「订阅提醒」，副标题「到点提醒你这顿能花多少，先领券再下单」。</p>
-<p>三行开关：午餐「每天 10:30 · 提醒你午餐预算 ¥X」（取 budget.meals.lunch）；晚餐「每天 17:00 · 提醒你晚餐预算 ¥Y」（取 budget.meals.dinner）；周更新「每周一 10:30 · 周预算 ¥W + 上周结算」（取 budget.weekAmount）。</p>
+<p>三行开关：午餐「每天 10:30 · 提醒你午餐预算 ¥X」（取 budget.meals.lunch）；晚餐「每天 17:00 · 提醒你晚餐预算 ¥Y」（取 budget.meals.dinner）；周更新「每周一 11:00 · 周预算 ¥W + 上周结算」（取 budget.weekAmount）。</p>
 <p><em class="sp-red">三个开关默认全关，独立控制</em>；从流程 3 进入时按链路默认开一档。</p>
 <p>按钮「取消」「订阅」。校验：全关 →「至少打开一个提醒」。</p>
 </div>`
@@ -1574,7 +1588,7 @@
 <div class="sp-h" data-sp-anchor=".gd-menu">步骤 ② · 先点「···」再选「设置」</div>
 <p>菜单示意图三行：转发给朋友 / <em class="sp-red">设置（红底高亮，行尾标「← 点这一行」）</em> / 取消。</p>
 <div class="sp-h" data-sp-anchor=".gd-tog">步骤 ③ · 打开「订阅消息」开关</div>
-<p>开关示意图三项：午餐提醒 10:30 / 晚餐提醒 17:00 / 周更新 · 周一 10:30，全部置于开启态（示意目标状态，非当前真实状态）。</p>
+<p>开关示意图三项：午餐提醒 10:30 / 晚餐提醒 17:00 / 周更新 · 周一 11:00，全部置于开启态（示意目标状态，非当前真实状态）。</p>
 <p><em class="sp-red">步骤 ②③ 是微信原生设置页，其菜单与开关样式不赘述，本帧只做路径示意；本帧只做通知，不放底部按钮，点遮罩空白处关闭并回首页，订阅卡保持「订阅未开启 · 去开启」，之后可再点卡进本抽屉</em>。</p>
 </div>`
         },
@@ -1617,18 +1631,59 @@
 <p><b>「调整周预算」</b>：关闭弹窗 → 跳改预算页（budget-edit），周预算输入框<b>预填 ¥420</b>。</p>
 <p><b>「我知道了」</b>：只关弹窗，关了跳本周首页（home-week）。同时在本地记一个标记"本周这窗已经看过了"，<b>同周内第二次进不弹</b>，下周一自动恢复。<b>点主按钮不算"看过"</b>。</p>
 <div class="sp-h">⑤ 什么时候弹</div>
-<p>每周一 10:30 推本地通知「你的上周账单已出」；点通知，或者周一第一次打开 App，首页渲染完等 600ms 自动弹出。</p>
-<p>上周 0 笔订单 → 不弹这窗，改成首页显示一张空周报卡。预算没设 → 隐藏周预算行和结支行，按钮换成「先设个周预算」。</p>
+<p><b>自动触发</b>：每周一上午 <b>11:00</b> 自动弹出。本地定时器在周一 11:00 触发，检查上周数据后决定弹哪一帧。</p>
+<p><b>被动触发</b>：周一收到推送卡片（正常版 / 超支版），点卡片进入小程序 → 首页渲染完等 600ms 自动弹。或者周一用户<b>第一次打开 App</b>，进入首页时也会触发。</p>
+<p><b>同周内去重</b>：本地记一个标记"本周这窗已经看过了"，<b>同周内第二次进不弹</b>；下周一 11:00 自动恢复。<b>点主按钮不算"看过"，只有"我知道了"才算</b>。</p>
+<p><b>分流逻辑（三选一）</b>：</p>
+<p>&nbsp;&nbsp;① 上周订单数 = 0 → 弹帧 39（空数据态 · 引导订阅）</p>
+<p>&nbsp;&nbsp;② 上周总支出 ≥ 周预算 → 弹帧 38（超支态）</p>
+<p>&nbsp;&nbsp;③ 其他情况 → 弹本帧 37（未超支）</p>
+<p>预算没设 → 本帧隐藏周预算行和结支行，按钮换成「先设个周预算」。</p>
 <div class="sp-h">⑥ 金额口径</div>
 <p>都是<b>实付</b>（扣了券、退了款之后），跟首页上周胶囊同一个数；按<b>下单时间</b>归到自然周，不按支付时间。</p>
+</div>`
+        },
+        "push-week-summary-empty": {
+          summary:
+`<div class="sp-block">
+<div class="sp-h">① 什么时候弹</div>
+<p>每周一上午 <b>11:00</b> 自动触发分流逻辑时：<b>上周订单数 = 0</b> → 弹本帧。这是三选一分流的<b>第一个判断条件</b>，优先级最高，先于超支判断。</p>
+<p><b>什么时候不会弹</b>：如果周预算也没设，首周新用户可能两字段都空——仍然弹本帧，文案里不提"预算"二字，只说"上周没有账单数据"。</p>
+<div class="sp-h">② 字段（本帧实际显示）</div>
+<p><b>徽章</b>：右上角灰色「数据为空」胶囊（未超支是绿色，超支是红色，本帧<b>不强调</b>，用浅灰）。</p>
+<p><b>大数字</b>：<b>上周总支出 ¥0.00</b>（灰色，不强调，避免误导）。</p>
+<p><b>只显示两行简单统计</b>：</p>
+<p>&nbsp;&nbsp;• 订单数 <b>0 笔</b></p>
+<p>&nbsp;&nbsp;• 有单天数 <b>0 / 7</b></p>
+<p>周预算行和结支行<b>隐藏</b>（没有数据谈预算没意义）。</p>
+<div class="sp-h">③ 空周报提示卡</div>
+<p>中部显示一张<b>灰色背景的空态卡</b>，内容：</p>
+<p>&nbsp;&nbsp;🫙（emoji 占位）</p>
+<p>&nbsp;&nbsp;<b>上周没有账单数据</b>（14px 加粗标题）</p>
+<p>&nbsp;&nbsp;上周（10.27 – 11.02）你还没有产生订单 / 无法生成周报总结（11px 辅助文案）</p>
+<div class="sp-h">④ 订阅引导卡（核心目的）</div>
+<p>空态卡下面紧跟一张<b>绿色背景的订阅引导卡</b>（绿色 = 正向引导，跟 37 帧的绿色主按钮同色系）：</p>
+<p>&nbsp;&nbsp;🔔 <b>开启订阅提醒</b>（12px 加粗标题）</p>
+<p>&nbsp;&nbsp;每周一 11:00 自动推送上周账单总结 / 还有午餐 / 晚餐打卡提醒（10.5px 两行说明）</p>
+<p><b>为什么要引导订阅</b>：空数据的根本原因大概率是用户没领券 / 没订阅，导致订单没回流。订阅是解决这个问题的第一步。</p>
+<div class="sp-h">⑤ 底部按钮（2 + 1）</div>
+<p><b>「去开启订阅」</b>（主按钮，绿色实心）：关闭抽屉 → 跳「订阅」抽屉（subscribe-sheet），三个开关全选开启，自动勾选「每周记账提醒」。</p>
+<p><b>「手动补一笔」</b>（次按钮，幽灵按钮）：关闭抽屉 → 跳「补卡」抽屉（add-order），日期<b>预填上周最后一天</b>（引导用户把漏掉的订单补上）。</p>
+<p><b>「我知道了」</b>（底部 underline 链接）：只关弹窗，不跳任何页面，留在当前首页。同周内屏蔽逻辑跟 37 / 38 两帧完全一样。</p>
+<div class="sp-h">⑥ 跟 37 / 38 两帧共用的</div>
+<p>触发时机（周一 11:00 自动弹 + 推送点击 + 600ms 延迟）、同周去重（本地记标记、下周一恢复）、金额口径（实付 / 下单时间）——这些全部跟 37 / 38 相同，不重复写。</p>
 </div>`
         },
         "push-week-summary-over": {
           summary:
 `<div class="sp-block">
 <div class="sp-h">① 为什么是超支态</div>
-<p>上周总支出 <b>441 ≥ 周预算 420</b> → 弹本帧。<b>全看这一个数</b>，没有第二个判断条件：<b>441 < 420</b> 就弹正常帧 37。</p>
-<p>怎么进来的：周一收到超支版推送卡片 → 点卡片 → 进本抽屉。</p>
+<p>上周订单数 <b>> 0</b>，且上周总支出 <b>441 ≥ 周预算 420</b> → 弹本帧。</p>
+<p><b>完整分流逻辑（三选一 · 按顺序判断）</b>：</p>
+<p>&nbsp;&nbsp;① 上周订单数 = 0 → 弹帧 39（空数据态 · 优先级最高，先跳过本帧）</p>
+<p>&nbsp;&nbsp;② 上周总支出 ≥ 周预算 → 弹本帧 38（超支态）</p>
+<p>&nbsp;&nbsp;③ 其他情况 → 弹帧 37（未超支）</p>
+<p>怎么进来的：周一 11:00 自动弹出分流命中，或收到超支版推送卡片 → 点卡片 → 进本抽屉。</p>
 <div class="sp-h">② 字段（本帧实际显示）</div>
 <p><b>徽章</b>：右上角红色「已超支」胶囊。</p>
 <p><b>大数字</b>：<b>上周总支出 ¥441.00</b>（红色）。计算方式跟正常态完全一样：自然周内所有订单实付之和。</p>
@@ -1651,7 +1706,7 @@
 <p><b>「调整三餐预算」</b>：关闭弹窗 → 跳改预算页（budget-edit），自动展开三餐面板，预填早 48 / 午 120 / 晚 252，超标的晚餐红框聚焦。保存时校验<b>三餐预算加起来必须等于周预算</b>，不等弹提示。</p>
 <p><b>「我知道了」</b>：只关弹窗，关了跳本周超支首页（home-week-over）。同周内屏蔽逻辑跟正常帧一样（本地记标记，下周自动恢复）。</p>
 <div class="sp-h">⑥ 跟正常帧共用的</div>
-<p>周预算是什么、金额口径（实付/下单时间）、触发时机（周一 10:30 推、600ms 延迟弹）、边界条件（0 笔订单、预算没设、卸载重装）——这些全部跟正常帧相同，不重复写。</p>
+<p>周预算是什么、金额口径（实付/下单时间）、触发时机（周一 11:00 自动弹 + 600ms 延迟弹）、边界条件（0 笔订单 → 帧 39、预算没设、卸载重装）——这些全部跟正常帧相同，不重复写。</p>
 </div>`
         }
       }
@@ -1749,7 +1804,7 @@
 <div class="sp-h">⑥ 数据口径</div>
 <p>上周一 0 点至本周一 0 点，联盟订单与外部订单实付之和；不推送本周无数据或新一周内容。</p>
 <div class="sp-h">⑦ 下发时间</div>
-<p>每周一 10:30 定时下发。</p>
+<p>每周一 11:00 定时下发。</p>
 </div>`
         },
         "push-week-over": {
@@ -1773,7 +1828,7 @@
 <p><b>异常</b>：上周总支出 ≥ 周预算时推送本帧（超支金额 = 上周总支出 − 周预算）。</p>
 <p><b>正常</b>：上周总支出 &lt; 周预算时改推正常版。</p>
 <div class="sp-h">⑦ 下发时间</div>
-<p>每周一 10:30 定时下发。</p>
+<p>每周一 11:00 定时下发。</p>
 </div>`
         },
         "push-noon-over": {
@@ -2533,8 +2588,8 @@
     "push-noon-over": { tpl: "打卡提醒", at: "11月1日  10:30", meal: "午餐", mealKey: "lunch", time: "10:30", over: true,  to: "home-week-over" },
     "push-eve":       { tpl: "日程提醒", at: "11月1日  17:00", meal: "晚餐", mealKey: "dinner", time: "17:00", over: false, to: "home-week" },
     "push-eve-over":  { tpl: "日程提醒", at: "11月1日  17:00", meal: "晚餐", mealKey: "dinner", time: "17:00", over: true,  to: "home-week-over" },
-    "push-week":       { tpl: "每周记账提醒", at: "11月3日  10:30", week: true, over: false, to: "push-week-summary" },
-    "push-week-over":  { tpl: "每周记账提醒", at: "11月3日  10:30", week: true, over: true,  to: "push-week-summary-over" }
+    "push-week":       { tpl: "每周记账提醒", at: "11月3日  11:00", week: true, over: false, to: "push-week-summary" },
+    "push-week-over":  { tpl: "每周记账提醒", at: "11月3日  11:00", week: true, over: true,  to: "push-week-summary-over" }
   };
   function noticeView(){
     const c = NOTICE[current] || NOTICE["push-noon"];
@@ -2682,6 +2737,35 @@
     "</div>";
   }
 
+  /* 上周账单总结 · 空数据态（帧 39）：上周 0 笔订单 → 引导订阅 */
+  function weekSummaryEmptyView(){
+    const sheetClass = "sheet summary-sheet empty";
+    const emptyHint = "<div class='ws-empty-hint'>" +
+      "<div class='ws-empty-emoji'>🫙</div>" +
+      "<div class='ws-empty-title'>上周没有账单数据</div>" +
+      "<div class='ws-empty-sub'>上周（10.27 – 11.02）你还没有产生订单<br>无法生成周报总结</div>" +
+    "</div>";
+    const subGuide = "<div class='ws-sub-guide'>" +
+      "<div class='ws-sub-guide-k'>🔔 开启订阅提醒</div>" +
+      "<div class='ws-sub-guide-v'>每周一 11:00 自动推送上周账单总结<br>还有午餐 / 晚餐打卡提醒</div>" +
+    "</div>";
+    const btnCta = "<button class='ws-cta' data-act='go-subscribe'>去开启订阅</button>" +
+      "<button class='ws-cta ghost' data-act='go-manual-add'>手动补一笔</button>";
+    return "<div class='sheet-mask show' data-act='close-summary'>" +
+      "<div class='" + sheetClass + "' onclick='event.stopPropagation()'>" +
+        "<div class='grab'></div>" +
+        "<div class='ws-h'><h3>上周账单总结</h3><span class='ws-badge'>数据为空</span></div>" +
+        "<div class='ws-big'><div class='ws-label'>上周总支出</div>" +
+          "<div class='ws-num' style='color:#B6AE9C'><span class='c'>¥</span>0.00</div></div>" +
+        "<div class='ws-div'></div>" +
+        "<div class='ws-row'><span class='lb'>订单数</span><span class='vl'>0 笔</span></div>" +
+        "<div class='ws-row'><span class='lb'>有单天数</span><span class='vl'>0 / 7</span></div>" +
+        emptyHint + subGuide + btnCta +
+        "<button class='ws-dismiss' data-act='close-summary'>我知道了</button>" +
+      "</div>" +
+    "</div>";
+  }
+
   function pointsView(){
     return "<div class='pgwrap fade'>" +
       "<div class='pg'>" +
@@ -2816,7 +2900,7 @@
     const m = budget.meals;
     const inner = "<div class='toggle'><div class='tx'><div class='n'>午餐提醒</div><div class='s'>每天 10:30 · 提醒你午餐预算 ¥" + m.lunch + "</div></div><button class='sw " + (d.lunch ? "on" : "") + "' data-sub='lunch'></button></div>" +
       "<div class='toggle'><div class='tx'><div class='n'>晚餐提醒</div><div class='s'>每天 17:00 · 提醒你晚餐预算 ¥" + m.dinner + "</div></div><button class='sw " + (d.dinner ? "on" : "") + "' data-sub='dinner'></button></div>" +
-      "<div class='toggle'><div class='tx'><div class='n'>周更新提醒</div><div class='s'>每周一 10:30 · 周预算 ¥" + budget.weekAmount + " + 上周结算</div></div><button class='sw " + (d.week ? "on" : "") + "' data-sub='week'></button></div>" +
+      "<div class='toggle'><div class='tx'><div class='n'>周更新提醒</div><div class='s'>每周一 11:00 · 周预算 ¥" + budget.weekAmount + " + 上周结算</div></div><button class='sw " + (d.week ? "on" : "") + "' data-sub='week'></button></div>" +
       "<div class='sh-actions'><button class='cta ghost' data-act='close-sheet'>取消</button><button class='cta' data-act='save-sub'>" + (subAuthorized ? "订阅" : "订阅并授权") + "</button></div>";
     return sheetShell("订阅提醒", "选好日期后，打开要收的提醒", inner);
   }
@@ -2849,7 +2933,7 @@
     const items = [
       p.lunch ? "午餐提醒 · 每天 10:30" : "",
       p.dinner ? "晚餐提醒 · 每天 17:00" : "",
-      p.week ? "周更新提醒 · 每周一 10:30" : ""
+      p.week ? "周更新提醒 · 每周一 11:00" : ""
     ].filter(Boolean);
     return "<div class='auth-mask'>" +
       "<div class='auth-box'>" +
@@ -2884,7 +2968,7 @@
         "<div class='gd-tog'>" +
           "<div class='tg'><span>午餐提醒 10:30</span><span class='sw2 on'></span></div>" +
           "<div class='tg'><span>晚餐提醒 17:00</span><span class='sw2 on'></span></div>" +
-          "<div class='tg'><span>周更新 · 周一 10:30</span><span class='sw2 on'></span></div>" +
+          "<div class='tg'><span>周更新 · 周一 11:00</span><span class='sw2 on'></span></div>" +
         "</div>" +
       "</div>" +
       "<div class='gd-hint'>点空白处关闭 · 之后想开，点首页订阅卡再来这里</div>";
@@ -3067,6 +3151,7 @@
     else if (NOTICE[current]) html = noticeView();
     else if (current === "push-week-summary") html = weekSummaryView(false);
     else if (current === "push-week-summary-over") html = weekSummaryView(true);
+    else if (current === "push-week-summary-empty") html = weekSummaryEmptyView();
     else if (current === "points-subscribe") html = pointsNoticeView();
     else if (current === "wework-promo") html = weworkView();
     else if (current === "share-friend-month" || current === "share-friend-week") html = shareFriendView();
@@ -3553,7 +3638,10 @@
       else if (act === "close-sheet") closeSheet();
       else if (act === "close-summary") {
         /* 上周账单总结抽屉关闭：按当前帧决定目标 */
-        const target = current === "push-week-summary-over" ? "home-week-over" : "home-week";
+        let target;
+        if (current === "push-week-summary-over") target = "home-week-over";
+        else if (current === "push-week-summary-empty") target = "home-week-new";
+        else target = "home-week";
         go(target);
         return;
       }
@@ -3565,6 +3653,12 @@
       }
       else if (act === "go-budget-edit") {
         closeSheet(); go("budget-edit"); return;
+      }
+      else if (act === "go-subscribe") {
+        closeSheet(); openSheet("subscribe", current); return;
+      }
+      else if (act === "go-manual-add") {
+        closeSheet(); openSheet("add-order", current); return;
       }
       else if (act === "save-add") {
         if (sheet !== "add") return;
