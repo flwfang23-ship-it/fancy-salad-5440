@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#F6F1E6">
+<title>吃饭预算 · 配置</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --paper:#FFFFFF;
+  --paper-2:#FFFFFF;
+  --card:#FFFFFF;
+  --ink:#211C16;
+  --soft:#7A7164;
+  --faint:#ABA294;
+  --line:#ECE7DE;
+  --line-2:#DDD6CA;
+  --seal:#C4392F;
+  --seal-d:#98281F;
+  --green:#4FA97F;
+  --gold:#D9A643;
+  --plum:#8C5F6B;
+  --mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+  --serif:'Noto Serif SC','Songti SC','STSong','SimSun',Georgia,serif;
+  --sans:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+body{
+  font-family:var(--sans);color:var(--ink);
+  background:#F1EFEA;
+  min-height:100vh;display:flex;justify-content:center;
+}
+.phone{
+  position:relative;z-index:1;width:100%;max-width:460px;min-height:100vh;
+  background:var(--paper);padding:64px 0 132px;
+  box-shadow:0 0 0 1px rgba(33,28,22,.06),0 24px 64px rgba(60,45,25,.16);
+}
+.phone > *{position:relative;z-index:1}
+
+/* ========== 主卡 ========== */
+.hero{
+  margin:16px 16px 0;background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:16px 20px 15px;position:relative;
+  box-shadow:0 3px 0 rgba(33,28,22,.04);
+}
+.hero::after{
+  content:"¥";position:absolute;right:14px;bottom:4px;font-family:var(--serif);font-size:84px;line-height:1;
+  color:rgba(196,57,47,.05);pointer-events:none;
+}
+.hero-top{display:flex;align-items:center;justify-content:space-between;padding-right:84px}
+.cat{
+  position:absolute;top:-34px;right:-12px;width:92px;height:92px;border-radius:50%;z-index:2;
+  background:#FFF4E2;border:1px solid var(--line);overflow:hidden;
+  box-shadow:0 8px 20px rgba(33,28,22,.14);transform:rotate(8deg);pointer-events:none;
+}
+.cat svg{display:block;width:100%;height:100%}
+.k-tag{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.17em;color:var(--seal);text-transform:uppercase}
+.k-date{font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;color:var(--faint)}
+.hero h1{font-family:var(--serif);font-size:17px;font-weight:600;letter-spacing:.05em;color:var(--soft);margin-top:14px;line-height:1.5;padding-right:88px}
+.hero h1 em{font-style:normal;font-weight:700;color:var(--ink);box-shadow:inset 0 -9px 0 rgba(217,166,67,.3);padding:0 2px 1px}
+.amount{display:flex;align-items:baseline;gap:7px;margin:5px 0 1px}
+.amount.pop{animation:pop .3s cubic-bezier(.2,.9,.3,1)}
+.cur{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--seal);flex-shrink:0}
+.amount input{
+  flex:1;min-width:0;width:100%;border:0;outline:0;background:transparent;padding:0;
+  font-family:var(--mono);font-size:clamp(38px,12.5vw,52px);font-weight:800;line-height:1.12;
+  letter-spacing:-.045em;color:var(--ink);font-variant-numeric:tabular-nums;
+}
+.amount input::placeholder{color:var(--line-2)}
+.unit{font-size:10.5px;color:var(--faint);letter-spacing:.08em;white-space:nowrap;flex-shrink:0}
+
+/* 滑杆 */
+.ruler{margin:12px 0 2px}
+.range{
+  -webkit-appearance:none;appearance:none;display:block;width:100%;height:26px;background:transparent;
+  cursor:pointer;position:relative;z-index:2;margin:0;
+}
+.range::-webkit-slider-runnable-track{
+  height:6px;border-radius:99px;
+  background:linear-gradient(90deg,var(--seal) 0 var(--p,40%),var(--line) var(--p,40%) 100%);
+}
+.range::-webkit-slider-thumb{
+  -webkit-appearance:none;width:20px;height:20px;border-radius:50%;margin-top:-7px;
+  border:2px solid var(--seal);
+  background:radial-gradient(circle,var(--seal) 0 3.5px,var(--card) 3.5px 100%);
+  box-shadow:0 2px 0 rgba(33,28,22,.12);
+  transition:transform .15s ease;
+}
+.range:active::-webkit-slider-thumb{transform:scale(1.18)}
+.range::-moz-range-track{height:6px;border-radius:99px;background:var(--line)}
+.range::-moz-range-progress{height:6px;border-radius:99px;background:var(--seal)}
+.range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--card);border:2px solid var(--seal)}
+.marks{display:flex;justify-content:space-between;padding:0 1px;margin-top:-3px}
+.marks span{position:relative;padding-top:7px;font-family:var(--mono);font-size:8.5px;letter-spacing:.04em;color:var(--faint)}
+.marks span::before{content:"";position:absolute;top:0;left:50%;width:1px;height:4px;background:var(--line-2)}
+
+/* ========== 周 / 天 票根 ========== */
+.tickets{display:flex;gap:12px;margin:14px 16px 0}
+.ticket{
+  flex:1;position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:13px 14px 14px;box-shadow:0 2px 0 rgba(33,28,22,.045);
+}
+.ticket:first-child{transform:rotate(-1.1deg)}
+.ticket:last-child{transform:rotate(.9deg)}
+.tk-label{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--faint);display:flex;justify-content:space-between;gap:4px}
+.tk-label b{color:var(--seal);font-weight:700}
+.tk-val{font-family:var(--mono);font-size:26px;font-weight:800;letter-spacing:-.035em;margin:6px 0 1px;font-variant-numeric:tabular-nums}
+.tk-val small{font-size:12px;font-weight:700;color:var(--seal);margin-right:1px}
+
+/* ========== 餐标卡 ========== */
+.menu{
+  margin:18px 16px 0;background:var(--card);border:1px solid var(--line);border-radius:16px;
+  overflow:hidden;box-shadow:0 3px 0 rgba(33,28,22,.04);
+}
+.menu-head{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:transparent;border:0;padding:16px 20px;cursor:pointer;text-align:left;
+  font-family:inherit;color:inherit;-webkit-appearance:none;
+}
+.mh-k{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.17em;color:var(--seal);text-transform:uppercase}
+.mh-t{display:block;font-family:var(--serif);font-size:17px;font-weight:700;letter-spacing:.04em;margin-top:4px}
+.mh-r{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.mh-sum{font-family:var(--mono);font-size:11px;color:var(--soft);letter-spacing:.01em;white-space:nowrap}
+.chev{
+  width:21px;height:21px;border-radius:50%;border:1px solid var(--line-2);display:grid;place-items:center;
+  color:var(--soft);transition:transform .25s ease;flex-shrink:0;
+}
+.chev::after{
+  content:"";display:block;width:6px;height:6px;margin-top:-3px;
+  border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  transform:rotate(45deg);
+}
+.menu.open .chev{transform:rotate(180deg)}
+.menu:not(.open) .menu-body{display:none}
+.menu-body{padding:0 20px 17px;border-top:1px solid var(--line);animation:bodyIn .3s ease both}
+.rows{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.mrow{
+  display:flex;flex-direction:column;
+  padding:12px 13px 11px;border:1px solid var(--line);border-radius:14px;background:#FBFBF8;
+}
+.m-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.ico{width:31px;height:31px;border-radius:9px;display:grid;place-items:center;font-size:16px;flex-shrink:0;background:var(--card)}
+.ico.tone-b{background:rgba(217,166,67,.16)}
+.ico.tone-l{background:rgba(196,57,47,.11)}
+.ico.tone-d{background:rgba(79,169,127,.14)}
+.ico.tone-o{background:rgba(140,95,107,.12)}
+.m-pct{
+  font-family:var(--mono);font-size:9px;letter-spacing:.05em;color:var(--faint);
+  white-space:nowrap;line-height:1;
+}
+.m-name{font-family:var(--serif);font-size:14px;font-weight:700;letter-spacing:.08em;margin-top:10px;line-height:1.2}
+.m-foot{display:flex;flex-direction:column;gap:7px;margin-top:3px}
+.m-amt{display:flex;align-items:baseline;gap:2px}
+.m-amt small{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--seal);flex-shrink:0}
+.m-amt input{
+  width:2.2em;flex:0 0 auto;border:0;outline:0;background:transparent;padding:0 0 1px;
+  font-family:var(--mono);font-size:21px;font-weight:800;letter-spacing:-.03em;line-height:1.25;color:var(--ink);
+  border-bottom:1px dotted var(--line-2);font-variant-numeric:tabular-nums;border-radius:0;
+}
+.m-amt input:focus{border-bottom-color:var(--seal)}
+.m-step{display:flex;align-items:center;gap:6px}
+.m-step button{
+  flex:1;height:31px;border-radius:9px;border:1px solid var(--line-2);background:var(--card);
+  color:var(--soft);font-family:var(--mono);font-size:15px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;touch-action:manipulation;-webkit-user-select:none;user-select:none;
+  transition:background .12s,transform .12s;
+}
+.m-step button:active{background:var(--paper);transform:scale(.96)}
+.rows-hint{margin:11px 0 0;text-align:center;font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;color:var(--faint)}
+.mrow.manual{border-color:rgba(196,57,47,.3);background:rgba(196,57,47,.035)}
+.mrow.manual .m-pct{color:var(--seal)}
+.mrow.manual .m-amt input{color:var(--seal);border-bottom-color:rgba(196,57,47,.5)}
+
+/* ========== 底栏 ========== */
+.foot{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:460px;
+  padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(255,255,255,0),var(--paper) 36%);
+  z-index:20;
+}
+.save{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  border:0;border-radius:14px;padding:16px;background:var(--seal);color:#FFF6E8;
+  font-family:var(--sans);font-size:14px;font-weight:700;letter-spacing:.13em;cursor:pointer;
+  box-shadow:0 4px 0 var(--seal-d);transition:transform .12s,box-shadow .12s;
+}
+.save:active{transform:translateY(3px);box-shadow:0 1px 0 var(--seal-d)}
+.save .arw{font-family:var(--mono);font-size:15px;letter-spacing:0}
+.fnote{text-align:center;font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--faint);margin-top:8px}
+
+/* ========== 结果小票 ========== */
+.done{
+  position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  padding:26px 20px;overflow:auto;background:rgba(30,25,19,.48);backdrop-filter:blur(5px);
+}
+.done.show{display:flex}
+.receipt{
+  width:100%;max-width:340px;background:var(--card);border-radius:5px;padding:20px 22px 16px;
+  position:relative;box-shadow:0 26px 64px rgba(20,15,10,.45);
+  animation:receiptIn .5s cubic-bezier(.2,.9,.25,1) both;
+}
+.rcp-head{
+  display:flex;justify-content:space-between;gap:10px;padding-bottom:11px;
+  border-bottom:1px dashed var(--line-2);
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;color:var(--faint);
+}
+.stamp{
+  position:absolute;top:54px;right:15px;width:54px;height:54px;border-radius:50%;
+  border:2px solid var(--seal);color:var(--seal);transform:rotate(-12deg);opacity:.85;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  font-family:var(--serif);font-size:9px;font-weight:700;letter-spacing:.14em;
+}
+.stamp b{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0}
+.rcp-h2{font-family:var(--serif);font-size:21px;line-height:1.45;font-weight:700;letter-spacing:.03em;margin:20px 0 8px;max-width:190px}
+.rcp-sub{font-size:11.5px;line-height:1.9;color:var(--soft)}
+.rcp-sub b{font-family:var(--mono);color:var(--ink);font-size:12.5px}
+.badge{
+  display:none;margin-top:9px;padding:3px 8px;border:1px solid rgba(196,57,47,.4);border-radius:4px;
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;color:var(--seal);
+}
+.rcp-rows{margin-top:13px;padding-top:4px;border-top:1px dashed var(--line-2)}
+.rcp-row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px dotted var(--line);font-size:11px;color:var(--soft)}
+.rcp-row span{white-space:nowrap;flex-shrink:0}
+.rcp-row b{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--ink);text-align:right;white-space:nowrap}
+.rcp-total{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0 2px}
+.rcp-total span{font-family:var(--mono);font-size:8.5px;letter-spacing:.15em;color:var(--faint)}
+.rcp-total b{font-family:var(--mono);font-size:26px;font-weight:800;letter-spacing:-.04em;color:var(--seal)}
+.rcp-actions{display:flex;gap:10px;margin-top:14px}
+.rcp-actions button{
+  flex:1;padding:12px;border-radius:10px;cursor:pointer;
+  font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.1em;
+}
+.ghost-btn{background:transparent;border:1px solid var(--line-2);color:var(--soft)}
+.primary-btn{background:var(--seal);border:0;color:#FFF6E8;box-shadow:0 3px 0 var(--seal-d)}
+.primary-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--seal-d)}
+.rcp-foot{text-align:center;font-family:var(--mono);font-size:8px;letter-spacing:.24em;color:var(--faint);margin-top:14px}
+
+/* ========== Toast ========== */
+.toast{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-46%);z-index:99;
+  max-width:78%;padding:11px 18px;border-radius:10px;
+  background:rgba(28,23,17,.93);color:#FFF6E8;
+  font-size:12px;letter-spacing:.03em;line-height:1.6;text-align:center;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+}
+.toast.show{opacity:1;transform:translate(-50%,-50%)}
+
+/* ========== 动画 ========== */
+.reveal{opacity:0;animation:rise .65s cubic-bezier(.22,.9,.24,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes bodyIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(1)}42%{transform:scale(1.035)}100%{transform:scale(1)}}
+@keyframes receiptIn{from{opacity:0;transform:translateY(26px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes sheetIn{from{opacity:.6;transform:translateY(44px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- 月预算 -->
+  <section class="hero reveal" style="animation-delay:.06s">
+    <div class="hero-top">
+      <span class="k-tag">Monthly Budget</span>
+      <span class="k-date" id="heroDate">2026 / 11</span>
+    </div>
+    <span class="cat" role="img" aria-label="猫占位图">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="#FFF4E2"/>
+        <path d="M27 41 L25 18 L45 30 Z" fill="#E79B4B"/>
+        <path d="M73 41 L75 18 L55 30 Z" fill="#E79B4B"/>
+        <path d="M30 34 L29 24 L39 29 Z" fill="#F7C9A0"/>
+        <path d="M70 34 L71 24 L61 29 Z" fill="#F7C9A0"/>
+        <ellipse cx="50" cy="48" rx="25" ry="22" fill="#E79B4B"/>
+        <path d="M42 28 q4 6 0 10" stroke="#C97A33" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M50 27 q0 7 0 11" stroke="#C97A33" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M58 28 q-4 6 0 10" stroke="#C97A33" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="41" cy="47" r="2.6" fill="#3B2A1E"/>
+        <circle cx="59" cy="47" r="2.6" fill="#3B2A1E"/>
+        <circle cx="35" cy="54" r="3" fill="#F6B7A0" opacity=".8"/>
+        <circle cx="65" cy="54" r="3" fill="#F6B7A0" opacity=".8"/>
+        <path d="M47 53 h6 l-3 4 z" fill="#C4392F"/>
+        <path d="M50 57 q-4 4 -7 1 M50 57 q4 4 7 1" stroke="#3B2A1E" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        <path d="M32 50 h-12 M33 56 l-13 3 M68 50 h13 M67 56 l13 3" stroke="#8A6A4D" stroke-width="1.2" opacity=".55"/>
+        <ellipse cx="41" cy="72" rx="7" ry="5" fill="#F7C9A0"/>
+        <ellipse cx="59" cy="72" rx="7" ry="5" fill="#F7C9A0"/>
+      </svg>
+    </span>
+    <h1>这个月，用来<em>吃饭的钱</em></h1>
+    <div class="amount" id="amount">
+      <span class="cur">¥</span>
+      <input id="mInput" type="tel" inputmode="numeric" maxlength="9" placeholder="0" aria-label="这个月吃饭的预算">
+      <span class="unit">元 / 月</span>
+    </div>
+    <div class="ruler">
+      <input id="mRange" class="range" type="range" min="0" max="6000" step="50" value="2400" aria-label="月预算滑杆">
+      <div class="marks"><span>0</span><span>1.5k</span><span>3k</span><span>4.5k</span><span>6k</span></div>
+    </div>
+  </section>
+
+  <!-- 周 / 天 -->
+  <section class="tickets reveal" style="animation-delay:.13s">
+    <div class="ticket">
+      <div class="tk-label"><span>每周 / WEEK</span><b>摊</b></div>
+      <div class="tk-val"><small>¥</small><span id="wV">560</span></div>
+    </div>
+    <div class="ticket">
+      <div class="tk-label"><span>每天 / DAY</span><b>摊</b></div>
+      <div class="tk-val"><small>¥</small><span id="dV">80</span></div>
+    </div>
+  </section>
+
+  <!-- 餐标 -->
+  <section class="menu open reveal" id="sec" style="animation-delay:.2s">
+    <button class="menu-head" id="menuHead" type="button" onclick="toggleSec()" aria-expanded="true" aria-controls="menuBody">
+      <div>
+        <span class="mh-k">Daily Split</span>
+        <span class="mh-t">每天怎么分</span>
+      </div>
+      <div class="mh-r">
+        <span class="mh-sum" id="secSum">一天 ¥80</span>
+        <span class="chev" aria-hidden="true"></span>
+      </div>
+    </button>
+    <div class="menu-body" id="menuBody">
+      <div class="rows" id="rows"></div>
+      <p class="rows-hint">点金额可直接输入 · 长按 − / ＋ 连续调整</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="foot">
+  <button class="save" type="button" onclick="save()">
+    <span>保存这个月的吃饭预算</span>
+    <span class="arw">→</span>
+  </button>
+  <div class="fnote" id="fnote">每天 80 元 · 四顿合计 80 元/天</div>
+</div>
+
+<!-- 结果小票 -->
+<div class="done" id="done" role="dialog" aria-modal="true" aria-label="预算已保存">
+  <div class="receipt">
+    <div class="rcp-head">
+      <span>MEAL BUDGET</span>
+      <span id="doneMonth">2026.11</span>
+    </div>
+    <div class="stamp"><span>已定</span><b>✓</b></div>
+    <h2 class="rcp-h2">这个月的<br>吃饭预算定好了</h2>
+    <p class="rcp-sub" id="doneSub">这个月留了 <b>¥2,400</b> 吃饭，平均每天 <b>¥80</b>。</p>
+    <span class="badge" id="doneManual">餐标为手动调整</span>
+    <div class="rcp-rows" id="doneRows"></div>
+    <div class="rcp-total">
+      <span>MONTHLY TOTAL</span>
+      <b id="doneTotal">¥2,400</b>
+    </div>
+    <div class="rcp-actions">
+      <button class="ghost-btn" type="button" onclick="closeDone(false)">改一改</button>
+      <button class="primary-btn" type="button" onclick="closeDone(true)">就这样</button>
+    </div>
+    <div class="rcp-foot">THANKS · 好好吃饭</div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ============ 基础 ============ */
+var $ = function (id) { return document.getElementById(id); };
+var now = new Date();
+var Y = now.getFullYear(), M = now.getMonth();
+var DAYS = new Date(Y, M + 1, 0).getDate();
+var MONTH_TXT = Y + '.' + String(M + 1).padStart(2, '0');
+
+var MEALS = [
+  { k: 'b', n: '早餐', icon: '🥟', ratio: .20, tone: 'tone-b' },
+  { k: 'l', n: '午餐', icon: '🍜', ratio: .35, tone: 'tone-l' },
+  { k: 'd', n: '晚餐', icon: '🍲', ratio: .25, tone: 'tone-d' },
+  { k: 'o', n: '其他', icon: '🧋', ratio: .20, tone: 'tone-o' }
+];
+
+var state = { month: 2400, meals: {}, touched: {} };
+var renderedMonth = null;
+
+/* ============ 工具 ============ */
+function money(v) { return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function dec(v) {
+  var r = Math.round(v * 10) / 10;
+  return r % 1 === 0 ? String(r) : r.toFixed(1);
+}
+function toast(t) {
+  var el = $('toast');
+  el.textContent = t; el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(function () { el.classList.remove('show'); }, 1900);
+}
+
+/* ============ 拆分逻辑 ============ */
+function hasManual() {
+  for (var k in state.meals) if (state.meals[k] !== undefined) return true;
+  return false;
+}
+function freezeMeals() {
+  if (hasManual()) return;
+  var day = state.month / DAYS;
+  MEALS.forEach(function (m) { state.meals[m.k] = Math.round(day * m.ratio); });
+}
+function getMeals() {
+  var day = state.month / DAYS, out = {};
+  MEALS.forEach(function (m) {
+    out[m.k] = state.meals[m.k] !== undefined ? state.meals[m.k] : Math.round(day * m.ratio);
+  });
+  return out;
+}
+function syncMonthFromMeals() {
+  var total = 0;
+  MEALS.forEach(function (m) { total += (state.meals[m.k] || 0); });
+  state.month = Math.round(total * DAYS);
+}
+
+/* ============ 行结构 ============ */
+function buildRows() {
+  $('rows').innerHTML = MEALS.map(function (m) {
+    return '<div class="mrow" data-k="' + m.k + '">' +
+      '<div class="m-top">' +
+        '<span class="ico ' + m.tone + '">' + m.icon + '</span>' +
+        '<span class="m-pct" id="sh_' + m.k + '"></span>' +
+      '</div>' +
+      '<div class="m-name">' + m.n + '</div>' +
+      '<div class="m-foot">' +
+        '<span class="m-amt"><small>¥</small><input id="i_' + m.k + '" type="tel" inputmode="numeric" maxlength="3" aria-label="' + m.n + '金额"></span>' +
+        '<span class="m-step">' +
+          '<button type="button" data-a="-1" aria-label="减少' + m.n + '">−</button>' +
+          '<button type="button" data-a="1" aria-label="增加' + m.n + '">＋</button>' +
+        '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ============ 渲染 ============ */
+function render() {
+  var day = state.month / DAYS;
+  var mIn = $('mInput');
+
+  if (document.activeElement !== mIn) mIn.value = state.month ? money(state.month) : '';
+  $('mRange').value = Math.min(state.month, 6000);
+  $('mRange').style.setProperty('--p', Math.min(state.month / 6000 * 100, 100) + '%');
+
+  var actual = getMeals();
+  var total = 0;
+  MEALS.forEach(function (m) { total += actual[m.k]; });
+
+  $('wV').textContent = state.month ? money(state.month / DAYS * 7) : '0';
+  $('dV').textContent = state.month ? dec(day) : '0';
+  $('secSum').textContent = '一天 ¥' + money(total);
+
+  MEALS.forEach(function (m) {
+    var v = actual[m.k];
+    var pct = total > 0 ? v / total * 100 : 0;
+    var inp = $('i_' + m.k);
+    var manual = !!state.touched[m.k];
+    var row = $('rows').querySelector('[data-k="' + m.k + '"]');
+
+    if (document.activeElement !== inp) inp.value = v;
+    inp.classList.toggle('manual', manual);
+    row.classList.toggle('manual', manual);
+    $('sh_' + m.k).textContent = manual ? '手改' : Math.round(pct) + '%';
+  });
+
+  $('fnote').textContent = state.month > 0
+    ? '每天 ' + dec(day) + ' 元 · 四顿合计 ' + money(total) + ' 元/天'
+    : '先填一个月预算';
+
+  if (renderedMonth !== null && renderedMonth !== state.month) {
+    var amt = $('amount');
+    amt.classList.remove('pop');
+    void amt.offsetWidth;
+    amt.classList.add('pop');
+  }
+  renderedMonth = state.month;
+}
+
+/* ============ 改月预算 ============ */
+function setMonth(v) {
+  v = Math.max(0, Math.min(9999999, Math.round(+v || 0)));
+  if (v === state.month) { render(); return; }
+  state.month = v;
+  state.meals = {};
+  state.touched = {};
+  if (v > 30000) toast('这个数有点大，确认一下');
+  render();
+}
+
+$('mInput').addEventListener('focus', function () { this.select(); });
+$('mInput').addEventListener('input', function () {
+  var raw = this.value.replace(/[^\d]/g, '').slice(0, 8);
+  var next = raw ? parseInt(raw, 10) : 0;
+  if (next === state.month) { render(); return; }
+  state.month = next;
+  state.meals = {};
+  state.touched = {};
+  render();
+});
+$('mInput').addEventListener('blur', function () {
+  setMonth(this.value.replace(/[^\d]/g, ''));
+});
+$('mRange').addEventListener('input', function () { setMonth(this.value); });
+
+/* ============ 改单顿 ============ */
+function stepMeal(k, d) {
+  freezeMeals();
+  var v = Math.max(0, Math.min(999, (state.meals[k] || 0) + d));
+  state.meals[k] = v;
+  state.touched[k] = true;
+  syncMonthFromMeals();
+  render();
+}
+
+$('rows').addEventListener('click', function (e) {
+  var row = e.target.closest('.mrow');
+  if (!row) return;
+  var btn = e.target.closest('.m-step button');
+  if (btn) {
+    if (holdFired) { holdFired = false; return; }
+    stepMeal(row.dataset.k, parseInt(btn.dataset.a, 10));
+    return;
+  }
+  if (e.target.tagName === 'INPUT') return;
+  var inp = row.querySelector('input');
+  inp.focus();
+  inp.select();
+});
+
+$('rows').addEventListener('focusin', function (e) {
+  if (e.target.tagName === 'INPUT') e.target.select();
+});
+
+/* 长按 −/+ 连续调整 */
+var holdT = null, holdI = null, holdK = '', holdD = 0, holdFired = false;
+function endHold() {
+  clearTimeout(holdT);
+  clearInterval(holdI);
+  holdT = holdI = null;
+}
+$('rows').addEventListener('pointerdown', function (e) {
+  var btn = e.target.closest('.m-step button');
+  if (!btn) return;
+  holdFired = false;
+  endHold();
+  holdK = e.target.closest('.mrow').dataset.k;
+  holdD = parseInt(btn.dataset.a, 10);
+  holdT = setTimeout(function () {
+    holdT = null;
+    holdFired = true;
+    holdI = setInterval(function () { stepMeal(holdK, holdD); }, 90);
+  }, 420);
+});
+document.addEventListener('pointerup', endHold);
+document.addEventListener('pointercancel', endHold);
+window.addEventListener('blur', endHold);
+$('rows').addEventListener('contextmenu', function (e) {
+  if (e.target.closest('.m-step button')) e.preventDefault();
+});
+
+$('rows').addEventListener('input', function (e) {
+  if (e.target.tagName !== 'INPUT') return;
+  freezeMeals();
+  var k = e.target.closest('.mrow').dataset.k;
+  var v = Math.max(0, Math.min(999, Math.round(parseInt(e.target.value.replace(/[^\d]/g, ''), 10) || 0)));
+  state.meals[k] = v;
+  state.touched[k] = true;
+  syncMonthFromMeals();
+  render();
+});
+
+/* ============ 展开 / 收起 ============ */
+function toggleSec() {
+  var open = $('sec').classList.toggle('open');
+  $('menuHead').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+/* ============ 保存 ============ */
+function save() {
+  if (state.month <= 0) { toast('先填这个月的吃饭预算'); $('mInput').focus(); return; }
+
+  var day = state.month / DAYS;
+  var actual = getMeals();
+  var total = 0;
+  MEALS.forEach(function (m) { total += actual[m.k]; });
+  var manual = hasManual();
+
+  $('doneMonth').textContent = MONTH_TXT;
+  $('doneSub').innerHTML = '这个月（' + DAYS + ' 天）留了 <b>¥' + money(state.month) +
+    '</b> 吃饭，平均每天 <b>¥' + dec(day) + '</b>。';
+
+  var rows = [
+    ['月预算', '¥' + money(state.month)],
+    ['每周能吃', '¥' + money(state.month / DAYS * 7)],
+    ['每天能吃', '¥' + dec(day)],
+    ['四顿分配', MEALS.map(function (m) { return m.n + ' ' + actual[m.k]; }).join(' · ')],
+    ['四顿合计', '¥' + money(total) + ' / 天']
+  ];
+  $('doneRows').innerHTML = rows.map(function (r) {
+    return '<div class="rcp-row"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>';
+  }).join('');
+
+  $('doneTotal').textContent = '¥' + money(state.month);
+  $('doneManual').style.display = manual ? 'inline-block' : 'none';
+  $('done').classList.add('show');
+}
+
+function closeDone(saved) {
+  $('done').classList.remove('show');
+  if (saved) toast('已保存 · 好好吃饭');
+}
+
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  if ($('done').classList.contains('show')) closeDone(false);
+});
+
+/* ============ 初始化 ============ */
+$('heroDate').textContent = Y + ' / ' + String(M + 1).padStart(2, '0');
+$('doneMonth').textContent = MONTH_TXT;
+buildRows();
+render();
+</script>
+</body>
+</html>
