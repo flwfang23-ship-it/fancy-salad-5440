@@ -1,0 +1,878 @@
+<script type="text/plain" data-ai-only>
+# 首页配置改造
+
+> 本文档为 **B 端运营配置端** 功能文档，与 C 端前端任务书《首页配置改造-需求逻辑说明.md》及可运行原型《印章_交互稿.html》配套：C 端（积分首页）的交互实现由独立前端链路负责，本文档只补齐其背后的运营配置能力。
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+积分首页（points-home）的金刚区当前写死 6 个入口，运营无法调整入口的图标、名称、顺序与跳转。本次改造把金刚区入口、金刚区下方 Banner 位全部改为运营可配置。
+
+- **配置范围：**
+- [[4.1|金刚区配置]]：维护金刚区入口的图标、名称、顺序与跳转方式
+- [[4.2|Banner 配置]]：维护金刚区下方 Banner 位的素材与跳转
+- [[4.4|首页红包配置]]：历史已上线功能，本次改造不涉及，仅登记不赘述
+
+```text
+改造前
+
+金刚区 6 个入口写死在前端代码中，调整入口需要发版
+
+改造后
+
+运营在配置端维护金刚区入口与 Banner
+        ↓
+C 端积分首页按配置渲染金刚区与 Banner
+        ↓
+用户点击入口，按所配跳转方式跳转目标页面
+```
+
+### 1.2 一句话业务模型
+
+```text
+运营在配置端维护的金刚区入口与 Banner
+        ↓
+C 端按配置渲染首页 → 用户按跳转方式到达目标页面
+```
+
+### 1.3 最终目标
+
+- **入口可运营：** 金刚区入口与 Banner 的图标、名称、顺序、跳转方式全部由运营配置，调整不再依赖发版。
+
+### 1.4 页面原型与图片说明
+
+C 端页面效果由外部原型《印章_交互稿.html》（积分首页 points-home）承载；本工作流只产出 B 端运营配置端交互原型，不重复 C 端展示。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌───────────────────────────┬───────────────────────────┬───────────────────────────┐
+│ 客户端后台（运营人员）    │ C 端小程序                │ C 端用户                  │
+├───────────────────────────┼───────────────────────────┼───────────────────────────┤
+│ ① 维护金刚区入口配置      │                           │                           │
+│ 【金刚区入口：已配置】    │                           │                           │
+│                           │                           │                           │
+│ ② 维护Banner配置          │                           │                           │
+│ 【Banner位：已配置】      │                           │                           │
+│                           │                           │                           │
+│                           │ ③ 渲染金刚区与Banner      │                           │
+│                           │ 【首页模块：按配置展示】  │                           │
+│                           │                           │                           │
+│                           │                           │ ④ 按跳转方式跳转目标页    │
+│                           │                           │ 【跳转：按配置执行】      │
+└───────────────────────────┴───────────────────────────┴───────────────────────────┘
+```
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序线性展开。**阶段切分以"操作端"为第一判据：同一阶段内不得跨端。** 根据当前业务闭环，可划分为：
+
+1. **第一阶段：首页配置（主要参与方：客户端后台）**：运营人员在配置端统一维护金刚区入口（4.1）与 Banner（4.2）；首页红包（4.4）为历史功能，本次不涉及。B 端全部配置操作不跨端，归入同一阶段。
+2. **第二阶段：C 端首页渲染（主要参与方：C 端小程序）**：小程序按配置渲染金刚区与 Banner。
+3. **第三阶段：入口跳转（主要参与方：C 端用户）**：用户点击金刚区入口或 Banner，按所配跳转方式跳转。
+
+```text
+第一阶段：首页配置（运营配置端）
+① 维护金刚区入口配置
+② 维护Banner配置
+            ↓
+第二阶段：C 端首页渲染
+③ 渲染金刚区与Banner
+            ↓
+第三阶段：入口跳转
+④ 按跳转方式跳转目标页
+```
+
+### 2.3 页面类型说明
+
+| 页面类型 | 面向对象 | 含义 | 正文字段表格列 |
+| --- | --- | --- | --- |
+| 列表页 | 后台操作人员 | 运营人员看到的入口 / Banner 数据列表，新增与编辑共用右侧抽屉 | 字段名称、字段类型、列表、详情、新增、字段解释 |
+| 移动端展示页 | C 端用户 | 积分首页金刚区与 Banner 的实际呈现（本文档仅登记，交互细节由外部链路承载） | 简要登记，不展开 |
+
+## 3. 页面流程图（C 端，由外部链路承载）
+
+> 本章 C 端交互不在本工作流内展开：完整前端交互逻辑见《首页配置改造-需求逻辑说明.md》§四「整体交互流程」，可运行原型见同目录《印章_交互稿.html》（积分首页 points-home）。C 端页面清单见第 5、6 章的简要登记。
+
+---
+
+## 4. 第一阶段：首页配置（运营配置端）
+
+### 4.1 金刚区配置 — 列表页（改造页面）
+
+#### 业务背景
+
+当前环节：① 维护金刚区入口配置<br>
+页面路径：运营配置后台 > 首页配置 > 金刚区入口<br>
+对下游影响：配置保存后 C 端积分首页金刚区按最新配置渲染，跳转方式决定用户点击入口后的行为<br>
+表格类型：列表页<br>
+
+#### 字段说明
+
+金刚区现状为写死的 6 个入口（记一账、晒单活动、签单日历、淘转链、门店转链、外卖转链），本次改造后全部迁移为本列表的可配置数据。
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 入口图标 | file | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员上传或替换。<br>**逻辑：** 图片素材，建议尺寸一致；列表中以缩略图/占位图标展示。<br>**用途：** C 端金刚区入口 icon。 |
+| 入口名称 | string | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 显示在入口图标下方的文字。<br>**用途：** C 端金刚区入口名称。 |
+| 排序号 | number | 是 | 否 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 数值越小越靠前；C 端按顺序渲染，一行 4 个自动换行。<br>**用途：** 控制入口在金刚区中的排列位置。 |
+| 跳转方式 | enum（外部小程序、H5链接、口令、当前小程序路径） | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员选择。<br>**逻辑：** 决定用户点击入口后的行为，并联动控制下方 4 组跳转配置的可用性。<br>**用途：** 跳转行为的主控字段。 |
+| 小程序AppID | string | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 目标小程序的 appid，仅跳转方式=外部小程序时可用。<br>**用途：** 点击后跳转到目标小程序。 |
+| 外部页面路径 | string | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 目标小程序内的页面路径，仅跳转方式=外部小程序时可用。<br>**用途：** 跳转到目标小程序的指定页面。 |
+| H5链接 | string | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 完整 https 链接，仅跳转方式=H5链接时可用。<br>**用途：** 点击后在小程序内 webview 打开该链接。 |
+| 口令文本 | string | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 口令内容，仅跳转方式=口令时可用。<br>**用途：** 用户点击后弹出口令弹窗，配合去向引导。 |
+| 口令去向 | enum（饿了么、淘宝） | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员选择。<br>**逻辑：** 仅跳转方式=口令时可用；决定 C 端弹出口令弹窗的样式与文案（饿了么弹窗/淘宝弹窗）。<br>**用途：** 控制口令弹窗形态；口令核销在后端完成，前端只负责弹窗展示。 |
+| 站内页面路径 | enum（记一账、晒单活动、签单日历、淘转链、门店转链、外卖转链、积分明细、邀请好友） | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员下拉选择，选项来源于本小程序已注册的页面路由表。<br>**逻辑：** 仅跳转方式=当前小程序路径时可用；为下拉选择而非手填。<br>**用途：** 点击后跳转到所选的站内页面。 |
+| 状态 | enum（启用、停用） | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员设置。<br>**逻辑：** 停用的入口不下发给 C 端，不在金刚区渲染。<br>**用途：** 控制入口是否生效。 |
+| 更新时间 | date | 是 | 是 | 否 | **数据来源：** 系统记录最近保存时间。<br>**逻辑：** yyyy-MM-dd HH:mm，仅编辑弹窗展示。<br>**用途：** 追溯配置最近修改时间。 |
+
+##### 弹窗字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 入口图标、入口名称、排序号、状态 |
+| 跳转方式 | 跳转方式 |
+| 外部小程序配置 | 小程序AppID、外部页面路径 |
+| H5链接配置 | H5链接 |
+| 口令配置 | 口令文本、口令去向 |
+| 站内路径配置 | 站内页面路径 |
+
+#### 列表交互
+
+**交互：新增入口**  <br>
+**业务用途**：新增一条金刚区入口配置，保存后进入启用状态即可在 C 端金刚区渲染。<br>
+
+**交互：编辑入口**  <br>
+**业务用途**：调整入口的图标、名称、顺序、跳转方式与启停状态；保存后 C 端按最新配置渲染。<br>
+
+**交互：删除入口**  <br>
+**业务用途**：删除该入口配置，二次确认后生效；删除后 C 端不再渲染该入口。<br>
+
+#### 业务逻辑
+
+**跳转方式联动置灰：** 跳转方式=外部小程序时，仅「外部小程序配置」组可填（AppID + 页面路径），其余三组置灰；=H5链接时仅「H5链接配置」组可填；=口令时仅「口令配置」组可填（口令文本 + 去向）；=当前小程序路径时仅「站内路径配置」组可填。受控组在弹窗中始终可见，仅置灰表达不可用。
+
+**渲染顺序：** C 端按排序号升序渲染金刚区，一行 4 个、自动换行；排序号相同的按更新时间倒序。
+
+**口令弹窗边界：** 运营只配置口令文本与去向；用户点击入口后出现的饿了么弹窗/淘宝弹窗由 C 端按去向渲染，口令的核销逻辑在后端完成，不在本配置范围。
+
+### 4.2 Banner 配置 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：② 维护Banner配置<br>
+页面路径：运营配置后台 > 首页配置 > Banner<br>
+对下游影响：配置保存后 C 端积分首页金刚区下方的 Banner 位按最新配置渲染<br>
+表格类型：列表页<br>
+
+#### 字段说明
+
+Banner 位于积分首页金刚区下方，配置逻辑与金刚区入口完全一致：可维护素材、名称、顺序与跳转方式。
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| Banner图片 | file | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员上传或替换。<br>**逻辑：** Banner 位素材图，建议按 C 端 Banner 位尺寸上传。<br>**用途：** C 端金刚区下方 Banner 展示图。 |
+| Banner名称 | string | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 后台管理与列表识别用，不在 C 端展示。<br>**用途：** 标识不同 Banner。 |
+| 排序号 | number | 是 | 否 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 数值越小越靠前，多个 Banner 按 C 端 Banner 位样式（轮播/单张）依序展示。<br>**用途：** 控制 Banner 展示顺序。 |
+| 跳转方式 | enum（外部小程序、H5链接、口令、当前小程序路径） | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员选择。<br>**逻辑：** 与金刚区入口同一套枚举，联动控制下方 4 组跳转配置的可用性。<br>**用途：** 决定用户点击 Banner 后的行为。 |
+| 小程序AppID | string | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 仅跳转方式=外部小程序时可用。<br>**用途：** 跳转到目标小程序。 |
+| 外部页面路径 | string | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 仅跳转方式=外部小程序时可用。<br>**用途：** 跳转到目标小程序的指定页面。 |
+| H5链接 | string | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 仅跳转方式=H5链接时可用。<br>**用途：** 在小程序内 webview 打开该链接。 |
+| 口令文本 | string | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 仅跳转方式=口令时可用。<br>**用途：** 用户点击后弹出口令弹窗。 |
+| 口令去向 | enum（饿了么、淘宝） | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员选择。<br>**逻辑：** 仅跳转方式=口令时可用。<br>**用途：** 控制口令弹窗形态与去向文案。 |
+| 站内页面路径 | enum（记一账、晒单活动、签单日历、淘转链、门店转链、外卖转链、积分明细、邀请好友） | 否 | 是 | 是（可编辑） | **数据来源：** 运营人员下拉选择站内路由。<br>**逻辑：** 仅跳转方式=当前小程序路径时可用。<br>**用途：** 跳转到所选的站内页面。 |
+| 状态 | enum（启用、停用） | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员设置。<br>**逻辑：** 停用的 Banner 不下发给 C 端。<br>**用途：** 控制 Banner 是否生效。 |
+| 更新时间 | date | 是 | 是 | 否 | **数据来源：** 系统记录最近保存时间。<br>**逻辑：** yyyy-MM-dd HH:mm，仅编辑弹窗展示。<br>**用途：** 追溯配置最近修改时间。 |
+
+##### 弹窗字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | Banner图片、Banner名称、排序号、状态 |
+| 跳转方式 | 跳转方式 |
+| 外部小程序配置 | 小程序AppID、外部页面路径 |
+| H5链接配置 | H5链接 |
+| 口令配置 | 口令文本、口令去向 |
+| 站内路径配置 | 站内页面路径 |
+
+#### 列表交互
+
+**交互：新增 Banner**  <br>
+**业务用途**：新增一条 Banner 配置，保存并启用后在 C 端金刚区下方 Banner 位渲染。<br>
+
+**交互：编辑 Banner**  <br>
+**业务用途**：调整素材、名称、顺序、跳转方式与启停状态；保存后 C 端按最新配置渲染。<br>
+
+**交互：删除 Banner**  <br>
+**业务用途**：删除该 Banner 配置，二次确认后生效；删除后 C 端不再展示。<br>
+
+#### 业务逻辑
+
+**与金刚区同构：** Banner 的跳转方式 4 种枚举、联动置灰规则、口令去向逻辑与金刚区入口完全一致，仅展示位不同（金刚区下方 Banner 位）。
+
+**停用不下发：** 状态=停用的 Banner 不进入 C 端渲染数据。
+
+### 4.4 首页红包配置 — 列表页（历史功能）
+
+**历史已上线功能**：积分首页红包活动的配置入口，逻辑与本次改造无关，此处仅作菜单登记、不再赘述；本次「首页配置改造」不改动该模块的任何字段与交互。
+
+## 5. 第二阶段：C 端首页渲染
+
+> 本阶段为 C 端内容，仅在本 MD 中简要登记，B 端原型不生成对应页面；完整交互逻辑由《首页配置改造-需求逻辑说明.md》承载，可运行原型见《印章_交互稿.html》。
+
+### 5.1 积分首页金刚区与 Banner 渲染 — 移动端展示页（改造页面）
+
+C 端积分首页按配置端下发的数据渲染金刚区（图标/名称/顺序，一行 4 个自动换行）与下方 Banner 位（启用状态的 Banner 按排序展示）。停用记录不下发。金刚区入口点击后按所配跳转方式执行。
+
+## 6. 第三阶段：入口与 CTA 跳转
+
+> 本阶段为 C 端内容，仅简要登记，B 端原型不生成对应页面。
+
+### 6.1 跳转执行 — 移动端展示页（改造页面）
+
+用户点击金刚区入口或 Banner 后，按该对象配置的跳转方式执行：外部小程序跳转目标小程序指定页面；H5 链接在小程序内 webview 打开；口令按去向弹出对应弹窗（饿了么/淘宝）；当前小程序路径跳转所选站内页面。
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>首页配置改造</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用壳 { display: grid; grid-template-columns: var(--泳道宽) var(--菜单宽) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+
+/* ── 中：后台菜单（白底黑字，全铺开，父节点不可点） ── */
+.菜单区 { background: #fff; color: #334155; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+.菜单品牌 { padding: 18px 18px 14px; border-bottom: 1px solid #eef2f7; }
+.菜单品牌名 { font-size: 16px; font-weight: 700; color: #172033; line-height: 1.4; }
+.菜单品牌小 { font-size: 11px; color: #94a3b8; margin-top: 3px; letter-spacing: .5px; }
+.菜单父 { padding: 16px 18px 4px; font-size: 12px; color: #0f6b8f; font-weight: 700; letter-spacing: .5px; }
+.菜单文档, .菜单叶子 { display: flex; align-items: center; gap: 8px; color: #334155; font-size: 13.5px; cursor: pointer; user-select: none; border-left: 3px solid transparent; }
+.菜单文档 { padding: 9px 18px; }
+.菜单叶子 { padding: 8px 18px 8px 30px; font-size: 13px; }
+.菜单文档.子级 { padding: 9px 18px 9px 30px; font-size: 13px; }
+.菜单文档:hover, .菜单叶子:hover { background: #f1f5f9; color: #0f172a; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.菜单号 { font-family: Consolas, monospace; font-size: 11px; color: #94a3b8; min-width: 26px; }
+.菜单文档.激活 .菜单号, .菜单叶子.激活 .菜单号 { color: #0f6b8f; }
+.菜单图标 { font-size: 13px; }
+
+/* ── 中：内容工作区 ── */
+.内容区 { overflow-y: auto; background: #f1f5f9; }
+.页面面板 { display: none; padding: 22px 26px 48px; }
+.页面面板.激活 { display: block; }
+.页面卡 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(15,35,52,.04); margin-bottom: 18px; }
+.页面头 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.页面头 h2 { margin: 0; font-size: 19px; color: #172033; }
+.主按钮 { padding: 7px 16px; border: 1px solid #0f6b8f; border-radius: 6px; background: #0f6b8f; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.主按钮:hover { background: #0c5673; }
+
+/* ── 左：常驻泳道栏 ── */
+.泳道区 { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 14px 12px 28px; }
+.泳道区 > h3 { margin: 2px 4px 10px; font-size: 14px; color: #334155; }
+.泳道简介 { margin: 0 4px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.75; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分点 { margin: 0 4px 12px; padding: 9px 11px; list-style: none; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分点 li { padding: 4px 0; font-size: 12px; line-height: 1.65; color: #475569; border-bottom: 1px dashed #e2e8f0; }
+.泳道简介-分点 li:last-child { border-bottom: none; }
+.泳道简介-分点 li strong { color: #2b6cb0; margin-right: 4px; }
+.泳道简介-分组 { margin: 0 4px 12px; padding: 5px 11px; font-size: 12px; line-height: 1.7; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分组 .简介组 { padding: 5px 0 4px; border-bottom: 1px dashed #e2e8f0; }
+.泳道简介-分组 .简介组:last-child { border-bottom: none; }
+.泳道简介-分组 .简介组标题 { display: block; color: #2b6cb0; font-weight: 700; margin-right: 4px; white-space: nowrap; }
+.泳道简介-分组 .简介组条目 { padding: 2px 0 0 20px; color: #475569; }
+.泳道简介-分组 .简介跳转, .泳道简介-分点 .简介跳转 { color: #1d4ed8; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.泳道区 .泳道图 { font-size: 13px; }
+</style>
+<style id="css-组件">
+/* ── 文档页排版 ── */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 26px 0 12px; font-size: 20px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.阅读标题 { line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 20px; margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 16px; margin: 22px 0 8px; } .文档正文 h5 { font-size: 14px; margin: 18px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.行内代码 { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; }
+.代码块 pre { margin: 0; padding: 16px; background: #fff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; }
+.代码块 code { display: block; font-family: Consolas, Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ── 流程信息卡 ── */
+.流程信息卡 { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; background: linear-gradient(180deg,#f8fbff,#f1f7ff); margin-bottom: 16px; overflow: hidden; }
+.流程信息卡-头部 { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #dbeafe; }
+.流程步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.流程信息卡-环节名 { font-size: 13.5px; font-weight: 600; color: #1e3a8a; }
+.流程信息卡-正文 { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+.流程信息卡-行 { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.流程信息卡-标签 { flex-shrink: 0; display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+
+/* ── 列表页 ── */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 150px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 150px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; white-space: nowrap; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+/* v2 详情/编辑合并后沿用旧名，保持 CSS 稳定，产出后人类可自行矫正 */
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; margin-right: 6px; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.删除按钮 { padding: 4px 12px; border: 1px solid #ef4444; border-radius: 4px; background: #fff; color: #ef4444; font-size: 12px; cursor: pointer; } .删除按钮:hover { background: #ef4444; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+
+/* ── 字段卡（弹窗表单与详情抽屉共用） ── */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 20px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius:  10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 120px 1fr 28px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 140px; }
+.field-input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; width: 100%; max-width: 360px; font-family: inherit; }
+textarea.field-input { max-width: 100%; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; pointer-events: auto; }
+.field-info-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ── 详情抽屉 / 表单弹窗（右侧滑出） ── */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; max-width: 94vw; height: 100vh; background: #f8fafc; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 60px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: #fff; }
+.panel-title { font-size: 17px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ── 字段弹窗 ── */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ── 泳道图组件（2026 蓝圈号标准版） ── */
+.泳道图 { margin: 0; font-size: 13px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道圆圈 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支说明 { font-size: 12px; color: #b45309; padding: 2px 0 0 26px; line-height: 1.6; }
+.泳道行 { transition: opacity .25s ease; }
+.泳道图[class*="高亮阶段"] .泳道行[data-node-phase] { opacity: .35; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"], .泳道图.高亮阶段2 .泳道行[data-node-phase="2"],
+.泳道图.高亮阶段3 .泳道行[data-node-phase="3"], .泳道图.高亮阶段4 .泳道行[data-node-phase="4"],
+.泳道图.高亮阶段5 .泳道行[data-node-phase="5"], .泳道图.高亮阶段6 .泳道行[data-node-phase="6"],
+.泳道图.高亮阶段7 .泳道行[data-node-phase="7"], .泳道图.高亮阶段8 .泳道行[data-node-phase="8"],
+.泳道图.高亮阶段9 .泳道行[data-node-phase="9"], .泳道图.高亮阶段10 .泳道行[data-node-phase="10"] { opacity: 1; }
+.泳道行.置灰 { opacity: .25 !important; pointer-events: none; }
+.泳道行.正常 { opacity: 1 !important; }
+/* ── 泳道收纳卡状态层（主图一行一卡 + 点击展开居中浮层）── */
+.泳道收纳卡.收纳-已过 { opacity: 1 !important; }
+.泳道收纳卡.收纳-现在 { opacity: 1 !important; }
+.泳道收纳卡.收纳-现在 .泳道收纳卡内 { outline: 2px solid rgba(29,78,216,.55); outline-offset: -2px; }
+.泳道收纳卡.收纳-未来 { opacity: .25 !important; }
+.泳道收纳卡:hover .泳道收纳卡内 { filter: brightness(.97); }
+
+/* ── 提示消息 / 灯箱 / 杂项 ── */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+</style>
+<style id="css-状态">
+.页面面板.激活 { display: block; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.图片灯箱.可见 { display: flex; }
+</style>
+</head>
+<body>
+<div class="应用壳">
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<p class="泳道简介">积分首页（points-home）的金刚区当前写死 6 个入口，运营无法调整入口的图标、名称、顺序与跳转。本次改造把金刚区入口、金刚区下方 Banner 位全部改为运营可配置。</p>
+<div class="泳道简介-分组"><div class="简介组"><strong class="简介组标题">配置范围：</strong><div class="简介组条目">① <span class="简介跳转" onclick="切换页面('4.1')">金刚区配置</span>：维护金刚区入口的图标、名称、顺序与跳转方式</div><div class="简介组条目">② <span class="简介跳转" onclick="切换页面('4.2')">Banner 配置</span>：维护金刚区下方 Banner 位的素材与跳转</div><div class="简介组条目">③ <span class="简介跳转" onclick="切换页面('4.4')">首页红包配置</span>：历史已上线功能，本次改造不涉及，仅登记不赘述</div></div></div>
+<div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;">
+<div class="泳道图-头" style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid #e2e8f0;">
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">客户端后台（运营人员）</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#ecfdf5;color:#065f46;">C 端小程序</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#ecfdf5;color:#065f46;">C 端用户</div>
+</div><div class="泳道图-体">
+<div class="泳道行 泳道收纳卡" data-card="g1" data-card-nodes="1,2" data-card-label="①–② 客户端后台（运营人员）" data-node-phase="1" onclick="打开泳道浮层('g1')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;">
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">①–② 客户端后台（运营人员）</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">2 步 ▸</span></div></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+</div>
+<div class="泳道行 泳道收纳卡" data-card="g2" data-card-nodes="3" data-card-label="③ C 端小程序" data-node-phase="2" onclick="打开泳道浮层('g2')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;">
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">③ C 端小程序</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">1 步 ▸</span></div></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+</div>
+<div class="泳道行 泳道收纳卡" data-card="g3" data-card-nodes="4" data-card-label="④ C 端用户" data-node-phase="3" data-swimlane-node="4" onclick="打开泳道浮层('g3')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;">
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">④ C 端用户</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div>
+</div>
+<div id="泳道浮层体_g1" style="display:none;">
+<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">①</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">维护金刚区入口配置
+<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">金刚区入口：已配置</span>
+</div></div>
+<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">②</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">维护Banner配置
+<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">Banner位：已配置</span>
+</div></div>
+</div>
+<div id="泳道浮层体_g2" style="display:none;">
+<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">③</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">渲染金刚区与Banner
+<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">首页模块：按配置展示</span>
+</div></div>
+</div>
+<div id="泳道浮层体_g3" style="display:none;">
+<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">④</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">按跳转方式跳转目标页
+<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">跳转：按配置执行</span>
+</div></div>
+</div>
+<div id="泳道浮层遮罩" style="display:none;position:fixed;inset:0;z-index:1600;background:rgba(15,23,42,.34);align-items:center;justify-content:center;" onclick="关闭泳道浮层()"><div onclick="event.stopPropagation()" style="background:#fff;border-radius:10px;width:330px;max-width:88vw;max-height:72vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.24);"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:#fff;z-index:1;"><b id="泳道浮层标题" style="font-size:13.5px;color:#0f172a;"></b><span onclick="关闭泳道浮层()" style="cursor:pointer;color:#94a3b8;font-size:16px;line-height:1;padding:2px 4px;">✕</span></div><div id="泳道浮层内容" style="padding:6px 14px 10px;"></div></div></div>
+</aside>
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">首页配置改造</div><div class="菜单品牌小">B 端业务原型 · v2 母版</div></div>
+<div class="菜单父"><span>需求与流程</span></div>
+<div class="菜单文档 子级 激活" data-menu-page="1" onclick="切换页面('1')"><span class="菜单号">001</span><span>需求背景与目标</span></div>
+<div class="菜单文档 子级" data-menu-page="2" onclick="切换页面('2')"><span class="菜单号">002</span><span>业务流程</span></div>
+<div class="菜单父"><span>第一阶段：首页配置（运营配置端）</span></div>
+<div class="菜单叶子" data-menu-page="4.1" onclick="切换页面('4.1')"><span class="菜单号">4.1</span><span class="菜单图标">🧩</span><span>金刚区配置</span></div>
+<div class="菜单叶子" data-menu-page="4.2" onclick="切换页面('4.2')"><span class="菜单号">4.2</span><span class="菜单图标">🖼️</span><span>Banner 配置</span></div>
+<div class="菜单叶子" data-menu-page="4.4" onclick="切换页面('4.4')"><span class="菜单号">4.4</span><span class="菜单图标">🧧</span><span>首页红包配置</span></div>
+</nav>
+<main class="内容区" id="内容区">
+<section class="页面面板 激活" id="面_1" data-page="1"><div class="页面卡"><div class="页面头"><h2>需求背景与目标</h2></div><div class="文档正文"><h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>积分首页（points-home）的金刚区当前写死 6 个入口，运营无法调整入口的图标、名称、顺序与跳转。本次改造把金刚区入口、金刚区下方 Banner 位全部改为运营可配置。</p>
+<ul>
+<li><strong>配置范围：</strong></li>
+<li>[[4.1|金刚区配置]]：维护金刚区入口的图标、名称、顺序与跳转方式</li>
+<li>[[4.2|Banner 配置]]：维护金刚区下方 Banner 位的素材与跳转</li>
+<li>[[4.4|首页红包配置]]：历史已上线功能，本次改造不涉及，仅登记不赘述</li>
+</ul>
+
+<div class="代码块"><div class="代码头">text</div><pre><code>改造前
+
+金刚区 6 个入口写死在前端代码中，调整入口需要发版
+
+改造后
+
+运营在配置端维护金刚区入口与 Banner
+        ↓
+C 端积分首页按配置渲染金刚区与 Banner
+        ↓
+用户点击入口，按所配跳转方式跳转目标页面</code></pre></div>
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>运营在配置端维护的金刚区入口与 Banner
+        ↓
+C 端按配置渲染首页 → 用户按跳转方式到达目标页面</code></pre></div>
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>入口可运营：</strong> 金刚区入口与 Banner 的图标、名称、顺序、跳转方式全部由运营配置，调整不再依赖发版。</li>
+</ul>
+
+<h3 class="阅读节标题">1.4 页面原型与图片说明</h3>
+<p>C 端页面效果由外部原型《印章_交互稿.html》（积分首页 points-home）承载；本工作流只产出 B 端运营配置端交互原型，不重复 C 端展示。</p></div></div></section>
+<section class="页面面板" id="面_2" data-page="2"><div class="页面卡"><div class="页面头"><h2>业务流程</h2></div><div class="文档正文"><h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>后续正文按照业务实际发生顺序线性展开。<strong>阶段切分以"操作端"为第一判据：同一阶段内不得跨端。</strong> 根据当前业务闭环，可划分为：</p>
+<p>1. <strong>第一阶段：首页配置（主要参与方：客户端后台）</strong>：运营人员在配置端统一维护金刚区入口（4.1）与 Banner（4.2）；首页红包（4.4）为历史功能，本次不涉及。B 端全部配置操作不跨端，归入同一阶段。</p>
+<p>2. <strong>第二阶段：C 端首页渲染（主要参与方：C 端小程序）</strong>：小程序按配置渲染金刚区与 Banner。</p>
+<p>3. <strong>第三阶段：入口跳转（主要参与方：C 端用户）</strong>：用户点击金刚区入口或 Banner，按所配跳转方式跳转。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：首页配置（运营配置端）
+① 维护金刚区入口配置
+② 维护Banner配置
+            ↓
+第二阶段：C 端首页渲染
+③ 渲染金刚区与Banner
+            ↓
+第三阶段：入口跳转
+④ 按跳转方式跳转目标页</code></pre></div>
+<h3 class="阅读节标题">2.3 页面类型说明</h3>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>页面类型</th>
+<th>面向对象</th>
+<th>含义</th>
+<th>正文字段表格列</th>
+</tr>
+<tr>
+<td>列表页</td>
+<td>后台操作人员</td>
+<td>运营人员看到的入口 / Banner 数据列表，新增与编辑共用右侧抽屉</td>
+<td>字段名称、字段类型、列表、详情、新增、字段解释</td>
+</tr>
+<tr>
+<td>移动端展示页</td>
+<td>C 端用户</td>
+<td>积分首页金刚区与 Banner 的实际呈现（本文档仅登记，交互细节由外部链路承载）</td>
+<td>简要登记，不展开</td>
+</tr>
+</table></div>
+</div></div></section>
+<section class="页面面板" id="面_4_1" data-page="4.1"><div class="页面卡"><div class="页面头"><h2>金刚区配置</h2><button class="主按钮" onclick="打开表单弹窗('4.1','新增')">+ 新增入口</button></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 维护金刚区入口配置</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">运营配置后台 &gt; 首页配置 &gt;</span> <span class="路径末段">金刚区入口</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">配置保存后 C 端积分首页金刚区按最新配置渲染，跳转方式决定用户点击入口后的行为</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索入口名称"></div><div class="筛选区"><span class="筛选标签">跳转方式：</span><select class="筛选下拉"><option>全部</option><option>外部小程序</option><option>H5链接</option><option>口令</option><option>当前小程序路径</option></select><span class="筛选标签">状态：</span><select class="筛选下拉"><option>全部</option><option>启用</option><option>停用</option></select></div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;">当前启用入口 <strong>6</strong> 个；C 端按排序号渲染，一行 4 个自动换行。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">入口图标<span class="类型标签 file">file</span></span><button class="信息按钮" onclick="显示字段弹窗('入口图标', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">入口名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('入口名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">排序号<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('排序号', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">跳转方式<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('跳转方式', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('状态', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">更新时间<span class="类型标签 date">date</span></span><button class="信息按钮" onclick="显示字段弹窗('更新时间', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">📒</td><td class="列表单元格">记一账</td><td class="列表单元格">1</td><td class="列表单元格">当前小程序路径</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-12 10:20</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'',口令去向:'',站内页面路径:'记一账',入口图标:'📒',入口名称:'记一账',排序号:'1',跳转方式:'当前小程序路径',状态:'启用',更新时间:'2026-11-12 10:20',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'',口令去向:'',站内页面路径:'记一账',入口图标:'📒',入口名称:'记一账',排序号:'1',跳转方式:'当前小程序路径',状态:'启用',更新时间:'2026-11-12 10:20',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">📸</td><td class="列表单元格">晒单活动</td><td class="列表单元格">2</td><td class="列表单元格">当前小程序路径</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-12 10:22</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'',口令去向:'',站内页面路径:'晒单活动',入口图标:'📸',入口名称:'晒单活动',排序号:'2',跳转方式:'当前小程序路径',状态:'启用',更新时间:'2026-11-12 10:22',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'',口令去向:'',站内页面路径:'晒单活动',入口图标:'📸',入口名称:'晒单活动',排序号:'2',跳转方式:'当前小程序路径',状态:'启用',更新时间:'2026-11-12 10:22',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">📅</td><td class="列表单元格">签单日历</td><td class="列表单元格">3</td><td class="列表单元格">当前小程序路径</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-12 10:25</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'',口令去向:'',站内页面路径:'签单日历',入口图标:'📅',入口名称:'签单日历',排序号:'3',跳转方式:'当前小程序路径',状态:'启用',更新时间:'2026-11-12 10:25',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'',口令去向:'',站内页面路径:'签单日历',入口图标:'📅',入口名称:'签单日历',排序号:'3',跳转方式:'当前小程序路径',状态:'启用',更新时间:'2026-11-12 10:25',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">🛒</td><td class="列表单元格">淘转链</td><td class="列表单元格">4</td><td class="列表单元格">口令</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-13 09:10</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'复制口令，打开淘宝搜一搜',口令去向:'淘宝',站内页面路径:'',入口图标:'🛒',入口名称:'淘转链',排序号:'4',跳转方式:'口令',状态:'启用',更新时间:'2026-11-13 09:10',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'复制口令，打开淘宝搜一搜',口令去向:'淘宝',站内页面路径:'',入口图标:'🛒',入口名称:'淘转链',排序号:'4',跳转方式:'口令',状态:'启用',更新时间:'2026-11-13 09:10',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">🏪</td><td class="列表单元格">门店转链</td><td class="列表单元格">5</td><td class="列表单元格">口令</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-13 09:12</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'复制口令，打开饿了么',口令去向:'饿了么',站内页面路径:'',入口图标:'🏪',入口名称:'门店转链',排序号:'5',跳转方式:'口令',状态:'启用',更新时间:'2026-11-13 09:12',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'复制口令，打开饿了么',口令去向:'饿了么',站内页面路径:'',入口图标:'🏪',入口名称:'门店转链',排序号:'5',跳转方式:'口令',状态:'启用',更新时间:'2026-11-13 09:12',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">🍜</td><td class="列表单元格">外卖转链</td><td class="列表单元格">6</td><td class="列表单元格">外部小程序</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-13 09:15</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {小程序AppID:'wx8888888888',外部页面路径:'pages/index/index',H5链接:'',口令文本:'',口令去向:'',站内页面路径:'',入口图标:'🍜',入口名称:'外卖转链',排序号:'6',跳转方式:'外部小程序',状态:'启用',更新时间:'2026-11-13 09:15',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {小程序AppID:'wx8888888888',外部页面路径:'pages/index/index',H5链接:'',口令文本:'',口令去向:'',站内页面路径:'',入口图标:'🍜',入口名称:'外卖转链',排序号:'6',跳转方式:'外部小程序',状态:'启用',更新时间:'2026-11-13 09:15',_壳节编号:'4.1'})">删除</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 6 条记录</div>
+</div></section>
+<section class="页面面板" id="面_4_2" data-page="4.2"><div class="页面卡"><div class="页面头"><h2>Banner 配置</h2><button class="主按钮" onclick="打开表单弹窗('4.2','新增')">+ 新增 Banner</button></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">②</span><span class="流程信息卡-环节名">当前环节：② 维护Banner配置</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">运营配置后台 &gt; 首页配置 &gt;</span> <span class="路径末段">Banner</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">配置保存后 C 端积分首页金刚区下方的 Banner 位按最新配置渲染</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索 Banner 名称"></div><div class="筛选区"><span class="筛选标签">跳转方式：</span><select class="筛选下拉"><option>全部</option><option>外部小程序</option><option>H5链接</option><option>口令</option><option>当前小程序路径</option></select><span class="筛选标签">状态：</span><select class="筛选下拉"><option>全部</option><option>启用</option><option>停用</option></select></div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;">Banner 位于金刚区下方，配置逻辑与金刚区入口完全一致；停用记录不下发 C 端。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">Banner图片<span class="类型标签 file">file</span></span><button class="信息按钮" onclick="显示字段弹窗('Banner图片', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">Banner名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('Banner名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">排序号<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('排序号', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">跳转方式<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('跳转方式', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('状态', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">更新时间<span class="类型标签 date">date</span></span><button class="信息按钮" onclick="显示字段弹窗('更新时间', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">banner-xinren.png</td><td class="列表单元格">新人专享Banner</td><td class="列表单元格">1</td><td class="列表单元格">当前小程序路径</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-13 09:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'',口令去向:'',站内页面路径:'邀请好友',Banner图片:'banner-xinren.png',Banner名称:'新人专享Banner',排序号:'1',跳转方式:'当前小程序路径',状态:'启用',更新时间:'2026-11-13 09:00',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'',口令去向:'',站内页面路径:'邀请好友',Banner图片:'banner-xinren.png',Banner名称:'新人专享Banner',排序号:'1',跳转方式:'当前小程序路径',状态:'启用',更新时间:'2026-11-13 09:00',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">banner-double11.png</td><td class="列表单元格">双11活动Banner</td><td class="列表单元格">2</td><td class="列表单元格">H5链接</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-13 09:05</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {小程序AppID:'',外部页面路径:'',H5链接:'https://m.example.com/d11',口令文本:'',口令去向:'',站内页面路径:'',Banner图片:'banner-double11.png',Banner名称:'双11活动Banner',排序号:'2',跳转方式:'H5链接',状态:'启用',更新时间:'2026-11-13 09:05',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {小程序AppID:'',外部页面路径:'',H5链接:'https://m.example.com/d11',口令文本:'',口令去向:'',站内页面路径:'',Banner图片:'banner-double11.png',Banner名称:'双11活动Banner',排序号:'2',跳转方式:'H5链接',状态:'启用',更新时间:'2026-11-13 09:05',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">banner-sign.png</td><td class="列表单元格">每日签到Banner</td><td class="列表单元格">3</td><td class="列表单元格">口令</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#f3f4f6;color:#6b7280">停用</span></td><td class="列表单元格">2026-11-13 09:08</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'复制口令，打开饿了么',口令去向:'饿了么',站内页面路径:'',Banner图片:'banner-sign.png',Banner名称:'每日签到Banner',排序号:'3',跳转方式:'口令',状态:'停用',更新时间:'2026-11-13 09:08',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {小程序AppID:'',外部页面路径:'',H5链接:'',口令文本:'复制口令，打开饿了么',口令去向:'饿了么',站内页面路径:'',Banner图片:'banner-sign.png',Banner名称:'每日签到Banner',排序号:'3',跳转方式:'口令',状态:'停用',更新时间:'2026-11-13 09:08',_壳节编号:'4.2'})">删除</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 3 条记录</div>
+</div></section>
+<section class="页面面板" id="面_4_4" data-page="4.4"><div class="页面卡"><div class="页面头"><h2>首页红包配置</h2></div><div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#92400e;">&#9888; <strong>历史功能</strong>：积分首页红包活动为历史已上线配置入口，本次「首页配置改造」不涉及改动，此处仅作菜单登记、不再赘述。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">红包名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('红包名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">红包金额<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('红包金额', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('状态', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">更新时间<span class="类型标签 date">date</span></span><button class="信息按钮" onclick="显示字段弹窗('更新时间', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">首页红包活动（历史配置）</td><td class="列表单元格">1.00</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#f3f4f6;color:#6b7280">停用</span></td><td class="列表单元格">2025-06-01 10:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.4','编辑', {红包名称:'首页红包活动（历史配置）',红包金额:'1.00',状态:'停用',更新时间:'2025-06-01 10:00',_壳节编号:'4.4'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.4', {红包名称:'首页红包活动（历史配置）',红包金额:'1.00',状态:'停用',更新时间:'2025-06-01 10:00',_壳节编号:'4.4'})">删除</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 1 条记录（历史数据仅示例）</div>
+</div></section>
+</main>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭表单弹窗()"></div>
+<aside id="表单弹窗面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="表单弹窗标题">新增</div>
+    <button class="btn-close" onclick="关闭表单弹窗()">×</button>
+  </div>
+  <div id="表单弹窗正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭表单弹窗()">取消</button>
+    <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-泳道映射">
+window._泳道节点映射 = {"4.1": [1], "4.2": [2]};
+window._阶段泳道映射 = {"4": 1};
+</script>
+<script id="js-页面切换">
+// 唯一导航函数：叶子菜单 onclick="切换页面('4.1')"。父节点不可点，无展开收起逻辑。
+function 切换页面(页码) {
+  document.querySelectorAll('.页面面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(页码).replace('.', '_'));
+  if (panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单文档,.菜单叶子').forEach(function(a) { a.classList.remove('激活'); });
+  var link = document.querySelector('[data-menu-page="' + 页码 + '"]');
+  if (link) link.classList.add('激活');
+  var c = document.getElementById('内容区'); if (c) c.scrollTop = 0;
+  更新泳道高亮(页码);
+}
+// 泳道两级高亮合并：已过+当前正常显示（opacity 1），未来节点置灰（opacity .25）；文档页(1/2)自动清空
+// 分支：有 .泳道收纳卡 → 走卡区间算法（min/max vs 当前页 nums 的 max）；无 → 走原 .泳道行 节点算法
+function 更新泳道高亮(页码) {
+  var 图 = document.getElementById('全局泳道图'); if (!图) return;
+  图.className = 图.className.replace(/ ?高亮阶段\d+/g, '');
+  var 阶段号 = String(页码).split('.')[0];
+  var k = (window._阶段泳道映射 || {})[阶段号];
+  if (k) 图.classList.add('高亮阶段' + k);
+  var nums = (window._泳道节点映射 || {})[页码];
+  var cards = 图.querySelectorAll('.泳道收纳卡');
+  if (cards.length) {
+    for (var i = 0; i < cards.length; i++) {
+      var c = cards[i];
+      c.classList.remove('收纳-已过'); c.classList.remove('收纳-现在'); c.classList.remove('收纳-未来');
+      if (!nums) continue;
+      var ids = c.getAttribute('data-card-nodes').split(',');
+      var a = Math.min.apply(null, ids.map(Number));
+      var b = Math.max.apply(null, ids.map(Number));
+      var max = Math.max.apply(null, nums);
+      if (b < max) c.classList.add('收纳-已过');
+      else if (a > max) c.classList.add('收纳-未来');
+      else c.classList.add('收纳-现在');
+    }
+    return;
+  }
+  图.querySelectorAll('.泳道行').forEach(function(r) {
+    if (!nums) { r.classList.remove('置灰'); r.classList.remove('正常'); return; }
+    var nodeNum = parseInt(r.getAttribute('data-swimlane-node'), 10);
+    var max = Math.max.apply(null, nums);
+    r.classList.toggle('正常', nodeNum <= max);
+    r.classList.toggle('置灰', nodeNum > max);
+  });
+}
+</script>
+<script id="js-字段联动">
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); }
+}
+// 枚举置灰通用函数：受控分组在「启用值」命中时正常，否则整组变淡且不可点。
+// 用法：置灰切换_模板('grp_退货设置', this.value, ['是'])；多组受控就在适配函数里多调几次。
+function 置灰切换_模板(组id, val, 启用值列表) {
+  var on = 启用值列表.indexOf(val) >= 0;
+  var el = document.getElementById(组id);
+  if (el) { el.style.opacity = on ? '1' : '0.35'; el.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+</script>
+<script id="js-表单弹窗">
+// 数据驱动的新增/编辑弹窗：window._表单字段按节['4.1'] + window._新增字段分组['4.1']
+// 三个可选扩展（枚举置灰场景三件套）：
+//   window._新增控制逻辑['4.1'] = 规则摘要框 HTML（弹窗顶部说明）
+//   字段对象加 联动:'置灰切换_xx(this.value)'（enum 下拉 onchange，串内只用单引号）
+//   分组对象加 id:'grp_xx'；window._弹窗初始化['4.1'] = function(){...}（弹窗打开后执行一次初始置灰）
+function 打开表单弹窗(节编号, 模式, 行数据) {
+  var drawer = document.getElementById('表单弹窗面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('表单弹窗正文'); var titleEl = document.getElementById('表单弹窗标题');
+  if (!drawer || !body) return;
+  模式 = 模式 || '新增';
+  行数据 = 行数据 || null;
+  var 字段列表 = (window._表单字段按节 && window._表单字段按节[节编号]) ? window._表单字段按节[节编号] : [];
+  titleEl.textContent = 模式 + ' · ' + 节编号;
+  var html = '<div class="编辑卡片区">';
+  var 控制逻辑块 = (window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  function 取值(f) { return (行数据 && 行数据[f.名称] !== undefined && 行数据[f.名称] !== '') ? 行数据[f.名称] : (f.示例值 || ''); }
+  function 控件(f) {
+    if (f.编辑性 === '只读') return '<span class="field-readonly">' + (取值(f) || '系统自动生成') + '</span>';
+    if (f.基础类型 === 'enum') {
+      var opts = (f.枚举值 || '').split(/[、,，]/).filter(Boolean);
+      var ev = f.联动 ? ' onchange="' + f.联动 + '"' : '';
+      var cur = String(取值(f));
+      var o = '<select class="field-select"' + ev + '>';
+      for (var i = 0; i < opts.length; i++) o += '<option' + (opts[i] === cur ? ' selected' : '') + '>' + opts[i] + '</option>';
+      return o + '</select>';
+    }
+    if (f.基础类型 === '富文本') return '<textarea class="field-input" rows="3" placeholder="请输入">' + 取值(f) + '</textarea>';
+    return '<input class="field-input" value="' + 取值(f) + '" placeholder="请输入">';
+  }
+  function 渲染字段行(f) {
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">' + 控件(f) + '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  function 字段可在新增显示(f) { return !(模式 === '新增' && f.新增可见 === false); }
+  var 分组配置 = (window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"' + (组.id ? ' id="' + 组.id + '"' : '') + '><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 字段列表.length; k++) {
+          if (字段列表[k].名称 === 组.字段[j]) { if (字段可在新增显示(字段列表[k])) html += 渲染字段行(字段列表[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>' + 模式 + '</h4></div><div class="field-card-body">';
+    if (字段列表.length === 0) html += '<div class="空状态">未注册弹窗字段（_表单字段按节 / _新增字段分组）</div>';
+    else for (var i = 0; i < 字段列表.length; i++) { if (字段可在新增显示(字段列表[i])) html += 渲染字段行(字段列表[i]); }
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+  if (window._弹窗初始化 && window._弹窗初始化[节编号]) { try { window._弹窗初始化[节编号](); } catch (e) {} }
+}
+function 关闭表单弹窗() { var d = document.getElementById('表单弹窗面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+// 行内「删除」按钮入口：二次确认后提示（演示环境不落库）。
+function 确认删除(节编号, 行数据) {
+  if (!confirm('确定删除该记录？删除后不可恢复。')) return;
+  显示提示('已删除（演示环境，不落库）', '成功', 2200);
+}
+</script>
+<script id="js-单元格截断">
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script id="js-泳道收纳">
+// 收纳卡居中浮层：打开/关闭/ESC。居中形态为泳道图专属例外，非半屏抽屉。
+(function () {
+  function 打开泳道浮层(cardId) {
+    var tpl = document.getElementById('泳道浮层体_' + cardId);
+    var card = document.querySelector('[data-card="' + cardId + '"]');
+    var mask = document.getElementById('泳道浮层遮罩');
+    if (!tpl || !card || !mask) return;
+    document.getElementById('泳道浮层内容').innerHTML = tpl.innerHTML;
+    document.getElementById('泳道浮层标题').textContent = card.getAttribute('data-card-label') || '';
+    mask.style.display = 'flex';
+  }
+  function 关闭泳道浮层() {
+    var mask = document.getElementById('泳道浮层遮罩');
+    if (mask) mask.style.display = 'none';
+  }
+  window.打开泳道浮层 = 打开泳道浮层;
+  window.关闭泳道浮层 = 关闭泳道浮层;
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') 关闭泳道浮层();
+  });
+})();
+</script>
+<script>
+window._表单字段按节=window._表单字段按节||{};
+window._表单字段按节["4.1"]=[
+  {名称:"入口图标",类型原文:"file",基础类型:"file",示例值:"📒",数据来源:"运营人员上传或替换",逻辑:"图片素材，建议尺寸一致",用途:"C 端金刚区入口 icon",节编号:"4.1"},
+  {名称:"入口名称",类型原文:"string",基础类型:"string",示例值:"记一账",数据来源:"运营人员填写",用途:"入口图标下方显示的文字",节编号:"4.1"},
+  {名称:"排序号",类型原文:"number",基础类型:"number",示例值:"1",数据来源:"运营人员填写",逻辑:"数值越小越靠前；C 端一行 4 个自动换行",用途:"控制入口排列位置",节编号:"4.1"},
+  {名称:"跳转方式",类型原文:"enum（外部小程序、H5链接、口令、当前小程序路径）",基础类型:"enum",枚举值:"外部小程序、H5链接、口令、当前小程序路径",示例值:"当前小程序路径",联动:"置灰切换_跳转方式(this.value)",数据来源:"运营人员选择",逻辑:"主控字段，联动 4 组跳转配置的可用性",用途:"决定用户点击入口后的行为",节编号:"4.1"},
+  {名称:"小程序AppID",类型原文:"string",基础类型:"string",编辑性:"条件",示例值:"wx8888888888",数据来源:"运营人员填写",逻辑:"仅跳转方式=外部小程序时可用",用途:"跳转到目标小程序",节编号:"4.1"},
+  {名称:"外部页面路径",类型原文:"string",基础类型:"string",编辑性:"条件",示例值:"pages/index/index",数据来源:"运营人员填写",逻辑:"仅跳转方式=外部小程序时可用",用途:"跳转到目标小程序指定页面",节编号:"4.1"},
+  {名称:"H5链接",类型原文:"string",基础类型:"string",编辑性:"条件",示例值:"https://m.example.com/promo",数据来源:"运营人员填写",逻辑:"仅跳转方式=H5链接时可用",用途:"小程序内 webview 打开",节编号:"4.1"},
+  {名称:"口令文本",类型原文:"string",基础类型:"string",编辑性:"条件",示例值:"复制口令，打开饿了么",数据来源:"运营人员填写",逻辑:"仅跳转方式=口令时可用",用途:"口令弹窗内容",节编号:"4.1"},
+  {名称:"口令去向",类型原文:"enum（饿了么、淘宝）",基础类型:"enum",枚举值:"饿了么、淘宝",编辑性:"条件",示例值:"饿了么",数据来源:"运营人员选择",逻辑:"仅跳转方式=口令时可用；决定 C 端弹窗形态",用途:"口令弹窗去向",节编号:"4.1"},
+  {名称:"站内页面路径",类型原文:"enum（站内路由表）",基础类型:"enum",枚举值:"记一账、晒单活动、签单日历、淘转链、门店转链、外卖转链、积分明细、邀请好友",编辑性:"条件",示例值:"记一账",数据来源:"运营人员下拉选择站内路由",逻辑:"仅跳转方式=当前小程序路径时可用；下拉选择而非手填",用途:"跳转所选站内页面",节编号:"4.1"},
+  {名称:"状态",类型原文:"enum（启用、停用）",基础类型:"enum",枚举值:"启用、停用",示例值:"启用",数据来源:"运营人员设置",逻辑:"停用的入口不下发 C 端",用途:"控制入口是否生效",节编号:"4.1"},
+  {名称:"更新时间",类型原文:"date",基础类型:"date",编辑性:"只读",新增可见:false,示例值:"2026-11-13 09:15",数据来源:"系统记录",逻辑:"yyyy-MM-dd HH:mm，仅编辑弹窗展示",用途:"追溯最近修改时间",节编号:"4.1"}
+];
+window._新增字段分组=window._新增字段分组||{};
+window._新增字段分组["4.1"]=[{组名:"基本信息",字段:["入口图标","入口名称","排序号","状态","更新时间"]},{组名:"跳转方式",字段:["跳转方式"]},{组名:"外部小程序配置",id:"grp_外部",字段:["小程序AppID","外部页面路径"]},{组名:"H5链接配置",id:"grp_H5",字段:["H5链接"]},{组名:"口令配置",id:"grp_口令",字段:["口令文本","口令去向"]},{组名:"站内路径配置",id:"grp_站内",字段:["站内页面路径"]}];
+
+window._表单字段按节["4.2"]=[
+  {名称:"Banner图片",类型原文:"file",基础类型:"file",示例值:"banner-xinren.png",数据来源:"运营人员上传或替换",逻辑:"Banner 位素材图",用途:"C 端金刚区下方 Banner 展示图",节编号:"4.2"},
+  {名称:"Banner名称",类型原文:"string",基础类型:"string",示例值:"新人专享Banner",数据来源:"运营人员填写",逻辑:"后台管理识别用，不在 C 端展示",用途:"标识不同 Banner",节编号:"4.2"},
+  {名称:"排序号",类型原文:"number",基础类型:"number",示例值:"1",数据来源:"运营人员填写",逻辑:"数值越小越靠前",用途:"控制 Banner 展示顺序",节编号:"4.2"},
+  {名称:"跳转方式",类型原文:"enum（外部小程序、H5链接、口令、当前小程序路径）",基础类型:"enum",枚举值:"外部小程序、H5链接、口令、当前小程序路径",示例值:"当前小程序路径",联动:"置灰切换_跳转方式(this.value)",数据来源:"运营人员选择",逻辑:"与金刚区同一套枚举，联动 4 组跳转配置",用途:"决定用户点击 Banner 后的行为",节编号:"4.2"},
+  {名称:"小程序AppID",类型原文:"string",基础类型:"string",编辑性:"条件",示例值:"wx8888888888",数据来源:"运营人员填写",逻辑:"仅跳转方式=外部小程序时可用",用途:"跳转到目标小程序",节编号:"4.2"},
+  {名称:"外部页面路径",类型原文:"string",基础类型:"string",编辑性:"条件",示例值:"pages/index/index",数据来源:"运营人员填写",逻辑:"仅跳转方式=外部小程序时可用",用途:"跳转到目标小程序指定页面",节编号:"4.2"},
+  {名称:"H5链接",类型原文:"string",基础类型:"string",编辑性:"条件",示例值:"https://m.example.com/d11",数据来源:"运营人员填写",逻辑:"仅跳转方式=H5链接时可用",用途:"小程序内 webview 打开",节编号:"4.2"},
+  {名称:"口令文本",类型原文:"string",基础类型:"string",编辑性:"条件",示例值:"复制口令，打开饿了么",数据来源:"运营人员填写",逻辑:"仅跳转方式=口令时可用",用途:"口令弹窗内容",节编号:"4.2"},
+  {名称:"口令去向",类型原文:"enum（饿了么、淘宝）",基础类型:"enum",枚举值:"饿了么、淘宝",编辑性:"条件",示例值:"饿了么",数据来源:"运营人员选择",逻辑:"仅跳转方式=口令时可用",用途:"口令弹窗去向",节编号:"4.2"},
+  {名称:"站内页面路径",类型原文:"enum（站内路由表）",基础类型:"enum",枚举值:"记一账、晒单活动、签单日历、淘转链、门店转链、外卖转链、积分明细、邀请好友",编辑性:"条件",示例值:"邀请好友",数据来源:"运营人员下拉选择站内路由",逻辑:"仅跳转方式=当前小程序路径时可用",用途:"跳转所选站内页面",节编号:"4.2"},
+  {名称:"状态",类型原文:"enum（启用、停用）",基础类型:"enum",枚举值:"启用、停用",示例值:"启用",数据来源:"运营人员设置",逻辑:"停用的 Banner 不下发 C 端",用途:"控制 Banner 是否生效",节编号:"4.2"},
+  {名称:"更新时间",类型原文:"date",基础类型:"date",编辑性:"只读",新增可见:false,示例值:"2026-11-13 09:08",数据来源:"系统记录",逻辑:"yyyy-MM-dd HH:mm，仅编辑弹窗展示",用途:"追溯最近修改时间",节编号:"4.2"}
+];
+window._新增字段分组["4.2"]=[{组名:"基本信息",字段:["Banner图片","Banner名称","排序号","状态","更新时间"]},{组名:"跳转方式",字段:["跳转方式"]},{组名:"外部小程序配置",id:"grp_外部",字段:["小程序AppID","外部页面路径"]},{组名:"H5链接配置",id:"grp_H5",字段:["H5链接"]},{组名:"口令配置",id:"grp_口令",字段:["口令文本","口令去向"]},{组名:"站内路径配置",id:"grp_站内",字段:["站内页面路径"]}];
+
+
+window._表单字段按节["4.4"]=[
+  {名称:"红包名称",类型原文:"string",基础类型:"string",编辑性:"只读",示例值:"首页红包活动（历史配置）",数据来源:"历史已上线配置",逻辑:"历史功能，本次改造不涉及",用途:"标识历史红包活动",节编号:"4.4"},
+  {名称:"红包金额",类型原文:"number",基础类型:"number",编辑性:"只读",示例值:"1.00",数据来源:"历史已上线配置",逻辑:"历史功能，本次改造不涉及",用途:"历史红包金额",节编号:"4.4"},
+  {名称:"状态",类型原文:"enum（启用、停用）",基础类型:"enum",枚举值:"启用、停用",编辑性:"只读",示例值:"停用",数据来源:"历史已上线配置",逻辑:"历史功能，本次改造不涉及",用途:"历史活动启停状态",节编号:"4.4"},
+  {名称:"更新时间",类型原文:"date",基础类型:"date",编辑性:"只读",示例值:"2025-06-01 10:00",数据来源:"系统记录",逻辑:"历史功能，本次改造不涉及",用途:"追溯历史配置时间",节编号:"4.4"}
+];
+window._新增字段分组["4.4"]=[{组名:"历史配置（仅登记）",字段:["红包名称","红包金额","状态","更新时间"]}];
+
+window._新增控制逻辑=window._新增控制逻辑||{};
+window._新增控制逻辑["4.1"]='<div style="margin-bottom:14px;padding:10px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px;line-height:1.8;color:#92400e;"><strong>ⓘ 置灰规则</strong><br>&bull; 跳转方式=<strong>外部小程序</strong> &rarr; 仅「外部小程序配置」可填，其余三组置灰<br>&bull; <strong>H5链接</strong> &rarr; 仅「H5链接配置」可填；<strong>口令</strong> &rarr; 仅「口令配置」可填（文本+去向）<br>&bull; <strong>当前小程序路径</strong> &rarr; 仅「站内路径配置」可填（下拉选择站内路由）<br>&bull; 状态=停用的入口不下发 C 端，不在金刚区渲染</div>';
+window._新增控制逻辑["4.2"]='<div style="margin-bottom:14px;padding:10px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px;line-height:1.8;color:#92400e;"><strong>ⓘ 置灰规则</strong><br>&bull; Banner 跳转方式与金刚区完全同构：按所选枚举仅对应配置组可填，其余置灰<br>&bull; 状态=停用的 Banner 不下发 C 端</div>';
+function 置灰切换_跳转方式(val){ 置灰切换_模板('grp_外部', val, ['外部小程序']); 置灰切换_模板('grp_H5', val, ['H5链接']); 置灰切换_模板('grp_口令', val, ['口令']); 置灰切换_模板('grp_站内', val, ['当前小程序路径']); }
+window._弹窗初始化=window._弹窗初始化||{};
+window._弹窗初始化["4.1"]=function(){ var sels=document.querySelectorAll('#表单弹窗正文 select.field-select'); for(var i=0;i<sels.length;i++){ var oe=sels[i].getAttribute('onchange')||''; if(oe.indexOf('置灰切换_跳转方式')>=0){ 置灰切换_跳转方式(sels[i].value); return; } } 置灰切换_跳转方式('当前小程序路径'); };
+window._弹窗初始化["4.2"]=function(){ var sels=document.querySelectorAll('#表单弹窗正文 select.field-select'); for(var i=0;i<sels.length;i++){ var oe=sels[i].getAttribute('onchange')||''; if(oe.indexOf('置灰切换_跳转方式')>=0){ 置灰切换_跳转方式(sels[i].value); return; } } 置灰切换_跳转方式('当前小程序路径'); };
+
+(window._字段总库||[]).push(
+{名称:"入口图标",类型原文:"file",基础类型:"file",编辑性:"可编辑",数据来源:"运营人员上传或替换",用途:"C 端金刚区入口 icon",节编号:"4.1"},
+{名称:"入口名称",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员填写",用途:"入口图标下方显示的文字",节编号:"4.1"},
+{名称:"排序号",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"运营人员填写",逻辑:"数值越小越靠前，一行 4 个自动换行",用途:"控制入口排列位置",节编号:"4.1"},
+{名称:"跳转方式",类型原文:"enum（外部小程序、H5链接、口令、当前小程序路径）",基础类型:"enum",枚举值:"外部小程序、H5链接、口令、当前小程序路径",编辑性:"可编辑",数据来源:"运营人员选择",逻辑:"主控字段，联动 4 组跳转配置置灰",用途:"决定点击后的跳转行为",节编号:"4.1"},
+{名称:"小程序AppID",类型原文:"string",基础类型:"string",编辑性:"条件",数据来源:"运营人员填写",逻辑:"仅跳转方式=外部小程序时可用",用途:"跳转到目标小程序",节编号:"4.1"},
+{名称:"外部页面路径",类型原文:"string",基础类型:"string",编辑性:"条件",数据来源:"运营人员填写",逻辑:"仅跳转方式=外部小程序时可用",用途:"跳转目标小程序指定页面",节编号:"4.1"},
+{名称:"H5链接",类型原文:"string",基础类型:"string",编辑性:"条件",数据来源:"运营人员填写",逻辑:"仅跳转方式=H5链接时可用",用途:"小程序内 webview 打开",节编号:"4.1"},
+{名称:"口令文本",类型原文:"string",基础类型:"string",编辑性:"条件",数据来源:"运营人员填写",逻辑:"仅跳转方式=口令时可用",用途:"口令弹窗内容",节编号:"4.1"},
+{名称:"口令去向",类型原文:"enum（饿了么、淘宝）",基础类型:"enum",枚举值:"饿了么、淘宝",编辑性:"条件",数据来源:"运营人员选择",逻辑:"决定 C 端口令弹窗形态",用途:"口令弹窗去向",节编号:"4.1"},
+{名称:"站内页面路径",类型原文:"enum（站内路由表）",基础类型:"enum",枚举值:"记一账、晒单活动、签单日历、淘转链、门店转链、外卖转链、积分明细、邀请好友",编辑性:"条件",数据来源:"运营人员下拉选择",逻辑:"仅跳转方式=当前小程序路径时可用",用途:"跳转所选站内页面",节编号:"4.1"},
+{名称:"状态",类型原文:"enum（启用、停用）",基础类型:"enum",枚举值:"启用、停用",编辑性:"可编辑",数据来源:"运营人员设置",逻辑:"停用不下发 C 端",用途:"控制入口是否生效",节编号:"4.1"},
+{名称:"Banner图片",类型原文:"file",基础类型:"file",编辑性:"可编辑",数据来源:"运营人员上传或替换",用途:"C 端 Banner 展示图",节编号:"4.2"},
+{名称:"Banner名称",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员填写",逻辑:"后台管理识别用",用途:"标识不同 Banner",节编号:"4.2"},
+);
+</script>
+</body>
+</html>

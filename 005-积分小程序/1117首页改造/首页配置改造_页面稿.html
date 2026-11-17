@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>首页配置改造 · 页面稿</title>
+<style>
+:root{
+  --ink:#171615;--ink2:#625e59;--ink3:#9c9690;--line:#ece9e5;--panel:#fff;--stage:#f1f1f2;
+  --green:#21845b;--red:#d85a42;--orange:#d78b38;--blue:#1686b8;
+  --stamp-bg:#f7f3ea;--stamp-paper:#fffdf8;--stamp-ink:#3c2622;--stamp-muted:#958d89;
+  --stamp-accent:#d9903d;--stamp-line:#e7e0d6;
+  --sans:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+button,select{font:inherit}
+button{color:inherit}
+body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans);color:var(--ink)}
+.app{display:grid;grid-template-columns:232px minmax(560px,1fr);height:100vh}
+.rail{min-height:0;display:flex;flex-direction:column;border-right:1px solid #dfdfe1;background:#fff}
+.rail-head{padding:18px 16px 13px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.92)}
+.eyebrow{font:700 9px/1 var(--mono);letter-spacing:.18em;color:var(--ink3);text-transform:uppercase}
+.rail-title{margin-top:8px;font-size:16px;font-weight:800;letter-spacing:.04em}
+.rail-sub,.flow-sub{margin-top:5px;font-size:10.5px;color:var(--ink3);line-height:1.45}
+.rail-body,.flow-body{flex:1;min-height:0;overflow:auto;padding:10px 10px 24px;scrollbar-width:thin}
+.mode-switch{display:flex;gap:3px;padding:3px;background:#f3f3f4;border-radius:8px;margin-bottom:8px}
+.mode-btn{flex:1;padding:6px 0;border:0;border-radius:6px;background:transparent;font-size:11px;color:#888;cursor:pointer}
+.mode-btn.on{background:#fff;color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.group-head{display:flex;align-items:center;gap:7px;padding:14px 8px 7px;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#4a4744}
+.group-head::before{content:"";width:5px;height:5px;border-radius:50%;background:#c8c4c0}
+.group-head em{margin-left:auto;font:400 9px var(--mono);color:#aaa;font-style:normal}
+.rail-item,.page-item{width:100%;border:0;background:transparent;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;text-align:left;cursor:pointer;font-size:12px;color:#555}
+.rail-item:hover,.page-item:hover,.step:hover{background:#f3f3f4}
+.rail-item.on,.page-item.on{background:#eeeef0;color:#151515;font-weight:750}
+.rail-dot{width:5px;height:5px;border-radius:50%;background:#ccc;flex:none}.on .rail-dot{background:#191919}
+.rail-name{min-width:0;flex:1;line-height:1.38;word-break:break-word}
+.rail-sub{display:block;font-style:normal;font-size:9px;font-weight:400;color:#999;margin-top:1px;letter-spacing:.02em}
+.rail-count,.page-code{font:9px var(--mono);color:#aaa}
+.flow-title{font-size:12.5px;font-weight:800;letter-spacing:.05em}
+.section-label{margin:16px 8px 7px;font:700 9px var(--mono);letter-spacing:.16em;color:#aaa}
+.step{display:flex;gap:9px;padding:8px;border-radius:8px;cursor:pointer}
+.step.on{background:#fff;box-shadow:0 0 0 1px #e4e2df}
+.step-index{width:22px;height:22px;border:1px solid #bdb8b3;border-radius:50%;display:grid;place-items:center;flex:none;font:700 9px var(--mono);color:#777}
+.step.on .step-index{background:#191919;color:#fff;border-color:#191919}
+.step.ext .step-index{border-style:dashed}.step-title{font-size:11.5px;font-weight:700;line-height:1.35}.step-sub{font-size:9.5px;color:#aaa;margin-top:2px;line-height:1.45}
+.stage{min-width:0;overflow:auto;display:flex;justify-content:center;align-items:center;gap:18px;padding:18px 22px}
+.stage-main{display:flex;flex-direction:column;align-items:center;gap:10px;flex:none}
+.stage-meta{width:392px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:#888;font-size:10.5px}
+.stage-name{display:flex;align-items:center;gap:7px;min-width:0}.stage-name i{width:5px;height:5px;border-radius:50%;background:#171615}
+.frame-select{max-width:222px;border:1px solid #ddd9d5;border-radius:7px;background:#fff;padding:6px 7px;font-size:10px;color:#34312e;outline:none}
+.phone{width:392px;height:min(820px,calc(100vh - 88px));min-height:650px;border-radius:44px;background:var(--stamp-bg);box-shadow:0 0 0 1px rgba(0,0,0,.06),0 18px 45px rgba(0,0,0,.13);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.statusbar{height:39px;padding:14px 25px 0;display:flex;align-items:center;justify-content:space-between;flex:none;font:700 10px var(--mono);z-index:8}
+.status-icons{display:flex;gap:4px;align-items:center}.status-icons i{display:block;width:4px;height:4px;border-radius:50%;background:#1f1e1c}.status-icons b{width:18px;height:9px;border:1.5px solid #1f1e1c;border-radius:3px;display:block;margin-left:4px;position:relative}.status-icons b::after{content:"";position:absolute;inset:1px;background:#1f1e1c;border-radius:1px}
+#screen{flex:1;min-height:0;display:flex;position:relative}
+.mobile-page{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;color:var(--stamp-ink);background:var(--stamp-bg)}
+.page-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:0 16px 22px}.page-scroll::-webkit-scrollbar,.sheet::-webkit-scrollbar{display:none}
+#tabbar{flex:none}
+.global-tabs{height:62px;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,253,248,.96);border-top:1px solid var(--stamp-line);padding:6px 8px 8px;z-index:10}
+.global-tabs button{border:0;background:transparent;border-radius:13px;color:#9d958f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:8.5px;cursor:pointer}
+.global-tabs button.on{color:var(--stamp-accent);background:#f4ede3;font-weight:800}
+.global-tabs .ico{font-size:17px;line-height:1}
+/* 弹层 */
+#sheetRoot{position:absolute;inset:0;z-index:30;pointer-events:none}
+.mask{position:absolute;inset:0;background:rgba(29,22,17,.35);pointer-events:auto;animation:fade .18s ease both}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:88%;overflow-y:auto;background:var(--stamp-paper);border-radius:26px 26px 0 0;padding:10px 16px 22px;pointer-events:auto;animation:rise .24s cubic-bezier(.2,.8,.25,1) both}
+.sheet-handle{width:34px;height:4px;border-radius:4px;background:#d7d0c8;margin:2px auto 16px}
+.sheet-head{display:flex;align-items:flex-start;gap:10px;padding:0 2px 14px}
+.sheet-title{flex:1;text-align:center}
+.sheet-title h2{font-size:20px}
+.sheet-title p{font-size:11px;color:var(--stamp-muted);margin-top:7px}
+.sheet-close{width:30px;height:30px;border:0;border-radius:11px;background:#f1ede7;color:#8f8780;cursor:pointer}
+.sheet-spacer{width:30px}
+.modal-mask{position:absolute;inset:0;background:rgba(20,15,11,.5);pointer-events:auto;animation:fade .18s ease both}
+.modal{position:absolute;left:34px;right:34px;top:50%;transform:translateY(-50%);background:var(--stamp-paper);border-radius:25px;padding:20px 18px 22px;text-align:center;pointer-events:auto;box-shadow:0 18px 50px rgba(0,0,0,.22);animation:pop .25s cubic-bezier(.2,.8,.25,1) both}
+.modal-x{position:absolute;right:12px;top:12px;width:28px;height:28px;border:0;border-radius:10px;background:#f1ede7;color:#8f8780;cursor:pointer;font-size:14px}
+.modal h2{font-size:19px;margin-top:12px}
+.modal p{font-size:11px;color:#999;line-height:1.65;margin-top:8px}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-actions button{flex:1;border:0;height:42px;border-radius:13px;font-size:11px;font-weight:800;cursor:pointer}
+.modal-actions .secondary{background:#f0ece6;color:#776f68}
+.modal-actions .primary{background:var(--stamp-ink);color:#fff}
+.modal-img{width:100%;height:150px;object-fit:cover;border-radius:16px;background:#f6f1e9;display:block}
+.pop-tag{display:inline-block;padding:3px 9px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:.06em}
+.pop-tag.running{color:#16754d;background:#e8f6ef}
+.pop-tag.mounted{color:#ad641b;background:#fff2e4}
+#toast{position:absolute;left:50%;bottom:78px;transform:translate(-50%,8px);background:rgba(35,29,25,.92);color:#fff;padding:9px 13px;border-radius:9px;font-size:10.5px;opacity:0;pointer-events:none;transition:.2s;white-space:nowrap;z-index:50;max-width:84%;overflow:hidden;text-overflow:ellipsis}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+/* 说明面板 */
+.inspector{width:280px;height:min(820px,calc(100vh - 88px));margin-top:38px;background:#fafafa;border:1px solid #dfdcd8;border-radius:15px;overflow:hidden;display:flex;flex-direction:column;flex:none}
+.inspector-head{padding:14px 15px;border-bottom:1px solid #e6e3df;background:#fff}
+.inspector-top{display:flex;align-items:center;gap:8px}
+.inspector-title{font-size:13px;font-weight:800}
+.inspector-status{margin-left:auto;padding:2px 6px;border-radius:4px;background:#e8f6ef;color:#19714b;font-size:8px;font-weight:800}
+.inspector-sub{margin-top:4px;font-size:9.5px;color:#aaa}
+.inspector-body{flex:1;overflow:auto;padding:14px 15px}
+.note-section{padding:11px 0;border-bottom:1px solid #e8e5e1}
+.note-section:first-child{padding-top:0}
+.note-section h4{font-size:9px;letter-spacing:.14em;color:#999;margin-bottom:8px}
+.note-row{display:flex;gap:7px;font-size:10.5px;line-height:1.6;color:#666;margin-top:5px}
+.note-row i{font:9px var(--mono);font-style:normal;color:#bbb;flex:none;margin-top:2px}
+.note-row.warn{color:#c6503c;font-weight:650}
+/* 积分首页（沿用印章稿积分页视觉） */
+.points-page{background:#fff;color:#17211c}
+.pts-scroll{padding:0 0 22px}
+.pts-head{padding:4px 16px 6px;background:linear-gradient(180deg,#E6F8EC 0%,#F1FBF4 46%,#FFFFFF 88%)}
+.pts-cap{display:flex;justify-content:flex-end;margin-bottom:6px}
+.pts-cap-pill{display:flex;align-items:center;background:rgba(255,255,255,.8);border:1px solid rgba(23,33,28,.07);border-radius:99px;height:25px;padding:2px;box-shadow:0 2px 7px rgba(23,33,28,.05)}
+.pts-cap button{border:0;background:transparent;height:21px;min-width:30px;border-radius:99px;font-size:10px;letter-spacing:.6px;color:#3f4d45;cursor:pointer;display:grid;place-items:center;padding:0 7px}
+.pts-cap button + button{border-left:1px solid rgba(23,33,28,.1);border-radius:0 99px 99px 0;min-width:24px;padding:0 5px;font-size:11px;letter-spacing:0}
+.pts-title{font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.42}
+.pts-title span{background:linear-gradient(180deg,transparent 74%,#83D19C 74%,#83D19C 99%,transparent 99%);padding:0 2px;margin:0 -2px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.pts-grid{margin-top:16px;background:#fff;border-radius:20px;padding:15px 4px 9px;display:grid;grid-template-columns:repeat(4,1fr);gap:13px 2px;box-shadow:0 8px 22px rgba(24,52,36,.08);border:1px solid rgba(233,244,236,.9)}
+.pts-grid.empty-grid{display:none}
+.pts-entry{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;cursor:pointer;border-radius:14px}
+.pts-entry img{width:44px;height:44px;display:block;transition:transform .12s}
+.pts-entry:active img{transform:scale(.93)}
+.pts-entry span{font-size:10.5px;font-weight:750;color:#3b4a41;letter-spacing:-.3px;white-space:nowrap}
+.pts-entry .jt-chip{font:700 7.5px var(--mono);color:#9aa8a0;background:#f2f7f4;border-radius:5px;padding:1.5px 4px;letter-spacing:.02em}
+.pts-sec-head{display:flex;align-items:baseline;gap:8px;margin:17px 2px 0}
+.pts-sec-head h2{font-size:15px;font-weight:900;letter-spacing:-.3px}
+.pts-sec-head span{margin-left:auto;font-size:9px;color:#aab3ad}
+.pts-body{padding:0 16px}
+.banner-card{margin-top:11px;border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 10px 24px rgba(28,88,54,.11);border:1px solid #EFF5F0;cursor:pointer;text-align:left;padding:0;display:block;width:100%}
+.banner-img{width:100%;height:120px;object-fit:cover;display:block;background:#eef4ef}
+.banner-foot{padding:10px 13px 12px;display:flex;align-items:center;gap:10px}
+.banner-foot b{display:block;font-size:12px;font-weight:900;letter-spacing:-.3px}
+.banner-foot small{display:block;margin-top:4px;font-size:9px;color:#9ba49e}
+.banner-btn{margin-left:auto;flex:none;height:28px;padding:0 13px;border:0;border-radius:99px;background:#37BC7C;color:#fff;font-size:10.5px;font-weight:850}
+.banner-empty{margin-top:11px;border:1px dashed #dfe7e1;border-radius:16px;padding:22px;text-align:center;color:#a9b5ad;font-size:10.5px;background:#fafcfa}
+/* 红包区（4.4 历史功能，静态演示） */
+.pts-cols{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}
+.pts-col{position:relative;border-radius:16px;padding:11px 9px 10px;background:linear-gradient(180deg,#FFF2EC,#FFFAF7);border:1px solid #FFE1D4;overflow:hidden}
+.pts-col.mt{background:linear-gradient(180deg,#FFFAE9,#FFFDF6);border-color:#F5E7BC}
+.pts-col-stamp{position:absolute;right:-8px;top:-8px;width:44px;height:44px;border:1px dashed currentColor;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:900;opacity:.13;transform:rotate(-12deg);color:#D9481F}
+.pts-col.mt .pts-col-stamp{color:#B07400}
+.pts-col-brand{display:flex;align-items:center;gap:5px;position:relative;z-index:1}
+.pts-brand-dot{width:17px;height:17px;border-radius:6px;display:grid;place-items:center;font-size:8px;font-weight:900;color:#fff;background:#FF5000;flex:none}
+.pts-col.mt .pts-brand-dot{background:#FFD100;color:#3a2f00}
+.pts-col-brand b{font-size:11px;font-weight:850;letter-spacing:-.3px}
+.pts-coupon{position:relative;background:#fff;border-radius:12px;padding:10px 9px 9px;margin-top:8px;box-shadow:0 3px 9px rgba(122,72,42,.06)}
+.pts-coupon b{display:block;font-size:12.5px;font-weight:900;letter-spacing:-.5px;color:#D9481F}
+.pts-col.mt .pts-coupon b{color:#A96C00}
+.pts-coupon span{display:block;margin-top:4px;font-size:9px;color:#a7a7a7;letter-spacing:-.2px}
+.pts-coupon button{width:100%;height:29px;margin-top:8px;border:0;border-radius:8px;background:linear-gradient(96deg,#FF9E5E,#FF6E30);color:#fff;font-size:11px;font-weight:850;cursor:pointer;transition:transform .14s ease}
+.pts-col.mt .pts-coupon button{background:linear-gradient(96deg,#FFE184,#FFC32F);color:#6A4900}
+.pts-coupon button:active{transform:scale(.96)}
+.pts-coupon.got{background:#fbf7f0;box-shadow:none;border:1px dashed #e6dccc}
+.pts-coupon.got b{color:#a89d90}
+.pts-coupon.got button,.pts-col.mt .pts-coupon.got button{background:#efe9df;color:#a89d90;cursor:default}
+/* 微信分享卡片落地帧（样式移植自奶茶争霸二期_交互稿.html shareFriendView） */
+.wx-page{background:#EDEDED;display:flex;flex-direction:column;height:100%}
+.wx-nav{display:flex;align-items:center;padding:12px 14px;background:#EDEDED;border-bottom:1px solid #D8D8D8;flex-shrink:0}
+.wx-back{width:28px;height:28px;border:none;background:none;font-size:22px;color:#333;cursor:pointer}
+.wx-nav-c{flex:1;text-align:center}
+.wx-title{font-size:15px;font-weight:600;color:#111}
+.wx-sub{font-size:10px;color:#888;margin-top:1px}
+.wx-more{font-size:18px;color:#333;letter-spacing:2px}
+.wx-scroll{flex:1;overflow-y:auto;padding:12px 12px 16px}
+.wx-time{text-align:center;font-size:11px;color:#999;margin:6px 0 14px}
+.wx-msg{display:flex;align-items:flex-start;gap:8px;margin-bottom:12px}
+.wx-avatar{width:36px;height:36px;border-radius:6px;background:linear-gradient(135deg,#5BA0E0,#3B7BC8);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wx-bubble{max-width:78%;background:#fff;border-radius:4px;padding:10px 12px;position:relative;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.wx-bubble p{font-size:13px;color:#222;line-height:1.55}
+.wx-mini-share{width:82%;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);cursor:pointer;position:relative;border:0;padding:0;text-align:left;font:inherit;transition:transform .12s ease}
+.wx-mini-share:active{transform:scale(.98)}
+.wx-mini-head{display:flex;align-items:center;gap:7px;padding:8px 10px 6px}
+.wx-mini-avatar{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#4FBF67,#2E9E4F);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.wx-mini-appname{font-size:12px;color:#576b95;font-weight:500}
+.wx-mini-desc{padding:0 10px 8px;font-size:13px;color:#222;line-height:1.5;white-space:nowrap;font-weight:600}
+.wx-mini-banner{margin:0 10px 10px;border-radius:8px;overflow:hidden}
+.wx-mini-foot{display:flex;align-items:center;gap:4px;padding:6px 10px 10px;font-size:11px;color:#888}
+.source-tip{margin:12px 2px 0;display:flex;align-items:flex-start;gap:8px;font-size:9.5px;line-height:1.55;color:#9d958d}
+.source-tip i{font-style:normal;width:17px;height:17px;border-radius:50%;background:#ede6da;display:grid;place-items:center;flex:none;color:#7c6c5d;font-size:9px}
+.cfg-strip{margin:12px 0 0;border:1px dashed #dbe4de;background:#f7faf8;border-radius:12px;padding:9px 11px;font:9px/1.7 var(--mono);color:#7d8d84;display:grid;grid-template-columns:auto 1fr;gap:1px 10px}
+.cfg-strip b{font-size:8.5px;letter-spacing:.12em;color:#5c6b62}
+.sim-row{display:flex;gap:7px;margin-top:10px}
+.sim-row button{flex:1;border:1px solid #d5e2da;background:#fff;border-radius:10px;padding:8px 6px;font-size:10px;font-weight:750;color:#3f4d45;cursor:pointer}
+.sim-row button.hot{background:#fff7ea;border-color:#eeddc4;color:#8a6a3d}
+/* 口令 Bottom Sheet：饿了么 / 淘宝两套视觉 */
+.code-sheet .dest-badge{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:5px 12px;font-size:10.5px;font-weight:850}
+.code-sheet.eleme .dest-badge{background:#e8f2ff;color:#1677ff}
+.code-sheet.taobao .dest-badge{background:#fff1e8;color:#FF5000}
+.code-sheet .code-box{margin-top:14px;border-radius:16px;padding:16px 14px;text-align:center}
+.code-sheet.eleme .code-box{background:linear-gradient(160deg,#EDF4FF,#E0EDFF);border:1px dashed #9dc2f5}
+.code-sheet.taobao .code-box{background:linear-gradient(160deg,#FFF3EB,#FFE8D9);border:1px dashed #f5b28e}
+.code-sheet .code-box code{font:850 13px/1.6 var(--mono);letter-spacing:.02em;display:block;word-break:break-all}
+.code-sheet.eleme .code-box code{color:#1258a8}
+.code-sheet.taobao .code-box code{color:#B23A00}
+.code-sheet .code-btn{width:100%;height:44px;border:0;border-radius:13px;margin-top:14px;font-size:12px;font-weight:850;color:#fff;cursor:pointer}
+.code-sheet.eleme .code-btn{background:linear-gradient(96deg,#4C9BFF,#1677FF)}
+.code-sheet.taobao .code-btn{background:linear-gradient(96deg,#FF7A3C,#FF5000)}
+.code-sheet .code-hint{margin-top:10px;font-size:9.5px;color:#a49d96;line-height:1.6;text-align:center}
+/* D 帧：跳转落地 */
+.flow-page{background:#faf9f6;align-items:center;padding:26px 20px;text-align:center}
+.flow-mark{width:64px;height:64px;border:1px dashed #bbb;border-radius:22px;display:grid;place-items:center;font-size:24px;margin:0 auto}
+.flow-page h1{font-size:18px;margin-top:14px}
+.flow-page p{font-size:10.5px;line-height:1.7;color:#999;margin-top:7px}
+.flow-nodes{display:flex;align-items:center;justify-content:center;gap:0;margin-top:16px}
+.flow-node{border:1px solid #e2ddd6;background:#fff;border-radius:14px;padding:10px 10px;min-width:92px;text-align:center}
+.flow-node small{display:block;font:700 8px var(--mono);color:#aaa;letter-spacing:.1em}
+.flow-node b{display:block;font-size:11px;margin-top:5px;line-height:1.4}
+.flow-node.dashed{border-style:dashed;background:transparent;color:#8f8880}
+.flow-link{width:26px;border-top:1.5px dashed #c9c2b8;position:relative}
+.flow-link::after{content:"";position:absolute;right:0;top:-3px;border:4px solid transparent;border-left-color:#c9c2b8}
+.info-card{width:100%;margin-top:16px;border:1px solid #eee;border-radius:16px;padding:14px;text-align:left;background:#fff}
+.info-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:10.5px;border-bottom:1px solid #f4f1ec}
+.info-row:last-child{border:0}
+.info-row span{color:#999;flex:none}
+.info-row b{font-weight:700;text-align:right;word-break:break-all}
+.webview-top{display:flex;align-items:center;gap:9px;padding:9px 14px;background:#f4f1ea;border-bottom:1px solid #e7e0d6;flex:none}
+.webview-back{width:30px;height:30px;border:0;border-radius:10px;background:#fff;color:#5a544e;cursor:pointer;font-size:15px}
+.webview-title{flex:1;text-align:center;font-size:13px;font-weight:800;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.webview-spacer{width:30px}
+.webview-domain{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#eceae4;font:600 9.5px var(--mono);color:#8f8780;border-bottom:1px solid #e3e0d8;flex:none}
+.webview-domain i{width:7px;height:7px;border-radius:50%;background:#4caf7d;flex:none}
+.webview-body{flex:1;min-height:0;overflow-y:auto;background:#fff}
+.webview-body img{width:100%;height:180px;object-fit:cover;display:block}
+.webview-cap{padding:14px 16px;font-size:10.5px;color:#8b847c;line-height:1.7;text-align:center}
+/* D4 口令对照 */
+.code-compare{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.code-mini{border-radius:16px;padding:12px 10px;text-align:left;border:1px solid}
+.code-mini.eleme{border-color:#bcd6f8;background:#f4f9ff}
+.code-mini.taobao{border-color:#f8c9a8;background:#fff8f2}
+.code-mini .dest-badge{display:inline-flex;border-radius:99px;padding:4px 9px;font-size:9px;font-weight:850}
+.code-mini.eleme .dest-badge{background:#e8f2ff;color:#1677ff}
+.code-mini.taobao .dest-badge{background:#fff1e8;color:#FF5000}
+.code-mini code{display:block;margin-top:9px;font:800 9.5px/1.5 var(--mono);word-break:break-all}
+.code-mini.eleme code{color:#1258a8}
+.code-mini.taobao code{color:#B23A00}
+.code-mini .mini-btn{width:100%;height:30px;border:0;border-radius:9px;margin-top:10px;font-size:9.5px;font-weight:850;color:#fff}
+.code-mini.eleme .mini-btn{background:#1677FF}
+.code-mini.taobao .mini-btn{background:#FF5000}
+/* 站内路径占位 */
+.station-page{background:var(--stamp-bg);align-items:center;justify-content:center;text-align:center;padding:30px}
+.station-mark{width:64px;height:64px;border:1px dashed #c8bfb2;border-radius:22px;display:grid;place-items:center;font-size:24px;color:#a2958a;background:rgba(255,255,255,.6)}
+.station-page h1{font-size:20px;margin-top:16px}
+.station-page p{font-size:11px;line-height:1.7;color:#999;margin-top:8px;max-width:250px}
+/* 占位 Tab 页 */
+.placeholder-page{background:#faf9f6;align-items:center;justify-content:center;text-align:center;padding:30px}
+.placeholder-icon{width:64px;height:64px;border-radius:22px;background:#f0ece5;display:grid;place-items:center;font-size:26px}
+.placeholder-page h1{font-size:20px;margin-top:18px}
+.placeholder-page p{font-size:11px;line-height:1.7;color:#999;margin-top:8px;max-width:240px}
+.notice-bar{margin:0 0 12px;border-radius:15px;background:#fff7ea;border:1px solid #eeddc4;color:#8a6a3d;font-size:10.5px;line-height:1.6;padding:11px 13px;display:flex;gap:8px;align-items:flex-start;text-align:left}
+.notice-bar i{font-style:normal;flex:none;width:16px;height:16px;border-radius:50%;background:#f3e0c2;display:grid;place-items:center;font-size:9px;color:#8a6a3d}
+.notice-bar.bad{background:#fdf0ec;border-color:#f0d3ca;color:#b0503b}
+.notice-bar.bad i{background:#f7dcd4;color:#b0503b}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{opacity:.45;transform:translateY(35px)}}
+@keyframes pop{from{opacity:.2;transform:translateY(-48%) scale(.9)}}
+@media(max-width:1220px){.inspector{display:none}.stage{padding-right:18px}}
+@media(max-width:900px){.app{grid-template-columns:210px minmax(520px,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="rail-head"><div class="eyebrow">HOME CONFIG · PAGES</div><div class="rail-title">首页配置改造 · 页面稿</div><div class="rail-sub">无流程版 · 首页 / 未配置金刚区 / 未配置 Banner / 双空</div></div>
+    <div class="rail-body" id="railBody"></div>
+  </aside>
+  <main class="stage">
+    <div class="stage-main">
+      <div class="stage-meta"><div class="stage-name"><i></i><span id="stageName">积分首页</span></div><select class="frame-select" id="frameSelect"></select></div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span class="status-icons"><i></i><i></i><i></i><b></b></span></div>
+        <div id="screen"></div><div id="tabbar"></div><div id="sheetRoot"></div><div id="toast"></div>
+      </div>
+    </div>
+    <aside class="inspector">
+      <div class="inspector-head"><div class="inspector-top"><span class="inspector-title">交互说明</span><span class="inspector-status" id="noteStatus">核心</span></div><div class="inspector-sub" id="noteSub"></div></div>
+      <div class="inspector-body" id="noteBody"></div>
+    </aside>
+  </main>
+</div>
+<script>
+"use strict";
+
+/* ================================================================
+ * ① B 端配置镜像（同源数据）：CONFIG ↔ B 端 4.1 金刚区 / 4.2 Banner / 4.3 弹窗 / 4.5 推广链接
+ *    字段名与 B 端《11-16首页配置改造.md》逐字段对齐，见 §NOTES 与交付说明对照表。
+ * ================================================================ */
+const STATION_ROUTES=["记一账","晒单活动","签单日历","淘转链","门店转链","外卖转链","积分明细","邀请好友"];
+
+const CONFIG={
+  entries:[ /* B 端 4.1 金刚区配置 */
+    {id:1,icon:"./assets/icons/points-jizhang.svg",name:"记一账",sort:1,status:"on",jumpType:"station",stationPath:"记一账",updatedAt:"2026-11-15 10:00"},
+    {id:2,icon:"./assets/icons/points-shaidan.svg",name:"晒单活动",sort:2,status:"on",jumpType:"station",stationPath:"晒单活动",updatedAt:"2026-11-15 10:00"},
+    {id:3,icon:"./assets/icons/points-qiandao.svg",name:"签单日历",sort:3,status:"on",jumpType:"station",stationPath:"签单日历",updatedAt:"2026-11-15 10:00"},
+    {id:4,icon:"./assets/icons/points-taolink.svg",name:"淘转链",sort:4,status:"on",jumpType:"code",codeText:"复制口令，打开淘宝搜索好物",codeTo:"taobao",updatedAt:"2026-11-15 10:05"},
+    {id:5,icon:"./assets/icons/points-shoplink.svg",name:"门店转链",sort:5,status:"on",jumpType:"code",codeText:"复制口令，打开饿了么领门店券",codeTo:"eleme",updatedAt:"2026-11-15 10:06"},
+    {id:6,icon:"./assets/icons/points-waimai.svg",name:"外卖转链",sort:6,status:"on",jumpType:"miniapp",appid:"wx8888888888",extPath:"pages/link/index",updatedAt:"2026-11-15 10:07"}
+  ],
+  banners:[ /* B 端 4.2 Banner 配置 */
+    {id:1,img:"./assets/ui/banner-xinren.jpg",name:"新人专享Banner",sort:1,status:"on",jumpType:"station",stationPath:"邀请好友",updatedAt:"2026-11-15 10:10"}
+  ],
+  popups:[ /* B 端 4.3 弹窗配置：status: running=进行中 | idle=不触发 */
+    {id:1,name:"新人礼包弹窗",img:"./assets/ui/banner-xinren.jpg",status:"running",ctaType:"station",stationPath:"邀请好友",updatedAt:"2026-11-15 10:20"},
+    {id:2,name:"外卖券提醒弹窗",img:"./assets/records/order-eleme-latte.webp",status:"idle",ctaType:"code",codeText:"复制口令，打开饿了么领外卖券",codeTo:"eleme",updatedAt:"2026-11-15 10:21"},
+    {id:3,name:"双11活动弹窗",img:"./assets/records/order-eleme-berry.webp",status:"idle",ctaType:"miniapp",appid:"wx6666666666",extPath:"pages/activity/index",updatedAt:"2026-11-15 10:22"},
+    {id:4,name:"签到提醒弹窗",img:"./assets/ui/banner-xinren.jpg",status:"idle",ctaType:"h5",h5:"https://m.example.com/sign",updatedAt:"2026-11-15 10:23"}
+  ],
+  links:[ /* B 端 4.5 推广链接：param 由系统生成，前端只读 */
+    {id:1,name:"抖音投放链接",popupId:2,param:"extra_popup=2",createdAt:"2026-11-15 11:00"}
+  ]
+};
+
+/* 配置变体：帧 C1–C5 通过切换 state.configVariant 应用补丁，不复制页面代码 */
+const CONFIG_VARIANTS={
+  default:{},
+  noneRunning:{popups:[{id:1,status:"idle"}]},
+  sortChanged:{entries:[{id:5,sort:1,name:"门店转链·新"}]},
+  entryDisabled:{entries:[{id:2,status:"off"}]},
+  bannerDisabled:{banners:[{id:1,status:"off"}]},
+  popupSwitch:{popups:[{id:1,status:"idle"},{id:3,status:"running"}]},
+  linkRemount:{links:[{id:1,popupId:4,param:"extra_popup=4"}]},
+  noEntries:{entries:[{id:1,status:"off"},{id:2,status:"off"},{id:3,status:"off"},{id:4,status:"off"},{id:5,status:"off"},{id:6,status:"off"}]},
+  noEntriesNoBanners:{entries:[{id:1,status:"off"},{id:2,status:"off"},{id:3,status:"off"},{id:4,status:"off"},{id:5,status:"off"},{id:6,status:"off"}],banners:[{id:1,status:"off"}]}
+};
+const VARIANT_LABEL={
+  default:"default（基线配置）",noneRunning:"noneRunning（无进行中弹窗）",
+  sortChanged:"sortChanged（5号 sort 5→1，名称改「门店转链·新」）",
+  entryDisabled:"entryDisabled（2号 晒单活动 停用）",
+  bannerDisabled:"bannerDisabled（Banner 停用）",
+  popupSwitch:"popupSwitch（进行中 1号→3号 双11）",
+  linkRemount:"linkRemount（抖音链接挂载 2号→4号，param=extra_popup=4）",
+  noEntries:"noEntries（金刚区全部未配置）",
+  noEntriesNoBanners:"noEntriesNoBanners（金刚区与 Banner 均未配置）"
+};
+
+/* ② 纯函数选择器：view 只调它们，不在 view 里写死入口 */
+function getConfig(){
+  const patch=CONFIG_VARIANTS[state.configVariant]||{};
+  const clone=id=>JSON.parse(JSON.stringify(id));
+  const cfg=clone(CONFIG);
+  ["entries","banners","popups","links"].forEach(list=>{
+    (patch[list]||[]).forEach(p=>{
+      const item=cfg[list].find(x=>x.id===p.id);
+      if(item)Object.assign(item,p);
+    });
+  });
+  return cfg;
+}
+function activeEntries(){
+  return getConfig().entries
+    .filter(e=>e.status==="on")
+    .sort((a,b)=>a.sort-b.sort||String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
+}
+function activeBanners(){
+  return getConfig().banners
+    .filter(b=>b.status==="on")
+    .sort((a,b)=>a.sort-b.sort||String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
+}
+function runningPopup(){
+  const list=getConfig().popups.filter(p=>p.status==="running");
+  return list[0]||null;
+}
+function mountedLink(){
+  const raw=state.params&&state.params.extra_popup;
+  if(!raw)return null;
+  const cfg=getConfig();
+  const link=cfg.links.find(l=>l.param==="extra_popup="+raw);
+  if(!link)return null;
+  const popup=cfg.popups.find(p=>p.id===link.popupId&&p.status==="idle");
+  return popup?{link,popup}:null;
+}
+const popupById=id=>getConfig().popups.find(p=>p.id===id)||null;
+
+/* ================================================================
+ * ③ 页面菜单：PAGE_DEFS → 自动生成 ROUTES / PAGE_TREE（一帧只挂一页）
+ * ================================================================ */
+/* 页面 Tab（对外可见）：弹窗生效 / 没弹窗 + 3 个空配置帧 */
+const PAGE_DEFS=[
+  {code:"A",group:"首页配置",page:"首页",kind:"points",
+   sheets:[],
+   frames:[
+     {key:"b-home-none",name:"无弹窗直接展示",variant:"noneRunning"}
+   ]},
+  {code:"B",group:"首页配置",page:"未配置金刚区",kind:"points",
+   sheets:[],
+   frames:[
+     {key:"cfg-no-entries",name:"金刚区为空",variant:"noEntries"}
+   ]},
+  {code:"C",group:"首页配置",page:"未配置 Banner",kind:"points",
+   sheets:[],
+   frames:[
+     {key:"cfg-no-banners",name:"Banner 为空",variant:"bannerDisabled"}
+   ]},
+  {code:"D",group:"首页配置",page:"金刚区与 Banner 均未配置",kind:"points",
+   sheets:[],
+   frames:[
+     {key:"cfg-none",name:"两者均为空",variant:"noEntriesNoBanners"}
+   ]}
+];
+
+/* 内部路由：不在页面 Tab 展示，供流程导航与跳转交互落地使用 */
+const HIDDEN_PAGE_DEFS=[
+  {code:"H1",group:"_hidden",page:"首页默认态",kind:"points",sheets:[],
+   frames:[
+     {key:"a-home-default",name:"首页默认态"},
+     {key:"a-home-running",name:"弹进行中弹窗",sheet:"popup-running"},
+     {key:"a-home-after-close",name:"关闭后再次进入 · 不再弹"},
+     {key:"a-code-eleme",name:"口令入口 · 饿了么",sheet:"code-eleme",codeTo:"eleme",codeText:"复制口令，打开饿了么领门店券"},
+     {key:"a-code-taobao",name:"口令入口 · 淘宝",sheet:"code-taobao",codeTo:"taobao",codeText:"复制口令，打开淘宝搜索好物"}
+   ]},
+  {code:"H2",group:"_hidden",page:"推广进入",kind:"points",
+   sheets:[
+     {key:"popup-mounted",name:"挂载弹窗（外卖券提醒）"},
+     {key:"popup-double11",name:"3号弹窗（双11活动）"},
+     {key:"popup-signin",name:"4号弹窗（签到提醒）"}
+   ],
+   frames:[
+     {key:"share-card",name:"分享卡片落地页",kind:"share"},
+     {key:"c1-promo-running",name:"不带参 + 有进行中",sheet:"popup-running"},
+     {key:"c2-promo-none",name:"不带参 + 无进行中",variant:"noneRunning"},
+     {key:"d1-promo-regular",name:"带参 + 有进行中：先常规",params:"2",sheet:"popup-running"},
+     {key:"d1-promo-mounted",name:"带参：关闭常规后弹挂载",params:"2",sheet:"popup-mounted"},
+     {key:"d2-promo-only-mounted",name:"带参 + 无进行中：只弹挂载",params:"2",variant:"noneRunning",sheet:"popup-mounted"},
+     {key:"d3-promo-invalid",name:"兜底：参数无效",params:"999",sheet:"popup-running"}
+   ]},
+  {code:"H3",group:"_hidden",page:"跳转落地",kind:"jump",sheets:[],
+   frames:[
+     {key:"jump-miniapp",name:"外部小程序",jumpTarget:{appid:"wx8888888888",extPath:"pages/link/index",from:"金刚区入口「外卖转链」"}},
+     {key:"jump-h5",name:"H5 链接",jumpTarget:{h5:"https://m.example.com/sign",from:"4号弹窗「签到提醒」CTA"}},
+     {key:"jump-station",name:"当前小程序路径",stationPage:"晒单活动"},
+     {key:"jump-code-compare",name:"口令去向对照"}
+   ]},
+  {code:"H4",group:"_hidden",page:"配置联动",kind:"points",sheets:[],
+   frames:[
+     {key:"cfg-sort-changed",name:"排序/名称变更",variant:"sortChanged"},
+     {key:"cfg-entry-disabled",name:"入口停用",variant:"entryDisabled"},
+     {key:"cfg-popup-switch",name:"换进行中弹窗",variant:"popupSwitch",sheet:"popup-double11"},
+     {key:"cfg-link-remount",name:"换绑挂载弹窗",variant:"linkRemount",params:"4",sheet:"popup-signin"}
+   ]},
+  {code:"H5",group:"_hidden",page:"站内与占位",kind:"station",sheets:[],
+   frames:[
+     {key:"station-page",name:"站内路由占位页"},
+     {key:"tab-stamp",name:"印章 Tab 占位",kind:"placeholder",tab:"stamp"},
+     {key:"tab-mall",name:"积分商城占位",kind:"placeholder",tab:"mall"},
+     {key:"tab-mine",name:"我的占位",kind:"placeholder",tab:"mine"}
+   ]}
+];
+
+const ROUTES={};
+const PAGE_TREE=[];
+(()=>{
+  let id=0;const groups=new Map();
+  PAGE_DEFS.concat(HIDDEN_PAGE_DEFS).forEach(p=>{
+    const page={code:p.code,name:p.page,kind:p.kind,frames:[],sheets:[],frameMeta:{},sheetMeta:{}};
+    p.frames.forEach(f=>{
+      id++;
+      ROUTES[f.key]={id,page:p.page,frame:f.name,name:`${p.page} · ${f.name}`,kind:f.kind||p.kind,
+        variant:f.variant||"default",params:f.params||null,sheet:f.sheet||null,
+        stationPage:f.stationPage||null,jumpTarget:f.jumpTarget||null,codeTo:f.codeTo||null,codeText:f.codeText||null,tab:f.tab};
+      page.frames.push(f.key);
+      page.frameMeta[f.key]={name:f.name,tag:f.variant&&f.variant!=="default"?"状态":"核心"};
+    });
+    (p.sheets||[]).forEach(s=>{page.sheets.push(s.key);page.sheetMeta[s.key]={name:s.name};});
+    if(p.group==="_hidden")return;
+    if(!groups.has(p.group))groups.set(p.group,[]);
+    groups.get(p.group).push(page);
+  });
+  groups.forEach((pages,group)=>PAGE_TREE.push({group,pages}));
+})();
+
+/* ④ 页面数据：仅保留页面 Tab（已移除流程） */
+const NOTES={
+  "a-home-default":{status:"核心",sections:[
+    {h:"数据来源",rows:["金刚区 ← CONFIG.entries 中 status=on，按 sort 升序（同 sort 按更新时间倒序）","Banner ← CONFIG.banners 中 status=on，按 sort 升序","红包区 ← 4.4 历史功能（本次改造不涉及），静态演示"]},
+    {h:"首页样式（三段式）",rows:["A 金刚区：一行 4 个自动换行，停用项不下发不占位","B Banner：金刚区下方，启用态按 sort 展示","C 红包区：淘宝闪购 / 美团红包双列，领取按钮可交互"]},
+    {h:"交互",rows:["点击入口按 jumpType 分发到 4 种跳转表现","「模拟带参数进入」可反复验证推广链路 D"]}
+  ]},
+  "a-home-running":{status:"核心",sections:[
+    {h:"触发规则",rows:["进入积分首页即检查 runningPopup()（运营手动开关，全局唯一）","触发时机：进首页即弹，不做延时 / 滚动触发"]},
+    {h:"弹窗内容",rows:["弹窗图片 ← 弹窗配置 img 字段","CTA 复用 4 种跳转方式，行为与金刚区入口完全一致"]},
+    {h:"关闭即去重",rows:["关闭弹窗（遮罩 / 按钮 / Esc）后，该弹窗记入本次会话已关闭集合","再次进入首页不再弹出（评审时可用「再次进入」按钮验证）"]}
+  ]},
+  "a-home-after-close":{status:"核心",sections:[
+    {h:"口径",rows:["用户已关闭过「进行中」弹窗 → 本次会话内不再弹出","点击下方「再次进入」按钮：若弹窗已关闭，仅 Toast 提示，不弹窗"]},
+    {h:"恢复演示",rows:["点击「重置会话」清除去重记录，可重新演示自动弹窗"]},
+    {h:"边界",rows:["去重范围为前端会话维度；跨会话 / 跨天的频控由后端口径决定，本稿不涉及"]}
+  ]},
+  "a-code-eleme":{status:"核心",sections:[
+    {h:"触发",rows:["点击金刚区「门店转链」（jumpType=code，去向=饿了么）"]},
+    {h:"弹窗形态",rows:["按「去向」渲染饿了么样式与文案（蓝色系 Bottom Sheet）","口令文本 ← 配置 codeText 字段"]},
+    {h:"交互",rows:["「复制口令」→ Toast「口令已复制」","口令核销在后端完成，前端不模拟"]}
+  ]},
+  "a-code-taobao":{status:"核心",sections:[
+    {h:"触发",rows:["点击金刚区「淘转链」（jumpType=code，去向=淘宝）"]},
+    {h:"弹窗形态",rows:["按「去向」渲染淘宝样式与文案（橙红系 Bottom Sheet）","与饿了么样式可明确区分"]},
+    {h:"交互",rows:["「复制口令」→ Toast「口令已复制」"]}
+  ]},
+  "b-home-none":{status:"核心",sections:[
+    {h:"入口条件",rows:["变体 noneRunning：唯一「进行中」弹窗被运营关闭，全部转「不触发」"]},
+    {h:"表现",rows:["常规进入首页直接展示，不弹任何东西","金刚区 / Banner / 红包区三区正常渲染，不留白不塌陷"]},
+    {h:"口径",rows:["「进行中」由运营手动开关控制，不是优先级自动取值","不触发弹窗仅可被推广链接挂载后额外弹出（挂载只认 extra_popup 参数）"]}
+  ]},
+  "share-card":{status:"核心",sections:[
+    {h:"入口来源",rows:["微信聊天内的分享 / 推广小程序卡片（样式移植自奶茶争霸二期分享帧）","卡片由微信渲染，前端只传标题、分享图、路径参数"]},
+    {h:"进入行为",rows:["点击卡片 → 落地积分首页","不带参推广链接：等同主动进入，只看「进行中」弹窗（见「路径未带弹窗参数」两条流程）","带参推广链接：叠加挂载弹窗（见「路径带弹窗参数」流程）"]},
+    {h:"边界",rows:["卡片样式与文案由微信统一渲染，本稿仅还原聊天上下文"]}
+  ]},
+  "c1-promo-running":{status:"核心",sections:[
+    {h:"子场景 C1",rows:["推广卡片进入 + 链接不带参 + 后台有「进行中」弹窗"]},
+    {h:"表现",rows:["行为与常规进入一致：进首页弹进行中弹窗","关闭常规弹窗后无后续弹层——挂载弹窗不出现（挂载只认 extra_popup 参数）"]},
+    {h:"验证要点",rows:["推广入口本身不改变弹窗逻辑，只看参数"]}
+  ]},
+  "c2-promo-none":{status:"核心",sections:[
+    {h:"子场景 C2",rows:["推广卡片进入 + 链接不带参 + 后台无「进行中」弹窗"]},
+    {h:"表现",rows:["无任何弹窗，首页直接展示","三区渲染正常"]},
+    {h:"验证要点",rows:["不带参的推广进入完全回落到常规进入逻辑"]}
+  ]},
+  "d1-promo-regular":{status:"核心",sections:[
+    {h:"子场景 D1",rows:["推广链接携带 ?extra_popup=2（state.params.extra_popup=2）"]},
+    {h:"触发顺序",rows:["先弹常规「进行中」弹窗（1 号新人礼包）","关闭后接着弹链接挂载弹窗（顺序：常规 → 挂载）"]},
+    {h:"口径",rows:["常规弹窗与挂载弹窗叠加生效，不是二选一"]}
+  ]},
+  "d1-promo-mounted":{status:"核心",sections:[
+    {h:"触发",rows:["关闭常规弹窗后自动弹出挂载弹窗","挂载弹窗 ← links 中 param=extra_popup=2 命中的 popupId=2"]},
+    {h:"限制",rows:["一条推广链接只挂 1 个弹窗","只能挂「不触发」状态的弹窗"]},
+    {h:"弹窗内容",rows:["2 号外卖券提醒弹窗，CTA=口令（饿了么）"]}
+  ]},
+  "d2-promo-only-mounted":{status:"核心",sections:[
+    {h:"子场景 D2",rows:["带参进入 + 后台无「进行中」弹窗（变体 noneRunning）"]},
+    {h:"表现",rows:["跳过常规弹窗，直接弹出链接挂载的 2 号弹窗","无常规弹窗时挂载弹窗不受「先常规后挂载」顺序约束"]},
+    {h:"验证要点",rows:["与 D1 对照：挂载弹窗是否弹出只由参数决定，与有无进行中弹窗无关"]}
+  ]},
+  "d3-promo-invalid":{status:"状态",sections:[
+    {h:"异常场景",rows:["extra_popup=999 指向不存在的弹窗"]},
+    {h:"兜底",rows:["只弹常规「进行中」弹窗","不报错、不空白，页面表现与常规进入一致"]},
+    {h:"口径",rows:["前端只解析参数，参数格式由 B 端定义（extra_popup=弹窗ID）"]}
+  ]},
+  "cfg-sort-changed":{status:"状态",sections:[
+    {h:"配置变更",rows:["变体 sortChanged：5 号「门店转链」sort 5→1，名称改「门店转链·新」"]},
+    {h:"渲染结果",rows:["金刚区第一位变成「门店转链·新」","其余入口顺序后移，一行 4 个规则不变"]},
+    {h:"验证要点",rows:["首页渲染 = activeEntries() 结果，不是写死数组"]}
+  ]},
+  "cfg-entry-disabled":{status:"状态",sections:[
+    {h:"配置变更",rows:["变体 entryDisabled：2 号「晒单活动」状态=停用"]},
+    {h:"渲染结果",rows:["首页只剩 5 个入口","一行 4 个、第二行 1 个，换行位置随之变化"]},
+    {h:"口径",rows:["停用入口不下发、不渲染、不占位"]}
+  ]},
+  "cfg-banner-disabled":{status:"状态",sections:[
+    {h:"配置变更",rows:["变体 bannerDisabled：Banner 状态=停用"]},
+    {h:"渲染结果",rows:["金刚区下方 Banner 位消失","不塌陷、不留白框，红包区上移补位"]},
+    {h:"口径",rows:["停用 Banner 不进入 C 端渲染数据"]}
+  ]},
+  "cfg-popup-switch":{status:"状态",sections:[
+    {h:"配置变更",rows:["变体 popupSwitch：进行中从 1 号换到 3 号（双11活动弹窗）","置 3 号为「进行中」时 1 号自动转「不触发」"]},
+    {h:"渲染结果",rows:["首页弹出 3 号双11弹窗，CTA=外部小程序 wx6666666666"]},
+    {h:"验证要点",rows:["弹窗内容 = runningPopup() 结果，不是固定帧"]}
+  ]},
+  "cfg-link-remount":{status:"状态",sections:[
+    {h:"配置变更",rows:["变体 linkRemount：抖音投放链接挂载从 2 号改到 4 号（签到提醒）","链接参数由系统自动更新为 extra_popup=4"]},
+    {h:"渲染结果",rows:["推广进入弹出的挂载弹窗随之变为 4 号（CTA=H5 链接）"]},
+    {h:"口径",rows:["param 只读，前端只解析 extra_popup 取值"]}
+  ]},
+  "jump-miniapp":{status:"流程",sections:[
+    {h:"跳转配置",rows:["appid + 外部页面路径，来自入口 / 弹窗的 miniapp 配置"]},
+    {h:"表现",rows:["用虚线流程节点表达跳转链路，不还原目标小程序页面","展示来源、appid、页面路径三段"]},
+    {h:"边界",rows:["不实现真实 wx.miniProgram.navigateTo，仅说明帧"]}
+  ]},
+  "jump-h5":{status:"流程",sections:[
+    {h:"跳转配置",rows:["H5 链接 ← 配置 h5 字段"]},
+    {h:"表现",rows:["手机内 webview 外壳：返回 / 标题 / 域名条","内容用占位图 + 「H5 页面由 webview 承载」说明"]},
+    {h:"边界",rows:["不实现真实 webview 加载"]}
+  ]},
+  "jump-station":{status:"流程",sections:[
+    {h:"跳转配置",rows:["站内页面路径为下拉选择，选项固定 8 个路由","本帧所选：晒单活动"]},
+    {h:"表现",rows:["站内路由占位页，标题 = 所选路由名，带返回"]},
+    {h:"路由表",rows:[STATION_ROUTES.join(" / ")]}
+  ]},
+  "jump-code-compare":{status:"流程",sections:[
+    {h:"对照内容",rows:["同帧左右对照饿了么 / 淘宝两种口令弹窗样式","两套视觉（配色、去向徽标、口令文案）可明确区分"]},
+    {h:"口径",rows:["口令弹窗只按「去向」渲染样式与文案","核销在后端，前端只负责展示与复制"]}
+  ]},
+  "station-page":{status:"核心",sections:[
+    {h:"入口",rows:["点击 jumpType=station 的入口 / Banner / 弹窗 CTA"]},
+    {h:"表现",rows:["站内路由占位页：标题 = 所选路由名","真实页面由对应业务线承载，本稿只表达跳转结果"]},
+    {h:"路由表",rows:["下拉选项固定 8 个：记一账 / 晒单活动 / 签单日历 / 淘转链 / 门店转链 / 外卖转链 / 积分明细 / 邀请好友"]}
+  ]},
+  "tab-stamp":{status:"范围",sections:[{h:"本稿边界",rows:["印章模块由《印章_交互稿.html》单独承载，本稿不展开"]}]},
+  "tab-mall":{status:"范围",sections:[{h:"本稿边界",rows:["积分商城不在本次改造范围，仅占位"]}]},
+  "tab-mine":{status:"范围",sections:[{h:"本稿边界",rows:["「我的」不在本次改造范围，仅占位"]}]},
+  "cfg-no-entries":{status:"状态",sections:[
+    {h:"配置变更",rows:["变体 noEntries：金刚区全部入口未配置（status=off）"]}
+  ]},
+  "cfg-no-banners":{status:"状态",sections:[
+    {h:"配置变更",rows:["变体 bannerDisabled：Banner 位未配置（status=off）"]}
+  ]},
+  "cfg-none":{status:"状态",sections:[
+    {h:"配置变更",rows:["变体 noEntriesNoBanners：金刚区与 Banner 均未配置"]}
+  ]},
+  "popup-running":{status:"核心",sections:[
+    {h:"数据来源",rows:["弹窗 ← runningPopup()（全局唯一「进行中」，运营手动开关）","图片与 CTA 均来自弹窗配置字段"]},
+    {h:"CTA",rows:["复用 4 种跳转方式，行为与金刚区入口完全一致"]},
+    {h:"关闭",rows:["遮罩 / 关闭按钮 / Esc；关闭后记入会话去重，本次会话不再弹"]},
+    {h:"待评审",rows:["触发时机已按确认口径「进首页即弹」，无延时 / 滚动触发"]}
+  ]},
+  "popup-mounted":{status:"核心",sections:[
+    {h:"数据来源",rows:["弹窗 ← links 中 param 命中的挂载弹窗（必须为「不触发」状态）"]},
+    {h:"顺序",rows:["带参进入且有进行中弹窗：常规先弹，关闭后弹挂载弹窗","无进行中弹窗（D2）：直接弹挂载弹窗"]},
+    {h:"限制",rows:["一条推广链接只挂 1 个弹窗"]}
+  ]},
+  "popup-double11":{status:"状态",sections:[
+    {h:"数据来源",rows:["3 号双11活动弹窗（变体 popupSwitch 下为「进行中」）"]},
+    {h:"CTA",rows:["外部小程序：appid wx6666666666 + pages/activity/index"]}
+  ]},
+  "popup-signin":{status:"状态",sections:[
+    {h:"数据来源",rows:["4 号签到提醒弹窗（变体 linkRemount 下被抖音链接挂载）"]},
+    {h:"CTA",rows:["H5 链接：https://m.example.com/sign，webview 承载"]}
+  ]},
+  "code-eleme":{status:"核心",sections:[
+    {h:"去向样式",rows:["饿了么：蓝色系 Bottom Sheet + 蓝色复制按钮","口令文本 ← 配置 codeText"]},
+    {h:"交互",rows:["复制口令 → Toast「口令已复制」","核销在后端，前端不模拟"]}
+  ]},
+  "code-taobao":{status:"核心",sections:[
+    {h:"去向样式",rows:["淘宝：橙红系 Bottom Sheet + 橙红复制按钮","与饿了么样式可明确区分"]},
+    {h:"交互",rows:["复制口令 → Toast「口令已复制」"]}
+  ]}
+};
+
+/* ⑥ STATE：dismissed = 本次会话已关闭的弹窗（关闭后不再弹）；claimed = 已领取的红包 */
+let state={
+  currentRoute:"b-home-none",sheet:null,sheetOrigin:null,
+  globalTab:"points",configVariant:"default",params:{extra_popup:null},
+  stationPage:null,jumpTarget:null,codeText:null,codeTo:null,
+  pendingMounted:false,backRoute:"a-home-default",
+  dismissed:new Set(),claimed:new Set()
+};
+
+const routeOf=k=>ROUTES[k]||ROUTES["a-home-default"];
+const pageByCode=code=>{for(const g of PAGE_TREE){const p=g.pages.find(x=>x.code===code);if(p)return p;}return null;};
+const pad2=n=>String(n).padStart(2,"0");
+
+/* ⑦ 导航与场景恢复 */
+function go(route,patch){
+  state.sheet=null;state.pendingMounted=false;
+  const r=routeOf(route);
+  state.configVariant=r.variant||"default";
+  state.params={extra_popup:r.params||null};
+  state.stationPage=r.stationPage||null;
+  state.jumpTarget=r.jumpTarget||null;
+  state.codeText=r.codeText||null;state.codeTo=r.codeTo||null;
+  if(patch)Object.assign(state,patch);
+  if(r.kind==="points"&&!r.tab)state.globalTab="points";
+  if(r.tab)state.globalTab=r.tab;
+  state.currentRoute=route;
+  if(r.sheet){state.sheet=r.sheet;state.sheetOrigin=route;
+    state.pendingMounted=(r.sheet==="popup-running"&&!!mountedLink());}
+  renderAll();
+}
+function applyStepState(step){
+  const r=routeOf(step.route);
+  state.sheet=null;state.pendingMounted=false;
+  state.configVariant=step.variant||r.variant||"default";
+  state.params={extra_popup:step.params!=null?step.params:(r.params||null)};
+  state.stationPage=step.stationPage||r.stationPage||null;
+  state.jumpTarget=step.jumpTarget||r.jumpTarget||null;
+  state.codeText=step.codeText||r.codeText||null;
+  state.codeTo=step.codeTo||r.codeTo||null;
+  state.currentRoute=step.route;
+  if(r.kind==="points"&&!r.tab)state.globalTab="points";
+  if(r.tab)state.globalTab=r.tab;
+  if(step.autoSheet){state.sheet=step.autoSheet;state.sheetOrigin=step.route;
+    state.pendingMounted=(step.autoSheet==="popup-running"&&!!mountedLink());}
+  if(step.focus==="copy")setTimeout(()=>toast("口令已复制"),350);
+}
+function openSheet(key,origin){
+  state.sheet=key;state.sheetOrigin=origin||state.currentRoute;
+  renderSheet();renderNotes();
+}
+function closeSheet(){
+  const was=state.sheet;
+  state.sheet=null;
+  if(was&&was.startsWith("popup-"))state.dismissed.add(was); /* 关闭即去重：本次会话不再弹 */
+  if(was==="popup-running"&&state.pendingMounted){
+    const m=mountedLink();
+    if(m&&!state.dismissed.has("popup-mounted")){state.pendingMounted=false;state.sheet="popup-mounted";state.sheetOrigin=state.currentRoute;renderSheet();renderNotes();toast("常规弹窗已关闭，弹出推广挂载弹窗");return;}
+    state.pendingMounted=false;
+  }
+  if(was&&was.startsWith("popup-"))toast("该弹窗已关闭，本次会话不再弹出");
+  renderSheet();renderNotes();
+}
+let toastTimer=null;
+function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.add("on");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("on"),2200);}
+
+/* ⑧ 跳转分发：入口 / Banner / 弹窗 CTA 共用 */
+function jumpByConfig(obj,src){
+  if(obj.jumpType==="station"){go("station-page",{stationPage:obj.stationPath,backRoute:state.currentRoute});toast(`跳转站内页面「${obj.stationPath}」`);return;}
+  if(obj.jumpType==="miniapp"){go("jump-miniapp",{jumpTarget:{appid:obj.appid,extPath:obj.extPath,from:src}});return;}
+  if(obj.jumpType==="h5"){go("jump-h5",{jumpTarget:{h5:obj.h5,from:src}});return;}
+  if(obj.jumpType==="code"){state.codeText=obj.codeText;state.codeTo=obj.codeTo;openSheet(obj.codeTo==="eleme"?"code-eleme":"code-taobao");return;}
+}
+
+/* ⑨ PAGE VIEWS */
+/* 红包区数据（B 端 4.4 历史功能，本次改造不涉及，静态演示） */
+const HOME_COUPONS=[
+  {tone:"tao",badge:"淘",brand:"淘宝闪购",items:[
+    {title:"淘宝10-18元红包",sub:"疯抢大额红包",btn:"领取 +5"},
+    {title:"叠加红包",sub:"同时使用更优惠",btn:"领取 +5"},
+    {title:"领最高20元红包",sub:"天天必领",btn:"领取 +5"}
+  ]},
+  {tone:"mt",badge:"美",brand:"美团红包",items:[
+    {title:"美团10-18元红包",sub:"天天都能领",btn:"去下单"},
+    {title:"甄选好店",sub:"优惠专享",btn:"领取 +5"},
+    {title:"9.9购大额神券包",sub:"抵扣省积分",btn:"领取 +5"}
+  ]}
+];
+const PROMO_ROUTES=["c1-promo-running","c2-promo-none","d1-promo-regular","d1-promo-mounted","d2-promo-only-mounted","d3-promo-invalid"];
+
+function couponsHtml(){
+  return HOME_COUPONS.map((c,ci)=>`<div class="pts-col ${c.tone==="mt"?"mt":""}">
+      <span class="pts-col-stamp">${c.badge}</span>
+      <div class="pts-col-brand"><span class="pts-brand-dot">${c.badge}</span><b>${c.brand}</b></div>
+      ${c.items.map((it,ii)=>{const key=`${ci}-${ii}`;const got=state.claimed.has(key);
+        const btnTxt=it.btn.startsWith("领取")?(got?"已领取":it.btn):it.btn;
+        return `<div class="pts-coupon ${got&&it.btn.startsWith("领取")?"got":""}"><b>${it.title}</b><span>${it.sub}</span><button data-act="coupon-claim" data-key="${key}" data-claim="${it.btn.startsWith("领取")?1:0}" ${got&&it.btn.startsWith("领取")?"disabled":""}>${btnTxt}</button></div>`;}).join("")}
+    </div>`).join("");
+}
+
+function pointsView(){
+  const entries=activeEntries();
+  const banners=activeBanners();
+  const running=runningPopup();
+  const mounted=mountedLink();
+  const route=routeOf(state.currentRoute);
+  const isPromo=PROMO_ROUTES.includes(state.currentRoute);
+  const bannerHtml=banners.length
+    ?banners.map(b=>`<button class="banner-card" data-act="banner-click" data-id="${b.id}" aria-label="Banner：${b.name}">
+        <img class="banner-img" src="${b.img}" alt="${b.name}">
+        <span class="banner-foot"><span><b>${b.name}</b><small>点击按所配跳转方式执行（本张：${({station:"站内路径",miniapp:"外部小程序",h5:"H5 链接",code:"口令"})[b.jumpType]}）</small></span><span class="banner-btn">查看</span></span>
+      </button>`).join("")
+    :`<div class="banner-empty">Banner 位：当前无启用 Banner（配置停用后不下发、不占位）</div>`;
+  return `<div class="mobile-page points-page">
+    <div class="page-scroll pts-scroll">
+      <section class="pts-head">
+        <div class="pts-cap"><div class="pts-cap-pill"><button data-act="points-cap" aria-label="更多">•••</button><button data-act="points-cap" aria-label="收起">◎</button></div></div>
+        <h1 class="pts-title"><span>领券下单</span>，自动记账</h1>
+        ${entries.length?`<div class="pts-grid" role="navigation" aria-label="金刚区">${entries.map(e=>`<button class="pts-entry" data-act="entry-click" data-id="${e.id}" title="${e.name} · ${({station:"站内路径",miniapp:"外部小程序",h5:"H5 链接",code:"口令"})[e.jumpType]}"><img src="${e.icon}" alt="${e.name}"><span>${e.name}</span><span class="jt-chip">${({station:"站内",miniapp:"小程序",h5:"H5",code:e.codeTo==="eleme"?"口令·饿了么":"口令·淘宝"})[e.jumpType]}</span></button>`).join("")}</div>`:`<div class="banner-empty">金刚区：当前无启用入口（未配置不下发、不占位）</div>`}
+      </section>
+      <div class="pts-body">
+        ${state.currentRoute.startsWith("cfg")?`<div class="notice-bar"><i>!</i><div>本帧为配置变体演示：当前变体 <b>${VARIANT_LABEL[state.configVariant]||state.configVariant}</b>，页面内容完全由该变体重新派生，页面代码与基线帧相同。</div></div>`:""}
+        <div class="pts-sec-head"><h2>为你推荐</h2><span>B 区 · 金刚区下方 Banner 位</span></div>
+        ${bannerHtml}
+        <div class="pts-sec-head"><h2>领外卖红包</h2><span>C 区 · 历史功能（4.4），静态演示</span></div>
+        <div class="pts-cols">${couponsHtml()}</div>
+        ${running&&!state.dismissed.has("popup-running")?`<div class="source-tip"><i>▸</i><span>本帧触发进行中弹窗：${running.name}（进首页即弹，见弹层）</span></div>`:(running&&state.dismissed.has("popup-running")?`<div class="source-tip"><i>✓</i><span>进行中弹窗「${running.name}」已在本次会话被关闭，再次进入不再弹出</span></div>`:`<div class="source-tip"><i>✓</i><span>当前无「进行中」弹窗（runningPopup() 为空）${mounted?"，推广挂载弹窗将按规则弹出":""}</span></div>`)}
+        <div class="sim-row">
+          <button class="hot" data-act="simulate-promo">模拟带参进入（extra_popup=2）</button>
+          <button data-act="simulate-enter">再次进入 · 验证不再弹</button>
+          <button data-act="reset-session">重置会话</button>
+        </div>
+        <div class="cfg-strip">
+          <b>配置快照</b><span>变体 ${VARIANT_LABEL[state.configVariant]||state.configVariant}</span>
+          <b>extra_popup</b><span>${state.params.extra_popup?state.params.extra_popup:"无（不带参）"}</span>
+          <b>金刚区</b><span>${entries.length} 条启用 ← CONFIG.entries（status=on，sort 升序）</span>
+          <b>Banner</b><span>${banners.length} 张启用 ← CONFIG.banners</span>
+          <b>进行中</b><span>${running?`${running.id} 号 ${running.name}${state.dismissed.has("popup-running")?"（已关闭·不再弹）":""}`:"无（全部不触发）"}</span>
+          <b>挂载弹窗</b><span>${mounted?`${mounted.popup.id} 号 ${mounted.popup.name}（${mounted.link.name}）${state.dismissed.has("popup-mounted")?"（已关闭·不再弹）":""}`:"本参数未命中可挂载弹窗"}</span>
+          <b>会话去重</b><span>${state.dismissed.size?`已关闭：${[...state.dismissed].join("、")}`:"无已关闭弹窗"}</span>
+        </div>
+        ${isPromo?`<div class="source-tip" style="margin-top:9px"><i>${state.currentRoute.startsWith("c")?"✓":"!"}</i><span>${state.currentRoute.startsWith("c")?"推广进入 · 不带参：行为等同常规进入，挂载弹窗不出现（挂载只认 extra_popup 参数）。":"推广进入 · 带参：常规弹窗先弹，关闭后弹挂载弹窗（顺序：常规 → 挂载）；无进行中弹窗时直接弹挂载弹窗。"}</span></div>`:""}
+      </div>
+    </div>
+  </div>`;
+}
+
+function stationView(){
+  const name=state.stationPage||STATION_ROUTES[0];
+  const idx=STATION_ROUTES.indexOf(name);
+  return `<div class="mobile-page station-page">
+    <div class="product-top" style="position:absolute;top:0;left:0;right:0"><button class="round-btn" data-act="back-home" aria-label="返回">‹</button><div class="product-title">${name}</div><div class="top-spacer"></div></div>
+    <div class="station-mark">◧</div>
+    <h1>站内页面 · ${name}</h1>
+    <p>「${name}」为站内下拉路由表中的页面（第 ${idx+1} / ${STATION_ROUTES.length} 项）。真实页面由对应业务线承载，本占位帧只表达「当前小程序路径」跳转的落地结果。</p>
+    <p style="font:600 9.5px var(--mono);color:#b0a89e;margin-top:14px">路由表：${STATION_ROUTES.join(" / ")}</p>
+    <button class="sim-row" style="display:block;margin-top:18px;padding:9px 16px;border:0;border-radius:11px;background:var(--stamp-ink);color:#fff;font-size:11px;font-weight:800;cursor:pointer" data-act="back-home">返回积分首页</button>
+  </div>`;
+}
+
+function jumpMiniappView(){
+  const t=state.jumpTarget||{appid:"wx8888888888",extPath:"pages/link/index",from:"金刚区入口「外卖转链」"};
+  return `<div class="mobile-page flow-page">
+    <div class="flow-mark">⧉</div>
+    <h1>跳转 · 外部小程序</h1>
+    <p>jumpType = miniapp。点击入口 / Banner / 弹窗 CTA 后，跳转到目标小程序的指定页面。</p>
+    <div class="flow-nodes">
+      <div class="flow-node"><small>SOURCE</small><b>${t.from||"首页入口"}</b></div>
+      <span class="flow-link"></span>
+      <div class="flow-node dashed"><small>TARGET APP</small><b>${t.appid}</b></div>
+      <span class="flow-link"></span>
+      <div class="flow-node dashed"><small>PAGE PATH</small><b>${t.extPath}</b></div>
+    </div>
+    <div class="info-card">
+      <div class="info-row"><span>来源</span><b>${t.from||"—"}</b></div>
+      <div class="info-row"><span>目标 AppID</span><b>${t.appid}</b></div>
+      <div class="info-row"><span>页面路径</span><b>${t.extPath}</b></div>
+      <div class="info-row"><span>承载方式</span><b>宿主小程序拉起目标小程序</b></div>
+    </div>
+    <p style="margin-top:14px">说明帧：不还原目标小程序页面，不调用真实 wx.miniProgram 接口。</p>
+    <div class="sim-row" style="width:100%"><button data-act="back-home">返回来源页</button></div>
+  </div>`;
+}
+
+function jumpH5View(){
+  const t=state.jumpTarget||{h5:"https://m.example.com/sign",from:"4号弹窗「签到提醒」CTA"};
+  let domain="m.example.com",title="活动页面";
+  try{const u=new URL(t.h5);domain=u.host;title=decodeURIComponent(u.pathname.replace(/^\//,""))||"活动页面";}catch(e){}
+  return `<div class="mobile-page" style="background:#fff">
+    <div class="webview-top"><button class="webview-back" data-act="back-home" aria-label="返回">‹</button><div class="webview-title">${title}</div><div class="webview-spacer"></div></div>
+    <div class="webview-domain"><i></i><span>${domain}</span><span style="margin-left:auto;color:#b5aea6">由小程序 webview 承载</span></div>
+    <div class="webview-body">
+      <img src="./assets/ui/banner-xinren.jpg" alt="H5 页面占位图">
+      <div class="webview-cap">H5 页面由小程序 webview 承载<br><span style="font:600 9.5px var(--mono);color:#b5aea6">${t.h5}</span><br><br>跳转来源：${t.from}<br>交互稿不实现真实 webview 加载，仅表达落地形态。</div>
+    </div>
+  </div>`;
+}
+
+function jumpCodeCompareView(){
+  return `<div class="mobile-page" style="background:#fff">
+    <div class="product-top"><button class="round-btn" data-act="back-home" aria-label="返回">‹</button><div class="product-title">口令去向对照</div><div class="top-spacer"></div></div>
+    <div class="page-scroll">
+      <div class="pts-sec-head" style="margin-top:4px"><h2>两套去向样式</h2><span>jumpType=code · codeTo 决定</span></div>
+      <div class="code-compare">
+        <div class="code-mini eleme"><span class="dest-badge">去向 · 饿了么</span><code>复制口令，打开饿了么领门店券</code><button class="mini-btn" data-act="copy-code" data-code="复制口令，打开饿了么领门店券">复制口令</button></div>
+        <div class="code-mini taobao"><span class="dest-badge">去向 · 淘宝</span><code>复制口令，打开淘宝搜索好物</code><button class="mini-btn" data-act="copy-code" data-code="复制口令，打开淘宝搜索好物">复制口令</button></div>
+      </div>
+      <div class="source-tip"><i>✓</i><span>口令弹窗只按「去向」渲染两套样式与文案：饿了么蓝色系 / 淘宝橙红系，可明确区分。核销在后端完成，前端只负责展示与复制。</span></div>
+      <div class="info-card">
+        <div class="info-row"><span>配置来源</span><b>入口 / 弹窗的 codeText + codeTo 字段</b></div>
+        <div class="info-row"><span>交互</span><b>复制口令 → Toast「口令已复制」</b></div>
+        <div class="info-row"><span>核销</span><b>后端完成，前端不模拟</b></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function placeholderView(tab){
+  const map={stamp:["印章","◎","印章模块由《印章_交互稿.html》单独承载。"],mall:["积分商城","◇","积分商城不在本次改造范围，仅占位。"],mine:["我的","○","「我的」不在本次改造范围，仅占位。"]};
+  const [name,ic,copy]=map[tab];return `<div class="mobile-page placeholder-page"><div class="placeholder-icon">${ic}</div><h1>${name}</h1><p>${copy}<br>本交互稿只覆盖积分首页配置改造。</p></div>`;
+}
+
+function frameView(){
+  const r=routeOf(state.currentRoute);
+  if(r.kind==="points")return pointsView();
+  if(r.kind==="share")return shareCardView();
+  if(r.kind==="station")return stationView();
+  if(r.kind==="jump"){
+    if(state.currentRoute==="jump-miniapp")return jumpMiniappView();
+    if(state.currentRoute==="jump-h5")return jumpH5View();
+    if(state.currentRoute==="jump-code-compare")return jumpCodeCompareView();
+    return stationView();
+  }
+  if(r.kind==="placeholder")return placeholderView(r.tab||"mall");
+  return pointsView();
+}
+
+/* 分享卡片落地页：微信聊天内点击小程序卡片进入（样式移植自奶茶争霸二期 shareFriendView） */
+function shareCardView(){
+  return `<div class="p wx-page">
+    <div class="wx-nav">
+      <button class="wx-back" data-act="back-home" aria-label="返回">‹</button>
+      <div class="wx-nav-c">
+        <div class="wx-title">阿方</div>
+        <div class="wx-sub">我分享给好友的页面</div>
+      </div>
+      <span class="wx-more">···</span>
+    </div>
+    <div class="wx-scroll">
+      <div class="wx-time">今天 12:30</div>
+      <div class="wx-msg">
+        <div class="wx-avatar">方</div>
+        <div class="wx-bubble"><div class="wx-bubble-inner"><p>我刚薅了一波外卖红包，你也来领！</p></div></div>
+      </div>
+      <div class="wx-msg">
+        <div class="wx-avatar">方</div>
+        <div class="wx-mini-share" data-act="enter-from-share" role="button" aria-label="点击小程序卡片进入积分首页">
+          <div class="wx-mini-head">
+            <div class="wx-mini-avatar">积</div>
+            <span class="wx-mini-appname">积分小程序</span>
+          </div>
+          <div class="wx-mini-desc">领券下单，自动记账！点进来领外卖红包～</div>
+          <div class="wx-mini-banner">
+            <div style="height:104px;border-radius:8px;background:#EFF7EF;border:1px dashed #C7D6BA;display:grid;place-items:center">
+              <span style="font-size:10px;color:#8AA88F;letter-spacing:.04em">分享图 · 5:4 · UI 出图</span>
+            </div>
+          </div>
+          <div class="wx-mini-foot"><span>▣</span><span>小程序</span></div>
+        </div>
+      </div>
+      <div class="wx-time" style="margin-top:18px">点击上方卡片进入小程序 · 分享进入流程从这一帧开始</div>
+    </div>
+  </div>`;
+}
+
+/* ⑩ SHEET / MODAL VIEWS */
+function popupModal(p,opts){
+  if(!p)return "";
+  const mounted=!!(opts&&opts.mounted);
+  const ctaLabel=({station:`去${p.stationPath||"站内页面"}`,miniapp:"去活动小程序",h5:"打开活动页面",code:"复制口令领券"})[p.ctaType]||"查看详情";
+  const jtLabel=({station:"当前小程序路径",miniapp:"外部小程序",h5:"H5 链接",code:"口令"})[p.ctaType]||"";
+  return `<div class="modal-mask" data-act="close-sheet"></div><div class="modal">
+    <button class="modal-x" data-act="close-sheet" aria-label="关闭">×</button>
+    <img class="modal-img" src="${p.img}" alt="${p.name}">
+    <div style="margin-top:12px"><span class="pop-tag ${mounted?"mounted":"running"}">${mounted?"推广挂载 · 不触发态被链接挂载":"进行中 · 常规触发"}</span></div>
+    <h2>${p.name}</h2>
+    <p>CTA 跳转方式：${jtLabel}（复用金刚区同一套 4 种枚举）</p>
+    <div class="modal-actions"><button class="secondary" data-act="close-sheet">关闭</button><button class="primary" data-act="popup-cta" data-id="${p.id}">${ctaLabel}</button></div>
+  </div>`;
+}
+
+function codeSheet(to){
+  const eleme=to==="eleme";
+  const text=state.codeText||(eleme?"复制口令，打开饿了么领门店券":"复制口令，打开淘宝搜索好物");
+  return `<div class="mask" data-act="close-sheet"></div><div class="sheet code-sheet ${eleme?"eleme":"taobao"}">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-spacer"></div><div class="sheet-title"><span class="dest-badge ${eleme?"":"taobao"}" style="${eleme?"background:#e8f2ff;color:#1677ff":"background:#fff1e8;color:#FF5000"}">口令去向 · ${eleme?"饿了么":"淘宝"}</span><h2 style="margin-top:10px">复制口令去${eleme?"饿了么":"淘宝"}</h2></div><button class="sheet-close" data-act="close-sheet" aria-label="关闭">×</button></div>
+    <div class="code-box"><code>${text}</code></div>
+    <button class="code-btn" data-act="copy-code" data-code="${text}">复制口令</button>
+    <div class="code-hint">口令核销在后端完成，前端只负责弹窗展示与复制。${eleme?"打开饿了么 App 后粘贴口令即可领取对应权益。":"打开淘宝 App 后粘贴口令即可搜索对应商品。"}</div>
+  </div>`;
+}
+
+function currentSheetView(){
+  if(!state.sheet)return "";
+  if(state.sheet==="popup-running"){const p=runningPopup();return p?popupModal(p,{mounted:false}):"";}
+  if(state.sheet==="popup-mounted"){const m=mountedLink();return m?popupModal(m.popup,{mounted:true}):"";}
+  if(state.sheet==="popup-double11"){const p=popupById(3);return p?popupModal(p,{mounted:false}):"";}
+  if(state.sheet==="popup-signin"){const p=popupById(4);return p?popupModal(p,{mounted:false}):"";}
+  if(state.sheet==="code-eleme")return codeSheet("eleme");
+  if(state.sheet==="code-taobao")return codeSheet("taobao");
+  return "";
+}
+
+/* ⑪ SHELL RENDERERS */
+function renderScreen(){
+  document.getElementById("screen").innerHTML=frameView();
+  const r=routeOf(state.currentRoute);
+  document.getElementById("stageName").textContent=r.name;
+  const sel=document.getElementById("frameSelect");
+  sel.innerHTML=PAGE_TREE.map(g=>g.pages.map(p=>`<optgroup label="${p.code} ${p.name}">${p.frames.map(k=>{const rr=routeOf(k);return `<option value="${k}" ${k===state.currentRoute?"selected":""}>${pad2(rr.id)} · ${p.name} · ${rr.frame}</option>`;}).join("")}</optgroup>`).join("")).join("");
+}
+
+function renderTabbar(){
+  const root=document.getElementById("tabbar");
+  const kind=routeOf(state.currentRoute).kind;
+  if(kind==="jump"||kind==="station"||kind==="share"){root.innerHTML="";return;}
+  const tabs=[["stamp","印章","◎"],["points","积分","◈"],["mall","积分商城","◇"],["mine","我的","○"]];
+  root.innerHTML=`<nav class="global-tabs" aria-label="全局导航">${tabs.map(([k,n,ic])=>`<button class="${state.globalTab===k?"on":""}" data-act="switch-global-tab" data-tab="${k}"><span class="ico">${ic}</span><span>${n}</span></button>`).join("")}</nav>`;
+}
+
+function renderSheet(){document.getElementById("sheetRoot").innerHTML=currentSheetView();}
+
+function renderRail(){
+  const root=document.getElementById("railBody");
+  let html="";
+    PAGE_TREE.forEach(g=>{html+=`<div class="group-head">${g.group}<em>${g.pages.length} 页</em></div>`;g.pages.forEach(p=>{const on=p.frames.includes(state.currentRoute)||p.sheets.includes(state.sheet);html+=`<button class="page-item ${on?"on":""}" data-page="${p.code}" title="${p.name}：${p.frames.length} 个状态帧 · ${p.sheets.length} 个弹层"><span class="page-code">${p.code}</span><span class="rail-name">${p.name}</span><span class="rail-count">${p.frames.length}</span></button>`;});});
+  root.innerHTML=html;
+}
+
+function pageForCurrent(){for(const g of PAGE_TREE){for(const p of g.pages){if(p.frames.includes(state.currentRoute)||p.sheets.includes(state.sheet))return p;}}return null;}
+
+
+function renderNotes(){
+  const key=state.sheet||state.currentRoute;
+  const n=NOTES[key]||{status:"说明",sections:[{h:"页面",rows:[routeOf(state.currentRoute).name]}]};
+  document.getElementById("noteStatus").textContent=n.status;
+  document.getElementById("noteSub").textContent=`${routeOf(state.currentRoute).name}${state.sheet?` · 弹层 ${state.sheet}`:""}`;
+  document.getElementById("noteBody").innerHTML=n.sections.map(s=>`<section class="note-section"><h4>${s.h}</h4>${s.rows.map((r,i)=>`<div class="note-row"><i>${pad2(i+1)}</i><span>${r}</span></div>`).join("")}</section>`).join("");
+}
+
+function renderAll(){renderScreen();renderTabbar();renderSheet();renderRail();renderNotes();}
+
+/* ⑫ EVENT DELEGATION：data-act 业务动作 / data-go 切帧 / data-step 定位步骤 / data-modes 模式切换 */
+document.addEventListener("click",e=>{
+  const actEl=e.target.closest("[data-act]");
+  if(actEl){
+    const act=actEl.dataset.act;
+    if(act==="close-sheet"){closeSheet();return;}
+    if(act==="entry-click"){
+      const en=activeEntries().find(x=>String(x.id)===actEl.dataset.id);if(!en)return;
+      jumpByConfig(en,`金刚区入口「${en.name}」`);return;
+    }
+    if(act==="banner-click"){
+      const b=activeBanners().find(x=>String(x.id)===actEl.dataset.id);if(!b)return;
+      jumpByConfig(b,`Banner「${b.name}」`);return;
+    }
+    if(act==="popup-cta"){
+      const p=popupById(Number(actEl.dataset.id))||runningPopup();if(!p)return;
+      closeSheet();jumpByConfig(p,`弹窗「${p.name}」CTA`);return;
+    }
+    if(act==="copy-code"){toast("口令已复制");return;}
+    if(act==="coupon-claim"){
+      const key=actEl.dataset.key;
+      if(actEl.dataset.claim==="1"){
+        if(state.claimed.has(key))return;
+        state.claimed.add(key);renderScreen();toast("+5 积分已到账");
+      }else{toast("红包区为 4.4 历史功能，「去下单」跳转不在本稿范围");}
+      return;
+    }
+    if(act==="enter-from-share"){
+      state.params={extra_popup:null};
+      const running=runningPopup();
+      if(running&&!state.dismissed.has("popup-running")){state.pendingMounted=false;state.currentRoute="a-home-default";state.sheet="popup-running";state.sheetOrigin="a-home-default";renderAll();toast("从分享卡片进入：弹出进行中弹窗");}
+      else if(running){state.currentRoute="a-home-default";renderAll();toast("从分享卡片进入：该弹窗已关闭过，本次会话不再弹出");}
+      else{go("a-home-default");toast("从分享卡片进入：无进行中弹窗，直接展示首页");}
+      return;
+    }
+    if(act==="switch-global-tab"){
+      const tab=actEl.dataset.tab;state.globalTab=tab;
+      go({stamp:"tab-stamp",points:"a-home-default",mall:"tab-mall",mine:"tab-mine"}[tab]);return;
+    }
+    if(act==="back-home"){
+      const back=state.backRoute&&ROUTES[state.backRoute]?state.backRoute:"a-home-default";
+      go(back);return;
+    }
+    if(act==="simulate-promo"){
+      state.params={extra_popup:"2"};
+      const m=mountedLink();
+      const running=runningPopup();
+      if(running&&!state.dismissed.has("popup-running")){state.pendingMounted=!!m;state.sheet="popup-running";state.sheetOrigin=state.currentRoute;renderAll();toast("已模拟推广链接进入（extra_popup=2）");}
+      else if(m&&!state.dismissed.has("popup-mounted")){state.pendingMounted=false;state.sheet="popup-mounted";state.sheetOrigin=state.currentRoute;renderAll();toast("带参进入：无进行中弹窗（或已关闭），直接弹挂载弹窗");}
+      else{renderAll();toast("无进行中弹窗且挂载弹窗已关闭 / 未命中，本次进入无弹窗");}
+      return;
+    }
+    if(act==="simulate-enter"){
+      const running=runningPopup();
+      if(running&&!state.dismissed.has("popup-running")){state.pendingMounted=false;state.sheet="popup-running";state.sheetOrigin=state.currentRoute;renderAll();toast("常规进入：弹出进行中弹窗");}
+      else if(running){toast("该弹窗已关闭过，本次会话不再弹出");}
+      else{toast("后台无「进行中」弹窗，常规进入不弹窗");}
+      return;
+    }
+    if(act==="reset-session"){state.dismissed.clear();state.claimed.clear();renderAll();toast("会话已重置：弹窗去重与红包领取记录已清空");return;}
+    if(act==="points-cap"){toast("小程序胶囊按钮，原型仅还原视觉");return;}
+  }
+  const page=e.target.closest("[data-page]");
+  if(page){const p=pageByCode(page.dataset.page);if(p)go(p.frames[0]);renderRail();return;}
+  const pageRoute=e.target.closest("[data-page-route]");
+  if(pageRoute){go(pageRoute.dataset.pageRoute);renderRail();return;}
+  const pageSheet=e.target.closest("[data-page-sheet]");
+  if(pageSheet){
+    const key=pageSheet.dataset.pageSheet;
+    if(key==="popup-running"&&!runningPopup()){state.configVariant="default";}
+    if(key==="popup-mounted"&&!mountedLink()){state.params={extra_popup:"2"};}
+    if(key==="code-eleme"&&!state.codeText){state.codeText="复制口令，打开饿了么领门店券";state.codeTo="eleme";}
+    if(key==="code-taobao"&&!state.codeText){state.codeText="复制口令，打开淘宝搜索好物";state.codeTo="taobao";}
+    openSheet(key);renderRail();return;
+  }
+});
+
+document.addEventListener("change",e=>{if(e.target.id==="frameSelect"){go(e.target.value);}});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&state.sheet){closeSheet();return;}
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches(".pts-entry,.banner-card")){e.preventDefault();e.target.click();}
+});
+
+/* ⑬ INIT：默认落在「积分」Tab */
+state.globalTab="points";
+renderAll();
+</script>
+</body>
+</html>
