@@ -425,9 +425,6 @@ textarea.field-input { max-width: 100%; }
 .提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
 .提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
 .提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
-.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
-.图片灯箱.可见 { display: flex; }
-.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
 .空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
 </style>
 <style id="css-状态">
@@ -435,9 +432,7 @@ textarea.field-input { max-width: 100%; }
 .菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
 .drawer.show { transform: translateX(0); } .overlay.show { display: block; }
 .字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
-.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
 .field-card.muted { opacity: 0.35; pointer-events: none; }
-.图片灯箱.可见 { display: flex; }
 </style>
 </head>
 <body>
@@ -611,7 +606,6 @@ C 端按配置渲染首页 → 用户按跳转方式到达目标页面</code></p
     <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
   </div>
 </aside>
-<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
 <script id="js-泳道映射">
 window._泳道节点映射 = {"4.1": [1], "4.2": [2]};
 window._阶段泳道映射 = {"4": 1};
@@ -663,9 +657,6 @@ function 更新泳道高亮(页码) {
 }
 </script>
 <script id="js-字段联动">
-if (typeof 切换字段详情 === 'undefined') {
-  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); }
-}
 // 枚举置灰通用函数：受控分组在「启用值」命中时正常，否则整组变淡且不可点。
 // 用法：置灰切换_模板('grp_退货设置', this.value, ['是'])；多组受控就在适配函数里多调几次。
 function 置灰切换_模板(组id, val, 启用值列表) {
@@ -779,9 +770,6 @@ function 确认删除(节编号, 行数据) {
     td.setAttribute('title', text);
   }
 })();
-</script>
-<script id="js-图片放大">
-function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
 </script>
 <script id="js-泳道收纳">
 // 收纳卡居中浮层：打开/关闭/ESC。居中形态为泳道图专属例外，非半屏抽屉。

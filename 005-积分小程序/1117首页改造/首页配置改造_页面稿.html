@@ -546,11 +546,6 @@ const NOTES={
     {h:"渲染结果",rows:["首页只剩 5 个入口","一行 4 个、第二行 1 个，换行位置随之变化"]},
     {h:"口径",rows:["停用入口不下发、不渲染、不占位"]}
   ]},
-  "cfg-banner-disabled":{status:"状态",sections:[
-    {h:"配置变更",rows:["变体 bannerDisabled：Banner 状态=停用"]},
-    {h:"渲染结果",rows:["金刚区下方 Banner 位消失","不塌陷、不留白框，红包区上移补位"]},
-    {h:"口径",rows:["停用 Banner 不进入 C 端渲染数据"]}
-  ]},
   "cfg-popup-switch":{status:"状态",sections:[
     {h:"配置变更",rows:["变体 popupSwitch：进行中从 1 号换到 3 号（双11活动弹窗）","置 3 号为「进行中」时 1 号自动转「不触发」"]},
     {h:"渲染结果",rows:["首页弹出 3 号双11弹窗，CTA=外部小程序 wx6666666666"]},
@@ -656,22 +651,6 @@ function go(route,patch){
     state.pendingMounted=(r.sheet==="popup-running"&&!!mountedLink());}
   renderAll();
 }
-function applyStepState(step){
-  const r=routeOf(step.route);
-  state.sheet=null;state.pendingMounted=false;
-  state.configVariant=step.variant||r.variant||"default";
-  state.params={extra_popup:step.params!=null?step.params:(r.params||null)};
-  state.stationPage=step.stationPage||r.stationPage||null;
-  state.jumpTarget=step.jumpTarget||r.jumpTarget||null;
-  state.codeText=step.codeText||r.codeText||null;
-  state.codeTo=step.codeTo||r.codeTo||null;
-  state.currentRoute=step.route;
-  if(r.kind==="points"&&!r.tab)state.globalTab="points";
-  if(r.tab)state.globalTab=r.tab;
-  if(step.autoSheet){state.sheet=step.autoSheet;state.sheetOrigin=step.route;
-    state.pendingMounted=(step.autoSheet==="popup-running"&&!!mountedLink());}
-  if(step.focus==="copy")setTimeout(()=>toast("口令已复制"),350);
-}
 function openSheet(key,origin){
   state.sheet=key;state.sheetOrigin=origin||state.currentRoute;
   renderSheet();renderNotes();
@@ -693,10 +672,12 @@ function toast(msg){const el=document.getElementById("toast");el.textContent=msg
 
 /* ⑧ 跳转分发：入口 / Banner / 弹窗 CTA 共用 */
 function jumpByConfig(obj,src){
-  if(obj.jumpType==="station"){go("station-page",{stationPage:obj.stationPath,backRoute:state.currentRoute});toast(`跳转站内页面「${obj.stationPath}」`);return;}
-  if(obj.jumpType==="miniapp"){go("jump-miniapp",{jumpTarget:{appid:obj.appid,extPath:obj.extPath,from:src}});return;}
-  if(obj.jumpType==="h5"){go("jump-h5",{jumpTarget:{h5:obj.h5,from:src}});return;}
-  if(obj.jumpType==="code"){state.codeText=obj.codeText;state.codeTo=obj.codeTo;openSheet(obj.codeTo==="eleme"?"code-eleme":"code-taobao");return;}
+  /* 金刚区/Banner 用 jumpType，弹窗用 ctaType，两种字段名都兼容 */
+  var jt=obj.jumpType||obj.ctaType;
+  if(jt==="station"){go("station-page",{stationPage:obj.stationPath,backRoute:state.currentRoute});toast(`跳转站内页面「${obj.stationPath}」`);return;}
+  if(jt==="miniapp"){go("jump-miniapp",{jumpTarget:{appid:obj.appid,extPath:obj.extPath,from:src}});return;}
+  if(jt==="h5"){go("jump-h5",{jumpTarget:{h5:obj.h5,from:src}});return;}
+  if(jt==="code"){state.codeText=obj.codeText;state.codeTo=obj.codeTo;openSheet(obj.codeTo==="eleme"?"code-eleme":"code-taobao");return;}
 }
 
 /* ⑨ PAGE VIEWS */
@@ -965,9 +946,6 @@ function renderRail(){
   root.innerHTML=html;
 }
 
-function pageForCurrent(){for(const g of PAGE_TREE){for(const p of g.pages){if(p.frames.includes(state.currentRoute)||p.sheets.includes(state.sheet))return p;}}return null;}
-
-
 function renderNotes(){
   const key=state.sheet||state.currentRoute;
   const n=NOTES[key]||{status:"说明",sections:[{h:"页面",rows:[routeOf(state.currentRoute).name]}]};
@@ -978,7 +956,7 @@ function renderNotes(){
 
 function renderAll(){renderScreen();renderTabbar();renderSheet();renderRail();renderNotes();}
 
-/* ⑫ EVENT DELEGATION：data-act 业务动作 / data-go 切帧 / data-step 定位步骤 / data-modes 模式切换 */
+/* ⑫ EVENT DELEGATION：data-act 业务动作 / data-page 切页 / data-page-route 切帧 / data-page-sheet 弹层 */
 document.addEventListener("click",e=>{
   const actEl=e.target.closest("[data-act]");
   if(actEl){
