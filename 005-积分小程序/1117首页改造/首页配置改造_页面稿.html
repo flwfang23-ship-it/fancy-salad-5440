@@ -279,25 +279,32 @@ body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans
  * ① B 端配置镜像（同源数据）：CONFIG ↔ B 端 4.1 金刚区 / 4.2 Banner / 4.3 弹窗 / 4.5 推广链接
  *    字段名与 B 端《11-16首页配置改造.md》逐字段对齐，见 §NOTES 与交付说明对照表。
  * ================================================================ */
+/* ===== 内联占位图：纯代码生成 SVG data URI，不依赖任何外部图片文件 ===== */
+function __phSvg(w,h,body){return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+body+'</svg>');}
+/* 金刚区小图标：彩色圆底 + 首字/符号 */
+function __phIcon(ch,c1,c2){return __phSvg(88,88,'<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+c1+'"/><stop offset="1" stop-color="'+c2+'"/></linearGradient></defs><rect width="88" height="88" rx="26" fill="url(#g)"/><text x="44" y="59" font-size="42" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">'+ch+'</text>');}
+/* Banner / 弹窗 / H5 横向占位图：主标题 + 副标注 */
+function __phBanner(title,sub,c1,c2){return __phSvg(600,240,'<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+c1+'"/><stop offset="1" stop-color="'+c2+'"/></linearGradient></defs><rect width="600" height="240" fill="url(#g)"/><text x="300" y="118" font-size="40" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">'+title+'</text><text x="300" y="168" font-size="22" text-anchor="middle" fill="#ffffff" opacity=".85" font-family="sans-serif">'+sub+'</text>');}
+
 const STATION_ROUTES=["记一账","晒单活动","签单日历","淘转链","门店转链","外卖转链","积分明细","邀请好友"];
 
 const CONFIG={
   entries:[ /* B 端 4.1 金刚区配置 */
-    {id:1,icon:"./assets/icons/points-jizhang.svg",name:"记一账",sort:1,status:"on",jumpType:"station",stationPath:"记一账",updatedAt:"2026-11-15 10:00"},
-    {id:2,icon:"./assets/icons/points-shaidan.svg",name:"晒单活动",sort:2,status:"on",jumpType:"station",stationPath:"晒单活动",updatedAt:"2026-11-15 10:00"},
-    {id:3,icon:"./assets/icons/points-qiandao.svg",name:"签单日历",sort:3,status:"on",jumpType:"station",stationPath:"签单日历",updatedAt:"2026-11-15 10:00"},
-    {id:4,icon:"./assets/icons/points-taolink.svg",name:"淘转链",sort:4,status:"on",jumpType:"code",codeText:"复制口令，打开淘宝搜索好物",codeTo:"taobao",updatedAt:"2026-11-15 10:05"},
-    {id:5,icon:"./assets/icons/points-shoplink.svg",name:"门店转链",sort:5,status:"on",jumpType:"code",codeText:"复制口令，打开饿了么领门店券",codeTo:"eleme",updatedAt:"2026-11-15 10:06"},
-    {id:6,icon:"./assets/icons/points-waimai.svg",name:"外卖转链",sort:6,status:"on",jumpType:"miniapp",appid:"wx8888888888",extPath:"pages/link/index",updatedAt:"2026-11-15 10:07"}
+    {id:1,icon:__phIcon("账","#34d399","#059669"),name:"记一账",sort:1,status:"on",jumpType:"station",stationPath:"记一账",updatedAt:"2026-11-15 10:00"},
+    {id:2,icon:__phIcon("晒","#60a5fa","#2563eb"),name:"晒单活动",sort:2,status:"on",jumpType:"station",stationPath:"晒单活动",updatedAt:"2026-11-15 10:00"},
+    {id:3,icon:__phIcon("签","#fbbf24","#d97706"),name:"签单日历",sort:3,status:"on",jumpType:"station",stationPath:"签单日历",updatedAt:"2026-11-15 10:00"},
+    {id:4,icon:__phIcon("淘","#fb7185","#e11d48"),name:"淘转链",sort:4,status:"on",jumpType:"code",codeText:"复制口令，打开淘宝搜索好物",codeTo:"taobao",updatedAt:"2026-11-15 10:05"},
+    {id:5,icon:__phIcon("店","#a78bfa","#7c3aed"),name:"门店转链",sort:5,status:"on",jumpType:"code",codeText:"复制口令，打开饿了么领门店券",codeTo:"eleme",updatedAt:"2026-11-15 10:06"},
+    {id:6,icon:__phIcon("外","#fb923c","#ea580c"),name:"外卖转链",sort:6,status:"on",jumpType:"miniapp",appid:"wx8888888888",extPath:"pages/link/index",updatedAt:"2026-11-15 10:07"}
   ],
   banners:[ /* B 端 4.2 Banner 配置 */
-    {id:1,img:"./assets/ui/banner-xinren.jpg",name:"新人专享Banner",sort:1,status:"on",jumpType:"station",stationPath:"邀请好友",updatedAt:"2026-11-15 10:10"}
+    {id:1,img:__phBanner("新人专享 Banner","占位图 · 绿","#6ee7b7","#059669"),name:"新人专享Banner",sort:1,status:"on",jumpType:"station",stationPath:"邀请好友",updatedAt:"2026-11-15 10:10"}
   ],
   popups:[ /* B 端 4.3 弹窗配置：status: running=进行中 | idle=不触发 */
-    {id:1,name:"新人礼包弹窗",img:"./assets/ui/banner-xinren.jpg",status:"running",ctaType:"station",stationPath:"邀请好友",updatedAt:"2026-11-15 10:20"},
-    {id:2,name:"外卖券提醒弹窗",img:"./assets/records/order-eleme-latte.webp",status:"idle",ctaType:"code",codeText:"复制口令，打开饿了么领外卖券",codeTo:"eleme",updatedAt:"2026-11-15 10:21"},
-    {id:3,name:"双11活动弹窗",img:"./assets/records/order-eleme-berry.webp",status:"idle",ctaType:"miniapp",appid:"wx6666666666",extPath:"pages/activity/index",updatedAt:"2026-11-15 10:22"},
-    {id:4,name:"签到提醒弹窗",img:"./assets/ui/banner-xinren.jpg",status:"idle",ctaType:"h5",h5:"https://m.example.com/sign",updatedAt:"2026-11-15 10:23"}
+    {id:1,name:"新人礼包弹窗",img:__phBanner("新人礼包弹窗","占位图 · 青","#5eead4","#0d9488"),status:"running",ctaType:"station",stationPath:"邀请好友",updatedAt:"2026-11-15 10:20"},
+    {id:2,name:"外卖券提醒弹窗",img:__phBanner("外卖券提醒","占位图 · 蓝","#93c5fd","#2563eb"),status:"idle",ctaType:"code",codeText:"复制口令，打开饿了么领外卖券",codeTo:"eleme",updatedAt:"2026-11-15 10:21"},
+    {id:3,name:"双11活动弹窗",img:__phBanner("双11 活动","占位图 · 橙红","#fca5a5","#dc2626"),status:"idle",ctaType:"miniapp",appid:"wx6666666666",extPath:"pages/activity/index",updatedAt:"2026-11-15 10:22"},
+    {id:4,name:"签到提醒弹窗",img:__phBanner("签到提醒弹窗","占位图 · 紫","#c4b5fd","#7c3aed"),status:"idle",ctaType:"h5",h5:"https://m.example.com/sign",updatedAt:"2026-11-15 10:23"}
   ],
   links:[ /* B 端 4.5 推广链接：param 由系统生成，前端只读 */
     {id:1,name:"抖音投放链接",popupId:2,param:"extra_popup=2",createdAt:"2026-11-15 11:00"}
@@ -810,7 +817,7 @@ function jumpH5View(){
     <div class="webview-top"><button class="webview-back" data-act="back-home" aria-label="返回">‹</button><div class="webview-title">${title}</div><div class="webview-spacer"></div></div>
     <div class="webview-domain"><i></i><span>${domain}</span><span style="margin-left:auto;color:#b5aea6">由小程序 webview 承载</span></div>
     <div class="webview-body">
-      <img src="./assets/ui/banner-xinren.jpg" alt="H5 页面占位图">
+      <img src="${__phBanner("H5 页面占位图","代码生成的占位图","#cbd5e1","#64748b")}" alt="H5 页面占位图">
       <div class="webview-cap">H5 页面由小程序 webview 承载<br><span style="font:600 9.5px var(--mono);color:#b5aea6">${t.h5}</span><br><br>跳转来源：${t.from}<br>交互稿不实现真实 webview 加载，仅表达落地形态。</div>
     </div>
   </div>`;
