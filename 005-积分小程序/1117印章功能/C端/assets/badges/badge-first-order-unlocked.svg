@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="第一杯已解锁印章">
+  <circle cx="120" cy="120" r="104" fill="#EEF8F1" stroke="#438A5E" stroke-width="8"/>
+  <circle cx="120" cy="120" r="87" fill="none" stroke="#74A988" stroke-width="3"/>
+  <text x="120" y="124" text-anchor="middle" font-family="Georgia,serif" font-size="82" font-weight="700" fill="#397650">1</text>
+  <text x="120" y="167" text-anchor="middle" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="23" font-weight="700" fill="#2F6544">第一杯</text>
+  <text x="120" y="193" text-anchor="middle" font-family="monospace" font-size="13" letter-spacing="2" fill="#5B9070">2026.11.04</text>
+</svg>

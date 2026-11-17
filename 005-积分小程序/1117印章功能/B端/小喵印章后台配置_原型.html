@@ -1,0 +1,1168 @@
+<script type="text/plain" data-ai-only>
+# 小喵印章后台配置
+
+> 本文档为 **B 端运营配置端** 功能文档，只补齐「小喵印章」勋章体系背后的运营配置能力。C 端日历与勋章图鉴的交互实现由《产品需求文档.md》《印章_交互稿.html》承载，本文档不重复描述。所有触发条件口径、关键词桶划分与取图优先级，一律以《小喵印章勋章体系_数据分析与候选清单.md》为准。
+
+## 1. 需求背景与目标
+
+### 1.1 为什么要做
+
+「小喵印章」的 C 端形态已经定稿：用户每完成一笔外卖订单，日历自动生成一条打卡记录并配一张图，行为累计达标后解锁对应勋章。但勋章的名称、印面字、图、文案，以及打卡图"该配哪一张"的匹配规则，目前全部写在前端与脚本里——运营改一个字都要发版。更关键的是美团订单拿不到商品图，必须有可运营的品类图片桶与兜底图把每一单接住，否则会出现大量无图的打卡记录。
+
+- **配置范围：**
+- [[4.1|勋章家族]]：维护图鉴的分区名、排序与是否展示
+- [[4.2|勋章配置]]：维护勋章的展示元素（名称、印面字、勋章图、解锁前文案、解锁条件）与启停
+- [[4.3|图片规则配置]]：维护「商品名关键词 → 图片池」的匹配桶与唯一的兜底桶，决定每条打卡记录命中哪一张图
+
+另有 **[[4.4|勋章设计]]**：只读文档页，一张表列清 17 枚勋章的家族、触发条件、预估覆盖率与设计意图，**不承载任何配置**。
+
+**不做的部分（已确认结论）：** 解锁判定不做成可配置项。触发条件类型、判定参数与门槛值一律由研发按勋章写死在代码里，后台只做只读回显——避免运营改口径导致勋章错发或永不触发。
+
+```text
+改造前
+
+勋章与取图规则写死在前端，调整需要发版
+美团订单无商品图，打卡记录无图可展示
+
+改造后
+
+运营在配置端维护家族、勋章展示元素，以及关键词图片桶和兜底桶
+        ↓
+订单完成后系统生成日历记录，按「真实商品图 → 品类桶 → 兜底桶」取图
+        ↓
+系统按研发写死的口径判定 → 用户解锁勋章 → 图鉴按配置展示
+```
+
+### 1.2 一句话业务模型
+
+```text
+积分订单数据（goods_title、platform、created_at、shop_name）
+        +
+运营维护的家族、勋章展示元素与关键词图片桶
+        +
+必填且不可删除的兜底图片池
+        ↓
+日历记录生成并按优先级取图 → 系统按写死口径判定 → 勋章解锁 → 图鉴展示
+```
+
+### 1.3 最终目标
+
+- **展示可运营：** 家族分区、勋章名称/印面字/图/两段用户可见文案全部由运营维护，改名换图改文案不依赖发版。
+- **判定收口在研发：** 解锁口径不在后台暴露，杜绝运营配错门槛导致勋章乱发或永不触发。
+- **打卡图不空缺：** 任何一笔订单都能取到一张图，美团无商品图的订单由关键词桶与兜底桶接住。
+
+### 1.4 页面原型与图片说明
+
+C 端日历与勋章图鉴效果由外部原型《印章_交互稿.html》承载；本文档只产出 B 端配置端交互原型，不重复 C 端展示。
+
+## 2. 业务流程
+
+### 2.1 多方业务泳道图
+
+```text
+┌────────────────────────┬────────────────────────┬────────────────────────┐
+│客户端后台（运营人员）  │C端小程序               │C端用户                 │
+├────────────────────────┼────────────────────────┼────────────────────────┤
+│① 维护家族与勋章配置    │                        │                        │
+│【勋章：已配置】        │                        │                        │
+│                        │                        │                        │
+│② 维护图片规则与兜底    │                        │                        │
+│【取图规则：按优先级】  │                        │                        │
+│                        │③ 订单完成生成日历记录  │                        │
+│                        │【日历记录：已生成】    │                        │
+│                        │                        │                        │
+│                        │④ 按规则取打卡图        │                        │
+│                        │【打卡图：三层取图】    │                        │
+│                        │                        │                        │
+│                        │⑤ 判定并解锁勋章        │                        │
+│                        │【勋章：已解锁】        │                        │
+│                        │                        │⑥ 查看日历与勋章图鉴    │
+└────────────────────────┴────────────────────────┴────────────────────────┘
+```
+
+### 2.2 阶段划分与阅读说明
+
+后续正文按照业务实际发生顺序线性展开。**阶段切分以"操作端"为第一判据：同一阶段内不得跨端。** 根据当前业务闭环，可划分为：
+
+1. **第一阶段：勋章与取图配置（主要参与方：客户端后台）**：运营人员维护家族（4.1）、勋章展示元素（4.2）与图片规则桶（4.3）；配置保存后即对 C 端生效，不需要发版。
+2. **第二阶段：日历记录生成与取图（主要参与方：C端小程序）**：订单完成后生成日历记录，按「真实商品图 → 品类桶 → 兜底桶」取图，并按研发写死的口径判定勋章是否解锁。
+3. **第三阶段：查看日历与勋章图鉴（主要参与方：C端用户）**：用户在小程序内查看打卡记录与已解锁勋章。
+
+```text
+第一阶段：勋章与取图配置
+① 维护家族与勋章配置 → ② 维护图片规则与兜底
+            ↓
+第二阶段：日历记录生成与取图
+③ 订单完成生成日历记录 → ④ 按规则取打卡图 → ⑤ 判定并解锁勋章
+            ↓
+第三阶段：查看日历与勋章图鉴
+⑥ 查看日历与勋章图鉴
+```
+
+### 2.3 页面类型说明
+
+| 页面类型 | 面向对象 | 含义 | 正文字段表格列 |
+| --- | --- | --- | --- |
+| 列表页 | 后台操作人员 | 运营人员看到的家族列表、勋章列表与图片规则桶列表，编辑共用右侧弹窗 | 字段名称、字段类型、列表、详情、新增、字段解释 |
+| 移动端展示页 | C 端用户 | 日历打卡记录与勋章图鉴的实际呈现（本文档仅登记，交互细节由外部链路承载） | 简要登记，不展开 |
+| 文档页 | 后台操作人员 | 只读的设计参考页，无列表、无新增/编辑弹窗（如 4.4 勋章设计） | 无字段表格，正文直接呈现设计结论 |
+
+## 3. 页面流程图（C 端，由外部链路承载）
+
+> 本章 C 端交互不在本工作流内展开：完整交互逻辑见《产品需求文档.md》，可运行原型见同目录《印章_交互稿.html》。C 端页面清单见第 5、6 章的简要登记。
+
+---
+
+## 4. 第一阶段：勋章与取图配置
+
+### 4.1 勋章家族 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：① 维护家族与勋章配置<br>
+页面路径：运营配置后台 > 小喵印章 > 勋章家族<br>
+对下游影响：家族决定 C 端图鉴的分区名与先后顺序；隐藏的家族在 C 端不展示，其下勋章随之一并不展示<br>
+表格类型：列表页<br>
+
+#### 字段说明
+
+家族是勋章的第一层归类，只承担展示职责，不参与解锁判定。C 端图鉴按本页排序依次分区，分区内展示该家族下状态=启用的勋章。
+
+本期预置 8 个家族，与 C 端交互稿的 8 族一一对应。其中「节气时令」「使用纪念」「特别时刻」在当前订单字段下没有任何可验证的勋章，**默认隐藏**——避免 C 端出现三个空分区。「初见日常」因新增两枚事件型勋章（注册即得、完善资料）改为展示。
+
+家族只保留最小字段集（ID、名称、排序、是否展示），不统计勋章数、不记录更新时间：家族是纯展示分类，知道它叫什么、排在第几、要不要显示就够了。
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 家族ID | string | 是 | 是 | 是（创建后不可修改） | **数据来源：** 运营人员填写。<br>**逻辑：** 小写英文（如 `time`、`taste`），全局唯一，与 C 端交互稿的 family 字段保持同值。<br>**用途：** 程序识别的唯一键，创建后不可改。 |
+| 家族名称 | string | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 2–6 个字（如"口味偏好"），全局不可重名。<br>**用途：** C 端图鉴的分区标题。 |
+| 排序 | number | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 正整数，数值越小越靠前，决定图鉴分区的上下顺序。<br>**用途：** 控制分区展示次序。 |
+| 是否展示 | enum（展示、隐藏） | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员选择。<br>**逻辑：** 隐藏后 C 端不渲染该分区，其下勋章一并不展示；新增家族默认隐藏。<br>**用途：** 控制分区是否出现在图鉴里。 |
+
+##### 弹窗字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 家族ID、家族名称、排序、是否展示 |
+
+#### 列表交互
+
+**交互：新增家族**  <br>
+**业务用途**：新增一个图鉴分区，填 ID、名称与排序后保存；是否展示默认关闭，等该家族下有勋章后再打开，避免出现空分区。<br>
+
+**交互：编辑家族**  <br>
+**业务用途**：调整名称、排序与是否展示；保存后 C 端图鉴按新顺序重新分区渲染。家族ID 不可修改。<br>
+
+**交互：删除家族**  <br>
+**业务用途**：删除该家族，二次确认后生效；**该家族下仍有勋章时禁止删除**（由系统校验），需先把勋章改到其他家族。已下线家族的历史解锁记录保留在库中。<br>
+
+#### 业务逻辑
+
+**ID 不可改：** 家族ID 与 C 端交互稿的 family 字段同值，改了会导致历史勋章找不回分区，因此创建后锁定。
+
+**空分区默认隐藏：** 新增家族默认不展示，配好勋章后再手动打开，防止图鉴出现空白分区。
+
+**删除有前置条件：** 有勋章归属的家族不可删除，必须先迁移勋章；只允许改名、调序或隐藏。
+
+**排序冲突：** 排序数值重复时，按更新时间先后排列，保存时提示冲突但不阻断。
+
+### 4.2 勋章配置 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：① 维护家族与勋章配置<br>
+页面路径：运营配置后台 > 小喵印章 > 勋章配置<br>
+对下游影响：勋章保存并启用后，C 端图鉴按下发的展示元素渲染；解锁由研发写死的口径判定，后台的改动只影响展示，不改变判定结果<br>
+表格类型：列表页<br>
+
+#### 字段说明
+
+勋章分两层信息：一层是用户看得见的展示元素（名称、印面字、图、**解锁前文案**、**解锁条件**），一层是系统判定的解锁口径（触发条件类型、参数、门槛值、档位与档位名）。
+
+两段文案的展示时机是分开的：**未解锁只出「解锁前文案」**（模糊暗示，不给门槛），**解锁后才出「解锁条件」**（直白说明做了什么）。这样运营配文案时只需要回答两个问题：还没拿到时说什么、拿到之后说什么。
+
+**第二层全部由研发按勋章写死在代码里，后台只读回显，不提供任何编辑入口。** 运营能看到这枚勋章"怎么算出来的"，但改不了——这是为了避免口径被误改导致勋章错发或永不触发。
+
+**本页不支持新增勋章。** 代码里没有判定逻辑的勋章永远不会解锁，只会变成一个空壳，所以新勋章必须走研发发版。后台只做两件事：编辑预置的 17 枚、启停。
+
+本期预置 17 枚：15 枚来自《小喵印章勋章体系_数据分析与候选清单.md》第五章候选（订单数据可验证），另 2 枚为事件型勋章（初次见面喵、露脸的小喵），不依赖订单数据。逐枚判定口径见 4.4。
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 勋章名称 | string | 是 | 是 | —（不支持新增） | **数据来源：** 运营人员填写。<br>**逻辑：** 固定 3 个字（如"干饭喵""碳水喵"），全局不可重名，避免 C 端展示折行。<br>**用途：** 勋章的唯一展示名，列表与图鉴共用。 |
+| 印面字 | string | 是 | 是 | —（不支持新增） | **数据来源：** 运营人员填写。<br>**逻辑：** 1–2 个字（如"饭""等门"），**必填**。C 端在勋章图未上传时用它渲染文字印章。<br>**用途：** 印章图形内刻的字，也是美术资源未到位时的兜底视觉。 |
+| 勋章图 | file | 是 | 是 | —（不支持新增） | **数据来源：** 运营人员上传。<br>**逻辑：** 正方形素材，建议 240×240；**选填**——有图则 C 端用图替代印面字，无图则回退到印面字渲染。<br>**用途：** 图鉴卡片、未解锁剪影与解锁弹窗的主视觉。 |
+| 家族 | enum（选项来自 4.1 中是否展示=展示的家族） | 是 | 是 | —（不支持新增） | **数据来源：** 运营人员选择。<br>**逻辑：** 决定勋章在图鉴中归入哪一组；家族被隐藏时该勋章在 C 端一并不展示。<br>**用途：** 图鉴家族分区。 |
+| 解锁前文案 | string | 否 | 是 | —（不支持新增） | **数据来源：** 运营人员填写。<br>**逻辑：** 20 字以内，只做模糊暗示——**不得出现数字**（如"再点 3 单"），**也不得直接写出触发条件**（如"点过火锅"）；只给画面感，不给门槛。<br>**用途：** 未解锁状态下的那一句话，勾起好奇而不泄露条件。 |
+| 解锁条件（用户可见） | string | 否 | 是 | —（不支持新增） | **数据来源：** 运营人员填写。<br>**逻辑：** 一句话直白说明"用户做了什么"，可含数字（如"在 3 家以上不同小店下过单"）；须与同行的「解锁口径」语义一致。<br>**用途：** **仅在解锁后展示**，告诉用户这枚勋章是怎么拿到的。 |
+| 解锁口径 | string（只读） | 是 | 是 | —（不支持新增） | **数据来源：** 研发按勋章写死，后台只读回显。<br>**逻辑：** 一句话描述完整的判定口径，如「时段 11:00-14:00 · 命中 ≥1 单」「商品名命中米面碳水关键词 · ≥1 单」。含触发条件类型、判定参数与门槛值三部分。<br>**用途：** 让运营知道这枚勋章怎么算出来的，**不提供任何编辑入口**。 |
+| 状态 | enum（启用、停用） | 是 | 是 | —（不支持新增） | **数据来源：** 运营人员设置。<br>**逻辑：** 停用的勋章不下发给 C 端，也不再触发新解锁。<br>**用途：** 控制勋章是否生效，这是运营下线一枚勋章的唯一手段。 |
+| 更新时间 | date | 是 | 是 | — | **数据来源：** 系统记录最近保存时间。<br>**逻辑：** yyyy-MM-dd HH:mm，仅编辑弹窗展示。<br>**用途：** 追溯配置最近修改时间。 |
+
+##### 弹窗字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 勋章名称、印面字、勋章图、家族、状态 |
+| 用户可见文案 | 解锁前文案、解锁条件（用户可见） |
+| 解锁口径（只读） | 解锁口径 |
+| 系统 | 更新时间 |
+
+「用户可见文案」组的两个输入框上方各带一行灰字提示：解锁前文案提示"未解锁时展示，不要写数字和条件"，解锁条件提示"解锁后展示，需与解锁口径一致"。
+
+#### 列表交互
+
+**交互：编辑勋章**  <br>
+**业务用途**：调整名称、印面字、图、家族、两段用户可见文案与启停；保存后 C 端按下发内容重新渲染。解锁口径（含档位阈值与档位名）只读，改判定口径或档位需要研发发版。<br>
+
+**交互：删除勋章**  <br>
+**业务用途**：删除该勋章配置，二次确认后生效；C 端不再展示，但用户已解锁的历史记录保留在库中不删除。**已上线过的勋章建议改用停用而非删除**，删除后代码里的判定逻辑会失去配置对象。<br>
+
+**交互：本页无「新增勋章」入口**  <br>
+**业务用途**：页面头部不提供新增按钮。新增勋章必须由研发在代码里补上判定逻辑并发版，否则这枚勋章永远不会解锁。<br>
+
+#### 业务逻辑
+
+**判定口径不下放：** 触发条件类型、判定参数、门槛值，以及档位数量与档位名，全部由研发写死。后台仅在弹窗中以只读形式回显一条「解锁口径」描述，任何情况下不提供编辑控件。此约束为已确认结论。
+
+**名称唯一：** 勋章名称全局不可重名，重名时保存失败并提示。
+
+**两段文案的边界：** 「解锁前文案」不得出现数字与具体触发条件，只做模糊暗示；「解锁条件（用户可见）」可含数字，但只在解锁后展示。解锁口径本身属内部信息，不直接下发 C 端，对外只通过这两段文案表达。
+
+**解锁条件须与解锁口径一致：** 解锁条件是判定口径的用户可读版本。运营改文案不会改判定——文案与实际口径不一致会让用户看到"说一套判一套"。因此保存时若两段文字差异过大，弹窗内提示运营核对上方只读的「解锁口径」；要改判定必须研发发版。
+
+**印面字与勋章图是互斥兜底关系：** C 端渲染逻辑为 `勋章图非空 ? 显示图 : 显示印面字`。因此印面字必填、勋章图选填——34 枚勋章不可能同时出图，先有字也不会开天窗。
+
+**只支持编辑与启停：** 预置 17 枚可编辑、可停用、可删除，但不支持新增。到店/自提、节气、收藏分享邀请晒单、免单中奖等方向因订单数据缺对应字段（`city`、`items`、行为埋点、活动标识等）暂不预置，字段补齐后由研发连同判定逻辑一起发版。
+
+**停用不删档：** 停用后 C 端不再展示该勋章，也不再触发新解锁；用户已解锁的记录留在库中。
+
+### 4.3 图片规则配置 — 列表页（新增页面）
+
+#### 业务背景
+
+当前环节：② 维护图片规则与兜底<br>
+页面路径：运营配置后台 > 小喵印章 > 图片规则配置<br>
+对下游影响：每条日历记录按本页桶的优先级匹配 `goods_title` 取图；未命中任何桶时落到兜底桶，兜底桶缺失会导致打卡记录无图<br>
+表格类型：列表页<br>
+
+#### 字段说明
+
+取图分三层：`pic_url` 非空直接用真实商品图；否则用 `goods_title` 匹配品类桶；再未命中就落兜底桶。真实商品图只覆盖饿了么约 30% 的订单，美团订单 `pic_url` 为空——所以品类桶与兜底桶承担了大部分取图量，是整个配置的重点。
+
+页面顶部另有一个全局开关「真实商品图优先」，控制第一层是否生效，见列表交互。
+
+**本页关键词只用于配图，不参与勋章判定。** 勋章判定用的关键词由研发在代码里单独维护，与本页词表各自演进——运营在本页加词只会让更多订单配上对应品类的图，不会让任何勋章提前解锁。
+
+##### [列表页字段]
+
+| 字段名称 | 字段类型 | 列表 | 详情 | 新增 | 字段解释 |
+| --- | --- | --- | --- | --- | --- |
+| 桶标识 | string | 是 | 是 | 是（创建后不可修改） | **数据来源：** 运营人员填写。<br>**逻辑：** 小写英文 + 下划线，全局唯一（如 `milk_tea`）；创建后不可修改。<br>**用途：** 程序匹配的唯一键。 |
+| 桶名称 | string | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 中文可读名，如"奶茶茶饮"。<br>**用途：** 后台识别与列表展示。 |
+| 优先级 | number | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 正整数，数值越小越先匹配，命中即停。**细分桶必须排在宽泛桶之前**（如奶茶茶饮 &lt; 米面碳水），否则"杨枝甘露""拿铁"会被宽泛词抢先归类。兜底桶固定为最大值。<br>**用途：** 决定匹配顺序。 |
+| 关键词 | string | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员填写。<br>**逻辑：** 多行或用逗号分隔，与 `goods_title` 做包含匹配（不区分大小写、不区分全半角）。<br>**用途：** 决定这个桶能接住哪些商品名，**只影响配图**。 |
+| 图片池 | file | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员上传，支持一次多选。<br>**逻辑：** 推荐 2–10 张；C 端按「用户 + 订单」哈希取模选一张，保证同一订单每次都取到同一张。<br>**用途：** 命中该桶的订单实际展示的打卡图。 |
+| 是否兜底 | enum（是、否） | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员选择。<br>**逻辑：** 全局恰好 1 个桶可为"是"；兜底桶不可删除、不可停用、图片池不少于 8 张。<br>**用途：** 标识所有未命中订单的最终归宿。 |
+| 状态 | enum（启用、停用） | 是 | 是 | 是（可编辑） | **数据来源：** 运营人员设置。<br>**逻辑：** 停用的桶不参与匹配，其关键词覆盖的订单全部转给后续桶或兜底桶。<br>**用途：** 控制该桶是否生效，兜底桶不支持停用。 |
+| 更新时间 | date | 是 | 是 | — | **数据来源：** 系统记录最近保存时间。<br>**逻辑：** yyyy-MM-dd HH:mm，仅编辑弹窗展示。<br>**用途：** 追溯配置最近修改时间。 |
+
+##### 弹窗字段分组
+
+| 组名 | 字段 |
+| --- | --- |
+| 基本信息 | 桶标识、桶名称、优先级、是否兜底、状态 |
+| 匹配规则 | 关键词 |
+| 图片 | 图片池 |
+| 系统 | 更新时间 |
+
+#### 列表交互
+
+**交互：新增桶**  <br>
+**业务用途**：新增一个品类桶，填桶标识、关键词与图片池后保存启用；保存后命中的订单立即按新桶取图。<br>
+
+**交互：编辑桶**  <br>
+**业务用途**：调整名称、优先级、关键词与图片池；保存后 C 端按新规则取图，已生成的记录在再次打开时会按新图片池重新取图。<br>
+
+**交互：删除桶**  <br>
+**业务用途**：删除该桶配置，二次确认后生效；兜底桶不提供删除入口。删除后其关键词覆盖的订单转由后续优先级桶或兜底桶承接。<br>
+
+**交互：切换「真实商品图优先」全局开关**  <br>
+**业务用途**：位于列表顶部，默认开启。开启时 `pic_url` 非空的订单一律用真实商品图，不进入关键词匹配；关闭时全部订单强制走关键词桶，用于真实商品图质量出问题时紧急兜底。<br>
+
+#### 业务逻辑
+
+**匹配顺序即优先级：** 按优先级数值升序逐个桶匹配 `goods_title`，命中第一个即停止，未命中任何桶时落兜底桶。优先级相同时按更新时间先后排序，并在保存时提示冲突。
+
+**兜底桶唯一且强制：** 全局恰好 1 个桶的「是否兜底」=是，不可删除、不可停用，图片池不少于 8 张。缺少兜底桶时系统拒绝保存任何其他桶的删除操作——这是避免打卡记录出现空图的最低保障。
+
+**真实商品图只覆盖饿了么：** 实测数据中 `pic_url` 仅饿了么约 30% 订单有值，美团订单 100% 为空，因此美团订单全部由关键词桶与兜底桶承接。
+
+**图片数量锚点：** 按订单占比配置——兜底桶 8–10 张、米面碳水 6–8 张、炸鸡烧烤 4–5 张、奶茶/甜品/火锅/咖啡/汤饮各 3–4 张、水果/轻食各 2–3 张，合计 35–45 张。若改用猫咪主题插画统一风格，可整体取下限约 30 张。
+
+**改图会追溯：** C 端按「用户 + 订单」哈希取模选图，只要图片池不变，同一订单每次都是同一张；一旦增删该桶的图片，历史记录再次打开时图会变。这是已确认可接受的行为，后台不做冻结。
+
+**关键词持续维护：** 当前词表对订单的命中率约 62.6%，其余约 37.4% 落兜底桶。停用某个桶等于把该品类的全部订单推给兜底桶，视觉上会明显泛化，操作前需评估订单占比。
+
+**与勋章判定解耦：** 本页关键词只服务配图。勋章判定用的关键词写死在代码里，两套词各自演进——运营在本页加词不会影响任何勋章的解锁条件。
+
+### 4.4 勋章设计 — 文档页（不产出配置）
+
+| 勋章名 | 家族 | 触发条件（数据口径） | 预估覆盖率 | 设计意图 |
+| --- | --- | --- | --- | --- |
+| 初次见面喵 | 初见日常 | 事件 注册成功 · 首次进入 | 100%（全部注册用户） | 新手路径第一枚，让用户注册后立刻拿到反馈 |
+| 露脸的小喵 | 初见日常 | 事件 资料更新 · 头像与昵称均非空 | 数据无法判断，需补用户资料字段 | 把"完善资料"这个运营动作变成情感奖励 |
+| 干饭喵 | 时间节律 | `created_at` 北京时间 11–14 点 · ≥1 单 | 38.19%，1111 人 | 覆盖最广的时段，做图鉴的基础盘 |
+| 等门喵 | 时间节律 | `created_at` 北京时间 17–20 点 · ≥1 单 | 38.60%，1123 人 | 与干饭喵构成"一天两顿"的对称叙事 |
+| 守夜喵 | 时间节律 | `created_at` 北京时间 21–5 点 · ≥1 单 | 23.38%，680 人 | 强故事性的夜猫子标签，分享意愿最高 |
+| 碳水喵 | 口味偏好 | `goods_title` 命中 `staple` 桶 · ≥1 单 | 38.43%，1118 人 | 最大品类，用来接住"没特色"的大多数订单 |
+| 咔嚓喵 | 口味偏好 | `goods_title` 命中 `fried` 桶 · ≥1 单 | 14.61%，425 人 | 拟声词记忆点，情绪最直接的一枚 |
+| 奶茶喵 | 口味偏好 | `goods_title` 命中 `milk_tea` 桶 · ≥1 单 | 9.52%，277 人 | 高辨识度的社交货币，适合做传播 |
+| 咕嘟喵 | 口味偏好 | `goods_title` 命中 `hotpot` 桶 · ≥1 单 | 4.68%，136 人 | 热气画面感，冬季时令可复用 |
+| 早C喵 | 口味偏好 | `goods_title` 命中 `coffee` 桶 · ≥1 单 | 4.61%，134 人 | 借"早C晚A"梗，年轻用户共鸣强 |
+| 甜心喵 | 口味偏好 | `goods_title` 命中 `dessert` 桶 · ≥1 单 | 4.13%，120 人 | 情绪补偿类，适合做"安慰"叙事 |
+| 维C喵 | 口味偏好 | `goods_title` 命中 `fruit` 桶 · ≥1 单 | 2.82%，82 人 | 健康倾向用户的分层标签 |
+| 吃草喵 | 口味偏好 | `goods_title` 命中 `salad` 桶 · ≥1 单 | 1.27%，37 人 | 极小众，做彩蛋比做主线更合适 |
+| 双碗喵 | 饮食习惯 | `platform` 同时存在 1 与 2 · 各 ≥1 单 | 10.45%，304 人 | 双平台行为有区分度，且是真实用户习惯 |
+| 拼桌喵 | 饮食习惯 | `goods_title` 含「等 N 件商品」且 N ≥ 2 · ≥1 单 | 5.88%，171 人 | 凑单是明确行为，代表"不只是为自己点" |
+| 专一喵 | 饮食习惯 | 饿了么同一 `shop_name` ≥ 3 单 | 2.99%，87 人 | 情感浓度最高的一枚，"只认一家" |
+| 探店喵 | 城市足迹 | 饿了么 `shop_name` 去重 ≥ 3 家 | 6.94%，202 人 | 探索型标签，城市字段补齐后可扩成城市家族 |
+
+## 5. 第二阶段：日历记录生成与取图
+
+> 本阶段为 C 端内容，仅在本 MD 中简要登记，B 端原型不生成对应页面；完整交互逻辑见《产品需求文档.md》，可运行原型见《印章_交互稿.html》。
+
+### 5.1 日历记录生成与取图 — 移动端展示页（改造页面）
+
+有效订单完成后，系统按下单时间在日历上生成一条打卡记录，并按「真实商品图 → 关键词桶 → 兜底桶」三层取图。同一订单重复生成时取图结果保持一致。记录生成后按研发写死的各勋章口径累计判定，达到门槛即解锁对应勋章及其档位。
+
+## 6. 第三阶段：查看日历与勋章图鉴
+
+> 本阶段为 C 端内容，仅在本 MD 中简要登记，B 端原型不生成对应页面。
+
+### 6.1 查看日历与勋章图鉴 — 移动端展示页（改造页面）
+
+用户在小程序内按月查看日历上的打卡记录与对应的打卡图，并按家族浏览勋章图鉴。未解锁勋章只展示「解锁前文案」、不出现任何数字门槛；已解锁勋章展示印面（有图则显示勋章图）、名称与「解锁条件」，多档勋章按当前档位展示对应文案。
+
+</script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>小喵印章后台配置</title>
+<style id="css-布局">
+:root { --菜单宽: 236px; --泳道宽: 400px; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif; background: #f1f5f9; color: #334155; -webkit-font-smoothing: antialiased; }
+.应用壳 { display: grid; grid-template-columns: var(--泳道宽) var(--菜单宽) minmax(0, 1fr); height: 100vh; overflow: hidden; }
+
+/* ── 中：后台菜单（白底黑字，全铺开，父节点不可点） ── */
+.菜单区 { background: #fff; color: #334155; border-right: 1px solid #e2e8f0; overflow-y: auto; }
+.菜单品牌 { padding: 18px 18px 14px; border-bottom: 1px solid #eef2f7; }
+.菜单品牌名 { font-size: 16px; font-weight: 700; color: #172033; line-height: 1.4; }
+.菜单品牌小 { font-size: 11px; color: #94a3b8; margin-top: 3px; letter-spacing: .5px; }
+.菜单父 { padding: 16px 18px 4px; font-size: 12px; color: #0f6b8f; font-weight: 700; letter-spacing: .5px; }
+.菜单文档, .菜单叶子 { display: flex; align-items: center; gap: 8px; color: #334155; font-size: 13.5px; cursor: pointer; user-select: none; border-left: 3px solid transparent; }
+.菜单文档 { padding: 9px 18px; }
+.菜单叶子 { padding: 8px 18px 8px 30px; font-size: 13px; }
+.菜单文档.子级 { padding: 9px 18px 9px 30px; font-size: 13px; }
+.菜单文档:hover, .菜单叶子:hover { background: #f1f5f9; color: #0f172a; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.菜单号 { font-family: Consolas, monospace; font-size: 11px; color: #94a3b8; min-width: 26px; }
+.菜单文档.激活 .菜单号, .菜单叶子.激活 .菜单号 { color: #0f6b8f; }
+.菜单图标 { font-size: 13px; }
+
+/* ── 中：内容工作区 ── */
+.内容区 { overflow-y: auto; background: #f1f5f9; }
+.页面面板 { display: none; padding: 22px 26px 48px; }
+.页面面板.激活 { display: block; }
+.页面卡 { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(15,35,52,.04); margin-bottom: 18px; }
+.页面头 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.页面头 h2 { margin: 0; font-size: 19px; color: #172033; }
+.主按钮 { padding: 7px 16px; border: 1px solid #0f6b8f; border-radius: 6px; background: #0f6b8f; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.主按钮:hover { background: #0c5673; }
+
+/* ── 左：常驻泳道栏 ── */
+.泳道区 { background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 14px 12px 28px; }
+.泳道区 > h3 { margin: 2px 4px 10px; font-size: 14px; color: #334155; }
+.泳道简介 { margin: 0 4px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.75; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分点 { margin: 0 4px 12px; padding: 9px 11px; list-style: none; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分点 li { padding: 4px 0; font-size: 12px; line-height: 1.65; color: #475569; border-bottom: 1px dashed #e2e8f0; }
+.泳道简介-分点 li:last-child { border-bottom: none; }
+.泳道简介-分点 li strong { color: #2b6cb0; margin-right: 4px; }
+.泳道简介-分组 { margin: 0 4px 12px; padding: 5px 11px; font-size: 12px; line-height: 1.7; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.泳道简介-分组 .简介组 { padding: 5px 0 4px; border-bottom: 1px dashed #e2e8f0; }
+.泳道简介-分组 .简介组:last-child { border-bottom: none; }
+.泳道简介-分组 .简介组标题 { display: block; color: #2b6cb0; font-weight: 700; margin-right: 4px; white-space: nowrap; }
+.泳道简介-分组 .简介组条目 { padding: 2px 0 0 20px; color: #475569; }
+.泳道简介-分组 .简介跳转, .泳道简介-分点 .简介跳转 { color: #1d4ed8; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.泳道区 .泳道图 { font-size: 13px; }
+</style>
+<style id="css-组件">
+/* ── 文档页排版 ── */
+.文档正文 { font-size: 15px; line-height: 1.72; color: #1f2937; min-width: 0; }
+.阅读节标题 { margin: 26px 0 12px; font-size: 20px; font-weight: 750; line-height: 1.35; color: #172033; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.阅读标题 { line-height: 1.35; color: #172033; }
+.文档正文 h3 { font-size: 20px; margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #d9e2ec; }
+.文档正文 h4 { font-size: 16px; margin: 22px 0 8px; } .文档正文 h5 { font-size: 14px; margin: 18px 0 6px; color: #344054; }
+.文档正文 p { margin: 10px 0; } .文档正文 ul, .文档正文 ol { margin: 10px 0 12px 22px; padding: 0; } .文档正文 li { margin: 5px 0; }
+.文档正文 strong { font-weight: 750; }
+.文档正文 blockquote { margin: 16px 0; border-left: 4px solid #0f6b8f; background: #e8f4f8; border-radius: 6px; padding: 10px 14px; color: #223548; } .文档正文 blockquote p { margin: 4px 0; }
+.行内代码 { font-family: Consolas, Menlo, monospace; font-size: .92em; background: #eef2f6; border-radius: 4px; padding: 1px 5px; color: #111827; }
+.表格容器 { width: 100%; overflow-x: auto; margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; }
+.阅读表格 { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.阅读表格 th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #d9e2ec; white-space: nowrap; }
+.阅读表格 td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; } .阅读表格 tbody tr:hover { background: #f8fafc; }
+.代码块 { margin: 16px 0; border: 1px solid #d9e2ec; border-radius: 8px; overflow: hidden; }
+.代码头 { padding: 6px 14px; background: #f8fafc; border-bottom: 1px solid #d9e2ec; font-size: 12px; color: #64748b; }
+.代码块 pre { margin: 0; padding: 16px; background: #fff; color: #111827; font-size: 13px; line-height: 1.55; overflow-x: auto; }
+.代码块 code { display: block; font-family: Consolas, Menlo, monospace; font-size: 13px; white-space: pre; }
+
+/* ── 流程信息卡 ── */
+.流程信息卡 { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; background: linear-gradient(180deg,#f8fbff,#f1f7ff); margin-bottom: 16px; overflow: hidden; }
+.流程信息卡-头部 { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #dbeafe; }
+.流程步骤号 { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.流程信息卡-环节名 { font-size: 13.5px; font-weight: 600; color: #1e3a8a; }
+.流程信息卡-正文 { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 5px; }
+.流程信息卡-行 { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.流程信息卡-标签 { flex-shrink: 0; display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.流程信息卡-标签.路径 { background: #f1f5f9; color: #475569; }
+.流程信息卡-标签.影响 { background: #fef3c7; color: #92400e; }
+.流程信息卡-值 { color: #334155; }
+.流程信息卡-值 .路径分段 { color: #64748b; }
+.流程信息卡-值 .路径末段 { color: #1e293b; font-weight: 600; }
+
+/* ── 列表页 ── */
+.工具栏 { display: flex; align-items: center; gap: 16px; padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.搜索框 { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; max-width: 320px; }
+.搜索图标 { font-size: 14px; } .搜索输入 { border: none; outline: none; font-size: 13px; flex: 1; color: #1e293b; } .搜索输入::placeholder { color: #94a3b8; }
+.筛选区 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .筛选标签 { font-size: 12px; color: #64748b; font-weight: 500; }
+.筛选下拉 { padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; cursor: pointer; }
+.数据表格 { width: 100%; border-collapse: collapse; font-size: 13px; }
+.列表表头 { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.列表表头.操作列 { text-align: center; width: 150px; } .表头字段名 { display: block; font-size: 13px; margin-bottom: 2px; }
+.列表单元格 { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 150px; word-break: break-all; overflow: hidden; } .列表单元格.操作列 { text-align: center; max-width: none; word-break: normal; overflow: visible; white-space: nowrap; }
+.列表单元格 .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.数据行:hover { background: #f8fafc; }
+/* v2 详情/编辑合并后沿用旧名，保持 CSS 稳定，产出后人类可自行矫正 */
+.详情按钮 { padding: 4px 12px; border: 1px solid #3b82f6; border-radius: 4px; background: #fff; color: #3b82f6; font-size: 12px; cursor: pointer; margin-right: 6px; } .详情按钮:hover { background: #3b82f6; color: #fff; }
+.删除按钮 { padding: 4px 12px; border: 1px solid #ef4444; border-radius: 4px; background: #fff; color: #ef4444; font-size: 12px; cursor: pointer; } .删除按钮:hover { background: #ef4444; color: #fff; }
+.列表脚注 { margin-top: 8px; font-size: 12px; color: #94a3b8; text-align: right; }
+.信息按钮 { display: inline-block; width: 20px; height: 20px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; margin-left: 4px; vertical-align: middle; }
+.信息按钮:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.类型标签 { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.列表表头 .类型标签 { display: block; margin-left: 0; margin-top: 2px; width: fit-content; }
+.类型标签.text,.类型标签.string { background: #dbeafe; color: #1d4ed8; } .类型标签.number { background: #dcfce7; color: #15803d; }
+.类型标签.enum { background: #fef3c7; color: #b45309; } .类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.类型标签.boolean { background: #fce7f3; color: #be185d; } .类型标签.file { background: #e0f2fe; color: #0369a1; }
+.类型标签.组合字段 { background: #f1f5f9; color: #64748b; } .类型标签.富文本 { background: #fef2f2; color: #b91c1c; }
+
+/* ── 字段卡（弹窗表单与详情抽屉共用） ── */
+.编辑卡片区 { display: flex; flex-direction: column; gap: 20px; }
+.field-card { background: #fff; border: 1px solid #e2e8f0; border-radius:  10px; overflow: hidden; transition: opacity 0.25s; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.field-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.field-card-header h4 { margin: 0; font-size: 15px; color: #1e293b; }
+.field-card-body { padding: 12px 16px; }
+.field-row { display: grid; grid-template-columns: 120px 1fr 28px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.field-row:last-child { border-bottom: none; } .field-label { font-size: 13px; font-weight: 500; color: #475569; }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .field-display { font-size: 13px; color: #1e293b; }
+.field-select { padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; min-width: 140px; }
+.field-input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; width: 100%; max-width: 360px; font-family: inherit; }
+textarea.field-input { max-width: 100%; }
+.field-rich { font-size: 13px; color: #1e293b; line-height: 1.8; } .field-readonly { font-size: 13px; color: #94a3b8; }
+.field-type-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; color: #64748b; background: #f1f5f9; }
+.编辑性标签 { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+.编辑性标签.可编辑 { background: #dcfce7; color: #15803d; }
+.编辑性标签.只读 { background: #f1f5f9; color: #64748b; }
+.编辑性标签.条件 { background: #fef3c7; color: #b45309; }
+.field-info-btn { width: 24px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 50%; background: #fff; color: #64748b; font-size: 12px; cursor: pointer; line-height: 22px; text-align: center; pointer-events: auto; }
+.field-info-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+
+/* ── 详情抽屉 / 表单弹窗（右侧滑出） ── */
+.overlay { position: fixed; inset: 0; display: none; background: rgba(15, 23, 42, .36); z-index: 80; } .overlay.show { display: block; }
+.drawer { position: fixed; top: 0; right: 0; width: 560px; max-width: 94vw; height: 100vh; background: #f8fafc; transform: translateX(100%); transition: .22s ease; z-index: 90; box-shadow: -16px 0 42px rgba(15, 23, 42, .18); display: flex; flex-direction: column; }
+.drawer.show { transform: translateX(0); }
+.panel-head { height: 60px; padding: 0 22px; border-bottom: 1px solid #d9e2ec; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: #fff; }
+.panel-title { font-size: 17px; font-weight: 700; } .btn-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: #f2f4f7; color: #596274; font-size: 20px; cursor: pointer; }
+.panel-body { padding: 20px 22px; overflow: auto; flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #d9e2ec; background: #fff; }
+.btn-secondary { padding: 7px 18px; border: 1px solid #bcccdc; border-radius: 6px; background: #fff; color: #475569; font-size: 13px; cursor: pointer; } .btn-secondary:hover { background: #f8fafc; }
+
+/* ── 字段弹窗 ── */
+.字段弹窗 { position: fixed; z-index: 1100; width: 320px; max-width: 90vw; background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16); border: 1px solid #e2e8f0; padding: 0; opacity: 0; transform: scale(0.95); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.弹窗头部 { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.弹窗字段名 { font-size: 15px; font-weight: 600; color: #1e293b; }
+.弹窗类型标签 { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.弹窗类型标签.text,.弹窗类型标签.string { background: #dbeafe; color: #1d4ed8; } .弹窗类型标签.number { background: #dcfce7; color: #15803d; }
+.弹窗类型标签.enum { background: #fef3c7; color: #b45309; } .弹窗类型标签.date { background: #f3e8ff; color: #7c3aed; }
+.弹窗正文 { padding: 12px 16px; } .弹窗属性 { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.6; }
+.弹窗属性 dt { color: #94a3b8; font-weight: 500; } .弹窗属性 dd { color: #334155; margin: 0; }
+
+/* ── 泳道图组件（2026 蓝圈号标准版） ── */
+.泳道图 { margin: 0; font-size: 13px; line-height: 1.55; user-select: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+.泳道圆圈 { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.泳道状态徽章 { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.6; align-self: flex-start; }
+.泳道状态徽章.驳回色 { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.泳道状态徽章.通过色 { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.泳道状态徽章.待处理色 { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.泳道状态徽章.信息色 { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.泳道分支说明 { font-size: 12px; color: #b45309; padding: 2px 0 0 26px; line-height: 1.6; }
+.泳道行 { transition: opacity .25s ease; }
+.泳道图[class*="高亮阶段"] .泳道行[data-node-phase] { opacity: .35; }
+.泳道图.高亮阶段1 .泳道行[data-node-phase="1"], .泳道图.高亮阶段2 .泳道行[data-node-phase="2"],
+.泳道图.高亮阶段3 .泳道行[data-node-phase="3"], .泳道图.高亮阶段4 .泳道行[data-node-phase="4"],
+.泳道图.高亮阶段5 .泳道行[data-node-phase="5"], .泳道图.高亮阶段6 .泳道行[data-node-phase="6"],
+.泳道图.高亮阶段7 .泳道行[data-node-phase="7"], .泳道图.高亮阶段8 .泳道行[data-node-phase="8"],
+.泳道图.高亮阶段9 .泳道行[data-node-phase="9"], .泳道图.高亮阶段10 .泳道行[data-node-phase="10"] { opacity: 1; }
+.泳道行.置灰 { opacity: .25 !important; pointer-events: none; }
+.泳道行.正常 { opacity: 1 !important; }
+/* ── 泳道收纳卡状态层（主图一行一卡 + 点击展开居中浮层）── */
+.泳道收纳卡.收纳-已过 { opacity: 1 !important; }
+.泳道收纳卡.收纳-现在 { opacity: 1 !important; }
+.泳道收纳卡.收纳-现在 .泳道收纳卡内 { outline: 2px solid rgba(29,78,216,.55); outline-offset: -2px; }
+.泳道收纳卡.收纳-未来 { opacity: .25 !important; }
+.泳道收纳卡:hover .泳道收纳卡内 { filter: brightness(.97); }
+
+/* ── 提示消息 / 灯箱 / 杂项 ── */
+.提示容器 { position: fixed; top: 16px; right: 16px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.提示 { padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; min-width: 260px; transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.提示.信息 { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; } .提示.成功 { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+.图片灯箱 { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.图片灯箱.可见 { display: flex; }
+.图片灯箱 img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px rgba(0,0,0,0.5); }
+.空状态 { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+</style>
+<style id="css-状态">
+.页面面板.激活 { display: block; }
+.菜单文档.激活, .菜单叶子.激活 { background: #eff6ff; color: #0c4a6e; border-left-color: #0f6b8f; font-weight: 600; }
+.drawer.show { transform: translateX(0); } .overlay.show { display: block; }
+.字段弹窗.可见 { opacity: 1; transform: scale(1); pointer-events: auto; }
+.提示.显示 { transform: translateX(0); opacity: 1; } .提示.消失 { transform: translateX(120%); opacity: 0; }
+.field-card.muted { opacity: 0.35; pointer-events: none; }
+.图片灯箱.可见 { display: flex; }
+</style>
+</head>
+<body>
+<div class="应用壳">
+<aside class="泳道区">
+<h3>多方业务泳道图</h3>
+<p class="泳道简介">「小喵印章」的 C 端形态已经定稿：用户每完成一笔外卖订单，日历自动生成一条打卡记录并配一张图，行为累计达标后解锁对应勋章。但勋章的名称、印面字、图、文案，以及打卡图"该配哪一张"的匹配规则，目前全部写在前端与脚本里——运营改一个字都要发版。更关键的是美团订单拿不到商品图，必须有可运营的品类图片桶与兜底图把每一单接住，否则会出现大量无图的打卡记录。</p>
+<div class="泳道简介-分组"><div class="简介组"><strong class="简介组标题">配置范围：</strong><div class="简介组条目">① <span class="简介跳转" onclick="切换页面('4.1')">勋章家族</span>：维护图鉴的分区名、排序与是否展示</div><div class="简介组条目">② <span class="简介跳转" onclick="切换页面('4.2')">勋章配置</span>：维护勋章的展示元素（名称、印面字、勋章图、解锁前文案、解锁条件）与启停</div><div class="简介组条目">③ <span class="简介跳转" onclick="切换页面('4.3')">图片规则配置</span>：维护「商品名关键词 → 图片池」的匹配桶与唯一的兜底桶，决定每条打卡记录命中哪一张图</div></div></div>
+<div class="泳道图" id="全局泳道图" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:14px;background:#fff;">
+<div class="泳道图-头" style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid #e2e8f0;">
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:#1d4ed8;">客户端后台（运营人员）</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#ecfdf5;color:#065f46;">C端小程序</div>
+<div class="泳道图-头格" style="padding:10px 8px;text-align:center;font-weight:700;font-size:14px;background:#ecfdf5;color:#065f46;">C端用户</div>
+</div><div class="泳道图-体">
+<div class="泳道行 泳道收纳卡" data-card="g1" data-card-nodes="1,2" data-card-label="①–② 客户端后台（运营人员）" data-node-phase="1" onclick="打开泳道浮层('g1')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;">
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">①–② 客户端后台（运营人员）</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">2 步 ▸</span></div></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+</div>
+<div class="泳道行 泳道收纳卡" data-card="g2" data-card-nodes="3,4,5" data-card-label="③–⑤ C端小程序" data-node-phase="2" onclick="打开泳道浮层('g2')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;">
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">③–⑤ C端小程序</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">3 步 ▸</span></div></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+</div>
+<div class="泳道行 泳道收纳卡" data-card="g3" data-card-nodes="6" data-card-label="⑥ C端用户" data-node-phase="3" data-swimlane-node="6" onclick="打开泳道浮层('g3')" style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;cursor:pointer;">
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"></div>
+<div class="泳道格" style="padding:5px 8px;border-right:1px solid #f1f5f9;display:flex;flex-direction:column;justify-content:center;min-width:0;"><div class="泳道收纳卡内" style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;overflow:hidden;"><span style="font-weight:700;font-size:12.5px;white-space:normal;word-break:break-word;line-height:1.35;min-width:0;">⑥ C端用户</span><span style="font-size:11px;opacity:.82;white-space:nowrap;flex-shrink:0;">▸</span></div></div>
+</div>
+</div></div><div id="泳道浮层体_g1" style="display:none;">
+<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">①</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">维护家族与勋章配置
+<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">勋章：已配置</span>
+</div></div>
+<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">②</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">维护图片规则与兜底
+<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">取图规则：按优先级</span>
+</div></div>
+</div>
+<div id="泳道浮层体_g2" style="display:none;">
+<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">③</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">订单完成生成日历记录
+<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">日历记录：已生成</span>
+</div></div>
+<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">④</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">按规则取打卡图
+<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">打卡图：三层取图</span>
+</div></div>
+<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">⑤</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">判定并解锁勋章
+<span class="泳道状态徽章 信息色" style="display:inline-block;margin:4px 4px 0 0;">勋章：已解锁</span>
+</div></div>
+</div>
+<div id="泳道浮层体_g3" style="display:none;">
+<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px dashed #e2e8f0;"><span class="泳道圆圈">⑥</span><div style="flex:1;font-size:12.5px;color:#1e293b;line-height:1.65;">查看日历与勋章图鉴
+</div></div>
+</div>
+<div id="泳道浮层遮罩" style="display:none;position:fixed;inset:0;z-index:1600;background:rgba(15,23,42,.34);align-items:center;justify-content:center;" onclick="关闭泳道浮层()"><div onclick="event.stopPropagation()" style="background:#fff;border-radius:10px;width:330px;max-width:88vw;max-height:72vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.24);"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:#fff;z-index:1;"><b id="泳道浮层标题" style="font-size:13.5px;color:#0f172a;"></b><span onclick="关闭泳道浮层()" style="cursor:pointer;color:#94a3b8;font-size:16px;line-height:1;padding:2px 4px;">✕</span></div><div id="泳道浮层内容" style="padding:6px 14px 10px;"></div></div></div>
+</aside>
+<nav class="菜单区">
+<div class="菜单品牌"><div class="菜单品牌名">小喵印章后台配置</div><div class="菜单品牌小">B 端业务原型 · v2 母版</div></div>
+<div class="菜单父"><span>需求与流程</span></div>
+<div class="菜单文档 子级 激活" data-menu-page="1" onclick="切换页面('1')"><span class="菜单号">001</span><span>需求背景与目标</span></div>
+<div class="菜单文档 子级" data-menu-page="2" onclick="切换页面('2')"><span class="菜单号">002</span><span>业务流程</span></div>
+<div class="菜单父"><span>第一阶段：勋章与取图配置</span></div>
+<div class="菜单叶子" data-menu-page="4.1" onclick="切换页面('4.1')"><span class="菜单号">4.1</span><span class="菜单图标">🗂️</span><span>勋章家族</span></div>
+<div class="菜单叶子" data-menu-page="4.2" onclick="切换页面('4.2')"><span class="菜单号">4.2</span><span class="菜单图标">🏅</span><span>勋章配置</span></div>
+<div class="菜单叶子" data-menu-page="4.3" onclick="切换页面('4.3')"><span class="菜单号">4.3</span><span class="菜单图标">🖼️</span><span>图片规则配置</span></div>
+<div class="菜单叶子" data-menu-page="4.4" onclick="切换页面('4.4')"><span class="菜单号">4.4</span><span class="菜单图标">📖</span><span>勋章设计</span></div>
+</nav>
+<main class="内容区" id="内容区">
+<section class="页面面板 激活" id="面_1" data-page="1"><div class="页面卡"><div class="页面头"><h2>需求背景与目标</h2></div><div class="文档正文"><h3 class="阅读节标题">1.1 为什么要做</h3>
+<p>「小喵印章」的 C 端形态已经定稿：用户每完成一笔外卖订单，日历自动生成一条打卡记录并配一张图，行为累计达标后解锁对应勋章。但勋章的名称、印面字、图、文案，以及打卡图"该配哪一张"的匹配规则，目前全部写在前端与脚本里——运营改一个字都要发版。更关键的是美团订单拿不到商品图，必须有可运营的品类图片桶与兜底图把每一单接住，否则会出现大量无图的打卡记录。</p>
+<ul>
+<li><strong>配置范围：</strong></li>
+<li>[[4.1|勋章家族]]：维护图鉴的分区名、排序与是否展示</li>
+<li>[[4.2|勋章配置]]：维护勋章的展示元素（名称、印面字、勋章图、解锁前文案、解锁条件）与启停</li>
+<li>[[4.3|图片规则配置]]：维护「商品名关键词 → 图片池」的匹配桶与唯一的兜底桶，决定每条打卡记录命中哪一张图</li>
+</ul>
+
+<p>另有 <strong>[[4.4|勋章设计]]</strong>：只读文档页，一张表列清 17 枚勋章的家族、触发条件、预估覆盖率与设计意图，<strong>不承载任何配置</strong>。</p>
+<p><strong>不做的部分（已确认结论）：</strong> 解锁判定不做成可配置项。触发条件类型、判定参数与门槛值一律由研发按勋章写死在代码里，后台只做只读回显——避免运营改口径导致勋章错发或永不触发。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>改造前
+
+勋章与取图规则写死在前端，调整需要发版
+美团订单无商品图，打卡记录无图可展示
+
+改造后
+
+运营在配置端维护家族、勋章展示元素，以及关键词图片桶和兜底桶
+        ↓
+订单完成后系统生成日历记录，按「真实商品图 → 品类桶 → 兜底桶」取图
+        ↓
+系统按研发写死的口径判定 → 用户解锁勋章 → 图鉴按配置展示</code></pre></div>
+<h3 class="阅读节标题">1.2 一句话业务模型</h3>
+<div class="代码块"><div class="代码头">text</div><pre><code>积分订单数据（goods_title、platform、created_at、shop_name）
+        +
+运营维护的家族、勋章展示元素与关键词图片桶
+        +
+必填且不可删除的兜底图片池
+        ↓
+日历记录生成并按优先级取图 → 系统按写死口径判定 → 勋章解锁 → 图鉴展示</code></pre></div>
+<h3 class="阅读节标题">1.3 最终目标</h3>
+<ul>
+<li><strong>展示可运营：</strong> 家族分区、勋章名称/印面字/图/两段用户可见文案全部由运营维护，改名换图改文案不依赖发版。</li>
+<li><strong>判定收口在研发：</strong> 解锁口径不在后台暴露，杜绝运营配错门槛导致勋章乱发或永不触发。</li>
+<li><strong>打卡图不空缺：</strong> 任何一笔订单都能取到一张图，美团无商品图的订单由关键词桶与兜底桶接住。</li>
+</ul>
+
+<h3 class="阅读节标题">1.4 页面原型与图片说明</h3>
+<p>C 端日历与勋章图鉴效果由外部原型《印章_交互稿.html》承载；本文档只产出 B 端配置端交互原型，不重复 C 端展示。</p></div></div></section>
+<section class="页面面板" id="面_2" data-page="2"><div class="页面卡"><div class="页面头"><h2>业务流程</h2></div><div class="文档正文"><h3 class="阅读节标题">2.1 多方业务泳道图</h3>
+<h3 class="阅读节标题">2.2 阶段划分与阅读说明</h3>
+<p>后续正文按照业务实际发生顺序线性展开。<strong>阶段切分以"操作端"为第一判据：同一阶段内不得跨端。</strong> 根据当前业务闭环，可划分为：</p>
+<p>1. <strong>第一阶段：勋章与取图配置（主要参与方：客户端后台）</strong>：运营人员维护家族（4.1）、勋章展示元素（4.2）与图片规则桶（4.3）；配置保存后即对 C 端生效，不需要发版。</p>
+<p>2. <strong>第二阶段：日历记录生成与取图（主要参与方：C端小程序）</strong>：订单完成后生成日历记录，按「真实商品图 → 品类桶 → 兜底桶」取图，并按研发写死的口径判定勋章是否解锁。</p>
+<p>3. <strong>第三阶段：查看日历与勋章图鉴（主要参与方：C端用户）</strong>：用户在小程序内查看打卡记录与已解锁勋章。</p>
+<div class="代码块"><div class="代码头">text</div><pre><code>第一阶段：勋章与取图配置
+① 维护家族与勋章配置 → ② 维护图片规则与兜底
+            ↓
+第二阶段：日历记录生成与取图
+③ 订单完成生成日历记录 → ④ 按规则取打卡图 → ⑤ 判定并解锁勋章
+            ↓
+第三阶段：查看日历与勋章图鉴
+⑥ 查看日历与勋章图鉴</code></pre></div>
+<h3 class="阅读节标题">2.3 页面类型说明</h3>
+<div class="表格容器"><table class="阅读表格">
+<tr>
+<th>页面类型</th>
+<th>面向对象</th>
+<th>含义</th>
+<th>正文字段表格列</th>
+</tr>
+<tr>
+<td>列表页</td>
+<td>后台操作人员</td>
+<td>运营人员看到的家族列表、勋章列表与图片规则桶列表，编辑共用右侧弹窗</td>
+<td>字段名称、字段类型、列表、详情、新增、字段解释</td>
+</tr>
+<tr>
+<td>移动端展示页</td>
+<td>C 端用户</td>
+<td>日历打卡记录与勋章图鉴的实际呈现（本文档仅登记，交互细节由外部链路承载）</td>
+<td>简要登记，不展开</td>
+</tr>
+<tr>
+<td>文档页</td>
+<td>后台操作人员</td>
+<td>只读的设计参考页，无列表、无新增/编辑弹窗（如 4.4 勋章设计）</td>
+<td>无字段表格，正文直接呈现设计结论</td>
+</tr>
+</table></div>
+</div></div></section>
+<section class="页面面板" id="面_4_1" data-page="4.1"><div class="页面卡"><div class="页面头"><h2>勋章家族</h2><button class="主按钮" onclick="打开表单弹窗('4.1','新增')">+ 新增家族</button></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 维护家族与勋章配置</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">运营配置后台 &gt; 小喵印章 &gt;</span> <span class="路径末段">勋章家族</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">家族决定 C 端图鉴的分区名与先后顺序；隐藏的家族在 C 端不展示，其下勋章随之一并不展示</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索家族名称"></div><div class="筛选区"><span class="筛选标签">是否展示：</span><select class="筛选下拉"><option>全部</option><option>展示</option><option>隐藏</option></select></div></div>
+<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#1e40af;">共 <strong>8</strong> 个家族。「节气时令」「使用纪念」「特别时刻」暂无勋章，设为隐藏，避免 C 端图鉴出现空分区；新增家族默认不展示，配好勋章后再打开。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">家族ID<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('家族ID', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">家族名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('家族名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">排序<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('排序', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">是否展示<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('是否展示', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">time</td><td class="列表单元格">时间节律</td><td class="列表单元格">1</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">展示</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {&quot;家族ID&quot;:'time',&quot;家族名称&quot;:'时间节律',&quot;排序&quot;:'1',&quot;是否展示&quot;:'展示',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {&quot;家族ID&quot;:'time',&quot;家族名称&quot;:'时间节律',&quot;排序&quot;:'1',&quot;是否展示&quot;:'展示',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">taste</td><td class="列表单元格">口味偏好</td><td class="列表单元格">2</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">展示</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {&quot;家族ID&quot;:'taste',&quot;家族名称&quot;:'口味偏好',&quot;排序&quot;:'2',&quot;是否展示&quot;:'展示',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {&quot;家族ID&quot;:'taste',&quot;家族名称&quot;:'口味偏好',&quot;排序&quot;:'2',&quot;是否展示&quot;:'展示',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">habit</td><td class="列表单元格">饮食习惯</td><td class="列表单元格">3</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">展示</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {&quot;家族ID&quot;:'habit',&quot;家族名称&quot;:'饮食习惯',&quot;排序&quot;:'3',&quot;是否展示&quot;:'展示',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {&quot;家族ID&quot;:'habit',&quot;家族名称&quot;:'饮食习惯',&quot;排序&quot;:'3',&quot;是否展示&quot;:'展示',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">city</td><td class="列表单元格">城市足迹</td><td class="列表单元格">4</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">展示</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {&quot;家族ID&quot;:'city',&quot;家族名称&quot;:'城市足迹',&quot;排序&quot;:'4',&quot;是否展示&quot;:'展示',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {&quot;家族ID&quot;:'city',&quot;家族名称&quot;:'城市足迹',&quot;排序&quot;:'4',&quot;是否展示&quot;:'展示',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">onsite</td><td class="列表单元格">初见日常</td><td class="列表单元格">5</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">展示</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {&quot;家族ID&quot;:'onsite',&quot;家族名称&quot;:'初见日常',&quot;排序&quot;:'5',&quot;是否展示&quot;:'展示',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {&quot;家族ID&quot;:'onsite',&quot;家族名称&quot;:'初见日常',&quot;排序&quot;:'5',&quot;是否展示&quot;:'展示',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">season</td><td class="列表单元格">节气时令</td><td class="列表单元格">6</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#f3f4f6;color:#6b7280">隐藏</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {&quot;家族ID&quot;:'season',&quot;家族名称&quot;:'节气时令',&quot;排序&quot;:'6',&quot;是否展示&quot;:'隐藏',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {&quot;家族ID&quot;:'season',&quot;家族名称&quot;:'节气时令',&quot;排序&quot;:'6',&quot;是否展示&quot;:'隐藏',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">usage</td><td class="列表单元格">使用纪念</td><td class="列表单元格">7</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#f3f4f6;color:#6b7280">隐藏</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {&quot;家族ID&quot;:'usage',&quot;家族名称&quot;:'使用纪念',&quot;排序&quot;:'7',&quot;是否展示&quot;:'隐藏',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {&quot;家族ID&quot;:'usage',&quot;家族名称&quot;:'使用纪念',&quot;排序&quot;:'7',&quot;是否展示&quot;:'隐藏',_壳节编号:'4.1'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">event</td><td class="列表单元格">特别时刻</td><td class="列表单元格">8</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#f3f4f6;color:#6b7280">隐藏</span></td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.1','编辑', {&quot;家族ID&quot;:'event',&quot;家族名称&quot;:'特别时刻',&quot;排序&quot;:'8',&quot;是否展示&quot;:'隐藏',_壳节编号:'4.1'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.1', {&quot;家族ID&quot;:'event',&quot;家族名称&quot;:'特别时刻',&quot;排序&quot;:'8',&quot;是否展示&quot;:'隐藏',_壳节编号:'4.1'})">删除</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 8 条记录</div>
+</div></section>
+<section class="页面面板" id="面_4_2" data-page="4.2"><div class="页面卡"><div class="页面头"><h2>勋章配置</h2></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">①</span><span class="流程信息卡-环节名">当前环节：① 维护家族与勋章配置</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">运营配置后台 &gt; 小喵印章 &gt;</span> <span class="路径末段">勋章配置</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">勋章保存并启用后，C 端图鉴按下发的展示元素渲染；解锁由研发写死的口径判定，后台的改动只影响展示，不改变判定结果</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索勋章名称"></div><div class="筛选区"><span class="筛选标签">家族：</span><select class="筛选下拉"><option>全部</option><option>初见日常</option><option>时间节律</option><option>口味偏好</option><option>饮食习惯</option><option>城市足迹</option></select><span class="筛选标签">状态：</span><select class="筛选下拉"><option>全部</option><option>启用</option><option>停用</option></select></div></div>
+<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#92400e;">&#9888; <strong>解锁口径由研发写死，本页只读</strong>；本页也不提供「新增勋章」——新勋章需研发补上判定逻辑后发版。运营可编辑展示元素与启停。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">勋章名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('勋章名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">印面字<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('印面字', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">家族<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('家族', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">解锁口径<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('解锁口径', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('状态', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">更新时间<span class="类型标签 date">date</span></span><button class="信息按钮" onclick="显示字段弹窗('更新时间', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">初次见面喵</td><td class="列表单元格">初</td><td class="列表单元格">初见日常</td><td class="列表单元格" style="color:#64748b">事件 注册成功 · 首次进入</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:04</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'初次见面喵',&quot;印面字&quot;:'初',&quot;家族&quot;:'初见日常',&quot;解锁前文案&quot;:'门口有只小喵，一直在等第一个来的人',&quot;解锁条件（用户可见）&quot;:'完成注册并第一次打开小程序',&quot;解锁口径&quot;:'事件 注册成功 · 首次进入',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:04',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'初次见面喵',&quot;印面字&quot;:'初',&quot;家族&quot;:'初见日常',&quot;解锁前文案&quot;:'门口有只小喵，一直在等第一个来的人',&quot;解锁条件（用户可见）&quot;:'完成注册并第一次打开小程序',&quot;解锁口径&quot;:'事件 注册成功 · 首次进入',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:04',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">露脸的小喵</td><td class="列表单元格">脸</td><td class="列表单元格">初见日常</td><td class="列表单元格" style="color:#64748b">事件 资料更新 · 头像与昵称均非空</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:06</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'露脸的小喵',&quot;印面字&quot;:'脸',&quot;家族&quot;:'初见日常',&quot;解锁前文案&quot;:'它还不知道该叫你什么',&quot;解锁条件（用户可见）&quot;:'设置过头像和昵称',&quot;解锁口径&quot;:'事件 资料更新 · 头像与昵称均非空',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:06',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'露脸的小喵',&quot;印面字&quot;:'脸',&quot;家族&quot;:'初见日常',&quot;解锁前文案&quot;:'它还不知道该叫你什么',&quot;解锁条件（用户可见）&quot;:'设置过头像和昵称',&quot;解锁口径&quot;:'事件 资料更新 · 头像与昵称均非空',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:06',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">干饭喵</td><td class="列表单元格">饭</td><td class="列表单元格">时间节律</td><td class="列表单元格" style="color:#64748b">时段 11:00-14:00 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:20</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'干饭喵',&quot;印面字&quot;:'饭',&quot;家族&quot;:'时间节律',&quot;解锁前文案&quot;:'饭点一到，小喵就蹲在桌边等',&quot;解锁条件（用户可见）&quot;:'午间 11:00–14:00 下过单',&quot;解锁口径&quot;:'时段 11:00-14:00 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:20',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'干饭喵',&quot;印面字&quot;:'饭',&quot;家族&quot;:'时间节律',&quot;解锁前文案&quot;:'饭点一到，小喵就蹲在桌边等',&quot;解锁条件（用户可见）&quot;:'午间 11:00–14:00 下过单',&quot;解锁口径&quot;:'时段 11:00-14:00 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:20',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">等门喵</td><td class="列表单元格">等门</td><td class="列表单元格">时间节律</td><td class="列表单元格" style="color:#64748b">时段 17:00-20:00 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:22</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'等门喵',&quot;印面字&quot;:'等门',&quot;家族&quot;:'时间节律',&quot;解锁前文案&quot;:'天暗下来，有只小喵坐在门口等你',&quot;解锁条件（用户可见）&quot;:'傍晚 17:00–20:00 下过单',&quot;解锁口径&quot;:'时段 17:00-20:00 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:22',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'等门喵',&quot;印面字&quot;:'等门',&quot;家族&quot;:'时间节律',&quot;解锁前文案&quot;:'天暗下来，有只小喵坐在门口等你',&quot;解锁条件（用户可见）&quot;:'傍晚 17:00–20:00 下过单',&quot;解锁口径&quot;:'时段 17:00-20:00 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:22',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">碳水喵</td><td class="列表单元格">碳水</td><td class="列表单元格">口味偏好</td><td class="列表单元格" style="color:#64748b">米面碳水关键词 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:25</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'碳水喵',&quot;印面字&quot;:'碳水',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'有些踏实，只有一口热的能给',&quot;解锁条件（用户可见）&quot;:'点过米饭、面条或包子',&quot;解锁口径&quot;:'米面碳水关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:25',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'碳水喵',&quot;印面字&quot;:'碳水',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'有些踏实，只有一口热的能给',&quot;解锁条件（用户可见）&quot;:'点过米饭、面条或包子',&quot;解锁口径&quot;:'米面碳水关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:25',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">守夜喵</td><td class="列表单元格">守夜</td><td class="列表单元格">时间节律</td><td class="列表单元格" style="color:#64748b">时段 21:00-05:00 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:28</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'守夜喵',&quot;印面字&quot;:'守夜',&quot;家族&quot;:'时间节律',&quot;解锁前文案&quot;:'灯还亮着的时候，它一直没走',&quot;解锁条件（用户可见）&quot;:'夜里 21:00 至次日 05:00 下过单',&quot;解锁口径&quot;:'时段 21:00-05:00 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:28',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'守夜喵',&quot;印面字&quot;:'守夜',&quot;家族&quot;:'时间节律',&quot;解锁前文案&quot;:'灯还亮着的时候，它一直没走',&quot;解锁条件（用户可见）&quot;:'夜里 21:00 至次日 05:00 下过单',&quot;解锁口径&quot;:'时段 21:00-05:00 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:28',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">咔嚓喵</td><td class="列表单元格">咔嚓</td><td class="列表单元格">口味偏好</td><td class="列表单元格" style="color:#64748b">炸鸡烧烤关键词 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:30</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'咔嚓喵',&quot;印面字&quot;:'咔嚓',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'听见那一声咔嚓，尾巴就翘起来',&quot;解锁条件（用户可见）&quot;:'点过炸鸡、烧烤或汉堡',&quot;解锁口径&quot;:'炸鸡烧烤关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:30',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'咔嚓喵',&quot;印面字&quot;:'咔嚓',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'听见那一声咔嚓，尾巴就翘起来',&quot;解锁条件（用户可见）&quot;:'点过炸鸡、烧烤或汉堡',&quot;解锁口径&quot;:'炸鸡烧烤关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:30',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">双碗喵</td><td class="列表单元格">双碗</td><td class="列表单元格">饮食习惯</td><td class="列表单元格" style="color:#64748b">饿了么与美团各有订单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:32</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'双碗喵',&quot;印面字&quot;:'双碗',&quot;家族&quot;:'饮食习惯',&quot;解锁前文案&quot;:'它备了两只小碗，一只还没用过',&quot;解锁条件（用户可见）&quot;:'在饿了么和美团各下过单',&quot;解锁口径&quot;:'饿了么与美团各有订单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:32',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'双碗喵',&quot;印面字&quot;:'双碗',&quot;家族&quot;:'饮食习惯',&quot;解锁前文案&quot;:'它备了两只小碗，一只还没用过',&quot;解锁条件（用户可见）&quot;:'在饿了么和美团各下过单',&quot;解锁口径&quot;:'饿了么与美团各有订单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:32',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">奶茶喵</td><td class="列表单元格">奶茶</td><td class="列表单元格">口味偏好</td><td class="列表单元格" style="color:#64748b">奶茶茶饮关键词 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:35</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'奶茶喵',&quot;印面字&quot;:'奶茶',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'三分糖少冰，它都替你记着',&quot;解锁条件（用户可见）&quot;:'点过奶茶或茶饮',&quot;解锁口径&quot;:'奶茶茶饮关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:35',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'奶茶喵',&quot;印面字&quot;:'奶茶',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'三分糖少冰，它都替你记着',&quot;解锁条件（用户可见）&quot;:'点过奶茶或茶饮',&quot;解锁口径&quot;:'奶茶茶饮关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:35',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">探店喵</td><td class="列表单元格">探店</td><td class="列表单元格">城市足迹</td><td class="列表单元格" style="color:#64748b">饿了么商家去重 ≥3 家</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:38</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'探店喵',&quot;印面字&quot;:'探店',&quot;家族&quot;:'城市足迹',&quot;解锁前文案&quot;:'爪子沾了不同的锅气',&quot;解锁条件（用户可见）&quot;:'在 3 家以上不同小店下过单',&quot;解锁口径&quot;:'饿了么商家去重 ≥3 家',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:38',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'探店喵',&quot;印面字&quot;:'探店',&quot;家族&quot;:'城市足迹',&quot;解锁前文案&quot;:'爪子沾了不同的锅气',&quot;解锁条件（用户可见）&quot;:'在 3 家以上不同小店下过单',&quot;解锁口径&quot;:'饿了么商家去重 ≥3 家',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:38',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">拼桌喵</td><td class="列表单元格">拼桌</td><td class="列表单元格">饮食习惯</td><td class="列表单元格" style="color:#64748b">单笔订单 ≥2 件商品</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:40</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'拼桌喵',&quot;印面字&quot;:'拼桌',&quot;家族&quot;:'饮食习惯',&quot;解锁前文案&quot;:'一个人的饭点，也能坐满一桌',&quot;解锁条件（用户可见）&quot;:'一次下过 2 件以上商品',&quot;解锁口径&quot;:'单笔订单 ≥2 件商品',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:40',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'拼桌喵',&quot;印面字&quot;:'拼桌',&quot;家族&quot;:'饮食习惯',&quot;解锁前文案&quot;:'一个人的饭点，也能坐满一桌',&quot;解锁条件（用户可见）&quot;:'一次下过 2 件以上商品',&quot;解锁口径&quot;:'单笔订单 ≥2 件商品',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:40',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">甜心喵</td><td class="列表单元格">甜心</td><td class="列表单元格">口味偏好</td><td class="列表单元格" style="color:#64748b">甜品烘焙关键词 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:43</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'甜心喵',&quot;印面字&quot;:'甜心',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'再忙也要留一格给甜的',&quot;解锁条件（用户可见）&quot;:'点过甜点或糖水',&quot;解锁口径&quot;:'甜品烘焙关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:43',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'甜心喵',&quot;印面字&quot;:'甜心',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'再忙也要留一格给甜的',&quot;解锁条件（用户可见）&quot;:'点过甜点或糖水',&quot;解锁口径&quot;:'甜品烘焙关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:43',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">维C喵</td><td class="列表单元格">维C</td><td class="列表单元格">口味偏好</td><td class="列表单元格" style="color:#64748b">水果生鲜关键词 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:45</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'维C喵',&quot;印面字&quot;:'维C',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'屋子里忽然有了清爽的味道',&quot;解锁条件（用户可见）&quot;:'点过水果或果切',&quot;解锁口径&quot;:'水果生鲜关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:45',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'维C喵',&quot;印面字&quot;:'维C',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'屋子里忽然有了清爽的味道',&quot;解锁条件（用户可见）&quot;:'点过水果或果切',&quot;解锁口径&quot;:'水果生鲜关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:45',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">早C喵</td><td class="列表单元格">早C</td><td class="列表单元格">口味偏好</td><td class="列表单元格" style="color:#64748b">咖啡关键词 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:47</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'早C喵',&quot;印面字&quot;:'早C',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'第一口下去，眼睛才真正睁开',&quot;解锁条件（用户可见）&quot;:'点过一杯咖啡',&quot;解锁口径&quot;:'咖啡关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:47',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'早C喵',&quot;印面字&quot;:'早C',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'第一口下去，眼睛才真正睁开',&quot;解锁条件（用户可见）&quot;:'点过一杯咖啡',&quot;解锁口径&quot;:'咖啡关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:47',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">咕嘟喵</td><td class="列表单元格">咕嘟</td><td class="列表单元格">口味偏好</td><td class="列表单元格" style="color:#64748b">火锅冒菜关键词 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:49</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'咕嘟喵',&quot;印面字&quot;:'咕嘟',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'锅子响的时候，它把爪子贴过来',&quot;解锁条件（用户可见）&quot;:'点过火锅或麻辣烫',&quot;解锁口径&quot;:'火锅冒菜关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:49',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'咕嘟喵',&quot;印面字&quot;:'咕嘟',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'锅子响的时候，它把爪子贴过来',&quot;解锁条件（用户可见）&quot;:'点过火锅或麻辣烫',&quot;解锁口径&quot;:'火锅冒菜关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:49',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">专一喵</td><td class="列表单元格">专一</td><td class="列表单元格">饮食习惯</td><td class="列表单元格" style="color:#64748b">饿了么同一商家 ≥3 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:51</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'专一喵',&quot;印面字&quot;:'专一',&quot;家族&quot;:'饮食习惯',&quot;解锁前文案&quot;:'它每次都在同一个台阶上等你',&quot;解锁条件（用户可见）&quot;:'在同一家小店下过 3 单',&quot;解锁口径&quot;:'饿了么同一商家 ≥3 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:51',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'专一喵',&quot;印面字&quot;:'专一',&quot;家族&quot;:'饮食习惯',&quot;解锁前文案&quot;:'它每次都在同一个台阶上等你',&quot;解锁条件（用户可见）&quot;:'在同一家小店下过 3 单',&quot;解锁口径&quot;:'饿了么同一商家 ≥3 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:51',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">吃草喵</td><td class="列表单元格">吃草</td><td class="列表单元格">口味偏好</td><td class="列表单元格" style="color:#64748b">轻食沙拉关键词 · ≥1 单</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:53</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.2','编辑', {&quot;勋章名称&quot;:'吃草喵',&quot;印面字&quot;:'吃草',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'绿的脆的，它也认真闻了闻',&quot;解锁条件（用户可见）&quot;:'点过沙拉或轻食',&quot;解锁口径&quot;:'轻食沙拉关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:53',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.2', {&quot;勋章名称&quot;:'吃草喵',&quot;印面字&quot;:'吃草',&quot;家族&quot;:'口味偏好',&quot;解锁前文案&quot;:'绿的脆的，它也认真闻了闻',&quot;解锁条件（用户可见）&quot;:'点过沙拉或轻食',&quot;解锁口径&quot;:'轻食沙拉关键词 · ≥1 单',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:53',&quot;勋章图&quot;:'已上传 240×240',_壳节编号:'4.2'})">删除</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 17 条记录</div>
+</div></section>
+<section class="页面面板" id="面_4_3" data-page="4.3"><div class="页面卡"><div class="页面头"><h2>图片规则配置</h2><button class="主按钮" onclick="打开表单弹窗('4.3','新增')">+ 新增桶</button></div><div class="流程信息卡"><div class="流程信息卡-头部"><span class="流程步骤号">②</span><span class="流程信息卡-环节名">当前环节：② 维护图片规则与兜底</span></div><div class="流程信息卡-正文"><div class="流程信息卡-行"><span class="流程信息卡-标签 路径">页面路径</span><span class="流程信息卡-值"><span class="路径分段">运营配置后台 &gt; 小喵印章 &gt;</span> <span class="路径末段">图片规则配置</span></span></div><div class="流程信息卡-行"><span class="流程信息卡-标签 影响">对下游影响</span><span class="流程信息卡-值">每条日历记录按本页桶的优先级匹配 `goods_title` 取图；未命中任何桶时落到兜底桶，兜底桶缺失会导致打卡记录无图</span></div></div></div>
+<div class="工具栏"><div class="搜索框"><span class="搜索图标">&#128269;</span><input class="搜索输入" type="text" placeholder="搜索桶名称或关键词"></div><div class="筛选区"><span class="筛选标签">状态：</span><select class="筛选下拉"><option>全部</option><option>启用</option><option>停用</option></select><label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#334155;padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;"><input type="checkbox" checked onchange="显示提示(this.checked?'已开启真实商品图优先':'已关闭，全部订单走关键词桶', '信息', 2200)">真实商品图优先</label></div></div>
+<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#92400e;">&#9888; 兜底桶「通用兜底」不可删除、不可停用，当前承接约 <strong>37.4%</strong> 未命中订单；美团订单无商品图，全部走本页桶取图。</div>
+<table class="数据表格"><thead><tr><th class="列表表头"><span class="表头字段名">桶名称<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('桶名称', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">桶标识<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('桶标识', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">优先级<span class="类型标签 number">number</span></span><button class="信息按钮" onclick="显示字段弹窗('优先级', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">关键词<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('关键词', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">图片池<span class="类型标签 string">string</span></span><button class="信息按钮" onclick="显示字段弹窗('图片池', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">是否兜底<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('是否兜底', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">状态<span class="类型标签 enum">enum</span></span><button class="信息按钮" onclick="显示字段弹窗('状态', event)">ⓘ</button></th><th class="列表表头"><span class="表头字段名">更新时间<span class="类型标签 date">date</span></span><button class="信息按钮" onclick="显示字段弹窗('更新时间', event)">ⓘ</button></th><th class="列表表头 操作列">操作</th></tr></thead><tbody>
+<tr class="数据行"><td class="列表单元格">奶茶茶饮</td><td class="列表单元格">milk_tea</td><td class="列表单元格">10</td><td class="列表单元格">奶茶、茶饮、益禾堂、蜜雪、茉莉奶白、古茗、茶百道、霸王茶姬、伯牙绝弦、奶绿、果茶、柠檬茶、杨枝甘露、生椰、芋泥</td><td class="列表单元格">3 张</td><td class="列表单元格"><span style="color:#94a3b8">否</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 09:40</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.3','编辑', {&quot;桶名称&quot;:'奶茶茶饮',&quot;桶标识&quot;:'milk_tea',&quot;优先级&quot;:'10',&quot;关键词&quot;:'奶茶、茶饮、益禾堂、蜜雪、茉莉奶白、古茗、茶百道、霸王茶姬、伯牙绝弦、奶绿、果茶、柠檬茶、杨枝甘露、生椰、芋泥',&quot;图片池&quot;:'3 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:40',_壳节编号:'4.3'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.3', {&quot;桶名称&quot;:'奶茶茶饮',&quot;桶标识&quot;:'milk_tea',&quot;优先级&quot;:'10',&quot;关键词&quot;:'奶茶、茶饮、益禾堂、蜜雪、茉莉奶白、古茗、茶百道、霸王茶姬、伯牙绝弦、奶绿、果茶、柠檬茶、杨枝甘露、生椰、芋泥',&quot;图片池&quot;:'3 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:40',_壳节编号:'4.3'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">咖啡</td><td class="列表单元格">coffee</td><td class="列表单元格">20</td><td class="列表单元格">咖啡、美式、拿铁、瑞幸、星巴克、库迪、卡布奇诺</td><td class="列表单元格">3 张</td><td class="列表单元格"><span style="color:#94a3b8">否</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 09:42</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.3','编辑', {&quot;桶名称&quot;:'咖啡',&quot;桶标识&quot;:'coffee',&quot;优先级&quot;:'20',&quot;关键词&quot;:'咖啡、美式、拿铁、瑞幸、星巴克、库迪、卡布奇诺',&quot;图片池&quot;:'3 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:42',_壳节编号:'4.3'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.3', {&quot;桶名称&quot;:'咖啡',&quot;桶标识&quot;:'coffee',&quot;优先级&quot;:'20',&quot;关键词&quot;:'咖啡、美式、拿铁、瑞幸、星巴克、库迪、卡布奇诺',&quot;图片池&quot;:'3 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:42',_壳节编号:'4.3'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">甜品烘焙</td><td class="列表单元格">dessert</td><td class="列表单元格">30</td><td class="列表单元格">蛋糕、甜品、面包、蛋挞、泡芙、酸奶、冰淇淋、糖水、布丁、蛋黄酥、桃胶、水果捞</td><td class="列表单元格">3 张</td><td class="列表单元格"><span style="color:#94a3b8">否</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 09:44</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.3','编辑', {&quot;桶名称&quot;:'甜品烘焙',&quot;桶标识&quot;:'dessert',&quot;优先级&quot;:'30',&quot;关键词&quot;:'蛋糕、甜品、面包、蛋挞、泡芙、酸奶、冰淇淋、糖水、布丁、蛋黄酥、桃胶、水果捞',&quot;图片池&quot;:'3 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:44',_壳节编号:'4.3'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.3', {&quot;桶名称&quot;:'甜品烘焙',&quot;桶标识&quot;:'dessert',&quot;优先级&quot;:'30',&quot;关键词&quot;:'蛋糕、甜品、面包、蛋挞、泡芙、酸奶、冰淇淋、糖水、布丁、蛋黄酥、桃胶、水果捞',&quot;图片池&quot;:'3 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:44',_壳节编号:'4.3'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">火锅冒菜</td><td class="列表单元格">hotpot</td><td class="列表单元格">40</td><td class="列表单元格">火锅、麻辣烫、冒菜、串串、关东煮、砂锅、鸡公煲、干锅、烤鱼</td><td class="列表单元格">3 张</td><td class="列表单元格"><span style="color:#94a3b8">否</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 09:46</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.3','编辑', {&quot;桶名称&quot;:'火锅冒菜',&quot;桶标识&quot;:'hotpot',&quot;优先级&quot;:'40',&quot;关键词&quot;:'火锅、麻辣烫、冒菜、串串、关东煮、砂锅、鸡公煲、干锅、烤鱼',&quot;图片池&quot;:'3 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:46',_壳节编号:'4.3'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.3', {&quot;桶名称&quot;:'火锅冒菜',&quot;桶标识&quot;:'hotpot',&quot;优先级&quot;:'40',&quot;关键词&quot;:'火锅、麻辣烫、冒菜、串串、关东煮、砂锅、鸡公煲、干锅、烤鱼',&quot;图片池&quot;:'3 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:46',_壳节编号:'4.3'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">炸鸡烧烤</td><td class="列表单元格">fried</td><td class="列表单元格">50</td><td class="列表单元格">炸鸡、鸡排、鸡腿、鸡柳、鸡堡、汉堡、薯条、炸串、烧烤、烤鸭、鸡翅、叉烧</td><td class="列表单元格">4 张</td><td class="列表单元格"><span style="color:#94a3b8">否</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 09:48</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.3','编辑', {&quot;桶名称&quot;:'炸鸡烧烤',&quot;桶标识&quot;:'fried',&quot;优先级&quot;:'50',&quot;关键词&quot;:'炸鸡、鸡排、鸡腿、鸡柳、鸡堡、汉堡、薯条、炸串、烧烤、烤鸭、鸡翅、叉烧',&quot;图片池&quot;:'4 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:48',_壳节编号:'4.3'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.3', {&quot;桶名称&quot;:'炸鸡烧烤',&quot;桶标识&quot;:'fried',&quot;优先级&quot;:'50',&quot;关键词&quot;:'炸鸡、鸡排、鸡腿、鸡柳、鸡堡、汉堡、薯条、炸串、烧烤、烤鸭、鸡翅、叉烧',&quot;图片池&quot;:'4 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:48',_壳节编号:'4.3'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">米面碳水</td><td class="列表单元格">staple</td><td class="列表单元格">60</td><td class="列表单元格">米饭、盖饭、拌饭、炒饭、牛肉饭、米线、面条、拉面、小笼包、包子、水饺、馄饨、米粉、河粉、螺蛳粉、凉皮、肉夹馍、烧饼、饭、面、粉</td><td class="列表单元格">7 张</td><td class="列表单元格"><span style="color:#94a3b8">否</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 09:50</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.3','编辑', {&quot;桶名称&quot;:'米面碳水',&quot;桶标识&quot;:'staple',&quot;优先级&quot;:'60',&quot;关键词&quot;:'米饭、盖饭、拌饭、炒饭、牛肉饭、米线、面条、拉面、小笼包、包子、水饺、馄饨、米粉、河粉、螺蛳粉、凉皮、肉夹馍、烧饼、饭、面、粉',&quot;图片池&quot;:'7 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:50',_壳节编号:'4.3'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.3', {&quot;桶名称&quot;:'米面碳水',&quot;桶标识&quot;:'staple',&quot;优先级&quot;:'60',&quot;关键词&quot;:'米饭、盖饭、拌饭、炒饭、牛肉饭、米线、面条、拉面、小笼包、包子、水饺、馄饨、米粉、河粉、螺蛳粉、凉皮、肉夹馍、烧饼、饭、面、粉',&quot;图片池&quot;:'7 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:50',_壳节编号:'4.3'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">轻食沙拉</td><td class="列表单元格">salad</td><td class="列表单元格">70</td><td class="列表单元格">沙拉、轻食、减脂、健康餐、素食、蔬菜</td><td class="列表单元格">2 张</td><td class="列表单元格"><span style="color:#94a3b8">否</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 09:52</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.3','编辑', {&quot;桶名称&quot;:'轻食沙拉',&quot;桶标识&quot;:'salad',&quot;优先级&quot;:'70',&quot;关键词&quot;:'沙拉、轻食、减脂、健康餐、素食、蔬菜',&quot;图片池&quot;:'2 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:52',_壳节编号:'4.3'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.3', {&quot;桶名称&quot;:'轻食沙拉',&quot;桶标识&quot;:'salad',&quot;优先级&quot;:'70',&quot;关键词&quot;:'沙拉、轻食、减脂、健康餐、素食、蔬菜',&quot;图片池&quot;:'2 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:52',_壳节编号:'4.3'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">水果生鲜</td><td class="列表单元格">fruit</td><td class="列表单元格">80</td><td class="列表单元格">水果、果切、草莓、蓝莓、苹果、香蕉、西瓜、葡萄、榴莲</td><td class="列表单元格">2 张</td><td class="列表单元格"><span style="color:#94a3b8">否</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 09:54</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.3','编辑', {&quot;桶名称&quot;:'水果生鲜',&quot;桶标识&quot;:'fruit',&quot;优先级&quot;:'80',&quot;关键词&quot;:'水果、果切、草莓、蓝莓、苹果、香蕉、西瓜、葡萄、榴莲',&quot;图片池&quot;:'2 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:54',_壳节编号:'4.3'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.3', {&quot;桶名称&quot;:'水果生鲜',&quot;桶标识&quot;:'fruit',&quot;优先级&quot;:'80',&quot;关键词&quot;:'水果、果切、草莓、蓝莓、苹果、香蕉、西瓜、葡萄、榴莲',&quot;图片池&quot;:'2 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:54',_壳节编号:'4.3'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">汤饮其他</td><td class="列表单元格">drink</td><td class="列表单元格">90</td><td class="列表单元格">汤、粥、豆浆、可乐、矿泉水、冰红茶、饮料、卤、豆干、小吃</td><td class="列表单元格">3 张</td><td class="列表单元格"><span style="color:#94a3b8">否</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 09:56</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.3','编辑', {&quot;桶名称&quot;:'汤饮其他',&quot;桶标识&quot;:'drink',&quot;优先级&quot;:'90',&quot;关键词&quot;:'汤、粥、豆浆、可乐、矿泉水、冰红茶、饮料、卤、豆干、小吃',&quot;图片池&quot;:'3 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:56',_壳节编号:'4.3'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.3', {&quot;桶名称&quot;:'汤饮其他',&quot;桶标识&quot;:'drink',&quot;优先级&quot;:'90',&quot;关键词&quot;:'汤、粥、豆浆、可乐、矿泉水、冰红茶、饮料、卤、豆干、小吃',&quot;图片池&quot;:'3 张',&quot;是否兜底&quot;:'否',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 09:56',_壳节编号:'4.3'})">删除</button></td></tr>
+<tr class="数据行"><td class="列表单元格">通用兜底</td><td class="列表单元格">general</td><td class="列表单元格">999</td><td class="列表单元格">—（不做匹配，承接全部未命中订单）</td><td class="列表单元格">9 张</td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#fdf2f8;color:#be185d">是</span></td><td class="列表单元格"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:#ecfdf3;color:#027a48">启用</span></td><td class="列表单元格">2026-11-17 10:00</td><td class="列表单元格 操作列"><button class="详情按钮" onclick="打开表单弹窗('4.3','编辑', {&quot;桶名称&quot;:'通用兜底',&quot;桶标识&quot;:'general',&quot;优先级&quot;:'999',&quot;关键词&quot;:'—（不做匹配，承接全部未命中订单）',&quot;图片池&quot;:'9 张',&quot;是否兜底&quot;:'是',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:00',_壳节编号:'4.3'})">编辑</button> <button class="删除按钮" onclick="确认删除('4.3', {&quot;桶名称&quot;:'通用兜底',&quot;桶标识&quot;:'general',&quot;优先级&quot;:'999',&quot;关键词&quot;:'—（不做匹配，承接全部未命中订单）',&quot;图片池&quot;:'9 张',&quot;是否兜底&quot;:'是',&quot;状态&quot;:'启用',&quot;更新时间&quot;:'2026-11-17 10:00',_壳节编号:'4.3'})">删除</button></td></tr>
+</tbody></table>
+<div class="列表脚注">共 10 条记录</div>
+</div></section>
+<section class="页面面板" id="面_4_4" data-page="4.4"><div class="页面卡"><div class="页面头"><h2>勋章设计</h2><span style="font-size:12px;color:#94a3b8;margin-left:8px">只读 · 设计参考，不产出配置</span></div><div class="文档正文"><div class="表格容器"><table class="阅读表格">
+<tr>
+<th>勋章名</th>
+<th>家族</th>
+<th>触发条件（数据口径）</th>
+<th>预估覆盖率</th>
+<th>设计意图</th>
+</tr>
+<tr>
+<td>初次见面喵</td>
+<td>初见日常</td>
+<td>事件 注册成功 · 首次进入</td>
+<td>100%（全部注册用户）</td>
+<td>新手路径第一枚，让用户注册后立刻拿到反馈</td>
+</tr>
+<tr>
+<td>露脸的小喵</td>
+<td>初见日常</td>
+<td>事件 资料更新 · 头像与昵称均非空</td>
+<td>数据无法判断，需补用户资料字段</td>
+<td>把"完善资料"这个运营动作变成情感奖励</td>
+</tr>
+<tr>
+<td>干饭喵</td>
+<td>时间节律</td>
+<td><code class="行内代码">created_at</code> 北京时间 11–14 点 · ≥1 单</td>
+<td>38.19%，1111 人</td>
+<td>覆盖最广的时段，做图鉴的基础盘</td>
+</tr>
+<tr>
+<td>等门喵</td>
+<td>时间节律</td>
+<td><code class="行内代码">created_at</code> 北京时间 17–20 点 · ≥1 单</td>
+<td>38.60%，1123 人</td>
+<td>与干饭喵构成"一天两顿"的对称叙事</td>
+</tr>
+<tr>
+<td>守夜喵</td>
+<td>时间节律</td>
+<td><code class="行内代码">created_at</code> 北京时间 21–5 点 · ≥1 单</td>
+<td>23.38%，680 人</td>
+<td>强故事性的夜猫子标签，分享意愿最高</td>
+</tr>
+<tr>
+<td>碳水喵</td>
+<td>口味偏好</td>
+<td><code class="行内代码">goods_title</code> 命中 <code class="行内代码">staple</code> 桶 · ≥1 单</td>
+<td>38.43%，1118 人</td>
+<td>最大品类，用来接住"没特色"的大多数订单</td>
+</tr>
+<tr>
+<td>咔嚓喵</td>
+<td>口味偏好</td>
+<td><code class="行内代码">goods_title</code> 命中 <code class="行内代码">fried</code> 桶 · ≥1 单</td>
+<td>14.61%，425 人</td>
+<td>拟声词记忆点，情绪最直接的一枚</td>
+</tr>
+<tr>
+<td>奶茶喵</td>
+<td>口味偏好</td>
+<td><code class="行内代码">goods_title</code> 命中 <code class="行内代码">milk_tea</code> 桶 · ≥1 单</td>
+<td>9.52%，277 人</td>
+<td>高辨识度的社交货币，适合做传播</td>
+</tr>
+<tr>
+<td>咕嘟喵</td>
+<td>口味偏好</td>
+<td><code class="行内代码">goods_title</code> 命中 <code class="行内代码">hotpot</code> 桶 · ≥1 单</td>
+<td>4.68%，136 人</td>
+<td>热气画面感，冬季时令可复用</td>
+</tr>
+<tr>
+<td>早C喵</td>
+<td>口味偏好</td>
+<td><code class="行内代码">goods_title</code> 命中 <code class="行内代码">coffee</code> 桶 · ≥1 单</td>
+<td>4.61%，134 人</td>
+<td>借"早C晚A"梗，年轻用户共鸣强</td>
+</tr>
+<tr>
+<td>甜心喵</td>
+<td>口味偏好</td>
+<td><code class="行内代码">goods_title</code> 命中 <code class="行内代码">dessert</code> 桶 · ≥1 单</td>
+<td>4.13%，120 人</td>
+<td>情绪补偿类，适合做"安慰"叙事</td>
+</tr>
+<tr>
+<td>维C喵</td>
+<td>口味偏好</td>
+<td><code class="行内代码">goods_title</code> 命中 <code class="行内代码">fruit</code> 桶 · ≥1 单</td>
+<td>2.82%，82 人</td>
+<td>健康倾向用户的分层标签</td>
+</tr>
+<tr>
+<td>吃草喵</td>
+<td>口味偏好</td>
+<td><code class="行内代码">goods_title</code> 命中 <code class="行内代码">salad</code> 桶 · ≥1 单</td>
+<td>1.27%，37 人</td>
+<td>极小众，做彩蛋比做主线更合适</td>
+</tr>
+<tr>
+<td>双碗喵</td>
+<td>饮食习惯</td>
+<td><code class="行内代码">platform</code> 同时存在 1 与 2 · 各 ≥1 单</td>
+<td>10.45%，304 人</td>
+<td>双平台行为有区分度，且是真实用户习惯</td>
+</tr>
+<tr>
+<td>拼桌喵</td>
+<td>饮食习惯</td>
+<td><code class="行内代码">goods_title</code> 含「等 N 件商品」且 N ≥ 2 · ≥1 单</td>
+<td>5.88%，171 人</td>
+<td>凑单是明确行为，代表"不只是为自己点"</td>
+</tr>
+<tr>
+<td>专一喵</td>
+<td>饮食习惯</td>
+<td>饿了么同一 <code class="行内代码">shop_name</code> ≥ 3 单</td>
+<td>2.99%，87 人</td>
+<td>情感浓度最高的一枚，"只认一家"</td>
+</tr>
+<tr>
+<td>探店喵</td>
+<td>城市足迹</td>
+<td>饿了么 <code class="行内代码">shop_name</code> 去重 ≥ 3 家</td>
+<td>6.94%，202 人</td>
+<td>探索型标签，城市字段补齐后可扩成城市家族</td>
+</tr>
+</table></div>
+</div></div></section>
+</main>
+</div>
+<div id="提示容器" class="提示容器"></div>
+<div id="字段弹窗" class="字段弹窗" style="display:none;"></div>
+<div id="overlay" class="overlay" onclick="关闭表单弹窗()"></div>
+<aside id="表单弹窗面板" class="drawer">
+  <div class="panel-head">
+    <div class="panel-title" id="表单弹窗标题">新增</div>
+    <button class="btn-close" onclick="关闭表单弹窗()">×</button>
+  </div>
+  <div id="表单弹窗正文" class="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn-secondary" onclick="关闭表单弹窗()">取消</button>
+    <button class="主按钮" onclick="显示提示('已保存（演示环境，不落库）', '成功', 2200);关闭表单弹窗();">保存</button>
+  </div>
+</aside>
+<div id="图片灯箱" class="图片灯箱" onclick="this.classList.remove('可见')"><img id="灯箱图片" src=""></div>
+<script id="js-泳道映射">
+window._泳道节点映射 = {"4.1": [1], "4.2": [1], "4.3": [2]};
+window._阶段泳道映射 = {"4": 1};
+</script>
+<script id="js-页面切换">
+// 唯一导航函数：叶子菜单 onclick="切换页面('4.1')"。父节点不可点，无展开收起逻辑。
+function 切换页面(页码) {
+  document.querySelectorAll('.页面面板').forEach(function(p) { p.classList.remove('激活'); });
+  var panel = document.getElementById('面_' + String(页码).replace('.', '_'));
+  if (panel) panel.classList.add('激活');
+  document.querySelectorAll('.菜单文档,.菜单叶子').forEach(function(a) { a.classList.remove('激活'); });
+  var link = document.querySelector('[data-menu-page="' + 页码 + '"]');
+  if (link) link.classList.add('激活');
+  var c = document.getElementById('内容区'); if (c) c.scrollTop = 0;
+  更新泳道高亮(页码);
+}
+// 泳道两级高亮合并：已过+当前正常显示（opacity 1），未来节点置灰（opacity .25）；文档页(1/2)自动清空
+// 分支：有 .泳道收纳卡 → 走卡区间算法（min/max vs 当前页 nums 的 max）；无 → 走原 .泳道行 节点算法
+function 更新泳道高亮(页码) {
+  var 图 = document.getElementById('全局泳道图'); if (!图) return;
+  图.className = 图.className.replace(/ ?高亮阶段\d+/g, '');
+  var 阶段号 = String(页码).split('.')[0];
+  var k = (window._阶段泳道映射 || {})[阶段号];
+  if (k) 图.classList.add('高亮阶段' + k);
+  var nums = (window._泳道节点映射 || {})[页码];
+  var cards = 图.querySelectorAll('.泳道收纳卡');
+  if (cards.length) {
+    for (var i = 0; i < cards.length; i++) {
+      var c = cards[i];
+      c.classList.remove('收纳-已过'); c.classList.remove('收纳-现在'); c.classList.remove('收纳-未来');
+      if (!nums) continue;
+      var ids = c.getAttribute('data-card-nodes').split(',');
+      var a = Math.min.apply(null, ids.map(Number));
+      var b = Math.max.apply(null, ids.map(Number));
+      var max = Math.max.apply(null, nums);
+      if (b < max) c.classList.add('收纳-已过');
+      else if (a > max) c.classList.add('收纳-未来');
+      else c.classList.add('收纳-现在');
+    }
+    return;
+  }
+  图.querySelectorAll('.泳道行').forEach(function(r) {
+    if (!nums) { r.classList.remove('置灰'); r.classList.remove('正常'); return; }
+    var nodeNum = parseInt(r.getAttribute('data-swimlane-node'), 10);
+    var max = Math.max.apply(null, nums);
+    r.classList.toggle('正常', nodeNum <= max);
+    r.classList.toggle('置灰', nodeNum > max);
+  });
+}
+</script>
+<script id="js-字段联动">
+if (typeof 切换字段详情 === 'undefined') {
+  function 切换字段详情(详情ID, 按钮) { var p = document.getElementById(详情ID); if (p) p.classList.toggle('show'); }
+}
+// 枚举置灰通用函数：受控分组在「启用值」命中时正常，否则整组变淡且不可点。
+// 用法：置灰切换_模板('grp_退货设置', this.value, ['是'])；多组受控就在适配函数里多调几次。
+function 置灰切换_模板(组id, val, 启用值列表) {
+  var on = 启用值列表.indexOf(val) >= 0;
+  var el = document.getElementById(组id);
+  if (el) { el.style.opacity = on ? '1' : '0.35'; el.style.pointerEvents = on ? 'auto' : 'none'; }
+}
+</script>
+<script id="js-表单弹窗">
+// 数据驱动的新增/编辑弹窗：window._表单字段按节['4.1'] + window._新增字段分组['4.1']
+// 三个可选扩展（枚举置灰场景三件套）：
+//   window._新增控制逻辑['4.1'] = 规则摘要框 HTML（弹窗顶部说明）
+//   字段对象加 联动:'置灰切换_xx(this.value)'（enum 下拉 onchange，串内只用单引号）
+//   分组对象加 id:'grp_xx'；window._弹窗初始化['4.1'] = function(){...}（弹窗打开后执行一次初始置灰）
+function 打开表单弹窗(节编号, 模式, 行数据) {
+  var drawer = document.getElementById('表单弹窗面板'); var overlay = document.getElementById('overlay');
+  var body = document.getElementById('表单弹窗正文'); var titleEl = document.getElementById('表单弹窗标题');
+  if (!drawer || !body) return;
+  模式 = 模式 || '新增';
+  行数据 = 行数据 || null;
+  var 字段列表 = (window._表单字段按节 && window._表单字段按节[节编号]) ? window._表单字段按节[节编号] : [];
+  titleEl.textContent = 模式 + ' · ' + 节编号;
+  var html = '<div class="编辑卡片区">';
+  var 控制逻辑块 = (window._新增控制逻辑 && window._新增控制逻辑[节编号]) ? window._新增控制逻辑[节编号] : '';
+  if (控制逻辑块) html += 控制逻辑块;
+  function 取值(f) { return (行数据 && 行数据[f.名称] !== undefined && 行数据[f.名称] !== '') ? 行数据[f.名称] : (f.示例值 || ''); }
+  function 控件(f) {
+    if (f.编辑性 === '只读') return '<span class="field-readonly">' + (取值(f) || '系统自动生成') + '</span>';
+    if (f.基础类型 === 'enum') {
+      var opts = (f.枚举值 || '').split(/[、,，]/).filter(Boolean);
+      var ev = f.联动 ? ' onchange="' + f.联动 + '"' : '';
+      var cur = String(取值(f));
+      var o = '<select class="field-select"' + ev + '>';
+      for (var i = 0; i < opts.length; i++) o += '<option' + (opts[i] === cur ? ' selected' : '') + '>' + opts[i] + '</option>';
+      return o + '</select>';
+    }
+    if (f.基础类型 === '富文本') return '<textarea class="field-input" rows="3" placeholder="请输入">' + 取值(f) + '</textarea>';
+    return '<input class="field-input" value="' + 取值(f) + '" placeholder="请输入">';
+  }
+  function 渲染字段行(f) {
+    var row = '<div class="field-row"><span class="field-label">' + f.名称 + '</span>';
+    row += '<span class="field-control">' + 控件(f) + '<span class="field-type-tag">' + (f.类型原文 || f.基础类型 || '') + '</span>';
+    row += '<button class="field-info-btn" onclick="event.stopPropagation();显示字段弹窗(\'' + f.名称 + '\', event)">ⓘ</button></span></div>';
+    return row;
+  }
+  function 字段可在新增显示(f) { return !(模式 === '新增' && f.新增可见 === false); }
+  var 分组配置 = (window._新增字段分组 && window._新增字段分组[节编号]) ? window._新增字段分组[节编号] : null;
+  if (分组配置 && 分组配置.length > 0) {
+    for (var g = 0; g < 分组配置.length; g++) {
+      var 组 = 分组配置[g];
+      html += '<div class="field-card"' + (组.id ? ' id="' + 组.id + '"' : '') + '><div class="field-card-header"><h4>' + 组.组名 + '</h4></div><div class="field-card-body">';
+      for (var j = 0; j < 组.字段.length; j++) {
+        for (var k = 0; k < 字段列表.length; k++) {
+          if (字段列表[k].名称 === 组.字段[j]) { if (字段可在新增显示(字段列表[k])) html += 渲染字段行(字段列表[k]); break; }
+        }
+      }
+      html += '</div></div>';
+    }
+  } else {
+    html += '<div class="field-card"><div class="field-card-header"><h4>' + 模式 + '</h4></div><div class="field-card-body">';
+    if (字段列表.length === 0) html += '<div class="空状态">未注册弹窗字段（_表单字段按节 / _新增字段分组）</div>';
+    else for (var i = 0; i < 字段列表.length; i++) { if (字段可在新增显示(字段列表[i])) html += 渲染字段行(字段列表[i]); }
+    html += '</div></div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  overlay.classList.add('show'); drawer.classList.add('show');
+  if (window._弹窗初始化 && window._弹窗初始化[节编号]) { try { window._弹窗初始化[节编号](); } catch (e) {} }
+}
+function 关闭表单弹窗() { var d = document.getElementById('表单弹窗面板'); var o = document.getElementById('overlay'); if (d) d.classList.remove('show'); if (o) o.classList.remove('show'); }
+</script>
+<script id="js-弹窗">
+window._字段总库 = window._字段总库 || [];
+function 显示字段弹窗(字段名, 事件) {
+  var 弹窗 = document.getElementById('字段弹窗'); if (!弹窗) { 弹窗 = document.createElement('div'); 弹窗.id = '字段弹窗'; 弹窗.className = '字段弹窗'; document.body.appendChild(弹窗); }
+  var 信息 = null; var 总库 = window._字段总库 || []; for (var i = 0; i < 总库.length; i++) { if (总库[i].名称 === 字段名) { 信息 = 总库[i]; break; } }
+  if (!信息) { 弹窗.innerHTML = '<div class="弹窗正文">未找到字段信息</div>'; }
+  else { 弹窗.innerHTML = '<div class="弹窗头部"><span class="弹窗字段名">' + 信息.名称 + '</span><span class="弹窗类型标签 ' + (信息.基础类型 || '') + '">' + (信息.类型原文 || 信息.基础类型 || '') + '</span></div><div class="弹窗正文"><dl class="弹窗属性"><dt>字段类型</dt><dd>' + (信息.类型原文 || 信息.基础类型 || '—') + '</dd><dt>编辑性</dt><dd>' + (信息.编辑性 || '—') + '</dd><dt>数据来源</dt><dd>' + (信息.数据来源 || '—') + '</dd><dt>逻辑</dt><dd>' + (信息.逻辑 || '—') + '</dd><dt>用途</dt><dd>' + (信息.用途 || '—') + '</dd></dl></div>'; }
+  var 目标矩形 = 事件.target.getBoundingClientRect();
+  弹窗.style.left = Math.max(8, Math.min(目标矩形.left, window.innerWidth - 332)) + 'px';
+  弹窗.style.top = (目标矩形.bottom + 8) + 'px'; 弹窗.style.display = 'block'; 弹窗.classList.add('可见');
+  if (window._弹窗关闭处理器) { document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; }
+  setTimeout(function() { window._弹窗关闭处理器 = function(e) { if (!弹窗.contains(e.target)) { 弹窗.classList.remove('可见'); document.removeEventListener('click', window._弹窗关闭处理器); window._弹窗关闭处理器 = null; } }; document.addEventListener('click', window._弹窗关闭处理器); }, 50);
+}
+</script>
+<script id="js-提示">
+function 显示提示(消息, 类型, 时长) {
+  类型 = 类型 || '信息'; 时长 = 时长 || 3000;
+  var 容器 = document.getElementById('提示容器'); if (!容器) { 容器 = document.createElement('div'); 容器.id = '提示容器'; 容器.className = '提示容器'; document.body.appendChild(容器); }
+  var el = document.createElement('div'); el.className = '提示 ' + 类型; el.textContent = 消息;
+  var close = document.createElement('span'); close.textContent = '×'; close.style.cssText = 'margin-left:auto;cursor:pointer;font-size:18px;opacity:0.7;';
+  close.onclick = function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); };
+  el.appendChild(close); 容器.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('显示'); });
+  setTimeout(function() { el.classList.add('消失'); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300); }, 时长);
+}
+// 行内「删除」按钮入口：二次确认后提示（演示环境不落库）。
+function 确认删除(节编号, 行数据) {
+  if (!confirm('确定删除该记录？删除后不可恢复。')) return;
+  显示提示('已删除（演示环境，不落库）', '成功', 2200);
+}
+</script>
+<script id="js-单元格截断">
+(function(){
+  var cells = document.querySelectorAll('.列表单元格:not(.操作列)');
+  for (var i = 0; i < cells.length; i++) {
+    var td = cells[i];
+    if (td.children.length > 0) continue;
+    var text = td.textContent || td.innerText || '';
+    td.innerHTML = '<span class="cell-clamp">' + text + '</span>';
+    td.setAttribute('title', text);
+  }
+})();
+</script>
+<script id="js-图片放大">
+function 放大图片(el) { var lb = document.getElementById('图片灯箱'); var img = document.getElementById('灯箱图片'); if (lb && img) { img.src = el.src; lb.classList.add('可见'); } }
+</script>
+<script id="js-泳道收纳">
+// 收纳卡居中浮层：打开/关闭/ESC。居中形态为泳道图专属例外，非半屏抽屉。
+(function () {
+  function 打开泳道浮层(cardId) {
+    var tpl = document.getElementById('泳道浮层体_' + cardId);
+    var card = document.querySelector('[data-card="' + cardId + '"]');
+    var mask = document.getElementById('泳道浮层遮罩');
+    if (!tpl || !card || !mask) return;
+    document.getElementById('泳道浮层内容').innerHTML = tpl.innerHTML;
+    document.getElementById('泳道浮层标题').textContent = card.getAttribute('data-card-label') || '';
+    mask.style.display = 'flex';
+  }
+  function 关闭泳道浮层() {
+    var mask = document.getElementById('泳道浮层遮罩');
+    if (mask) mask.style.display = 'none';
+  }
+  window.打开泳道浮层 = 打开泳道浮层;
+  window.关闭泳道浮层 = 关闭泳道浮层;
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') 关闭泳道浮层();
+  });
+})();
+</script>
+<script>
+window._表单字段按节=window._表单字段按节||{};
+window._表单字段按节["4.1"]=[
+  {名称:"家族ID",类型原文:"string",基础类型:"string",示例值:"time",数据来源:"运营人员填写",逻辑:"小写英文，全局唯一，与 C 端 family 字段同值；创建后不可修改",用途:"程序识别的唯一键",节编号:"4.1"},
+  {名称:"家族名称",类型原文:"string",基础类型:"string",示例值:"时间节律",数据来源:"运营人员填写",逻辑:"2-6 个字，全局不可重名",用途:"C 端图鉴的分区标题",节编号:"4.1"},
+  {名称:"排序",类型原文:"number",基础类型:"number",示例值:"1",数据来源:"运营人员填写",逻辑:"正整数，越小越靠前，决定图鉴分区顺序",用途:"控制分区展示次序",节编号:"4.1"},
+  {名称:"是否展示",类型原文:"enum",基础类型:"enum",枚举值:"展示、隐藏",示例值:"展示",数据来源:"运营人员选择",逻辑:"隐藏后 C 端不渲染该分区；新增家族默认隐藏",用途:"控制分区是否出现在图鉴",节编号:"4.1"}
+];
+window._新增字段分组=window._新增字段分组||{};
+window._新增字段分组["4.1"]=[
+  {组名:"基本信息",字段:["家族ID","家族名称","排序","是否展示"]}
+];
+
+window._表单字段按节["4.2"]=[
+  {名称:"勋章名称",类型原文:"string",基础类型:"string",示例值:"干饭喵",数据来源:"运营人员填写",逻辑:"固定 3 字，全局不可重名",用途:"勋章唯一展示名",节编号:"4.2"},
+  {名称:"印面字",类型原文:"string",基础类型:"string",示例值:"饭",数据来源:"运营人员填写",逻辑:"1-2 个字，必填；勋章图未上传时用它渲染文字印章",用途:"印章图形内的字，也是美术资源兜底视觉",节编号:"4.2"},
+  {名称:"勋章图",类型原文:"file",基础类型:"string",示例值:"已上传 240×240",数据来源:"运营人员上传",逻辑:"选填，正方形建议 240×240；有图则 C 端用图替代印面字",用途:"图鉴与解锁弹窗主视觉",节编号:"4.2"},
+  {名称:"家族",类型原文:"enum",基础类型:"enum",枚举值:"时间节律、口味偏好、饮食习惯、城市足迹",示例值:"时间节律",数据来源:"下拉来自 4.1 中是否展示=展示的家族",用途:"图鉴家族分区",节编号:"4.2"},
+  {名称:"解锁前文案",类型原文:"string",基础类型:"string",示例值:"饭点一到，小喵就蹲在桌边等",数据来源:"运营人员填写",逻辑:"20 字以内；只做模糊暗示，不得出现数字、不得直接写出触发条件",用途:"未解锁状态下展示的一句话",节编号:"4.2"},
+  {名称:"解锁条件（用户可见）",类型原文:"string",基础类型:"string",示例值:"午间 11:00–14:00 下过单",数据来源:"运营人员填写",逻辑:"直白说明做了什么，须与「解锁口径」语义一致；仅在解锁后展示",用途:"告知已解锁用户这枚勋章的获得方式",节编号:"4.2"},
+  {名称:"解锁口径",类型原文:"string",基础类型:"string",编辑性:"只读",新增可见:false,示例值:"时段 11:00-14:00 · ≥1 单",数据来源:"研发按勋章写死，后台只读回显",逻辑:"含触发条件类型、判定参数与门槛值；不提供任何编辑入口",用途:"让运营知道这枚勋章怎么算出来的",节编号:"4.2"},
+  {名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"启用、停用",示例值:"启用",数据来源:"运营人员设置",逻辑:"停用后不下发 C 端，也不再触发新解锁",用途:"控制勋章是否生效",节编号:"4.2"},
+  {名称:"更新时间",类型原文:"date",基础类型:"date",编辑性:"只读",新增可见:false,示例值:"2026-11-17 10:20",数据来源:"系统记录最近保存时间",逻辑:"yyyy-MM-dd HH:mm，仅编辑弹窗展示",用途:"追溯配置最近修改时间",节编号:"4.2"}
+];
+window._新增字段分组["4.2"]=[
+  {组名:"基本信息",字段:["勋章名称","印面字","勋章图","家族","状态"]},
+  {组名:"用户可见文案",字段:["解锁前文案","解锁条件（用户可见）"]},
+  {组名:"解锁口径（只读）",字段:["解锁口径"]},
+  {组名:"系统",字段:["更新时间"]}
+];
+window._新增控制逻辑=window._新增控制逻辑||{};
+window._新增控制逻辑["4.2"]='<div style="margin-bottom:14px;padding:10px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:12px;line-height:1.8;color:#92400e;"><strong>ⓘ 只读说明</strong><br>&bull; 「解锁口径」由研发在代码中写死（含档位阈值与档位名），本弹窗只做灰底只读回显，无编辑控件<br>&bull; 印面字必填、勋章图选填：有图时 C 端用图替代印面字，无图时用印面字渲染文字印章<br>&bull; 「解锁前文案」只在未解锁时展示，不得出现数字与具体条件；「解锁条件」只在解锁后展示，须与上面的「解锁口径」一致<br>&bull; 下线勋章请用「状态=停用」，不建议删除</div>';
+
+window._表单字段按节["4.3"]=[
+  {名称:"桶标识",类型原文:"string",基础类型:"string",示例值:"milk_tea",数据来源:"运营人员填写",逻辑:"小写英文+下划线，全局唯一，创建后不可修改",用途:"程序匹配的唯一键",节编号:"4.3"},
+  {名称:"桶名称",类型原文:"string",基础类型:"string",示例值:"奶茶茶饮",数据来源:"运营人员填写",逻辑:"中文可读名",用途:"后台识别与列表展示",节编号:"4.3"},
+  {名称:"优先级",类型原文:"number",基础类型:"number",示例值:"10",数据来源:"运营人员填写",逻辑:"正整数，越小越先匹配，命中即停；细分桶必须排在宽泛桶之前；兜底桶固定最大值",用途:"决定匹配顺序",节编号:"4.3"},
+  {名称:"关键词",类型原文:"string",基础类型:"string",示例值:"奶茶、茶饮、益禾堂、蜜雪",数据来源:"运营人员填写",逻辑:"逗号或换行分隔，与 goods_title 做包含匹配；只影响配图，不参与勋章判定",用途:"决定该桶能接住哪些商品名",节编号:"4.3"},
+  {名称:"图片池",类型原文:"file",基础类型:"string",示例值:"3 张",数据来源:"运营人员上传，支持多选",逻辑:"推荐 2-10 张；C 端按用户+订单哈希取模选一张",用途:"命中该桶的订单实际展示图",节编号:"4.3"},
+  {名称:"是否兜底",类型原文:"enum",基础类型:"enum",枚举值:"是、否",示例值:"否",数据来源:"运营人员选择",逻辑:"全局恰好 1 个桶可为是；兜底桶不可删除、不可停用、图片池不少于 8 张",用途:"标识未命中订单的最终归宿",节编号:"4.3"},
+  {名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"启用、停用",示例值:"启用",数据来源:"运营人员设置",逻辑:"停用的桶不参与匹配，兜底桶不支持停用",用途:"控制该桶是否生效",节编号:"4.3"},
+  {名称:"更新时间",类型原文:"date",基础类型:"date",编辑性:"只读",新增可见:false,示例值:"2026-11-17 09:40",数据来源:"系统记录最近保存时间",逻辑:"yyyy-MM-dd HH:mm，仅编辑弹窗展示",用途:"追溯配置最近修改时间",节编号:"4.3"}
+];
+window._新增字段分组["4.3"]=[
+  {组名:"基本信息",字段:["桶标识","桶名称","优先级","是否兜底","状态"]},
+  {组名:"匹配规则",字段:["关键词"]},
+  {组名:"图片",字段:["图片池"]},
+  {组名:"系统",字段:["更新时间"]}
+];
+
+(window._字段总库||[]).push(
+{名称:"家族ID",类型原文:"string",基础类型:"string",编辑性:"创建后不可改",数据来源:"运营人员填写",逻辑:"小写英文，与 C 端 family 字段同值",用途:"程序识别唯一键",节编号:"4.1"},
+{名称:"家族名称",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员填写",逻辑:"2-6 个字，全局不可重名",用途:"C 端图鉴分区标题",节编号:"4.1"},
+{名称:"排序",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"运营人员填写",逻辑:"正整数，越小越靠前",用途:"控制分区展示次序",节编号:"4.1"},
+{名称:"是否展示",类型原文:"enum",基础类型:"enum",枚举值:"展示、隐藏",编辑性:"可编辑",数据来源:"运营人员选择",逻辑:"隐藏后 C 端不渲染该分区",用途:"控制分区是否出现",节编号:"4.1"},
+{名称:"勋章名称",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员填写",逻辑:"固定 3 字，全局不可重名",用途:"勋章唯一展示名",节编号:"4.2"},
+{名称:"印面字",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员填写",逻辑:"1-2 个字，必填，勋章图未上传时渲染文字印章",用途:"印章图形内的字",节编号:"4.2"},
+{名称:"勋章图",类型原文:"file",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员上传",逻辑:"选填，正方形建议 240×240，有图则替代印面字",用途:"图鉴与解锁弹窗主视觉",节编号:"4.2"},
+{名称:"家族",类型原文:"enum",基础类型:"enum",枚举值:"时间节律、口味偏好、饮食习惯、城市足迹",编辑性:"可编辑",数据来源:"下拉来自 4.1 展示中的家族",用途:"图鉴家族分区",节编号:"4.2"},
+{名称:"解锁前文案",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员填写",逻辑:"20 字以内；只做模糊暗示，不得出现数字与具体条件",用途:"未解锁状态下展示的一句话",节编号:"4.2"},
+{名称:"解锁条件（用户可见）",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员填写",逻辑:"直白说明做了什么，须与「解锁口径」一致；仅解锁后展示",用途:"告知已解锁用户的获得方式",节编号:"4.2"},
+{名称:"解锁口径",类型原文:"string",基础类型:"string",编辑性:"只读",新增可见:false,数据来源:"研发按勋章写死",逻辑:"含触发条件类型、判定参数与门槛值，无编辑入口",用途:"内部口径只读回显",节编号:"4.2"},
+{名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"启用、停用",编辑性:"可编辑",数据来源:"运营人员设置",逻辑:"停用后不下发 C 端",用途:"控制勋章是否生效",节编号:"4.2"},
+{名称:"桶标识",类型原文:"string",基础类型:"string",编辑性:"创建后不可改",数据来源:"运营人员填写",逻辑:"小写英文+下划线，全局唯一",用途:"程序匹配唯一键",节编号:"4.3"},
+{名称:"桶名称",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员填写",用途:"后台识别与列表展示",节编号:"4.3"},
+{名称:"优先级",类型原文:"number",基础类型:"number",编辑性:"可编辑",数据来源:"运营人员填写",逻辑:"越小越先匹配，命中即停；细分桶排在宽泛桶之前",用途:"决定匹配顺序",节编号:"4.3"},
+{名称:"关键词",类型原文:"string",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员填写",逻辑:"与 goods_title 做包含匹配；只影响配图",用途:"决定该桶能接住哪些商品名",节编号:"4.3"},
+{名称:"图片池",类型原文:"file",基础类型:"string",编辑性:"可编辑",数据来源:"运营人员上传，支持多选",逻辑:"推荐 2-10 张，兜底桶不少于 8 张",用途:"实际展示的打卡图",节编号:"4.3"},
+{名称:"是否兜底",类型原文:"enum",基础类型:"enum",枚举值:"是、否",编辑性:"可编辑",数据来源:"运营人员选择",逻辑:"全局恰好 1 个为是；兜底桶不可删除、不可停用",用途:"标识未命中订单归宿",节编号:"4.3"},
+{名称:"状态",类型原文:"enum",基础类型:"enum",枚举值:"启用、停用",编辑性:"可编辑",数据来源:"运营人员设置",逻辑:"兜底桶不支持停用",用途:"控制该桶是否生效",节编号:"4.3"},
+{名称:"更新时间",类型原文:"date",基础类型:"date",编辑性:"只读",新增可见:false,数据来源:"系统记录最近保存时间",逻辑:"yyyy-MM-dd HH:mm",用途:"追溯配置最近修改时间",节编号:"4.3"}
+);
+</script>
+</body>
+</html>

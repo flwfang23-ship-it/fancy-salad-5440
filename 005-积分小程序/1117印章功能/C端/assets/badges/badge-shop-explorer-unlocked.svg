@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="探店达人已解锁印章">
+  <circle cx="120" cy="120" r="103" fill="#EEF7FA" stroke="#3F88A0" stroke-width="8"/>
+  <path d="M66 93h108l-10-30H76z" fill="#70B0C5"/>
+  <path d="M77 93v63h86V93M98 156v-34h44v34" fill="#D8EDF3" stroke="#34758C" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M66 93c0 11 8 18 18 18s18-7 18-18c0 11 8 18 18 18s18-7 18-18c0 11 8 18 18 18s18-7 18-18" fill="none" stroke="#34758C" stroke-width="5"/>
+  <text x="120" y="189" text-anchor="middle" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="23" font-weight="700" fill="#2B6174">探店达人</text>
+</svg>

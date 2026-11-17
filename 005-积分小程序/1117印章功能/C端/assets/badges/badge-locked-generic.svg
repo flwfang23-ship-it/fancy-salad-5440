@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="未解锁印章占位">
+  <circle cx="120" cy="120" r="103" fill="#F6F4F1" stroke="#C3BCB5" stroke-width="7"/>
+  <circle cx="120" cy="120" r="88" fill="none" stroke="#CFC8C1" stroke-width="2" stroke-dasharray="4 8"/>
+  <rect x="88" y="104" width="64" height="52" rx="13" fill="#DCD6D0"/>
+  <path d="M101 106V92c0-13 8-23 19-23s19 10 19 23v14" fill="none" stroke="#A79F98" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="120" cy="129" r="6" fill="#9C938C"/>
+  <path d="M120 140v8" stroke="#9C938C" stroke-width="5" stroke-linecap="round"/>
+</svg>

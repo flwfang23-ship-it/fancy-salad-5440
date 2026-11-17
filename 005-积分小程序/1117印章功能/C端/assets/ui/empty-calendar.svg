@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-label="暂无订单记录">
+  <rect x="59" y="28" width="202" height="166" rx="24" fill="#FFFDF8" stroke="#DCD4C9" stroke-width="4"/>
+  <path d="M59 74h202" stroke="#DCD4C9" stroke-width="4"/>
+  <path d="M105 18v28M215 18v28" stroke="#AA9D92" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="111" cy="112" r="12" fill="#E8E3DB"/><circle cx="160" cy="112" r="12" fill="#E8E3DB"/><circle cx="209" cy="112" r="12" fill="#E8E3DB"/>
+  <circle cx="111" cy="153" r="12" fill="#E8E3DB"/><circle cx="160" cy="153" r="12" fill="#D9903D" opacity=".55"/><circle cx="209" cy="153" r="12" fill="#E8E3DB"/>
+</svg>

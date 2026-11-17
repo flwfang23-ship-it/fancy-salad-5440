@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="城市初见已解锁印章">
+  <circle cx="120" cy="120" r="103" fill="#F5F0FA" stroke="#76569B" stroke-width="8"/>
+  <path d="M62 157h116M75 157V93h31v64M111 157V70h31v87M147 157v-48h22v48" fill="#E5D8F1" stroke="#68468E" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M84 108h12M84 123h12M120 88h13M120 104h13M120 120h13M154 123h8" stroke="#8B6AAF" stroke-width="4"/>
+  <text x="120" y="190" text-anchor="middle" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="23" font-weight="700" fill="#573774">城市初见</text>
+</svg>

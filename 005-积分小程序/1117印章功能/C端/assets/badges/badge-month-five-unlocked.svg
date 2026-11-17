@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="本月五杯已解锁印章">
+  <circle cx="120" cy="120" r="103" fill="#FFF7E8" stroke="#D8882D" stroke-width="8"/>
+  <circle cx="120" cy="120" r="88" fill="none" stroke="#D8882D" stroke-width="2" stroke-dasharray="4 7"/>
+  <path d="M83 77h74l-9 70H92z" fill="#E9A04E" opacity=".24" stroke="#A86020" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M96 61h48M143 61l14 20" fill="none" stroke="#A86020" stroke-width="5" stroke-linecap="round"/>
+  <text x="120" y="177" text-anchor="middle" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="23" font-weight="700" fill="#743C17">本月五杯</text>
+  <text x="120" y="202" text-anchor="middle" font-family="monospace" font-size="13" letter-spacing="2" fill="#B36B29">2026.11</text>
+</svg>

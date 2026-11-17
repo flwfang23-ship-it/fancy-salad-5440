@@ -1,0 +1,1688 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小喵生活图鉴 · 交互稿</title>
+<style>
+:root{
+  --ink:#171615;--ink2:#625e59;--ink3:#9c9690;--line:#ece9e5;--panel:#fff;--stage:#f1f1f2;
+  --green:#21845b;--red:#d85a42;--orange:#d78b38;--blue:#1686b8;
+  --stamp-bg:#f7f3ea;--stamp-paper:#fffdf8;--stamp-ink:#3c2622;--stamp-muted:#958d89;
+  --stamp-cell:#efeee9;--stamp-accent:#d9903d;--stamp-line:#e7e0d6;
+  --sans:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+button,select{font:inherit}
+button{color:inherit}
+body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans);color:var(--ink)}
+.app{display:grid;grid-template-columns:232px 300px minmax(560px,1fr);height:100vh}
+.rail,.flowcol{min-height:0;display:flex;flex-direction:column;border-right:1px solid #dfdfe1}
+.rail{background:#fff}.flowcol{background:#fafafa}
+.rail-head,.flow-head{padding:18px 16px 13px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.92)}
+.eyebrow{font:700 9px/1 var(--mono);letter-spacing:.18em;color:var(--ink3);text-transform:uppercase}
+.rail-title{margin-top:8px;font-size:16px;font-weight:800;letter-spacing:.04em}
+.rail-sub,.flow-sub{margin-top:5px;font-size:10.5px;color:var(--ink3);line-height:1.45}
+.rail-body,.flow-body{flex:1;min-height:0;overflow:auto;padding:10px 10px 24px;scrollbar-width:thin}
+.mode-switch{display:flex;gap:3px;padding:3px;background:#f3f3f4;border-radius:8px;margin-bottom:8px}
+.mode-btn{flex:1;padding:6px 0;border:0;border-radius:6px;background:transparent;font-size:11px;color:#888;cursor:pointer}
+.mode-btn.on{background:#fff;color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.group-head{display:flex;align-items:center;gap:7px;padding:14px 8px 7px;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#4a4744}
+.group-head::before{content:"";width:5px;height:5px;border-radius:50%;background:#c8c4c0}
+.group-head em{margin-left:auto;font:400 9px var(--mono);color:#aaa;font-style:normal}
+.rail-item,.page-item{width:100%;border:0;background:transparent;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;text-align:left;cursor:pointer;font-size:12px;color:#555}
+.rail-item:hover,.page-item:hover,.step:hover{background:#f3f3f4}
+.rail-item.on,.page-item.on{background:#eeeef0;color:#151515;font-weight:750}
+.rail-dot{width:5px;height:5px;border-radius:50%;background:#ccc;flex:none}.on .rail-dot{background:#191919}
+.rail-name{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rail-count,.page-code{font:9px var(--mono);color:#aaa}
+.flow-title{font-size:12.5px;font-weight:800;letter-spacing:.05em}
+.flow-lane{margin:13px 5px 7px;font-size:9px;font-weight:800;letter-spacing:.16em;color:#aaa}
+/* 分块流程：阶段标题按钮 */
+.step{display:flex;gap:9px;padding:8px;border-radius:8px;cursor:pointer}
+.step.on{background:#fff;box-shadow:0 0 0 1px #e4e2df}
+.step-index{width:22px;height:22px;border:1px solid #bdb8b3;border-radius:50%;display:grid;place-items:center;flex:none;font:700 9px var(--mono);color:#777}
+.step.on .step-index{background:#191919;color:#fff;border-color:#191919}
+.step.ext .step-index{border-style:dashed}.step-title{font-size:11.5px;font-weight:700;line-height:1.35}.step-sub{font-size:9.5px;color:#aaa;margin-top:2px;line-height:1.45}
+.flow-arrow{height:12px;border-left:1px dashed #ddd;margin-left:19px}
+.section-label{margin:16px 8px 7px;font:700 9px var(--mono);letter-spacing:.16em;color:#aaa}
+.change-tag{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:4px;font-size:8px;font-weight:800;vertical-align:1px}
+.change-tag.core{color:#16754d;background:#e8f6ef}.change-tag.state{color:#ad641b;background:#fff2e4}.change-tag.scope{color:#777;background:#eee}
+.stage{min-width:0;overflow:auto;display:flex;justify-content:center;align-items:center;gap:18px;padding:18px 22px}
+.stage-main{display:flex;flex-direction:column;align-items:center;gap:10px;flex:none}
+.stage-meta{width:392px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:#888;font-size:10.5px}
+.stage-name{display:flex;align-items:center;gap:7px;min-width:0}.stage-name i{width:5px;height:5px;border-radius:50%;background:#171615}
+.frame-select{max-width:222px;border:1px solid #ddd9d5;border-radius:7px;background:#fff;padding:6px 7px;font-size:10px;color:#34312e;outline:none}
+.phone{width:392px;height:min(820px,calc(100vh - 88px));min-height:650px;border-radius:44px;background:var(--stamp-bg);box-shadow:0 0 0 1px rgba(0,0,0,.06),0 18px 45px rgba(0,0,0,.13);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.statusbar{height:39px;padding:14px 25px 0;display:flex;align-items:center;justify-content:space-between;flex:none;font:700 10px var(--mono);z-index:8}
+.status-icons{display:flex;gap:4px;align-items:center}.status-icons i{display:block;width:4px;height:4px;border-radius:50%;background:#1f1e1c}.status-icons b{width:18px;height:9px;border:1.5px solid #1f1e1c;border-radius:3px;display:block;margin-left:4px;position:relative}.status-icons b::after{content:"";position:absolute;inset:1px;background:#1f1e1c;border-radius:1px}
+#screen{flex:1;min-height:0;display:flex;position:relative}.mobile-page{flex:1;min-width:0;max-width:100%;min-height:0;display:flex;flex-direction:column;position:relative;color:var(--stamp-ink);background:var(--stamp-bg)}
+.paper-bg{background-color:var(--stamp-bg);background-image:radial-gradient(rgba(91,66,42,.035) .8px,transparent .8px),radial-gradient(rgba(255,255,255,.55) 1px,transparent 1px);background-size:13px 13px,19px 19px;background-position:0 0,6px 8px}
+.page-scroll{flex:1;min-width:0;min-height:0;overflow-y:auto;scrollbar-width:none;padding:0 16px 22px}.page-scroll::-webkit-scrollbar,.sheet::-webkit-scrollbar{display:none}
+.product-top{height:48px;display:flex;align-items:center;gap:8px;padding:0 16px;flex:none}
+.round-btn{width:34px;height:34px;border:1px solid rgba(255,255,255,.8);background:rgba(255,255,255,.62);box-shadow:0 4px 14px rgba(79,58,35,.05);border-radius:13px;display:grid;place-items:center;cursor:pointer;font-size:16px}
+.product-title{flex:1;text-align:center;font-size:17px;font-weight:850;letter-spacing:.03em}.top-spacer{width:34px}
+.stamp-switch{display:flex;margin:2px 16px 10px;padding:3px;background:rgba(255,255,255,.58);border:1px solid rgba(225,218,207,.9);border-radius:12px;flex:none}
+.stamp-switch button{flex:1;border:0;background:transparent;border-radius:9px;padding:7px 5px;font-size:11px;color:#978e87;cursor:pointer}.stamp-switch button.on{background:#fff;color:var(--stamp-ink);font-weight:800;box-shadow:0 2px 8px rgba(69,46,25,.08)}
+.today{text-align:center;padding:9px 0 15px}.today h1{font-size:34px;letter-spacing:.06em;font-weight:850}.today p{margin-top:7px;color:var(--stamp-muted);font-size:13px}
+.calendar-card{background:rgba(255,255,255,.88);border:1px solid rgba(236,230,221,.9);border-radius:24px;padding:18px 13px 15px;box-shadow:0 10px 26px rgba(83,61,38,.055)}
+.week-row,.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.week-row{margin-bottom:12px}.week-row span{text-align:center;font-size:9.5px;color:#a09a94;font-weight:700}.day-grid{grid-auto-rows:43px}.day{position:relative;border:0;border-radius:14px;background:var(--stamp-cell);color:var(--stamp-ink);display:grid;place-items:center;font:500 12px var(--mono);cursor:pointer;overflow:visible}.day.blank{background:transparent;pointer-events:none}.day.today-cell{background:var(--stamp-accent);color:#fff;font-weight:800}.day.has-record{background:#fff;box-shadow:0 2px 8px rgba(63,43,24,.08)}.day.has-record img{width:35px;height:35px;object-fit:cover;border-radius:10px}.day .day-num{position:absolute;left:4px;top:3px;font:700 7px var(--mono);background:rgba(255,255,255,.82);border-radius:4px;padding:1px 3px;color:#6c5650}.day-count{position:absolute;right:-4px;top:-5px;width:18px;height:18px;border-radius:50%;background:#e4ae6d;color:#fff;display:grid;place-items:center;font:800 9px var(--mono);box-shadow:0 2px 6px rgba(72,42,12,.16)}
+.month-section{margin-top:13px;display:grid;grid-template-columns:1.16fr .84fr;gap:10px}.month-summary,.album-entry{min-height:125px;border:0;background:rgba(255,255,255,.88);border-radius:22px;padding:16px;box-shadow:0 9px 24px rgba(76,53,31,.05);cursor:pointer;text-align:left;position:relative;overflow:hidden}.month-summary small{color:var(--stamp-muted);font-size:11px;font-weight:700}.month-total{margin-top:10px;display:flex;align-items:baseline;gap:5px}.month-total b{font:800 34px var(--mono)}.month-total span{font-size:12px;color:var(--stamp-muted)}.month-shops{margin-top:7px;color:var(--stamp-muted);font-size:11px}.month-summary img{position:absolute;right:10px;bottom:6px;width:70px;height:86px;object-fit:cover;border-radius:16px;transform:rotate(-3deg);box-shadow:0 4px 13px rgba(0,0,0,.1)}
+.album-entry{display:flex;flex-direction:column;justify-content:flex-end}.album-stack{position:absolute;inset:13px 12px 43px}.album-stack img{position:absolute;width:62px;height:66px;object-fit:cover;border:4px solid #fff;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,.1)}.album-stack img:first-child{left:7px;top:4px;transform:rotate(-7deg)}.album-stack img:last-child{right:4px;top:10px;transform:rotate(8deg)}.album-entry span{font-size:10.5px;color:var(--stamp-muted);font-weight:700}.album-entry b{font-size:12px;margin-top:2px}
+.source-tip{margin:12px 2px 0;display:flex;align-items:flex-start;gap:8px;font-size:9.5px;line-height:1.55;color:#9d958d}.source-tip i{font-style:normal;width:17px;height:17px;border-radius:50%;background:#ede6da;display:grid;place-items:center;flex:none;color:#7c6c5d;font-size:9px}
+.global-tabs{height:62px;flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,253,248,.96);border-top:1px solid var(--stamp-line);padding:6px 8px 8px;z-index:10}.global-tabs button{border:0;background:transparent;border-radius:13px;color:#9d958f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:8.5px;cursor:pointer}.global-tabs button.on{color:var(--stamp-accent);background:#f4ede3;font-weight:800}.global-tabs .ico{font-size:17px;line-height:1}
+.badge-summary{text-align:center;padding:12px 0 15px}.badge-summary h1{font-size:26px;letter-spacing:.04em}.badge-summary p{margin-top:10px;color:var(--stamp-muted);font-size:11px}.badge-summary p b{color:var(--stamp-ink)}
+.badge-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 10px;padding:0 2px 20px}.badge-card{border:0;background:transparent;min-height:150px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}.stamp-art{width:132px;height:132px;border:3px solid var(--c,#1686b8);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--c,#1686b8);transform:rotate(var(--r,-3deg));background:rgba(255,255,255,.27);position:relative}.stamp-art::before{content:"";position:absolute;inset:6px;border:1px dashed currentColor;border-radius:50%;opacity:.55}.stamp-art .emoji{font-size:42px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.08))}.stamp-art .badge-img{width:54px;height:54px;object-fit:contain;position:relative;z-index:1;filter:drop-shadow(0 3px 3px rgba(0,0,0,.07))}.stamp-art strong{font-size:11px;max-width:88px;text-align:center;line-height:1.2;position:relative;z-index:1}.stamp-art time{font:700 9px var(--mono);letter-spacing:.07em;position:relative;z-index:1}.stamp-art.locked{filter:grayscale(1);opacity:.35;border-style:dashed}.stamp-art.locked time{display:none}.badge-progress{position:absolute;bottom:3px;left:20px;right:20px;height:4px;background:#e5dfd7;border-radius:99px;overflow:hidden}.badge-progress i{display:block;height:100%;background:#afa49a;border-radius:99px}.badge-filter-row{display:flex;justify-content:center;gap:6px;margin-bottom:13px}.filter-chip{border:1px solid var(--stamp-line);background:rgba(255,255,255,.65);padding:6px 10px;border-radius:99px;font-size:9.5px;color:var(--stamp-muted);cursor:pointer}.filter-chip.on{background:var(--stamp-ink);border-color:var(--stamp-ink);color:#fff}
+.gallery-page{background:#f1eee8}.gallery-head{display:flex;align-items:center;padding:0 16px 9px}.gallery-head h1{flex:1;text-align:center;font-size:20px}.gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px 10px;padding:10px 15px 28px}.polaroid{border:0;background:#fff;padding:8px 8px 12px;border-radius:5px;box-shadow:0 5px 12px rgba(55,45,36,.12);text-align:left;cursor:pointer;transform:rotate(var(--rot,0deg))}.polaroid img{width:100%;height:150px;object-fit:cover;display:block;background:#eee}.polaroid strong{display:block;font-size:10.5px;margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.polaroid time{display:block;font:9px var(--mono);color:#999;margin-top:3px}.gallery-empty{grid-column:1/-1;text-align:center;padding:80px 20px;color:#aaa;font-size:12px}
+.detail-hero{height:260px;margin:0 16px;border-radius:22px;overflow:hidden;box-shadow:0 8px 24px rgba(68,48,29,.1)}.detail-hero img{width:100%;height:100%;object-fit:cover}.detail-body{padding:18px 19px 28px}.detail-kicker{display:flex;align-items:center;gap:6px;color:#8f8780;font-size:10px}.platform-dot{width:18px;height:18px;border-radius:6px;color:#fff;display:grid;place-items:center;font-size:9px;font-weight:800}.platform-dot.eleme{background:#1677ff}.platform-dot.meituan{background:#ffd000;color:#352e00}.detail-body h1{font-size:22px;margin-top:12px}.detail-meta{margin-top:9px;color:#8e8580;font-size:11px}.detail-rows{margin-top:18px;background:rgba(255,255,255,.72);border:1px solid var(--stamp-line);border-radius:16px;padding:4px 14px}.detail-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--stamp-line);font-size:10.5px}.detail-row:last-child{border:0}.detail-row span{color:#999}.detail-row b{font-weight:700;text-align:right}.favorite-btn{width:100%;height:42px;border:0;border-radius:13px;margin-top:14px;background:var(--stamp-ink);color:#fff;font-weight:800;cursor:pointer}
+.placeholder-page{background:#faf9f6;align-items:center;justify-content:center;text-align:center;padding:30px}.placeholder-icon{width:64px;height:64px;border-radius:22px;background:#f0ece5;display:grid;place-items:center;font-size:28px}.placeholder-page h1{font-size:20px;margin-top:18px}.placeholder-page p{font-size:11px;line-height:1.7;color:#999;margin-top:8px;max-width:240px}
+.external-page{background:#fff;align-items:center;justify-content:center;text-align:center;padding:30px}.external-mark{width:68px;height:68px;border:1px dashed #bbb;border-radius:23px;display:grid;place-items:center;font-size:28px}.external-page h1{font-size:19px;margin-top:19px}.external-page p{font-size:11px;line-height:1.7;color:#999;margin-top:8px}.external-card{width:100%;margin-top:20px;border:1px solid #eee;border-radius:16px;padding:15px;text-align:left}.external-row{display:flex;justify-content:space-between;padding:7px 0;font-size:10.5px}.external-row span{color:#999}.simulate-btn{width:100%;height:44px;border:0;border-radius:13px;background:#171615;color:#fff;font-weight:800;margin-top:16px;cursor:pointer}
+#sheetRoot{position:absolute;inset:0;z-index:30;pointer-events:none}.mask{position:absolute;inset:0;background:rgba(29,22,17,.35);pointer-events:auto;animation:fade .18s ease both}.sheet{position:absolute;left:0;right:0;bottom:0;max-height:88%;overflow-y:auto;background:var(--stamp-paper);border-radius:26px 26px 0 0;padding:10px 16px 26px;pointer-events:auto;animation:rise .24s cubic-bezier(.2,.8,.25,1) both}.sheet-handle{width:34px;height:4px;border-radius:4px;background:#d7d0c8;margin:2px auto 16px}.sheet-head{display:flex;align-items:flex-start;gap:10px;padding:0 2px 14px}.sheet-title{flex:1;text-align:center}.sheet-title h2{font-size:22px}.sheet-title p{font-size:11px;color:var(--stamp-muted);margin-top:7px}.sheet-close{width:30px;height:30px;border:0;border-radius:11px;background:#f1ede7;color:#8f8780;cursor:pointer}.sheet-spacer{width:30px}.record-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.record-card{border:0;background:#fff;border-radius:18px;padding:8px 8px 11px;box-shadow:0 4px 13px rgba(61,44,28,.06);text-align:left;cursor:pointer;position:relative}.record-card img{width:100%;height:116px;object-fit:cover;border-radius:14px}.record-card strong{display:block;font-size:11px;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.record-card time{font:9px var(--mono);color:#999;display:block;margin-top:4px}.record-star{position:absolute;right:12px;top:12px;width:24px;height:24px;border:0;border-radius:9px;background:rgba(255,255,255,.88);font-size:15px;cursor:pointer}.month-list-empty{padding:55px 18px;text-align:center;color:#aaa;font-size:11px}.month-options{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.month-option{border:1px solid var(--stamp-line);background:#fff;padding:10px 5px;border-radius:12px;font-size:10.5px;cursor:pointer}.month-option.on{background:var(--stamp-ink);color:#fff;border-color:var(--stamp-ink)}
+.month-option.future{opacity:.38;cursor:not-allowed;text-decoration:line-through}
+.month-option b{display:block;font-size:11px;font-weight:750}
+.month-option small{display:block;font-size:9px;margin-top:5px;opacity:.72;font-family:var(--mono)}
+.month-option.on small{opacity:.85}
+.month-option.none{opacity:.42;cursor:not-allowed;background:#f7f5f2;color:#8f8780}
+.month-option.none small{font-family:inherit}
+.modal-mask{position:absolute;inset:0;background:rgba(20,15,11,.5);pointer-events:auto;animation:fade .18s ease both}.modal{position:absolute;left:38px;right:38px;top:50%;transform:translateY(-50%);background:var(--stamp-paper);border-radius:25px;padding:24px 20px;text-align:center;pointer-events:auto;box-shadow:0 18px 50px rgba(0,0,0,.22);animation:pop .25s cubic-bezier(.2,.8,.25,1) both}.unlock-stamp{width:130px;height:130px;margin:0 auto;border:4px solid var(--stamp-accent);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--stamp-accent);transform:rotate(-5deg);position:relative}.unlock-stamp::after{content:"";position:absolute;inset:7px;border:1px dashed currentColor;border-radius:50%}.unlock-stamp b{font-size:42px}.unlock-stamp span{font-size:13px;font-weight:900}.modal h2{font-size:20px;margin-top:19px}.modal p{font-size:11px;color:#999;line-height:1.65;margin-top:8px}.modal-actions{display:flex;gap:8px;margin-top:19px}.modal-actions button{flex:1;border:0;height:42px;border-radius:13px;font-size:11px;font-weight:800;cursor:pointer}.modal-actions .secondary{background:#f0ece6;color:#776f68}.modal-actions .primary{background:var(--stamp-ink);color:#fff}
+/* 记录中 / 记录成功：下单双时点告知，暖白底 + 单一绿色强调，无渐变发光 */
+.rec-ring{width:62px;height:62px;margin:0 auto;border-radius:50%;display:grid;place-items:center;border:2px solid var(--green)}
+.rec-ring span{font-size:27px;font-weight:800;color:var(--green);line-height:1}
+.rec-ring.pending span{animation:lagPulse 1.6s ease-in-out infinite}
+.rec-kicker{margin-top:18px;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--green)}
+.modal.rec-notice h2{margin-top:7px}
+.rec-foot{margin-top:15px;padding-top:13px;border-top:1px solid var(--stamp-line);font-size:9.5px;color:#a49c94;line-height:1.5}
+/* 记录中 / 记录成功：底部抽屉形态，真实商品图 + 状态差异；登记中=虚线半透明，无沙漏图标 */
+.sheet.rec-drawer .rec-thumb{width:100%;height:140px;object-fit:cover;border-radius:16px;display:block;margin-bottom:16px}
+.sheet.rec-drawer .rec-thumb.pending{border:2px dashed var(--green);opacity:.62}
+.rec-drawer-desc{font-size:11.5px;color:#6f675f;line-height:1.7;margin:0 2px}
+.rec-drawer .rec-foot{margin-top:14px}
+.rec-drawer .modal-actions button{height:44px}
+/* C3 多单抽屉：登记中/已登记 两张卡的状态区分 */
+.record-card.pending img{border:2px dashed var(--green);opacity:.62}
+.rec-state-tag{position:absolute;left:14px;top:14px;padding:2px 6px;border-radius:6px;font-size:8px;font-weight:800;color:#fff;background:var(--green)}
+.rec-state-tag.pending{background:#c9a227}
+.record-card .rec-foot{margin-top:10px;padding-top:9px}
+#toast{position:absolute;left:50%;bottom:78px;transform:translate(-50%,8px);background:rgba(35,29,25,.92);color:#fff;padding:9px 13px;border-radius:9px;font-size:10.5px;opacity:0;pointer-events:none;transition:.2s;white-space:nowrap;z-index:50;max-width:84%;overflow:hidden;text-overflow:ellipsis}#toast.on{opacity:1;transform:translate(-50%,0)}
+.inspector{width:280px;height:min(820px,calc(100vh - 88px));margin-top:38px;background:#fafafa;border:1px solid #dfdcd8;border-radius:15px;overflow:hidden;display:flex;flex-direction:column;flex:none}.inspector-head{padding:14px 15px;border-bottom:1px solid #e6e3df;background:#fff}.inspector-top{display:flex;align-items:center;gap:8px}.inspector-title{font-size:13px;font-weight:800}.inspector-status{margin-left:auto;padding:2px 6px;border-radius:4px;background:#e8f6ef;color:#19714b;font-size:8px;font-weight:800}.inspector-sub{margin-top:4px;font-size:9.5px;color:#aaa}.inspector-body{flex:1;overflow:auto;padding:14px 15px}.note-section{padding:11px 0;border-bottom:1px solid #e8e5e1}.note-section:first-child{padding-top:0}.note-section h4{font-size:9px;letter-spacing:.14em;color:#999;margin-bottom:8px}.note-row{display:flex;gap:7px;font-size:10.5px;line-height:1.6;color:#666;margin-top:5px}.note-row i{font:9px var(--mono);font-style:normal;color:#bbb;flex:none;margin-top:2px}.note-row.warn{color:#c6503c;font-weight:650}
+/* ---- ⑪ 参考图对齐 + 系统兜底状态 ---- */
+/* 今天且有记录：优先级高于“多条记录”，用橙色描边表达今日态 */
+.day.has-record.today-cell{background:#fff;box-shadow:0 0 0 2px var(--stamp-accent),0 4px 12px rgba(63,43,24,.12)}
+.day.has-record.today-cell .day-num{background:var(--stamp-accent);color:#fff;font-weight:800}
+.day.syncing{background:#faf5ec;box-shadow:inset 0 0 0 1px #dcc4a0;color:#b08a55}
+.day.syncing .sync-glyph{font-size:12px;line-height:1;opacity:.85;animation:lagPulse 1.6s ease-in-out infinite}
+.day.syncing .day-num{background:transparent;color:#b08a55}
+/* 日期格子状态切换器 */
+.cell-demo{margin:0 0 12px;padding:11px 12px 10px;border:1px solid var(--stamp-line);border-radius:16px;background:rgba(255,255,255,.7)}
+.cell-demo-head{margin-bottom:9px}.cell-demo-head b{display:block;font-size:10.5px;color:var(--stamp-ink)}.cell-demo-head span{display:block;margin-top:3px;font-size:8.5px;color:#9a918a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell-demo-chips{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.cell-demo-chip{min-width:0;border:1px solid var(--stamp-line);background:#fff;border-radius:9px;padding:6px 0 5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:#978e87}
+.cell-demo-chip b{font:800 9px var(--mono);color:#6f675f}.cell-demo-chip span{font-size:7px;white-space:nowrap;transform:scale(.92)}
+.cell-demo-chip.on{background:var(--stamp-ink);border-color:var(--stamp-ink)}.cell-demo-chip.on b,.cell-demo-chip.on span{color:#fff}
+.cell-demo-foot{margin-top:8px;font-size:8.5px;color:#aaa;text-align:center}.cell-demo-reset{border:0;background:transparent;color:var(--stamp-accent);font-size:9px;font-weight:700;cursor:pointer}
+/* 演示高亮格 + 状态角标 */
+.day.demo-focus{box-shadow:0 0 0 2px var(--stamp-accent),0 4px 12px rgba(63,43,24,.12);background:#fff}
+.day.has-record.demo-focus{background:#fff}
+.day.demo-b{background:var(--stamp-accent);color:#fff;font-weight:800}
+.demo-cell-tag{position:absolute;right:-4px;bottom:-6px;z-index:2;padding:1px 3px;border-radius:4px;background:var(--stamp-ink);color:#fff;font:800 7px var(--mono);box-shadow:0 2px 5px rgba(0,0,0,.16)}
+/* 登记中：真实商品图 + 虚线描边 + 轻微半透明，不用沙漏图标 */
+.day.has-record img.pending{border:1.5px dashed var(--green);opacity:.6;border-radius:10px;padding:1px}
+/* 相册入口：照片堆收在上半区，底部文案留出干净白底 */
+.album-entry{min-height:140px}
+.album-stack{inset:12px 10px 64px}
+.album-stack img{width:54px;height:58px}
+.album-entry::after{content:"";position:absolute;left:0;right:0;bottom:0;height:66px;background:linear-gradient(180deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.96) 48%);border-radius:0 0 22px 22px;z-index:1}
+.album-entry span,.album-entry b{position:relative;z-index:2}
+/* 本月记录卡：图片居中、文案居中、星标右上角描边，贴合参考图 03 */
+.record-card{text-align:center;padding:13px 10px 14px}
+.record-card img{height:112px;width:auto;max-width:100%;margin:4px auto 0;object-fit:contain;border-radius:12px;background:#faf7f2}
+.record-card strong{text-align:center;font-size:11.5px;margin-top:11px}
+.record-card time{text-align:center;font:9.5px var(--mono)}
+.record-star{background:transparent;border:0;color:#c9c2b8;font-size:17px;line-height:1;right:10px;top:8px}
+.record-star.on{color:var(--stamp-accent)}
+/* 印章：素材自带圆环、名称与日期，去掉重复外框与重复文案 */
+.stamp-art{width:152px;height:152px;border:0;background:none;display:grid;place-items:center;position:relative;transform:rotate(var(--r,-3deg))}
+.stamp-art::before{display:none}
+.stamp-art .badge-img{width:152px;height:152px;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(80,56,32,.1))}
+.stamp-art.locked{filter:grayscale(.9);opacity:.42}
+.badge-card{flex-direction:column;justify-content:flex-start;gap:10px;min-height:198px;padding-top:3px}
+.badge-progress{position:static;width:92px;height:4px;margin:0 auto}
+.badge-progress.lag i{width:58%!important;opacity:.45;animation:lagPulse 1.3s ease-in-out infinite}
+.badge-name{font-size:10.5px;font-weight:750;color:#8d857d;margin-top:-6px}
+.badge-lag{font-size:8.5px;color:#b3a99f;font-family:var(--mono)}
+/* 无单用户（主流程 A）：空态预告化 + 愿望清单 + 转化落地页 */
+.newbie-cta{display:flex;align-items:center;gap:11px;background:#fff;border:1px dashed var(--stamp-line);border-radius:18px;padding:13px 14px;margin-bottom:10px}
+.newbie-cta .newbie-art{width:44px;height:44px;border-radius:50%;background:#fdf3e3;display:grid;place-items:center;font-size:22px;flex:none}
+.newbie-cta img.newbie-art{width:46px;height:46px;border-radius:0;background:transparent;display:block;object-fit:contain}
+.newbie-cta .newbie-copy{flex:1;text-align:left;min-width:0}
+.newbie-cta b{font-size:12px}
+.newbie-cta span{display:block;font-size:9.5px;color:var(--stamp-muted);margin-top:4px;line-height:1.5}
+.newbie-btn{border:0;background:var(--stamp-ink);color:#fff;font-size:10px;font-weight:800;border-radius:99px;padding:8px 12px;cursor:pointer;flex:none}
+.social-strip{display:flex;align-items:center;gap:8px;background:#fff7ea;border:1px solid #eeddc4;color:#8a6a3d;font-size:10px;border-radius:14px;padding:9px 12px;margin:0 2px 12px;text-align:left;line-height:1.5}
+.social-strip i{font-style:normal;flex:none}
+.social-strip b{font-weight:900}
+.social-strip.center{justify-content:center;margin:14px 0 0}
+.badge-holders{font-size:8.5px;color:#b08d4f;font-family:var(--mono)}
+.convert-box{margin-top:14px;border-top:1px dashed var(--stamp-line);padding-top:13px}
+.convert-box p{font-size:10.5px;color:#8a6a3d;line-height:1.6;text-align:left;background:#fff7ea;border:1px solid #eeddc4;border-radius:12px;padding:10px 12px}
+.convert-box .modal-actions{margin-top:12px}
+.guide-steps{display:flex;justify-content:center;gap:5px;margin-top:14px;flex-wrap:wrap}
+.guide-steps span{font-size:9.5px;background:#f0ece6;border-radius:99px;padding:6px 9px;color:#776f68;font-weight:700}
+.badge-summary-title{border:0;background:transparent;font-size:26px;font-weight:850;letter-spacing:.04em;color:var(--stamp-ink);cursor:pointer}
+.badge-summary-arrow{font-size:15px;color:#b6ada4;margin-left:5px}
+/* 标签图鉴（勋章页 v2：族 × 档位） */
+.tag-wall-head{text-align:center;padding:6px 0 4px}
+.tag-wall-title{border:0;background:transparent;font-size:26px;font-weight:850;letter-spacing:.04em;color:var(--stamp-ink);cursor:pointer}
+.tag-wall-arrow{font-size:15px;color:#b6ada4;margin-left:5px}
+.tag-progress{display:flex;justify-content:center;align-items:baseline;gap:5px;margin-top:8px;font-size:10px;color:var(--stamp-muted)}
+.tag-progress b{font:900 21px var(--mono);color:var(--stamp-ink);letter-spacing:-.02em}
+.tag-progress em{font-style:normal;margin-left:7px;color:#b08d4f;font-size:9px}
+.tag-bar{height:5px;border-radius:99px;background:#e9e2d9;margin:10px 30px 0;overflow:hidden}
+.tag-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#d9b26a,#a8792f)}
+.fam-chips{display:flex;gap:6px;overflow-x:auto;padding:14px 2px 2px;scrollbar-width:none}
+.fam-chips::-webkit-scrollbar{display:none}
+.fam-chip{flex:0 0 auto;border:1px solid var(--stamp-line);background:rgba(255,255,255,.7);padding:6px 11px;border-radius:99px;font-size:9.5px;color:var(--stamp-muted);cursor:pointer;white-space:nowrap}
+.fam-chip.on{background:var(--stamp-ink);border-color:var(--stamp-ink);color:#fff;font-weight:800}
+.fam-section{padding-top:15px}
+.fam-head{display:flex;align-items:baseline;gap:6px;padding:0 3px}
+.fam-head b{font-size:12.5px;font-weight:850;letter-spacing:.05em;color:var(--stamp-ink)}
+.fam-head span{font:700 9px var(--mono);color:#c3b8a9}
+.fam-head em{font-style:normal;margin-left:auto;font:700 9px var(--mono);color:var(--tint);opacity:.85}
+.fam-hint{margin:3px 3px 0;font-size:9px;color:#b3aaa1;line-height:1.45}
+.tag-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 8px;padding:9px 0 2px}
+.tag-card{position:relative;min-width:0;border:1px solid rgba(60,38,34,.07);background:rgba(255,255,255,.62);border-radius:15px;padding:13px 9px 11px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center;box-shadow:0 2px 6px rgba(120,95,60,.04)}
+.tag-card.locked{background:rgba(246,243,238,.6);border-style:dashed;border-color:rgba(60,38,34,.1);box-shadow:none}
+.tag-mark{position:absolute;top:8px;right:8px;font-size:8px;font-weight:800;letter-spacing:.06em;color:#fff;background:var(--tint);border-radius:99px;padding:2px 6px}
+.tag-card.progress .tag-mark{background:transparent;color:var(--tint);border:1px solid var(--tint)}
+.tag-seal{width:66px;height:66px;border-radius:50%;border:2.5px solid var(--tint);display:grid;place-items:center;color:var(--tint);font-size:23px;font-weight:900;font-family:"Songti SC","STSong",serif;transform:rotate(var(--r,-1.5deg));position:relative;background:rgba(255,255,255,.4)}
+.tag-seal::before{content:"";position:absolute;inset:4px;border:1px dashed currentColor;border-radius:50%;opacity:.45}
+.tag-seal.locked{filter:grayscale(1);opacity:.46;border-style:dashed}
+.tag-seal.progress{opacity:.82}
+.tag-seal.big{width:86px;height:86px;font-size:30px;border-width:3px;--r:0deg}
+.tag-name{font-size:10.5px;font-weight:800;color:var(--stamp-ink);line-height:1.25;margin-top:2px;width:100%;min-width:0;overflow-wrap:anywhere}
+.tag-card.locked .tag-name{color:#9c948c}
+.tag-people{font:700 8.5px var(--mono);color:#b08d4f;letter-spacing:.02em}
+.tag-story{font-size:9px;color:#a09790;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:26px;width:100%;min-width:0;overflow-wrap:anywhere}
+.tag-hint{font-size:8.5px;color:#a89a8c;font-family:var(--mono);margin-top:1px}
+.tag-hint.hot{color:var(--tint);opacity:.9;font-family:inherit;font-weight:700}
+.tag-hero{display:flex;flex-direction:column;align-items:center;gap:7px;padding:0 0 10px}
+.tag-hero-meta{font-size:10px;color:var(--stamp-muted)}
+.tag-hero-meta b{font:900 15px var(--mono);color:#b08d4f;margin-right:3px}
+.tag-hero-story{font-size:11px;color:#6f675f;line-height:1.65;text-align:center;padding:0 6px}
+.tier-chain{display:grid;gap:7px;padding:3px 0 4px}
+.tier{display:flex;align-items:center;gap:9px;border:1px solid var(--stamp-line);border-radius:12px;padding:9px 11px;background:rgba(255,255,255,.55)}
+.tier i{width:20px;height:20px;border-radius:50%;border:1.5px solid #cfc5bb;display:grid;place-items:center;font:800 9px var(--mono);color:#a89e94;font-style:normal;flex:none}
+.tier div{display:flex;flex-direction:column;gap:2px;text-align:left}
+.tier b{font-size:11px;color:#8c8279}
+.tier span{font-size:8.5px;color:#b6ada4}
+.tier.done{background:rgba(255,255,255,.85)}
+.tier.done i{background:var(--tint);border-color:var(--tint);color:#fff}
+.tier.done b{color:var(--stamp-ink)}
+.tier.now{border-color:var(--tint);border-style:dashed;background:rgba(255,255,255,.9)}
+.tier.now i{border-color:var(--tint);color:var(--tint)}
+.tier.now b{color:var(--tint)}
+.weak-order{display:block;margin:12px auto 2px;border:0;background:transparent;color:#b6ada4;font-size:9.5px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.tag-detail .modal-actions{margin-top:12px}
+.tag-detail .primary.joined{background:#efe9df;color:#8a7f74}
+/* 相册：参考图为整齐白卡 */
+.polaroid{transform:none}
+.polaroid img{height:158px}
+/* 系统兜底状态 */
+.notice-bar{margin:0 0 12px;border-radius:15px;background:#fff7ea;border:1px solid #eeddc4;color:#8a6a3d;font-size:10.5px;line-height:1.6;padding:11px 13px;display:flex;gap:8px;align-items:flex-start;text-align:left}
+.notice-bar i{font-style:normal;flex:none;width:16px;height:16px;border-radius:50%;background:#f3e0c2;display:grid;place-items:center;font-size:9px;color:#8a6a3d}
+.notice-bar.bad{background:#fdf0ec;border-color:#f0d3ca;color:#b0503b}
+.notice-bar.bad i{background:#f7dcd4;color:#b0503b}
+.fail-tag{display:inline-block;padding:2px 6px;border-radius:5px;background:#fdece7;color:#c0503a;font-size:9px;font-weight:800}
+@keyframes lagPulse{0%,100%{opacity:.35}50%{opacity:.75}}
+@keyframes fade{from{opacity:0}}@keyframes rise{from{opacity:.45;transform:translateY(35px)}}@keyframes pop{from{opacity:.2;transform:translateY(-48%) scale(.9)}}
+/* ---- ⑫ 积分页：对齐参考图 05，另加金刚区 ---- */
+.points-page{background:#fff;color:#17211c}
+.pts-scroll{padding:0 0 26px}
+.pts-head{padding:4px 16px 6px;background:linear-gradient(180deg,#E6F8EC 0%,#F1FBF4 46%,#FFFFFF 88%)}
+.pts-cap{display:flex;justify-content:flex-end;margin-bottom:6px}
+.pts-cap-pill{display:flex;align-items:center;background:rgba(255,255,255,.8);border:1px solid rgba(23,33,28,.07);border-radius:99px;height:25px;padding:2px;box-shadow:0 2px 7px rgba(23,33,28,.05)}
+.pts-cap button{border:0;background:transparent;height:21px;min-width:30px;border-radius:99px;font-size:10px;letter-spacing:.6px;color:#3f4d45;cursor:pointer;display:grid;place-items:center;padding:0 7px}
+.pts-cap button + button{border-left:1px solid rgba(23,33,28,.1);border-radius:0 99px 99px 0;min-width:24px;padding:0 5px;font-size:11px;letter-spacing:0}
+.pts-title{font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.42;position:relative}
+.pts-title span{background:linear-gradient(180deg,transparent 74%,#83D19C 74%,#83D19C 99%,transparent 99%);padding:0 2px;margin:0 -2px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.pts-hero{display:flex;align-items:center;gap:6px;padding:14px 0 2px}
+.pts-hero-main{flex:1;min-width:0}
+.pts-label{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:750;color:#5c6b62}
+.pts-coin{width:15px;height:15px;flex:none}
+.pts-balance{display:flex;align-items:baseline;gap:5px;margin-top:5px;font:900 46px/1 var(--sans);letter-spacing:-2.2px}
+.pts-balance small{font-size:10px;font-weight:700;color:#93a09a;letter-spacing:0}
+.pts-star{width:104px;height:104px;flex:none;margin:-6px -6px 0 0;filter:drop-shadow(0 12px 20px rgba(10,92,168,.2))}
+.pts-signin{margin-top:12px;height:50px;border-radius:16px;padding:0 8px 0 15px;display:flex;align-items:center;gap:8px;background:linear-gradient(96deg,#5FD08E,#2FB271);box-shadow:0 9px 18px rgba(45,160,105,.24);color:#fff}
+.pts-signin p{flex:1;min-width:0;font-size:12px;font-weight:850;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pts-signin p i{font-style:normal;opacity:.7;font-weight:600}
+.pts-signin p b{font-weight:900}
+.pts-signin-btn{flex:none;height:34px;padding:0 16px;border:0;border-radius:99px;background:#fff;color:#1C9A5F;font-size:12px;font-weight:900;cursor:pointer;box-shadow:0 3px 8px rgba(14,80,50,.14)}
+.pts-signin-btn.done{background:rgba(255,255,255,.26);color:#fff;box-shadow:none;cursor:default;font-weight:800}
+.pts-grid{margin-top:13px;background:#fff;border-radius:20px;padding:15px 4px 9px;display:grid;grid-template-columns:repeat(4,1fr);gap:13px 2px;box-shadow:0 8px 22px rgba(24,52,36,.08);border:1px solid rgba(233,244,236,.9)}
+.pts-entry{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;cursor:pointer;border-radius:14px}
+.pts-entry img{width:44px;height:44px;display:block;transition:transform .12s}
+.pts-entry:active img{transform:scale(.93)}
+.pts-entry span{font-size:10.5px;font-weight:750;color:#3b4a41;letter-spacing:-.3px;white-space:nowrap}
+.pts-body{padding:0 16px}
+.pts-sec-head{display:flex;align-items:baseline;gap:8px;margin:19px 2px 0}
+.pts-sec-head h2{font-size:17px;font-weight:900;letter-spacing:-.3px}
+.pts-sec-head span{margin-left:auto;font-size:9px;color:#aab3ad}
+.pts-cols{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}
+.pts-col{position:relative;border-radius:16px;padding:11px 9px 10px;background:linear-gradient(180deg,#FFF2EC,#FFFAF7);border:1px solid #FFE1D4;overflow:hidden}
+.pts-col.mt{background:linear-gradient(180deg,#FFFAE9,#FFFDF6);border-color:#F5E7BC}
+.pts-col-stamp{position:absolute;right:-8px;top:-8px;width:44px;height:44px;border:1px dashed currentColor;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:900;opacity:.13;transform:rotate(-12deg);color:#D9481F}
+.pts-col.mt .pts-col-stamp{color:#B07400}
+.pts-col-brand{display:flex;align-items:center;gap:5px;position:relative;z-index:1}
+.pts-brand-dot{width:17px;height:17px;border-radius:6px;display:grid;place-items:center;font-size:8px;font-weight:900;color:#fff;background:#FF5000;flex:none}
+.pts-col.mt .pts-brand-dot{background:#FFD100;color:#3a2f00}
+.pts-col-brand b{font-size:11px;font-weight:850;letter-spacing:-.3px}
+.pts-coupon{position:relative;background:#fff;border-radius:12px;padding:10px 9px 9px;margin-top:8px;box-shadow:0 3px 9px rgba(122,72,42,.06)}
+.pts-coupon b{display:block;font-size:12.5px;font-weight:900;letter-spacing:-.5px;color:#D9481F}
+.pts-col.mt .pts-coupon b{color:#A96C00}
+.pts-coupon span{display:block;margin-top:4px;font-size:9px;color:#a7a7a7;letter-spacing:-.2px}
+.pts-coupon button{width:100%;height:29px;margin-top:8px;border:0;border-radius:8px;background:linear-gradient(96deg,#FF9E5E,#FF6E30);color:#fff;font-size:11px;font-weight:850;cursor:pointer}
+.pts-col.mt .pts-coupon button{background:linear-gradient(96deg,#FFE184,#FFC32F);color:#6A4900}
+.pts-banner{margin-top:17px;border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 10px 24px rgba(28,88,54,.11);border:1px solid #EFF5F0}
+.pts-banner-art{position:relative;height:134px;background:linear-gradient(112deg,#DCF7D2 0%,#A6E8B4 52%,#5FCE92 100%);overflow:hidden}
+.pts-banner-art h3{position:absolute;left:17px;top:20px;font-size:26px;line-height:1.02;font-weight:900;color:#0E5A2C;letter-spacing:-1.4px;transform:rotate(-4deg)}
+.pts-banner-art h3 em{display:block;font-style:normal;font-size:31px;letter-spacing:-1.8px}
+.pts-banner-art h3 u{position:absolute;left:-4px;bottom:-9px;width:126px;height:9px;border-radius:6px;background:rgba(255,255,255,.55);text-decoration:none;transform:rotate(-2deg)}
+.pts-banner-art img{position:absolute;right:6px;bottom:-18px;width:118px;height:118px;object-fit:cover;border-radius:16px;transform:rotate(6deg);box-shadow:0 10px 20px rgba(6,62,34,.22)}
+.pts-banner-art img.second{right:74px;bottom:-24px;width:84px;height:84px;transform:rotate(-8deg);border-radius:14px}
+.pts-banner-foot{padding:11px 13px 12px;display:flex;align-items:center;gap:10px}
+.pts-banner-foot b{display:block;font-size:12.5px;font-weight:900;letter-spacing:-.3px}
+.pts-banner-foot small{display:block;margin-top:5px;font-size:9px;color:#9ba49e}
+.pts-banner-btn{margin-left:auto;flex:none;height:30px;padding:0 14px;border:0;border-radius:99px;background:#37BC7C;color:#fff;font-size:11px;font-weight:850;cursor:pointer}
+.pts-checkin{text-align:center}
+.pts-checkin-coin{width:74px;height:74px;margin:0 auto;border-radius:50%;background:linear-gradient(150deg,#FFD97A,#FFA92E);display:grid;place-items:center;font-size:26px;font-weight:900;color:#8A5000;box-shadow:0 10px 22px rgba(214,146,32,.3);position:relative}
+.pts-checkin-coin::after{content:"";position:absolute;inset:5px;border:1px dashed rgba(255,255,255,.75);border-radius:50%}
+.pts-checkin-add{margin-top:15px;font-size:12px;color:#8b968f}
+.pts-checkin-add b{font-size:19px;color:#1C9A5F;font-weight:900;margin-left:2px}
+.pts-checkin .modal-actions{margin-top:18px}
+.pts-checkin .modal-actions .primary{background:#2FB271}
+
+/* ── 获得印章抽屉 v2（2026-11-17 按 ASCII 稿重做）：
+      图为主、字为辅，无渐变无发光无浮层阴影；绿是唯一强调色 ── */
+.sheet.seal-gain{background:#FFFCF6;text-align:center;padding-bottom:22px}
+.gain-art{width:148px;height:148px;margin:6px auto 12px;animation:gainIn .45s cubic-bezier(.2,.8,.3,1.15) both}
+.gain-art img{width:100%;height:100%;object-fit:contain}
+.gain-kicker{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-indent:.18em;color:#2FA36B}
+.gain-title{font-size:22px;font-weight:900;letter-spacing:.04em;color:#2B211C;margin:8px 0 0}
+.gain-desc{font-size:11px;color:#8F857B;margin:9px 0 0}
+.gain-divider{height:1px;background:rgba(60,38,34,.12);margin:18px 6px 12px}
+.gain-next-label{font-size:9px;font-weight:700;letter-spacing:.16em;color:#B3A99C;text-align:left;padding:0 6px;margin-bottom:8px}
+.gain-next{display:flex;align-items:center;gap:11px;width:100%;border:0;background:transparent;padding:8px 6px;border-radius:12px;text-align:left;cursor:pointer}
+.gain-next:active{background:rgba(47,163,107,.07)}
+.gain-next img{width:36px;height:36px;flex:none;object-fit:contain}
+.gain-next div{flex:1;min-width:0}
+.gain-next b{display:block;font-size:11.5px;color:#2B211C}
+.gain-next span{display:block;font-size:9.5px;color:#A29889;margin-top:2px}
+.gain-next i{font-style:normal;font-size:15px;font-weight:700;color:#2FA36B;flex:none}
+.gain-next.as-note{justify-content:center;cursor:default;padding:9px 6px}
+.gain-next.as-note span{margin:0;font-size:10px;color:#A29889;letter-spacing:.04em}
+.gain-next.as-note b{display:inline;color:#2FA36B;font-size:11px}
+.gain-next.as-note:active{background:transparent}
+@keyframes gainIn{0%{transform:translateY(-14px) scale(.92);opacity:0}100%{transform:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){.gain-art{animation:none}}
+.seal-gain .modal-actions{margin-top:18px}
+.seal-gain .modal-actions .primary{height:44px;font-size:12px}
+
+/* ── 主流程 A：图鉴开张 / 露脸的小喵到手（2026-11-17 改两抽屉） ── */
+.first-seal{padding-top:20px}
+.sheet.first-seal{text-align:center}
+.sheet.first-seal h2{margin:0}
+.sheet.first-seal p{margin:8px 0 0;text-align:center}
+.newbie-sheet .modal-actions{margin-top:16px}
+/* 头像昵称输入器 */
+.avatar-row{display:flex;align-items:center;gap:12px;margin-top:10px;padding:12px;border-radius:13px;background:#f8f4ec;border:1px dashed #ddd0bc;text-align:left}
+.avatar-frame{width:52px;height:52px;flex:none;border-radius:50%;border:2.5px solid var(--stamp-line);background:#fff;display:grid;place-items:center;font-size:22px;cursor:pointer;color:#b3a797}
+.avatar-frame.picked{color:var(--stamp-ink);border-color:#b8453a}
+.avatar-row b{font-size:11.5px;color:var(--stamp-ink);display:block}
+.avatar-row small{font-size:9.5px;color:#b3a797;display:block;margin-top:3px}
+.nick-label{flex:none;width:62px}
+.avatar-field{margin-top:11px;text-align:left}
+.avatar-field label{display:flex;align-items:baseline;gap:7px;font-size:10.5px;font-weight:700;color:var(--stamp-ink);margin-bottom:6px}
+.avatar-field label small{font-size:9px;font-weight:400;color:#b3a797}
+.avatar-field .nick-input{width:100%}
+.nick-input{flex:1;min-width:0;height:40px;border:1.5px solid var(--stamp-line);border-radius:11px;padding:0 11px;font-size:12px;background:#fff;color:var(--stamp-ink)}
+.nick-input:focus{outline:none;border-color:#b8453a}
+/* 印章猫耳：全库章面加两只耳朵，图鉴即小饭喵猫谱 */
+.tag-seal::before,.tag-seal::after{content:"";position:absolute;top:-8px;width:15px;height:13px;background:var(--tint,#1686b8);
+  clip-path:polygon(50% 0,100% 100%,0 100%)}
+.tag-seal::before{left:9px;transform:rotate(-14deg)}
+.tag-seal::after{right:9px;transform:rotate(14deg)}
+/* 到手章的猫耳（.seal-drop::after 已被墨迹外扩占用，用内部元素画） */
+.seal-drop .ear{position:absolute;top:-8px;width:19px;height:16px;background:currentColor;clip-path:polygon(50% 0,100% 100%,0 100%);z-index:0}
+.seal-drop .ear.l{left:15px;transform:rotate(-15deg)}
+.seal-drop .ear.r{right:15px;transform:rotate(15deg)}
+.seal-drop{position:relative;width:104px;height:104px;margin:0 auto 9px;display:grid;place-items:center;border-radius:50%;
+  border:3.5px solid #b8453a;color:#b8453a;background:#fff7f4;font:900 40px/1 var(--sans);letter-spacing:0;
+  animation:sealDrop .66s cubic-bezier(.18,1.5,.4,1) both}
+.seal-drop::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid #b8453a;opacity:0;
+  animation:inkSpread .95s ease-out .4s both}
+.seal-drop.gain{border-color:#b8651f;color:#b8651f;background:#fffaf0}
+.seal-drop.gain::after{border-color:#b8651f}
+/* ── 真素材章面：官方插画替换刻字印面（assets/badges/badge-cat-*.png，已去白底） ──
+   图内自带猫耳与名字缎带，所以有素材时关掉 CSS 猫耳、内圈虚线、边框和旋转。
+   白底由 trim-badge-bg.py 从四角泛洪去掉，不能用 multiply 凑合规——
+   JPEG 白不纯，乘上去会留一个浅灰方块。 */
+.seal-art{width:100%;height:100%;display:block;object-fit:contain;pointer-events:none;user-select:none}
+.tag-seal.has-art{width:78px;height:78px;border:0;background:transparent;transform:none}
+.tag-seal.has-art::before,.tag-seal.has-art::after{display:none}
+.tag-seal.has-art .seal-art{filter:drop-shadow(0 2px 3px rgba(120,95,60,.13))}
+.tag-seal.big.has-art{width:106px;height:106px}
+.tag-card.locked .tag-seal.has-art{filter:grayscale(1) opacity(.42)}
+.seal-drop.has-art{width:146px;height:146px;border:0;background:transparent;border-radius:0;margin-bottom:12px}
+.seal-drop.has-art::after{inset:8px;border-width:2px}
+.seal-drop.has-art .seal-art{filter:drop-shadow(0 3px 5px rgba(120,95,60,.16))}
+.coupon-gain .seal-drop.has-art{background:transparent}
+.seal-ink{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(184,69,58,.22),transparent 70%);opacity:0;animation:inkBloom .8s ease-out .38s both}
+.seal-ink.two{background:radial-gradient(circle,rgba(184,101,31,.24),transparent 70%)}
+@keyframes sealDrop{
+  0%{transform:translateY(-54px) scale(2.2) rotate(-14deg);opacity:0}
+  52%{transform:translateY(0) scale(.9) rotate(-7deg);opacity:1}
+  70%{transform:translateY(-3px) scale(1.06) rotate(-4deg)}
+  100%{transform:translateY(0) scale(1) rotate(-4deg);opacity:1}}
+@keyframes inkSpread{0%{transform:scale(.68);opacity:.62}100%{transform:scale(1.5);opacity:0}}
+@keyframes inkBloom{0%{transform:scale(.5);opacity:0}40%{opacity:1}100%{transform:scale(1.12);opacity:0}}
+.seal-name{font-size:12px;font-weight:900;letter-spacing:.14em;color:#b8453a;margin-top:2px}
+.coupon-gain .seal-name{color:#b8651f}
+.first-seal h2{margin-top:9px}
+.first-seal p b{color:var(--stamp-ink)}
+.seal-progress{display:flex;align-items:baseline;justify-content:center;gap:5px;margin-top:13px;font-size:10px;color:var(--stamp-muted)}
+.seal-progress b{font:900 20px var(--mono);color:var(--stamp-ink);letter-spacing:-.02em}
+.seal-progress em{font-style:normal;margin-left:6px;font-size:9.5px;color:#b8651f;font-weight:800}
+/* 积分页领券进度与已领态 */
+.pts-coupon-bar{margin:9px 0 2px;padding:10px 12px;border-radius:13px;background:#fff8ea;border:1px solid #f0e2c6}
+.pts-coupon-bar div{display:flex;align-items:baseline;justify-content:space-between}
+.pts-coupon-bar b{font-size:11px;font-weight:900;color:#8a5a12}
+.pts-coupon-bar span{font-size:9.5px;color:#a89070}
+.pts-coupon-bar i{display:block;height:4px;border-radius:3px;background:#f0e2c6;margin-top:7px;overflow:hidden}
+.pts-coupon-bar em{display:block;height:100%;background:linear-gradient(90deg,#f0b95c,#e08c2f);border-radius:3px;transition:width .32s ease}
+.pts-coupon-btn{border:0;margin-top:8px;width:100%;height:27px;border-radius:9px;background:#D9481F;color:#fff;font-size:10px;font-weight:800;cursor:pointer;transition:transform .14s ease,background .2s ease}
+.pts-coupon-btn:active{transform:scale(.96)}
+.pts-col.mt .pts-coupon-btn{background:#A96C00}
+.pts-coupon-btn.on{background:#efe9df;color:#a89d90;cursor:default}
+.pts-col.mt .pts-coupon-btn.on{background:#efe9df;color:#a89d90}
+.pts-coupon.got{background:#fbf7f0;box-shadow:none;border:1px dashed #e6dccc}
+.pts-coupon.got b{color:#a89d90}
+@media(prefers-reduced-motion:reduce){.seal-drop,.seal-drop::after,.seal-ink{animation:none}}
+@media(max-width:1220px){.inspector{display:none}.stage{padding-right:18px}}
+@media(max-width:900px){.app{grid-template-columns:210px minmax(520px,1fr)}.flowcol{display:none}}
+
+/* ── v3：生活记录型图鉴 / 隐藏条件 / 自动发现 / 分享 ── */
+.tag-wall-head{padding:12px 2px 10px;text-align:left}
+.tag-wall-title{font-size:25px;letter-spacing:.02em}
+.tag-wall-sub{margin-top:5px;font-size:10px;color:#9b9288;line-height:1.5}
+.collection-line{display:flex;align-items:baseline;gap:6px;margin-top:11px;color:var(--stamp-muted)}
+.collection-line b{font:900 23px var(--mono);color:var(--stamp-ink)}
+.collection-line span{font-size:10px}
+.collection-line em{font-style:normal;margin-left:auto;font-size:9px;color:#b0a69a}
+.tag-progress{display:none}
+.tag-bar{display:none}
+.fam-head em{display:none}
+.fam-section{padding-top:14px}
+.fam-hint{margin-top:4px}
+.tag-card{min-height:178px;padding:12px 9px 10px;gap:6px}
+.tag-mark{background:#6f9b7a}
+.tag-mark.waiting{background:#f0ece5;color:#9c9186}
+.tag-people{display:none}
+.tag-story{font-size:9px;color:#a09790;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:26px;width:100%;min-width:0;overflow-wrap:anywhere}
+.tag-hint{font:8.5px var(--sans);color:#b0a69e;letter-spacing:0}
+.tag-hint.hot{color:#6f9b7a;opacity:1;font-weight:700}
+.tag-card.locked .tag-seal{filter:grayscale(.92);opacity:.4}
+.tag-card.progress .tag-seal{filter:none;opacity:1}
+.discovery-note{display:flex;align-items:flex-start;gap:8px;margin:2px 2px 11px;padding:9px 11px;border-radius:11px;background:#f3f5ed;color:#7d8d6f;font-size:9px;line-height:1.55}
+.discovery-note i{font-style:normal;color:#6f9b7a;flex:none}
+.mystery-section{padding-top:17px;border-top:1px dashed #e4ddd2;margin-top:16px}
+.mystery-section .fam-head span{margin-left:auto;color:#b7aa98;font:700 14px var(--mono)}
+.mystery-card{border-style:dashed;background:rgba(255,255,255,.35)}
+.mystery-seal{width:78px;height:78px;border:2px dashed #c7bcae;background:#f6f2eb;color:#b7aa98;font-size:28px;display:grid;place-items:center;border-radius:50%;position:relative}
+.mystery-seal::before,.mystery-seal::after{content:"";position:absolute;top:-7px;width:15px;height:13px;background:#c7bcae;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.mystery-seal::before{left:10px;transform:rotate(-14deg)}
+.mystery-seal::after{right:10px;transform:rotate(14deg)}
+.tag-detail.life-detail .tag-hero{padding:2px 0 4px;gap:9px}
+.detail-seal{width:116px;height:116px;display:grid;place-items:center;margin:0 auto}
+.detail-seal img{width:100%;height:100%;object-fit:contain}
+.detail-seal.waiting img{filter:grayscale(1);opacity:.55}
+.tag-hero-meta{font-size:10px;color:#8f877e}
+.tag-hero-story{font-size:11px;line-height:1.7;color:#655d55;max-width:290px}
+.detail-note{font-size:9.5px;line-height:1.6;color:#a1988d;text-align:center;margin:7px 8px 2px}
+.badge-how{margin:12px 6px 2px;padding:10px 12px;background:rgba(0,0,0,.025);border:1px solid var(--stamp-line);border-radius:12px;text-align:center}
+.badge-how span{display:block;font-size:8.5px;font-weight:800;letter-spacing:.14em;color:var(--stamp-accent);margin-bottom:5px}
+.badge-how p{margin:0;font-size:10.5px;line-height:1.65;color:#6f675f}
+.life-detail .modal-actions{margin-top:16px}
+.life-detail .modal-actions button{height:43px}
+.life-detail .modal-actions .primary{background:var(--stamp-ink);color:#fff}
+.life-detail .modal-actions .secondary{background:#f0ece6;color:#776f68}
+.life-gain .gain-art{width:148px;height:148px;display:grid;place-items:center}
+.life-gain .gain-art .tag-seal{width:116px;height:116px}
+.gain-footnote{font-size:9.5px;color:#a1988d;line-height:1.6;margin:12px 8px 0}
+.life-gain .gain-footnote{margin:0 8px}
+.life-gain .modal-actions button{height:43px}
+.life-gain .modal-actions .secondary{background:#f0ece6;color:#776f68}
+.life-gain .modal-actions .primary{background:var(--stamp-ink);color:#fff}
+.first-seal-life .gain-art{margin-top:4px}
+.first-seal-life .gain-footnote{margin-top:0}
+.share-sheet .share-card-preview{width:100%;aspect-ratio:5/4;border:1px solid #e8dfd2;border-radius:17px;background:#f7f3ea;padding:13px 15px 12px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;color:var(--stamp-ink)}
+.share-card-top,.share-card-bottom{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:8px;color:#9b8f81}
+.share-card-top span:first-child{font-weight:800;color:#6f8b62}
+.share-card-art{height:112px;width:112px;display:grid;place-items:center}
+.share-card-art img{width:100%;height:100%;object-fit:contain}
+.share-card-art .tag-seal{width:92px;height:92px}
+.share-card-preview h3{font-size:18px;font-weight:900;letter-spacing:.02em;margin-top:2px}
+.share-card-preview p{font-size:9px;color:#8f857b;line-height:1.45;text-align:center;max-width:245px;margin:2px 0 0}
+.share-card-bottom{border-top:1px solid #e8dfd2;padding-top:8px}
+.share-card-bottom b{color:#6f9b7a;font-size:8px}
+.share-tip{font-size:9px;color:#aaa096;text-align:center;margin-top:9px}
+.share-sheet .modal-actions{margin-top:14px}
+.share-sheet .modal-actions button{height:42px}
+.share-sheet .modal-actions .primary{background:var(--stamp-ink);color:#fff}
+.share-sheet .modal-actions .secondary{background:#f0ece6;color:#776f68}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="rail-head"><div class="eyebrow">STAMP JOURNEY · PROTOTYPE</div><div class="rail-title">小喵生活图鉴</div><div class="rail-sub">交互稿 · 生活记录自动发现成就</div></div>
+    <div class="rail-body" id="railBody"></div>
+  </aside>
+  <section class="flowcol">
+    <div class="flow-head"><div class="flow-title" id="flowTitle"></div><div class="flow-sub" id="flowSub"></div></div>
+    <div class="flow-body" id="flowBody"></div>
+  </section>
+  <main class="stage">
+    <div class="stage-main">
+      <div class="stage-meta"><div class="stage-name"><i></i><span id="stageName">记录日历</span></div><select class="frame-select" id="frameSelect"></select></div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span class="status-icons"><i></i><i></i><i></i><b></b></span></div>
+        <div id="screen"></div><div id="tabbar"></div><div id="sheetRoot"></div><div id="toast"></div>
+      </div>
+    </div>
+    <aside class="inspector">
+      <div class="inspector-head"><div class="inspector-top"><span class="inspector-title">交互说明</span><span class="inspector-status" id="noteStatus">核心</span></div><div class="inspector-sub" id="noteSub"></div></div>
+      <div class="inspector-body" id="noteBody"></div>
+    </aside>
+  </main>
+</div>
+<script>
+"use strict";
+
+/* ① 页面菜单：一级页面（Tab 入口，弹窗挂宿主页）→ 二级页面（整页跳转、非 Tab）→ 外部页面（非 App 内） */
+const PAGE_DEFS=[
+  {code:"A",group:"一级页面",page:"印章-日历",kind:"calendar",status:"core",
+   sheets:[{key:"record-pending",name:"记录中抽屉"},{key:"record-success",name:"记录成功抽屉"},{key:"cell-demo-records",name:"多单合并抽屉（C3）"},{key:"month-records",name:"本月记录弹层"},{key:"day-records",name:"当日记录弹层"},{key:"surprise-unlock",name:"意外解锁抽屉"}],
+   frames:[
+     {key:"stamp-calendar",name:"有记录"},
+     {key:"stamp-calendar-newbie",name:"无单用户",scene:"newbie"},
+     {key:"stamp-calendar-empty",name:"空月份",scene:"empty"},
+     {key:"stamp-calendar-syncing",name:"订单同步中",scene:"syncing"},
+     {key:"stamp-calendar-fallback",name:"美团配置图",scene:"after-meituan"}
+   ]},
+  {code:"B",group:"一级页面",page:"印章-印章墙",kind:"badge",status:"core",
+   sheets:[{key:"badge-filter",name:"族筛选弹层"},{key:"badge-detail-unlocked",name:"标签详情（已收）"},{key:"badge-detail-locked",name:"标签详情（未点亮）"},{key:"badge-unlock",name:"自动发现成就反馈"},{key:"badge-share",name:"勋章分享预览"},{key:"newbie-guide",name:"初次见面喵抽屉"},{key:"avatar-editor",name:"头像昵称输入器"},{key:"avatar-unlock",name:"第二枚到手抽屉"}],
+   frames:[
+     {key:"badge-wall-all",name:"标签图鉴",filter:"all"},
+     {key:"badge-wall-newbie",name:"无单用户图鉴",scene:"newbie",filter:"all"},
+     {key:"badge-wall-unlocked",name:"已收录",filter:"collected"},
+     {key:"badge-wall-empty",name:"空态",scene:"empty",filter:"all"},
+     {key:"badge-computing",name:"判定计算中",scene:"computing",filter:"all"}
+   ]},
+  {code:"C",group:"一级页面",page:"积分",kind:"points",status:"core",
+   sheets:[{key:"coupon-unlock",name:"薅羊毛的猫到手弹窗"}],
+   frames:[
+     {key:"points-home",name:"积分首页"}
+   ]},
+  {code:"D",group:"一级页面",page:"积分商城",kind:"placeholder",status:"scope",
+   sheets:[],
+   frames:[
+     {key:"mall-placeholder",name:"范围占位",tab:"mall"}
+   ]},
+  {code:"E",group:"一级页面",page:"我的",kind:"placeholder",status:"scope",
+   sheets:[],
+   frames:[
+     {key:"mine-placeholder",name:"范围占位",tab:"mine"}
+   ]},
+  {code:"F",group:"二级页面",page:"月度相册",kind:"gallery",status:"core",
+   sheets:[{key:"month-picker",name:"月份选择弹层"}],
+   frames:[
+     {key:"month-gallery",name:"按月回顾"}
+   ]},
+  {code:"G",group:"二级页面",page:"订单记录详情",kind:"detail",status:"core",
+   sheets:[{key:"order-invalidated",name:"退款失效弹窗"}],
+   frames:[
+     {key:"record-detail-eleme",name:"饿了么订单",recordId:"r4"},
+     {key:"record-detail-meituan",name:"美团配置图",recordId:"mt-new",scene:"after-meituan"},
+     {key:"record-image-failed",name:"图片解析失败",recordId:"img-fallback",scene:"error"}
+   ]},
+  {code:"H",group:"外部页面",page:"外部",kind:"external",status:"state",
+   sheets:[],
+   frames:[
+     {key:"external-eleme",name:"饿了么订单",kind:"external",platform:"eleme"},
+     {key:"external-meituan",name:"美团订单",kind:"external",platform:"meituan"},
+     {key:"image-rule-demo",name:"后台图片规则命中",kind:"rule"}
+   ]}
+];
+
+const ROUTES={};
+const PAGE_TREE=[];
+(()=>{
+  let id=0;const groups=new Map();
+  PAGE_DEFS.forEach(p=>{
+    const page={code:p.code,name:p.page,kind:p.kind,status:p.status,frames:[],sheets:[],frameMeta:{},sheetMeta:{}};
+    p.frames.forEach(f=>{
+      id++;
+      ROUTES[f.key]={id,page:p.page,frame:f.name,name:`${p.page} · ${f.name}`,kind:f.kind||p.kind,
+        scene:f.scene,filter:f.filter,recordId:f.recordId,platform:f.platform,tab:f.tab};
+      page.frames.push(f.key);
+      page.frameMeta[f.key]={name:f.name,tag:p.status==="scope"?"范围":(f.scene?"状态":"核心")};
+    });
+    (p.sheets||[]).forEach(s=>{page.sheets.push(s.key);page.sheetMeta[s.key]={name:s.name};});
+    if(!groups.has(p.group))groups.set(p.group,[]);
+    groups.get(p.group).push(page);
+  });
+  groups.forEach((pages,group)=>PAGE_TREE.push({group,pages}));
+})();
+
+const FLOWS=[
+  /* A · 日历功能：两条线性流程。下单=准备态（记录中，不入册），收货/结算=落定态（正式入册）。 */
+  {group:"A - 日历功能",flows:[
+    {id:"01",name:"下单后的记录",start:"下单 → 记录中 → 收货 → 记录成功",
+     steps:[
+       {title:"01 下单",sub:"美团或饿了么下单，订单回传平台",route:"external-eleme",scene:"before-eleme",ext:true},
+       {title:"02 弹窗 · 记录中",sub:"轻量告知已记下，暂不计入统计与印章",route:"stamp-calendar-syncing",scene:"syncing",autoSheet:"record-pending"},
+       {title:"03 收货 / 结算",sub:"订单达到有效状态，图片入历",route:"stamp-calendar",scene:"after-eleme"},
+       {title:"04 弹窗 · 记录成功",sub:"印章与日历同一刻正式登记入册",route:"stamp-calendar",scene:"after-eleme",autoSheet:"record-success"}
+     ]},
+    {id:"02",name:"查阅记录",start:"记录日历 → 本月 → 相册",
+     steps:[
+       {title:"01 记录日历",sub:"查看 11 月的有效记录",route:"stamp-calendar",scene:"normal"},
+       {title:"02 本月记录",sub:"打开双列记录弹层",route:"stamp-calendar",scene:"normal",autoSheet:"month-records"},
+       {title:"03 月度相册",sub:"双列拍立得式回顾，按月份筛选",route:"month-gallery",scene:"normal"}
+     ]}
+  ]},
+  /* B · 印章功能：三条流程已人工审核，保持原样 */
+  {group:"B - 印章功能",flows:[
+    {id:"A1",name:"新人首日两抽屉",start:"积分页落地 → 印章页抽屉 → 改头像 → 第二枚",steps:[
+      {title:"01 积分页落地",sub:"新人从积分页进来，不弹任何窗",route:"points-home",scene:"newbie"},
+      {title:"02 进印章页",sub:"进页瞬间自动弹「初次见面喵」",route:"badge-wall-newbie",scene:"newbie",autoSheet:"newbie-guide"},
+      {title:"03 去逛逛",sub:"关掉抽屉，开始逛猫谱",route:"badge-wall-newbie",scene:"newbie"},
+      {title:"04 用户自然完善资料",sub:"用户在个人资料入口编辑头像昵称",route:"badge-wall-newbie",scene:"newbie",autoSheet:"avatar-editor"},
+      {title:"05 系统自动收录",sub:"资料保存后自动颁发「露脸的小喵」",route:"badge-wall-newbie",scene:"newbie",avatarDone:true,autoSheet:"avatar-unlock"}
+    ]},
+    {id:"A2",name:"意外解锁（几天后）",start:"深夜第 3 单 → 惊喜抽屉 → 图鉴多一枚",steps:[
+      {title:"01 几天后的深夜",sub:"第 3 单夜宵，小喵在记录里发现了它",route:"stamp-calendar",scene:"normal",preset:{"t-midnight":1}},
+      {title:"02 惊喜抽屉",sub:"恭喜解锁 · 夜宵猫：这枚不在计划里",route:"stamp-calendar",scene:"normal",preset:{"t-midnight":1},autoSheet:"surprise-unlock"},
+      {title:"03 图鉴多一枚",sub:"收下后回图鉴，无任务、无门槛",route:"badge-wall-all",scene:"normal",preset:{"t-midnight":1}}
+    ]},
+    {id:"03",name:"印章浏览",start:"记录日历 → 印章墙 → 筛选 → 详情",steps:[
+      {title:"01 记录日历",sub:"印章模块默认子页",route:"stamp-calendar",scene:"normal"},
+      {title:"02 印章墙",sub:"切换印章内部子导航",route:"badge-wall-all",scene:"normal"},
+      {title:"03 筛选",sub:"只看已解锁印章",route:"badge-wall-unlocked",scene:"normal",autoSheet:"badge-filter"},
+      {title:"04 已收录的印章",sub:"查看生活故事、收录日期与分享入口",route:"badge-wall-all",scene:"normal",autoSheet:"badge-detail-unlocked",badgeId:"h-shop"},
+      {title:"05 尚未相遇的印章",sub:"只看故事线索，不显示触发条件",route:"badge-wall-all",scene:"normal",autoSheet:"badge-detail-locked",badgeId:"h-breadth"}
+    ]}
+  ]}
+];
+
+/* ② INTERACTION NOTES */
+const NOTES={
+  "stamp-calendar":{status:"核心",sections:[
+    {h:"页面入口",rows:["全局底栏选择「印章」","印章内部默认选择「记录日历」"]},
+    {h:"数据口径",rows:["只展示 ACTIVE 日历记录","杯数、店铺数、日期角标由同一 records 数组派生","日期归属使用订单业务时间，不使用回调时间"]},
+    {h:"交互",rows:["点击「本月」打开本月记录弹层","点击照片堆进入月度相册","点击有记录日期打开当日记录"]},
+    {h:"日期格子状态演示（切换器）",rows:["日历卡片上方 4 个标签 B/C1/C2/C3，点选即在日历上演示一种「今天」格子状态，不必做独立状态帧","非今天格子已有真实数据展示（有数据=正常商品图、无数据=空格），无需单独标识，故去掉 A1/A2","B 无数据·今天=橙色填充空格","C1 1 单登记中·今天=虚线半透明商品图；C2 1 单登记完成·今天=正常商品图；C3 多单·今天=合并一格(角标 2)","点高亮的演示格：C1 弹「记录中」抽屉、C2 弹「记录成功」抽屉、C3 弹多单合并抽屉；点「还原真实数据」退出演示","登记中与登记成功用真实商品图的样式差区分（虚线半透明 vs 清晰），不用沙漏图标"]}
+  ]},
+  "stamp-calendar-empty":{status:"状态",sections:[{h:"入口条件",rows:["所选月份没有 ACTIVE 记录"]},{h:"表现",rows:["保留完整日历","本月显示 0 杯 · 0 家店铺","不提供手工新增入口"]}]},
+  "cell-demo-records":{status:"演示",sections:[
+    {h:"场景",rows:["C3：今天有多单，日历上合并为一格（角标显示单数）","点这一格打开本抽屉，看到合并前的每一单"]},
+    {h:"图片状态差",rows:["登记中的一单：真实商品图 + 虚线描边 + 轻微半透明，角标「登记中」","已登记的一单：同一类真实商品图，正常清晰样式，角标「已登记」","不使用沙漏/转圈图标，只靠图片样式区分登记状态"]},
+    {h:"时点口径",rows:["下单=准备态（登记中，暂不计入杯数与印章）","收货/结算=落定态（正式入册，印章同刻收录）"]}
+  ]},
+  "record-pending":{status:"核心",sections:[
+    {h:"形态",rows:["底部抽屉，不是居中弹窗","展示真实商品图，图片带虚线描边 + 轻微半透明，表示「还没定」","不使用沙漏/转圈图标替代商品图"]},
+    {h:"时点",rows:["用户下单、订单回传之后弹出","此时只是「准备态」，尚未入册"]},
+    {h:"口径",rows:["轻量告知这一单已记下，等收货/结算才正式写入","明确此刻不计入杯数与印章","不诱导下单、不提示差几单"]},
+    {h:"闭环",rows:["用户点「知道了」关闭，无需领取或操作"]}
+  ]},
+  "record-success":{status:"核心",sections:[
+    {h:"形态",rows:["底部抽屉，与「记录中」同构","同一张真实商品图，图片为正常清晰样式（无虚线、无半透明）","两抽屉对比即可看出「登记中 → 登记成功」的图片状态差"]},
+    {h:"时点",rows:["用户已收货 / 已结算，订单达到有效状态后弹出"]},
+    {h:"口径",rows:["日历与印章在同一刻正式登记入册","只陈述事实，不叠加任务或进度话术"]},
+    {h:"闭环",rows:["用户点「去看看日历」关闭并回到日历页"]}
+  ]},
+  "stamp-calendar-syncing":{status:"状态",sections:[{h:"入口条件",rows:["平台订单已接收但尚未达到有效状态"]},{h:"逻辑",rows:["SYNCING 不参与统计与印章计算","后台完成同步后页面自动出现记录"]}]},
+  "stamp-calendar-fallback":{status:"状态",sections:[{h:"图片逻辑",rows:["美团不回传订单图","按券/活动、SKU、商品、店铺、品牌、类别依次匹配","本帧命中券模板配置图，来源 ADMIN_RULE"]}]},
+  "month-gallery":{status:"核心",sections:[{h:"数据范围",rows:["展示当前选择月份的 ACTIVE 记录","与日历和本月弹层使用相同媒体资源"]},{h:"交互",rows:["点击月份打开年月选择","有图的月份标注张数并可点，无图月份置灰不可选","仅浏览照片，不进入订单详情","关闭返回记录日历并保留月份"]}]},
+  "badge-wall-all":{status:"核心",sections:[{h:"产品定位",rows:["印章墙是生活图鉴，不是任务中心；用户正常吃饭，系统从真实记录里发现习惯","按生活主题分组：初见与日常 / 时间节律 / 口味偏好 / 饮食习惯 / 城市足迹 / 节气时令 / 使用小纪念 / 特别时刻","顶部只显示已收录数量，不显示总量、百分比或进度条"]},{h:"展示规则",rows:["已收录：显示印章、名称与收录日期","未相遇：显示名称和生活故事，不显示数字条件、剩余次数或进度","神秘小喵：不提前展示名称和触发条件，作为纯惊喜"]},{h:"产品红线",rows:["不出现「差 N 笔」「去下单解锁」「再完成一次」等任务话术","不以额外消费、连续签到或分享作为强制任务","成就由系统自动识别和收录，用户不需要领取"]}]},
+  "badge-wall-unlocked":{status:"状态",sections:[{h:"筛选",rows:["只展示已经自然收录的印章","已收录与进阶中的状态统一呈现，不展示下一档进度","筛选只改变展示，不改变标签归属"]}]},
+  "badge-wall-empty":{status:"状态",sections:[{h:"入口条件",rows:["用户没有 ACTIVE 记录且当前筛选下无标签","空态文案只说明原因，不诱导下单"]}]},
+  "stamp-calendar-newbie":{status:"主流程 A",sections:[
+    {h:"入口条件",rows:["用户没有任何 ACTIVE 订单记录（无单用户）","首次进入印章 Tab 时可收到一枚初见纪念章"]},
+    {h:"空态表达",rows:["保留完整日历、统计和相册入口","轻量提示图鉴已开张，不展示差几单、任务或虚构社会证明"]},
+    {h:"交互",rows:["用户可以看看自己的小喵图鉴","之后的印章由真实生活记录自动发现"]}
+  ]},
+  "badge-wall-newbie":{status:"主流程 A",sections:[
+    {h:"无单用户看到什么",rows:["全平台生活图鉴照常展示，初见纪念章自动收录","未相遇的印章保留名称与生活故事，不显示触发门槛"]},
+    {h:"交互原则",rows:["不要求用户认领、下单、签到或分享来完成任务","用户只需正常使用产品，系统从记录里发现可被纪念的习惯"]},
+    {h:"惊喜机制",rows:["部分神秘印章不展示名称与条件","达成后自动收录，并提供分享入口"]}
+  ]},
+  "newbie-guide":{status:"主流程 A",sections:[
+    {h:"触发（2026-11-17 修订）",rows:["新人从积分页落地，积分页不弹任何窗","第一次进入印章页时自动弹底部抽屉，每个会话只弹一次","印章是全局 Tab，进页即触发，无需额外入口"]},
+    {h:"布局（生活惊喜版）",rows:["拖动指示条 → 印章图 → 小字「新印章已收录」→ 主标题 → 一句描述 → 细分割线 → 一句轻提示 → 分享与查看图鉴按钮","不预告下一枚，不展示解锁条件，不叠加多余装饰"]},
+    {h:"视觉规范",rows:["暖白底 #FFFCF6，绿 #2FA36B 是唯一强调色（小字「新印章已收录」与 ›）","文字深棕近黑；无渐变、发光、毛玻璃、复杂阴影；不堆卡片","文字极简：标题 + 一句描述，说明性文字全部拿掉"]},
+    {h:"CTA 层级",rows:["主按钮「看看我的印章墙」→ 关抽屉进图鉴","次按钮分享第一枚印章；不预告下一枚的解锁条件"]},
+    {h:"与弹窗配置体系的关系",rows:["仍属「首页配置改造」弹窗体系的一种运营弹窗，只是触发条件多了「无单用户」维度","遵守同一时刻仅 1 个弹窗触发"]}
+  ]},
+  "avatar-editor":{status:"主流程 A",sections:[
+    {h:"唤起",rows:["用户在个人资料入口主动编辑头像昵称","不把完善资料包装成勋章任务，也不在印章详情里催促"]},
+    {h:"输入器",rows:["头像走微信原生 chooseAvatar，昵称走原生昵称键盘","原型中点头像框即视为已选（🐱 占位）","次按钮「再想想」关闭，不打扰"]},
+    {h:"完成",rows:["保存后唤起「新印章已收录」抽屉，勋章即刻点亮"]}
+  ]},
+  "avatar-unlock":{status:"主流程 A",sections:[
+    {h:"第二枚到手",rows:["资料保存后由系统自动收录，不要求用户回到勋章页领取","弹窗展示印章图、名称、生活描述和分享入口","「收下，回印章墙」关闭抽屉即可继续浏览"]}
+  ]},
+  "coupon-unlock":{status:"自动发现",sections:[
+    {h:"触发",rows:["系统从自然发生的领券与消费记录中识别用户的优惠习惯","用户界面不展示计数、进度或解锁门槛"]},
+    {h:"反馈",rows:["达成后自动收录，轻量提示一次，不要求手动领取","动效克制，不使用连续任务或倒计时强化压力"]},
+    {h:"内容与后续",rows:["只展示印章名称和一句生活观察，不展示领券次数、下一档或收集进度","提供分享入口；用户也可以直接收好继续使用","不将领券行为包装成必须完成的勋章任务"]}
+  ]},
+  "record-detail-eleme":{status:"核心",sections:[{h:"图片来源",rows:["优先使用优惠券实际抵扣商品图片","平台图片转存为自有媒体资源","本帧来源 ELEME_ORDER"]},{h:"权限",rows:["业务字段与图片只读","用户只可收藏"]}]},
+  "record-detail-meituan":{status:"核心",sections:[{h:"图片来源",rows:["美团无回传图","命中后台规则 img-rule-mt-coupon-01 v1","历史记录固化命中版本，配置更新不静默换图"]}]},
+  "external-eleme":{status:"流程",sections:[{h:"外部步骤",rows:["交互稿不还原外卖平台页面","模拟订单达到已完成/已核销状态","重复订单由平台 + 订单号 + 券实例幂等"]}]},
+  "external-meituan":{status:"流程",sections:[{h:"外部步骤",rows:["平台回传订单与券信息，但不回传图片","后续进入后台图片匹配流程"]}]},
+  "image-rule-demo":{status:"流程",sections:[{h:"命中顺序",rows:["券/活动 > SKU > 商品 > 店铺 > 品牌 > 类别 > 平台默认 > 系统默认"]},{h:"本次结果",rows:["命中 coupon-template-01","优先级 100","使用 order-meituan-config.webp"]}]},
+  "record-image-failed":{status:"状态",sections:[{h:"入口条件",rows:["平台图下载失败或格式非法"]},{h:"处理",rows:["按配置图 → 平台默认图 → 系统默认图回退，日期格不留空白","详情标注图片来源与失败原因","后台继续重试，成功后按新图更新","历史记录不静默换图"]}]},
+  "badge-computing":{status:"状态",sections:[{h:"入口条件",rows:["新记录已入库，生活标签聚合尚未完成"]},{h:"处理",rows:["记录、统计与相册照常展示，不被标签计算阻塞","图鉴仅提示正在整理，不显示剩余次数或进度","计算完成后自动刷新收录状态"]}]},
+  "points-home":{status:"核心",sections:[
+    {h:"版式来源",rows:["对齐参考图 05：标题 → 积分余额 → 连续签到条 → 领外卖红包 → 活动 Banner","金刚区为本稿新增，参考图里没有这一块"]},
+    {h:"金刚区",rows:["6 个入口，一行 4 个，第二行 2 个左对齐","记一账 / 晒单活动 / 签单日历 / 淘转链 / 门店转链 / 外卖转链","本稿只还原位置与信息层级，各入口的目标页由对应业务线独立定义"]},
+    {h:"口径",rows:["积分是全局资产，印章解锁不默认发积分","红包卡片的资格与奖励由活动后台下发，前端只做展示","签到条为静态展示：签到流程、已签到态与签到成功反馈不在本稿表达范围（2026-11-16 确认）"]}
+  ]},
+  "mall-placeholder":{status:"范围",sections:[{h:"本稿边界",rows:["不定义商品、库存、兑换、支付、物流或退款"]}]},
+  "mine-placeholder":{status:"范围",sections:[{h:"本稿边界",rows:["不定义账户、权益、客服和设置详情"]}]},
+  "month-records":{status:"核心",sections:[{h:"入口",rows:["点击记录日历下方「本月」卡片"]},{h:"交互",rows:["默认按业务时间倒序","星标点击阻止卡片跳转","数量与首页统计一致"]}]},
+  "day-records":{status:"状态",sections:[{h:"入口",rows:["点击含记录的日期格"]},{h:"展示",rows:["同日多条以双列卡片展示"]}]},
+  "month-picker":{status:"状态",sections:[{h:"交互",rows:["选择月份后关闭抽屉并刷新相册","未来月份不可选"]}]},
+  "badge-filter":{status:"状态",sections:[{h:"筛选",rows:["全部 / 已收录 / 各生活主题","筛选只改变展示，不改变标签归属"]}]},
+  "badge-detail-unlocked":{status:"核心",sections:[{h:"展示",rows:["印章图 + 名称 + 一句生活故事","收录状态和日期","「怎么获得」：用一句文字描述这枚勋章的解锁条件（定性，不出现数字门槛、剩余次数或进度）","已收录勋章提供分享入口"]},{h:"口径",rows:["解锁条件只在已收录后回看，未相遇时不提前展示","条件用故事化文字表达，不出现「差 N 笔」「去下单解锁」等任务话术"]},{h:"交互",rows:["用户可以分享自己的生活成就","不需要点击认领，不通过「我也是这类人」改变勋章数据"]}]},
+  "badge-detail-locked":{status:"状态",sections:[{h:"展示",rows:["显示印章名称和一段生活故事，状态为「待相遇」","不展示数字条件、档位名称、剩余次数或进度条","不提供去下单、去签到、去领券等任务入口"]},{h:"交互",rows:["用户看完故事即可关闭","不催促用户完成任何动作，等待真实生活记录自然触发"]}]},
+  "badge-share":{status:"状态",sections:[{h:"分享",rows:["预览卡片统一 5:4，复用勋章插画、名称与生活故事","复制分享文案；正式小程序接入微信原生分享能力"]}]},
+  "badge-unlock":{status:"核心",sections:[{h:"触发",rows:["同一家店累计订单首次达到 5 单，进阶到第 2 档","同一标签只弹一次，重复订单不再弹"]},{h:"文案口径",rows:["讲「你的图鉴多了一枚」，不讲「解锁奖励」","强调标签由行为自动长出，不用领不用换"]}]},
+  "order-invalidated":{status:"状态",sections:[{h:"退款逻辑",rows:["记录转 INVALID 并从日历、统计、列表、相册隐藏","未完成进度重算","普通收藏型印章本演示默认保留"]}]},
+  "surprise-unlock":{status:"主流程 A2",sections:[
+    {h:"定位",rows:["第二层「隐藏条件」印章的解锁瞬间：用户什么都没做，小喵在记录里发现了他","与到手抽屉同构（life-gain），小字是「生活里的小惊喜」而不是「新印章已收录」"]},
+    {h:"内容",rows:["印面/插画 + 章名 + 一句惊喜文案「原来你已经悄悄收集了这么多深夜时光」","分割线下只给一句轻提示「这枚不在计划里 · 是小喵在记录里发现的」，不做任务预告","主按钮「分享这枚小喵」；次按钮「先收好」仅关闭"]},
+    {h:"红线",rows:["不引导下一单、不展示还差什么、不倒计时"]}
+  ]},
+};
+
+/* ③ MOCK DATA */
+const RECORD_LIBRARY={
+  r1:{id:"r1",orderKey:"eleme|E1001|C001",platform:"eleme",title:"生椰拿铁",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-04T20:06:00+08:00",localDate:"2026-11-04",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-latte.webp",favorite:false},
+  r2:{id:"r2",orderKey:"meituan|M1002|C002",platform:"meituan",title:"青提乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-11T14:15:00+08:00",localDate:"2026-11-11",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
+  r3:{id:"r3",orderKey:"eleme|E1003|C003",platform:"eleme",title:"桑葚酸奶昔",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-13T20:06:00+08:00",localDate:"2026-11-13",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-berry.webp",favorite:false},
+  r4:{id:"r4",orderKey:"eleme|E1004|C004",platform:"eleme",title:"白桃乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-14T20:57:00+08:00",localDate:"2026-11-14",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-peach.jpg",favorite:false},
+  r5:{id:"r5",orderKey:"meituan|M1005|C005",platform:"meituan",title:"轻乳茉莉",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-14T14:15:00+08:00",localDate:"2026-11-14",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
+  /* 历史月份记录：用于月度相册按月份筛选，6/7/8 月留空 */
+  h901:{id:"h901",orderKey:"eleme|H0901|D901",platform:"eleme",title:"冰摇柠檬茶",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-09-03T15:20:00+08:00",localDate:"2026-09-03",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-latte.webp",favorite:false},
+  h902:{id:"h902",orderKey:"meituan|H0902|D902",platform:"meituan",title:"桂花乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-09-12T14:10:00+08:00",localDate:"2026-09-12",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
+  h903:{id:"h903",orderKey:"eleme|H0903|D903",platform:"eleme",title:"白桃乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-09-25T20:40:00+08:00",localDate:"2026-09-25",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-peach.jpg",favorite:false},
+  h1001:{id:"h1001",orderKey:"eleme|H1001|E001",platform:"eleme",title:"桑葚酸奶昔",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-10-08T19:30:00+08:00",localDate:"2026-10-08",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-berry.webp",favorite:false},
+  h1002:{id:"h1002",orderKey:"meituan|H1002|E002",platform:"meituan",title:"轻乳茉莉",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-10-19T13:50:00+08:00",localDate:"2026-10-19",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
+  "eleme-new":{id:"eleme-new",orderKey:"eleme|E2005|C205",platform:"eleme",title:"桑葚酸奶昔",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-16T10:47:00+08:00",localDate:"2026-11-16",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-berry.webp",favorite:false},
+  "mt-new":{id:"mt-new",orderKey:"meituan|M2005|C305",platform:"meituan",title:"品牌日限定奶茶",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-16T10:47:00+08:00",localDate:"2026-11-16",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
+  syncing:{id:"syncing",orderKey:"eleme|E3006|C306",platform:"eleme",title:"订单同步中",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-16T10:47:00+08:00",localDate:"2026-11-16",status:"SYNCING",imageSource:"PLATFORM_DEFAULT",image:"./assets/defaults/eleme-default.svg",favorite:false},
+  "img-fallback":{id:"img-fallback",orderKey:"meituan|M2099|C399",platform:"meituan",title:"葡萄冻冻",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-16T09:12:00+08:00",localDate:"2026-11-16",status:"ACTIVE",imageSource:"SYSTEM_DEFAULT",image:"./assets/defaults/global-default.svg",imageFallbackReason:"平台图下载失败 HTTP 403，已回退系统默认图，后台重试中",favorite:false}
+};
+
+/* 印章 = 身份标签。图鉴面向全平台所有用户，标签按「族」分组、按「档位」进阶。
+   决定状态的只有可判定信号：时长/日期/节气/品类/门店/平台/频次/活动，不做天气与情绪。 */
+const TAG_FAMILIES=[
+  {key:"onsite",name:"初见与日常",tint:"#5b7f7a",hint:"从第一次见面开始，慢慢留下生活印记"},
+  {key:"time",name:"时间节律",tint:"#c2703f",hint:"从吃饭时间里，慢慢看见你的生活节奏"},
+  {key:"taste",name:"口味偏好",tint:"#b4553f",hint:"常吃的东西，藏着自己的小偏爱"},
+  {key:"habit",name:"饮食习惯",tint:"#6f8d4b",hint:"重复出现的小习惯，会慢慢变成专属印记"},
+  {key:"city",name:"城市足迹",tint:"#8c5d9f",hint:"从熟悉的店，到走过的城市"},
+  {key:"season",name:"节气时令",tint:"#4e7c8a",hint:"一年到头，总有一些值得记住的味道"},
+  {key:"usage",name:"使用小纪念",tint:"#8b9272",hint:"偶尔的互动，也会成为一段小小回忆"},
+  {key:"event",name:"特别时刻",tint:"#c79a3e",hint:"偶尔遇见的小惊喜，也值得被记住"}
+];
+
+/* tiers.need 仅供后台规则计算，前端图鉴、详情与分享页均不展示数字门槛。stage：老用户场景下已达成的档数（原型 mock）。
+   stageNew：新用户（0 单）场景下的档数——只有不依赖下单的标签才给值，其余由 0 起算。
+   signal：成就来源。order=订单派生（默认）/ signup 注册资料 / checkin 签到 / coupon 领券 /
+           link 转链 / invite 邀请。除 order 外都不需要下单。 */
+const TAG_LIBRARY=[
+  /* —— 入场与日常：不点外卖也能拿到的第一批，保证新用户进来不是空手。
+        小饭喵世界观：图鉴 = 猫谱，每枚标签都是一只猫的名字 —— */
+  {id:"o-hello",family:"onsite",seal:"喵",name:"初次见面喵",holders:"128万",stage:1,stageNew:1,earnedAt:"2026-11-16",signal:"signup",
+   art:"assets/badges/badge-cat-hello.png",
+   story:"每只小喵的故事，都从一次初次见面开始",how:"第一次来到这里时，小喵自动把你记下",
+   tiers:[{name:"初次见面喵",need:1}]},
+  {id:"o-avatar",family:"onsite",seal:"像",name:"露脸的小喵",holders:"86万",stage:1,stageNew:0,earnedAt:"2026-11-16",signal:"signup",
+   art:"assets/badges/badge-cat-avatar.png",
+   story:"你的专属小喵名片，慢慢有了自己的模样",how:"填好头像和昵称，专属小喵就有了模样",
+   tiers:[{name:"露脸的小喵",need:1}]},
+  {id:"o-checkin",family:"usage",seal:"签",name:"守点的小喵",holders:"41万",stage:2,stageNew:0,earnedAt:"2026-11-14",signal:"checkin",
+   story:"忙碌的日子里，你总能给自己留一个短暂的停靠点",how:"养成固定时间来看看的习惯后自然收录",
+   tiers:[{name:"准时打卡的小喵",need:3},{name:"连开七天的猫",need:7},{name:"月度全勤猫",need:30}]},
+  {id:"o-wool",family:"usage",seal:"券",name:"薅羊毛的猫",holders:"52万",stage:2,stageNew:0,signal:"coupon",
+   story:"红包、满减、神券包，没有一个能逃出你的收藏夹",how:"爱把红包满减收进收藏夹时慢慢浮现",
+   tiers:[{name:"薅羊毛的猫",need:6},{name:"羊毛大师",need:30},{name:"平台债主",need:100}]},
+  {id:"o-link",family:"usage",seal:"链",name:"甩链接的猫",holders:"7.9万",stage:0,stageNew:0,signal:"link",
+   story:"你分享的那份好吃，常常也会成为朋友的灵感",how:"把好吃的分给朋友时悄悄记下",
+   tiers:[{name:"甩链接的猫",need:1},{name:"带饭小队长",need:10},{name:"转链老炮",need:50}]},
+  {id:"o-invite",family:"usage",seal:"邀",name:"带朋友入伙的猫",holders:"3.4万",stage:0,stageNew:0,signal:"invite",
+   story:"你带来的朋友，后来都成了这儿的常驻猫",how:"带上朋友一起加入时收录",
+   tiers:[{name:"带来第一个朋友",need:1},{name:"猫群小队长",need:5},{name:"朋友圈猫团长",need:20}]},
+
+  {id:"t-midnight",family:"time",seal:"夜",name:"夜宵猫",holders:"9800+",stage:0,earnedAt:"2026-11-13",
+   story:"城市安静下来，你的夜宵雷达才刚刚启动",how:"常在深夜下单加餐时被小喵发现",
+   tiers:[{name:"半夜加餐的小喵",need:3},{name:"夜宵猫",need:8},{name:"凌晨城市合伙人",need:20}]},
+  {id:"t-lunch",family:"time",seal:"午",name:"踩点干饭猫",holders:"2.8万",stage:0,
+   story:"午休的钟声一响，干饭计划准时上线",how:"总在午休点开饭点时收录",tiers:[{name:"踩点干饭猫",need:15}]},
+  {id:"t-bedside",family:"time",seal:"床",name:"床上点餐猫仙",holders:"1.2万",stage:0,
+   story:"周末睁眼第一件事不是起床，是先点外卖再继续躺",how:"周末赖在床上点餐时自然出现",tiers:[{name:"床上点餐猫仙",need:8}]},
+  {id:"t-breakfast",family:"time",seal:"早",name:"蹲点取早餐的猫",holders:"1.3万",stage:0,
+   story:"清晨的第一口热乎，像给一天按下启动键",how:"常在清晨下单第一口时收录",tiers:[{name:"蹲点取早餐的猫",need:5}]},
+
+  {id:"p-fried",family:"taste",seal:"炸",name:"快乐水炸鸡猫",holders:"1.6万",stage:0,
+   story:"汉堡薯条快乐水三位一体，缺一个都算不上正经一餐",how:"炸鸡配快乐水反复出现时收录",tiers:[{name:"炸鸡配快乐水的猫",need:10}]},
+  {id:"p-rice",family:"taste",seal:"饭",name:"干饭永动机猫",holders:"3.1万",stage:0,
+   story:"忙归忙，正餐总有一份踏实的安排",how:"正餐总有一份踏实安排时被记下",tiers:[{name:"干饭猫本猫",need:15}]},
+  {id:"p-hotpot",family:"taste",seal:"锅",name:"独享火锅的猫",holders:"9300+",stage:0,
+   story:"一个人的火锅也要有仪式感，锅底小料一个不少",how:"一个人也认真吃火锅时收录",tiers:[{name:"独享火锅的猫",need:5}]},
+  {id:"p-carb",family:"taste",seal:"面",name:"碳水教派的猫",holders:"1.4万",stage:0,
+   story:"没有碳水的一天是不完整的一天，这是信仰问题",how:"顿顿离不开碳水时自然浮现",tiers:[{name:"碳水教派的猫",need:20}]},
+  {id:"p-dessert",family:"taste",seal:"甜",name:"饭后要甜点的猫",holders:"6800+",stage:0,
+   story:"一顿饭没有甜品，就像一天没有结尾",how:"每一餐都要以甜点收尾时收录",tiers:[{name:"饭后要甜点的猫",need:8}]},
+  {id:"p-bakery",family:"taste",seal:"包",name:"把面包当饭的猫",holders:"5900+",stage:0,
+   story:"别人买面包当早餐，你买面包当正餐",how:"把面包当正餐时被小喵记下",tiers:[{name:"把面包当饭的猫",need:15}]},
+
+  {id:"p-milktea",family:"taste",seal:"茶",name:"奶茶收藏家",holders:"",stage:0,
+   story:"奶茶的甜度、冰量和那一口熟悉感，都是你的专属偏爱",how:"常点那杯熟悉的奶茶时慢慢收录",tiers:[{name:"奶茶收藏家",need:10},{name:"奶茶地图绘制员",need:30}]},
+  {id:"p-coffee",family:"taste",seal:"咖",name:"咖啡续命喵",holders:"",stage:0,
+   story:"一天的节奏，常常从熟悉的咖啡香开始",how:"一天从熟悉的咖啡香开始时收录",tiers:[{name:"咖啡续命喵",need:10},{name:"咖啡巡游者",need:30}]},
+
+  {id:"h-first",family:"habit",seal:"初",name:"第一口就上头的猫",holders:"3.8万",stage:1,earnedAt:"2026-11-04",
+   story:"有些味道，第一口就成了心头好",how:"第一次点单就认定一个味道时收录",tiers:[{name:"第一口就上头的猫",need:1}]},
+  {id:"h-shop",family:"habit",seal:"熟",name:"老板认识的那只猫",holders:"4.7万",stage:2,earnedAt:"2026-11-04",
+   story:"熟悉到店员都快替你背下那句备注了",how:"在同一家店点到混脸熟时自然出现",
+   tiers:[{name:"混了个脸熟",need:3},{name:"老板记得你的甜度",need:5},{name:"编外合伙人",need:15}]},
+  {id:"h-breadth",family:"habit",seal:"广",name:"巡街探店的猫",holders:"3.3万",stage:0,
+   story:"你总能在街角发现一家值得回头的店",how:"在街角不断发现新店时慢慢收录",
+   tiers:[{name:"闻遍一条街的小喵",need:5},{name:"巡街探店的猫",need:10}]},
+  {id:"h-category",family:"habit",seal:"全",name:"什么都想尝的猫",holders:"3.8万",stage:0,
+   story:"平台有多少品类，你的收藏夹就有多少分组",how:"收藏夹横跨好几个品类时浮现",
+   tiers:[{name:"什么都想尝一口",need:3},{name:"外卖百科猫",need:6},{name:"干饭版图无死角",need:10}]},
+  {id:"h-volume",family:"habit",seal:"量",name:"点单编年史猫",holders:"3.9万",stage:0,
+   story:"你的点单记录，够写一部外卖编年史",how:"点单记录越攒越厚时自然记下",
+   tiers:[{name:"稳定干饭的猫",need:30},{name:"吨吨吨大师",need:100}]},
+  {id:"h-dual",family:"habit",seal:"衡",name:"两碗水端平的猫",holders:"1.4万",stage:1,earnedAt:"2026-11-11",
+   story:"满减是唯一的忠诚，甜度才是底线",how:"在美团点了2单，在饿了么点了2单",tiers:[{name:"两碗水端平的猫",need:1}]},
+  {id:"h-constant",family:"habit",seal:"恒",name:"只认一家的猫",holders:"3.6万",stage:0,
+   story:"永远同一杯，备注都不用改，店老板都认识你了",how:"反复点同一杯、备注都不用改时收录",tiers:[{name:"只认一家的猫",need:10}]},
+  {id:"h-coupon",family:"habit",seal:"凑",name:"凑单精算猫",holders:"2.7万",stage:0,
+   story:"为了刚刚好的优惠，凑单比点单更认真",how:"为了刚刚好的优惠认真凑单时记下",tiers:[{name:"凑单精算猫",need:5}]},
+  {id:"h-note",family:"habit",seal:"注",name:"备注栏写小说的猫",holders:"1.8万",stage:0,
+   story:"少冰三分糖去珍珠双份芋泥，备注栏就是你的个人主页",how:"把备注栏写成个人主页时收录",tiers:[{name:"备注栏写小说的猫",need:5}]},
+
+  {id:"c-newcity",family:"city",seal:"迁",name:"先喝一杯再搬家的猫",holders:"2.1万",stage:1,earnedAt:"2026-11-04",
+   story:"行李没拆先下单，熟悉的甜度落胃才算落地",how:"搬到新城市先下单熟悉的味道时收录",tiers:[{name:"先喝一杯再搬家的猫",need:1}]},
+  {id:"c-hometown",family:"city",seal:"乡",name:"回乡认路的猫",holders:"6900+",stage:0,
+   story:"回到家第一杯，用来校准外面的味道到底差在哪",how:"回到家第一杯校准味道时自然出现",tiers:[{name:"回乡认路的猫",need:1}]},
+
+  {id:"s-liqiu",family:"season",seal:"秋",name:"立秋贪杯猫",holders:"5.2万",stage:0,
+   story:"秋天的第一杯，朋友圈和外卖单同时到",how:"立秋这天下单第一杯时收录",tiers:[{name:"立秋贪杯猫",need:1}]},
+  {id:"s-dongzhi",family:"season",seal:"冬",name:"冬至蹲灶台的猫",holders:"3.4万",stage:0,
+   story:"冬至这天，南北之争在订单里握手言和",how:"冬至这天用订单参与南北之争时记下",tiers:[{name:"冬至蹲灶台的猫",need:1}]},
+  {id:"s-full",family:"season",seal:"节",name:"节气全勤猫",holders:"1800+",stage:0,
+   story:"你总能在季节更替里，记住那些特别的日子",how:"跟着季节更替记住特别日子时慢慢收录",tiers:[{name:"节气常客",need:3},{name:"节气全勤猫",need:6}]},
+
+  {id:"e-free",family:"event",seal:"鲤",name:"免单锦鲤猫",holders:"2300+",stage:0,
+   story:"榜单冲过、免单中过，运气这东西是真实存在的",how:"运气好到被免单砸中时收录",tiers:[{name:"免单锦鲤猫",need:1}]},
+  {id:"e-share",family:"event",seal:"晒",name:"晒单摆拍猫",holders:"7400+",stage:0,
+   story:"你总能把好好吃饭这件事，认真留个纪念",how:"把好好吃饭认真留个纪念时记下",tiers:[{name:"晒单摆拍猫",need:5}]}
+];
+const BADGE_LIBRARY=TAG_LIBRARY;
+
+const IMAGE_RULES=[{id:"img-rule-mt-coupon-01",platform:"meituan",matchType:"coupon",matchValue:"coupon-template-01",priority:100,asset:"./assets/records/order-meituan-config.webp",version:1}];
+
+/* 积分页（参考图 05）：金刚区 6 个入口，一行 4 个 */
+const POINT_ENTRIES=[
+  {key:"jizhang",name:"记一账",icon:"./assets/icons/points-jizhang.svg"},
+  {key:"shaidan",name:"晒单活动",icon:"./assets/icons/points-shaidan.svg"},
+  {key:"qiandao",name:"签单日历",icon:"./assets/icons/points-qiandao.svg"},
+  {key:"taolink",name:"淘转链",icon:"./assets/icons/points-taolink.svg"},
+  {key:"shoplink",name:"门店转链",icon:"./assets/icons/points-shoplink.svg"},
+  {key:"waimai",name:"外卖转链",icon:"./assets/icons/points-waimai.svg"}
+];
+
+const POINT_COUPONS=[
+  {tone:"tao",badge:"淘",brand:"淘宝闪购",items:[
+    {title:"淘宝10-18元红包",sub:"疯抢大额红包",btn:"领取 +5"},
+    {title:"叠加红包",sub:"同时使用更优惠",btn:"领取 +5"},
+    {title:"领最高20元红包",sub:"天天必领",btn:"领取 +5"}
+  ]},
+  {tone:"mt",badge:"美",brand:"美团红包",items:[
+    {title:"美团10-18元红包",sub:"天天都能领",btn:"领取 +5"},
+    {title:"甄选好店",sub:"优惠专享",btn:"领取 +5"},
+    {title:"9.9购大额神券包",sub:"抵扣省更多",btn:"领取 +5"}
+  ]}
+];
+
+/* ④ STATE / SELECTORS / SCENES */
+const cloneRecord=k=>({...RECORD_LIBRARY[k]});
+const base4=()=>["r1","r2","r3","r4"].map(cloneRecord);
+const base5=()=>["r1","r2","r3","r4","r5","h901","h902","h903","h1001","h1002"].map(cloneRecord);
+
+let state={
+  railMode:"flow",activeFlowId:"01",activeStepIndex:0,currentRoute:"stamp-calendar",sheet:null,sheetOrigin:null,
+  scene:"normal",globalTab:"stamp",stampView:"calendar",selectedMonth:"2026-11",badgeFilter:"all",
+  selectedRecordId:"r4",selectedBadgeId:"h-shop",records:[],processedOrderKeys:new Set(),retainMonthBadge:false,
+  cellDemo:null,
+  favoriteDemo:false,progressLag:false,couponClaimed:new Set(),scrollStore:{},scrollKey:null,
+  avatarDone:false,avatarPicked:false,nickName:"",newbieGuideSeen:false,shareBadgeId:"o-hello",shareReturnSheet:null
+};
+
+function resetScene(scene="normal"){
+  state.scene=scene;
+  state.retainMonthBadge=false;
+  state.bonusStages={};
+  state.favoriteDemo=false;
+  state.progressLag=scene==="computing";
+  let records;
+  if(scene==="empty"||scene==="newbie") records=[];
+  else if(scene==="after-first") records=[cloneRecord("eleme-new")];
+  else if(scene==="before-eleme"||scene==="before-meituan") records=base4();
+  else if(scene==="after-eleme") records=[...base4(),cloneRecord("eleme-new")];
+  else if(scene==="after-meituan") records=[...base4(),cloneRecord("mt-new")];
+  else if(scene==="syncing") records=[...base4(),cloneRecord("syncing")];
+  else if(scene==="refunded"){
+    records=base5();
+    const target=records.find(r=>r.id==="r5"); if(target) target.status="INVALID";
+    state.retainMonthBadge=true;
+  }else records=base5();
+  state.records=records;
+  state.processedOrderKeys=new Set(records.filter(r=>r.status!=="SYNCING").map(r=>r.orderKey));
+  state.badgeFilter="all";
+  state.selectedRecordId=records.find(r=>r.status==="ACTIVE")?.id||"r4";
+  state.selectedBadgeId="h-shop";
+  /* 头像昵称按场景重建：换场景即视为重新演示，newbieGuideSeen 不在这里清（每个会话只弹一次） */
+  state.avatarDone=false;
+  state.avatarPicked=false;
+}
+
+const activeRecords=()=>state.records.filter(r=>r.status==="ACTIVE");
+const monthRecords=(month=state.selectedMonth)=>activeRecords().filter(r=>r.localDate.startsWith(month)).sort((a,b)=>b.businessAt.localeCompare(a.businessAt));
+const monthQty=(month=state.selectedMonth)=>monthRecords(month).reduce((n,r)=>n+r.quantity,0);
+const distinct=(arr,key)=>new Set(arr.map(x=>x[key]).filter(Boolean)).size;
+const monthShops=(month=state.selectedMonth)=>distinct(monthRecords(month),"shopId");
+const monthCities=(month=state.selectedMonth)=>distinct(monthRecords(month),"city");
+const recordById=id=>state.records.find(r=>r.id===id)||RECORD_LIBRARY[id]||null;
+const recordsOnDate=date=>activeRecords().filter(r=>r.localDate===date).sort((a,b)=>b.businessAt.localeCompare(a.businessAt));
+const pad2=n=>String(n).padStart(2,"0");
+const timeOf=r=>r?`${Number(r.localDate.slice(5,7))}月${Number(r.localDate.slice(8,10))}日 ${r.businessAt.slice(11,16)}`:"";
+const monthLabel=m=>{const [y,mo]=m.split("-");return `${y}年${Number(mo)}月`;};
+const routeOf=k=>ROUTES[k]||ROUTES["stamp-calendar"];
+const flowById=id=>{for(const g of FLOWS){const f=g.flows.find(x=>x.id===id);if(f)return f;}return null;};
+const groupOfFlow=id=>FLOWS.find(g=>g.flows.some(f=>f.id===id));
+
+/* 标签状态：locked 未点亮 / progress 已收但未走完档位 / unlocked 收齐可用档位 */
+function computedBadges(){
+  const isNew=state.scene==="newbie"||state.scene==="empty";
+  const lag=state.progressLag;
+  return TAG_LIBRARY.map(t=>{
+    const total=t.tiers.length;
+    /* 新用户/空数据场景：订单派生的标签归零，站内行为标签用 stageNew 自己的进度，
+       保证无单用户进来时手里已经有「初次见面喵」这类不打折的成就 */
+    let stage=isNew?(t.stageNew||0):(t.stage||0);
+    /* 领券族：当天领满 6 张即达成第一档，不需要等结算 */
+    if(t.id==="o-wool"&&state.couponClaimed.size>=6)stage=Math.max(stage,1);
+    /* 露脸的小喵：完成头像昵称输入才算到手，新用户默认 0，点它走输入器 */
+    if(t.id==="o-avatar"&&state.avatarDone)stage=Math.max(stage,1);
+    /* 流程预置的「意外解锁」（主流程 A2）：模拟系统在后台记录后突然颁发 */
+    if(state.bonusStages&&state.bonusStages[t.id])stage=Math.max(stage,state.bonusStages[t.id]);
+    const done=stage>=total;
+    const status=stage<=0?"locked":(done?"unlocked":"progress");
+    const cur=stage>0?t.tiers[stage-1]:null;
+    const next=done?null:t.tiers[stage];
+    const fam=TAG_FAMILIES.find(f=>f.key===t.family)||TAG_FAMILIES[0];
+    const hint=lag?"正在整理记录":(status==="locked"?"待相遇":`已收录 · ${(t.earnedAt||"").slice(5).replace("-","/")}`);
+    return {...t,fam,tint:fam.tint,status,stage,total,
+      display:cur?cur.name:t.tiers[0].name,
+      next,hint,
+      earnedAt:stage>0?(t.earnedAt||"2026-11-04"):null};
+  });
+}
+const collectedTags=()=>computedBadges().filter(b=>b.stage>0);
+
+function badgeById(id){
+  const bs=computedBadges();
+  return bs.find(b=>b.id===id)||bs.find(b=>b.stage>0)||bs[0];
+}
+function visibleBadges(){
+  if(state.currentRoute==="badge-wall-empty")return [];
+  const bs=computedBadges();
+  if(state.badgeFilter==="unlocked"||state.badgeFilter==="collected")return bs.filter(b=>b.stage>0);
+  if(state.badgeFilter==="locked")return bs.filter(b=>b.stage===0);
+  if(TAG_FAMILIES.some(f=>f.key===state.badgeFilter))return bs.filter(b=>b.family===state.badgeFilter);
+  return bs;
+}
+
+function setRouteContext(route){
+  const r=routeOf(route);
+  if(r.kind==="calendar"||r.kind==="badge"||r.kind==="gallery"||r.kind==="detail")state.globalTab="stamp";
+  if(r.kind==="points")state.globalTab="points";
+  if(r.kind==="calendar")state.stampView="calendar";
+  if(r.kind==="badge")state.stampView="badges";
+  if(r.filter)state.badgeFilter=r.filter;
+  if(r.recordId)state.selectedRecordId=r.recordId;
+  if(r.tab)state.globalTab=r.tab;
+}
+
+function applyStepState(step){
+  state.couponClaimed=new Set();
+  resetScene(step.scene||"normal");
+  /* 流程步骤可预置领券进度，用于演示「领满 6 张」之后的形态 */
+  if(step.coupons){
+    const ids=[];POINT_COUPONS.forEach((c,ci)=>c.items.forEach((_,ii)=>ids.push(`${ci}-${ii}`)));
+    ids.slice(0,step.coupons).forEach(id=>state.couponClaimed.add(id));
+  }
+  if(step.avatarDone)state.avatarDone=true;
+  /* 主流程 A2：预置「意外解锁」的档位，模拟系统后台记录后自动颁发 */
+  state.bonusStages=step.preset||{};
+  state.selectedMonth=step.month||"2026-11";
+  state.currentRoute=step.route;
+  state.sheet=null;
+  if(step.badgeId)state.selectedBadgeId=step.badgeId;
+  if(step.focus==="favorite"){
+    const r=state.records.find(x=>x.id==="r4");if(r)r.favorite=true;
+  }
+  setRouteContext(step.route);
+  if(step.autoSheet){state.sheet=step.autoSheet;state.sheetOrigin=step.route;}
+}
+
+function routeDefaultScene(route){
+  if(route==="stamp-calendar-empty"||route==="badge-wall-empty")return "empty";
+  if(route==="stamp-calendar-newbie"||route==="badge-wall-newbie")return "newbie";
+  if(route==="stamp-calendar-syncing")return "syncing";
+  if(route==="badge-computing")return "computing";
+  if(route==="record-image-failed")return "image-failed";
+  if(route==="points-home")return "points-unchecked";
+  if(route==="stamp-calendar-fallback"||route==="record-detail-meituan")return "after-meituan";
+  return "normal";
+}
+
+resetScene("normal");
+
+/* ⑤ PAGE VIEWS */
+function stampSwitch(active){return `<div class="stamp-switch">
+  <button class="${active==="calendar"?"on":""}" data-act="switch-stamp-view" data-view="calendar">记录日历</button>
+  <button class="${active==="badges"?"on":""}" data-act="switch-stamp-view" data-view="badges">印章墙</button>
+</div>`;}
+
+function topBar(title="印章",sub=""){return `<div class="product-top"><button class="round-btn" data-act="utility-settings" aria-label="设置">⚙</button><div class="product-title">${title}</div><button class="round-btn" data-act="top-m-entry" aria-label="M 入口（语义待确认）">M</button></div>`;}
+
+/* 日期格子状态演示：B/C1/C2/C3 演示「今天」格(16日)。
+   一个可切换的日历即可表达全部 4 种情况，无需做成独立状态帧。
+   A1/A2（非今天的有/无数据格）由日历上已有的真实数据格展示，不再单独演示。
+   登记中的图用真实商品图 + 虚线半透明（class=pending），不使用沙漏图标。 */
+const DEMO_TODAY="2026-11-16";
+const CELL_DEMO_LABELS=[["B","空·今天"],["C1","登记中"],["C2","已登记"],["C3","多单·今"]];
+const CELL_DEMO_DESC={B:"B 无数据 · 今天 → 橙色空格",C1:"C1 1 单登记中 · 今天 → 虚线半透明图",C2:"C2 1 单登记完成 · 今天 → 清晰图",C3:"C3 多单 · 今天 → 合并一格（角标 2）"};
+function demoCellOverride(date,d){
+  const s=state.cellDemo;
+  if(!s)return null;
+  const isTarget=date===DEMO_TODAY;
+  if(!isTarget||!state.selectedMonth.startsWith("2026-11"))return null;
+  const tag=`<span class="demo-cell-tag">${s}</span>`,act=`data-act="demo-cell" data-demo="${s}"`;
+  const img=(cls,src)=>`<img class="${cls}" src="${src}" alt=""><span class="day-num">${d}</span>`;
+  if(s==="B")return `<button class="day demo-b" ${act}>${tag}${d}</button>`;
+  if(s==="C1")return `<button class="day has-record today-cell demo-focus" ${act}>${tag}${img("pending","./assets/records/order-eleme-latte.webp")}</button>`;
+  if(s==="C2")return `<button class="day has-record today-cell demo-focus" ${act}>${tag}${img("","./assets/records/order-eleme-latte.webp")}</button>`;
+  if(s==="C3")return `<button class="day has-record today-cell demo-focus" ${act}>${tag}${img("","./assets/records/order-eleme-latte.webp")}<span class="day-count">2</span></button>`;
+  return null;
+}
+function calendarCells(){
+  const [y,m]=state.selectedMonth.split("-").map(Number);
+  const days=new Date(y,m,0).getDate();
+  const jsDay=new Date(y,m-1,1).getDay();
+  const lead=(jsDay+6)%7;
+  const cells=[];
+  for(let i=0;i<lead;i++)cells.push(`<button class="day blank" tabindex="-1"></button>`);
+  for(let d=1;d<=days;d++){
+    const date=`${y}-${pad2(m)}-${pad2(d)}`;
+    const demo=demoCellOverride(date,d);
+    if(demo){cells.push(demo);continue;}
+    const rs=recordsOnDate(date);
+    const today=date==="2026-11-16";
+    const syncing=state.records.find(r=>r.localDate===date&&r.status==="SYNCING");
+    if(rs.length){
+      const cover=rs[0];
+      cells.push(`<button class="day has-record${today?" today-cell":""}" data-act="open-day-records" data-date="${date}" aria-label="${d}日${today?"（今天）":""}，${rs.length}条记录">
+        <img src="${cover.image}" alt=""><span class="day-num">${d}</span>${rs.length>1?`<span class="day-count">${rs.length}</span>`:""}
+      </button>`);
+    }else if(syncing){
+      cells.push(`<button class="day syncing" data-act="syncing-info" aria-label="${d}日，订单同步中"><span class="sync-glyph">↻</span><span class="day-num">${d}</span></button>`);
+    }else cells.push(`<button class="day${today?" today-cell":""}" data-act="empty-day" data-date="${date}">${d}</button>`);
+  }
+  return cells.join("");
+}
+
+function calendarView(){
+  const recs=monthRecords();
+  const cover=recs[0]?.image||"./assets/ui/empty-calendar.svg";
+  const alt=recs[1]?.image||"./assets/defaults/global-default.svg";
+  const sync=state.currentRoute==="stamp-calendar-syncing";
+  const fallback=state.currentRoute==="stamp-calendar-fallback";
+  return `<div class="mobile-page paper-bg">
+    ${topBar("印章")}${stampSwitch("calendar")}
+    <div class="page-scroll">
+      <section class="today"><h1>${state.selectedMonth==="2026-11"?"今天":monthLabel(state.selectedMonth)}</h1><p>${state.selectedMonth==="2026-11"?"2026年11月16日，周一":"按订单业务时间归档"}</p></section>
+      <section class="cell-demo" aria-label="日期格子状态切换">
+        <div class="cell-demo-head"><b>日期格子状态</b><span>${state.cellDemo?CELL_DEMO_DESC[state.cellDemo]:"点标签切换，点高亮格看抽屉"}</span></div>
+        <div class="cell-demo-chips">${CELL_DEMO_LABELS.map(([k,lab])=>`<button class="cell-demo-chip ${state.cellDemo===k?"on":""}" data-act="set-cell-demo" data-demo="${k}"><b>${k}</b><span>${lab}</span></button>`).join("")}</div>
+        <div class="cell-demo-foot">${state.cellDemo?`<button class="cell-demo-reset" data-act="clear-cell-demo">还原真实数据 ×</button>`:"当前为真实数据"}</div>
+      </section>
+      <section class="calendar-card">
+        <div class="week-row"><span>周一</span><span>周二</span><span>周三</span><span>周四</span><span>周五</span><span>周六</span><span>周日</span></div>
+        <div class="day-grid">${calendarCells()}</div>
+      </section>
+      ${state.scene==="newbie"?`<section class="newbie-cta"><img class="newbie-art" src="assets/badges/badge-cat-hello.png" alt=""><div class="newbie-copy"><b>你的小喵图鉴已开张</b><span>接下来的每一餐，都可能留下一个专属小印记。</span></div><button class="newbie-btn" data-act="newbie-to-wall">看看图鉴 ›</button></section>`:""}
+      <section class="month-section">
+        <button class="month-summary" data-act="open-month-records"><small>本月</small><div class="month-total"><b>${monthQty()}</b><span>杯</span></div><div class="month-shops">${monthShops()} 家店铺</div><img src="${cover}" alt="本月代表记录"></button>
+        <button class="album-entry" data-act="open-month-gallery"><div class="album-stack"><img src="${cover}" alt=""><img src="${alt}" alt=""></div><span>月度回顾</span><b>查看相册 ›</b></button>
+      </section>
+      <div class="source-tip"><i>${sync?"⋯":fallback?"美":state.scene==="newbie"?"✦":"✓"}</i><span>${sync?"订单已接收，达到有效状态后会自动进入日历。":fallback?"美团订单未返回图片，已命中后台配置图 img-rule-mt-coupon-01。":state.scene==="newbie"?"小喵会从之后的真实饮食记录里，慢慢发现你的生活习惯，并在合适的时候自动收录。":"记录由有效优惠券订单自动生成，无需手工上传。"}</span></div>
+    </div>
+  </div>`;
+}
+
+function tagCard(b,i){
+  const owned=b.stage>0;
+  const cls=owned?"": "locked";
+  const mark=owned?"已收录":"待相遇";
+  const date=owned&&b.earnedAt?b.earnedAt.slice(5).replace("-","/"):"";
+  return `<button class="tag-card ${owned?b.status:"locked"}" data-act="open-badge-detail" data-badge="${b.id}" style="--tint:${b.tint};--r:${i%2?"1.4deg":"-1.6deg"}" aria-label="${b.display}，${owned?"已收录":"待相遇"}">
+    <span class="tag-mark ${owned?"":"waiting"}">${mark}</span>
+    <div class="tag-seal ${cls}${b.art?" has-art":""}">${b.art?`<img class="seal-art" src="${b.art}" alt="">`:b.seal}</div>
+    <strong class="tag-name">${b.display}</strong>
+    <span class="tag-story">${b.story}</span>
+    <span class="tag-hint ${owned?"hot":""}">${owned?`收录于 ${date||"最近"}`:"也许哪天，你会遇见它"}</span>
+  </button>`;
+}
+
+function badgeWallView(){
+  const bs=visibleBadges();
+  const all=computedBadges();
+  const got=collectedTags().length;
+  const famKey=state.badgeFilter;
+  const grouped=famKey==="all"||famKey==="collected"||famKey==="unlocked"||famKey==="locked"
+    ?TAG_FAMILIES
+    :TAG_FAMILIES.filter(f=>f.key===famKey);
+  const sections=grouped.map(f=>{
+    const items=bs.filter(b=>b.family===f.key);
+    if(!items.length)return "";
+    return `<section class="fam-section" style="--tint:${f.tint}">
+      <div class="fam-head"><b>${f.name}</b></div>
+      <p class="fam-hint">${f.hint}</p>
+      <div class="tag-grid">${items.map(tagCard).join("")}</div>
+    </section>`;
+  }).join("");
+  const mystery=(famKey==="all"&&bs.length)?`<section class="fam-section mystery-section">
+    <div class="fam-head"><b>还有一些神秘来客</b><span>?</span></div>
+    <p class="fam-hint">有些小喵不会提前介绍自己，只在某个时刻突然出现。</p>
+    <div class="tag-grid">
+      <button class="tag-card mystery-card" data-act="mystery-hint">
+        <div class="tag-seal mystery-seal">?</div>
+        <strong class="tag-name">？？？</strong>
+        <span class="tag-story">名字和故事先保密，等遇见的那天再揭晓。</span>
+        <span class="tag-hint">一份未知的小惊喜</span>
+      </button>
+    </div>
+  </section>`:"";
+  return `<div class="mobile-page paper-bg">
+    ${topBar("印章")}${stampSwitch("badges")}
+    <div class="page-scroll">
+      <section class="tag-wall-head">
+        <button class="tag-wall-title" data-act="open-badge-filter">小喵图鉴<span class="tag-wall-arrow">⌄</span></button>
+        <p class="tag-wall-sub">你只管好好吃饭，小喵负责发现生活里的小成就。</p>
+        <div class="collection-line"><b>${state.progressLag?"…":got}</b><span>枚已收录</span><em>每一枚都来自真实生活</em></div>
+      </section>
+      ${state.progressLag?`<div class="notice-bar"><i>⋯</i><div>小喵正在整理最近的生活记录，稍后会自动更新图鉴。</div></div>`:""}
+      <div class="discovery-note"><i>✦</i><span>不用刻意完成任务，也不用手动领取。生活里的小习惯，会慢慢变成你的专属印记。</span></div>
+      <div class="fam-chips">${[["all","全部"],["collected","已收录"],...TAG_FAMILIES.map(f=>[f.key,f.name])].map(([k,n])=>`<button class="fam-chip ${(state.badgeFilter===k||(k==="collected"&&state.badgeFilter==="unlocked"))?"on":""}" data-act="set-badge-filter" data-filter="${k}">${n}</button>`).join("")}</div>
+      ${bs.length?sections:`<div class="month-list-empty"><div style="font-size:32px;margin-bottom:12px">◎</div>这里还没有可展示的印章<br><span style="display:block;margin-top:7px">小喵会继续整理你的生活记录</span></div>`}
+      ${mystery}
+    </div>
+  </div>`;
+}
+
+function galleryView(){
+  const recs=monthRecords();
+  return `<div class="mobile-page gallery-page paper-bg">
+    <div class="gallery-head"><button class="round-btn" data-act="gallery-layout" aria-label="布局">□</button><button data-act="open-month-picker" style="flex:1;border:0;background:transparent"><h1>${monthLabel(state.selectedMonth)}⌄</h1></button><button class="round-btn" data-act="close-gallery" aria-label="关闭">×</button></div>
+    <div class="page-scroll" style="padding:0">
+      <div class="gallery-grid">${recs.length?recs.map((r,i)=>`<div class="polaroid" style="--rot:${i%3===0?"-1.5deg":i%3===1?"1deg":"-.4deg"}"><img src="${r.image}" alt="${r.title}"><strong>${r.title}</strong><time>${timeOf(r)}</time></div>`).join(""):`<div class="gallery-empty">这个月还没有符合条件的订单记录</div>`}</div>
+    </div>
+  </div>`;
+}
+
+function detailView(){
+  const rec=recordById(state.selectedRecordId)||recordById(routeOf(state.currentRoute).recordId);
+  if(!rec)return `<div class="mobile-page placeholder-page"><div class="placeholder-icon">⌁</div><h1>记录不存在</h1></div>`;
+  const sourceMap={ELEME_ORDER:"饿了么订单图",ADMIN_RULE:"后台配置图",PLATFORM_DEFAULT:"平台默认图",SYSTEM_DEFAULT:"系统默认图"};
+  return `<div class="mobile-page paper-bg">
+    <div class="product-top"><button class="round-btn" data-act="detail-back">‹</button><div class="product-title">订单记录</div><div class="top-spacer"></div></div>
+    <div class="page-scroll" style="padding:0 0 25px">
+      <div class="detail-hero"><img src="${rec.image}" alt="${rec.title}"></div>
+      <div class="detail-body">${rec.imageFallbackReason?`<div class="notice-bar bad"><i>!</i><div>图片已按兜底链回退：先用后台配置图，再平台默认图，最后系统默认图，日期格不会留空白。${rec.imageFallbackReason?`<br>${rec.imageFallbackReason}`:""}</div></div>`:""}<div class="detail-kicker"><span class="platform-dot ${rec.platform}">${rec.platform==="eleme"?"饿":"美"}</span><span>${rec.platform==="eleme"?"饿了么":"美团"} · 订单自动入历</span></div><h1>${rec.title}</h1><div class="detail-meta">${rec.shopName} · ${timeOf(rec)}</div>
+        <div class="detail-rows"><div class="detail-row"><span>图片来源</span><b>${sourceMap[rec.imageSource]}</b></div><div class="detail-row"><span>记录状态</span><b>${rec.status}${rec.imageFallbackReason?` <span class="fail-tag">已兜底</span>`:""}</b></div><div class="detail-row"><span>城市 / 数量</span><b>${rec.city} · ${rec.quantity} 杯</b></div>${rec.imageRuleId?`<div class="detail-row"><span>命中配置</span><b>${rec.imageRuleId} · v${rec.imageRuleVersion}</b></div>`:""}${rec.imageFallbackReason?`<div class="detail-row"><span>取图结果</span><b>重试中 · 成功后更新</b></div>`:""}<div class="detail-row"><span>订单号</span><b>${rec.orderKey.split("|")[1].slice(0,2)}****${rec.orderKey.split("|")[1].slice(-2)}</b></div></div>
+        <button class="favorite-btn" data-act="toggle-detail-favorite" data-record="${rec.id}">${rec.favorite?"★ 已收藏":"☆ 收藏这条记录"}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function externalView(platform){
+  const isEleme=platform==="eleme";
+  return `<div class="mobile-page external-page"><div class="external-mark">${isEleme?"饿":"美"}</div><h1>${isEleme?"饿了么":"美团"}订单（外部步骤）</h1><p>交互稿不还原第三方下单页面。点击下方按钮，模拟一笔优惠券订单达到有效状态并回流。</p><div class="external-card"><div class="external-row"><span>订单状态</span><b>已完成 / 已核销</b></div><div class="external-row"><span>优惠券</span><b>coupon-template-01</b></div><div class="external-row"><span>订单图片</span><b>${isEleme?"回传商品图":"不回传"}</b></div><div class="external-row"><span>幂等键</span><b>${isEleme?"E2005":"M2005"} + 券实例</b></div></div><button class="simulate-btn" data-act="${isEleme?"simulate-eleme-order":"simulate-meituan-order"}">模拟订单回流</button></div>`;
+}
+
+function ruleDemoView(){const rule=IMAGE_RULES[0];return `<div class="mobile-page external-page"><div class="external-mark">⌘</div><h1>后台图片规则命中</h1><p>美团未回传订单图，系统按白名单规则从高到低匹配。</p><div class="external-card"><div class="external-row"><span>平台</span><b>美团</b></div><div class="external-row"><span>匹配字段</span><b>${rule.matchType}</b></div><div class="external-row"><span>匹配值</span><b>${rule.matchValue}</b></div><div class="external-row"><span>优先级 / 版本</span><b>${rule.priority} / v${rule.version}</b></div><div class="external-row"><span>最终来源</span><b>ADMIN_RULE</b></div></div><button class="simulate-btn" data-act="simulate-meituan-order">使用配置图写入日历</button></div>`;}
+
+const COIN_SVG=`<svg class="pts-coin" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="coinGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE29A"/><stop offset="1" stop-color="#F2A11F"/></linearGradient></defs><circle cx="12" cy="12" r="10" fill="url(#coinGrad)"/><circle cx="12" cy="12" r="7.6" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.3"/><text x="12" y="16.2" text-anchor="middle" font-size="10.5" font-weight="900" fill="#8A5000">¥</text></svg>`;
+
+function pointsView(){
+  return `<div class="mobile-page points-page">
+    <div class="page-scroll pts-scroll">
+      <section class="pts-head">
+        <div class="pts-cap"><div class="pts-cap-pill"><button data-act="points-cap" aria-label="更多">•••</button><button data-act="points-cap" aria-label="收起">◎</button></div></div>
+        <h1 class="pts-title"><span>领券下单</span>，自动记账</h1>
+        <div class="pts-hero">
+          <div class="pts-hero-main">
+            <div class="pts-label">${COIN_SVG}我的积分</div>
+            <div class="pts-balance">1779<small>分</small></div>
+          </div>
+          <img class="pts-star" src="./assets/ui/points-star.svg" alt="积分星球">
+        </div>
+        <div class="pts-signin">
+          <p>连续签到 <b>1</b> 天<i>·</i>今日 +3</p>
+          <button class="pts-signin-btn" data-act="points-checkin">去签到</button>
+        </div>
+        <div class="pts-grid" role="navigation" aria-label="金刚区">${POINT_ENTRIES.map(e=>`<button class="pts-entry" data-act="points-entry" data-entry="${e.name}" title="${e.name}"><img src="${e.icon}" alt="${e.name}"><span>${e.name}</span></button>`).join("")}</div>
+      </section>
+      <div class="pts-body">
+        <div class="pts-sec-head"><h2>领外卖红包</h2><span>以活动实际资格为准</span></div>
+        
+        <div class="pts-cols">${POINT_COUPONS.map((col,ci)=>`<div class="pts-col ${col.tone}"><span class="pts-col-stamp">券</span><div class="pts-col-brand"><span class="pts-brand-dot">${col.badge}</span><b>${col.brand}</b></div>${col.items.map((it,ii)=>{const cid=`${ci}-${ii}`,got=state.couponClaimed.has(cid);return `<div class="pts-coupon${got?" got":""}"><b>${it.title}</b><span>${it.sub}</span><button class="pts-coupon-btn${got?" on":""}" data-act="points-coupon" data-title="${it.title}" data-cid="${cid}" ${got?"disabled":""}>${got?"已领 ✓":it.btn}</button></div>`;}).join("")}</div>`).join("")}</div>
+        <div class="pts-banner">
+          <div class="pts-banner-art"><h3>这周<em>我请客!</em><u></u></h3><img src="./assets/records/order-eleme-peach.jpg" alt=""><img class="second" src="./assets/records/order-eleme-berry.webp" alt=""></div>
+          <div class="pts-banner-foot"><div><b>第3期 助力冲榜免费喝奶茶</b><small>活动时间：11.07 - 11.11 ｜ 71 人参与</small></div><button class="pts-banner-btn" data-act="points-banner">参与活动</button></div>
+        </div>
+        <div class="source-tip" style="margin:13px 2px 4px"><i>✓</i><span>红包与活动位由活动后台配置；金刚区 6 个入口由各业务线接入，本稿只还原位置与信息层级。</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function placeholderView(tab){
+  const map={points:["积分","◈","本交互稿只确认积分是全局 Tab，不定义余额、明细、获取或扣减。"],mall:["积分商城","◇","本交互稿不定义商品、库存、兑换、支付、物流和退款。"],mine:["我的","○","本交互稿不定义账户、权益、客服与设置详情。"]};
+  const [name,ic,copy]=map[tab];return `<div class="mobile-page placeholder-page"><div class="placeholder-icon">${ic}</div><h1>${name}</h1><p>${copy}<br>请在独立 PRD 中继续设计。</p></div>`;
+}
+
+function frameView(){
+  const r=routeOf(state.currentRoute);
+  if(r.kind==="calendar")return calendarView();
+  if(r.kind==="badge")return badgeWallView();
+  if(r.kind==="gallery")return galleryView();
+  if(r.kind==="detail")return detailView();
+  if(r.kind==="external")return externalView(r.platform);
+  if(r.kind==="rule")return ruleDemoView();
+  if(r.kind==="points")return pointsView();
+  if(r.kind==="placeholder")return placeholderView(r.tab);
+  return calendarView();
+}
+
+/* ⑥ SHEET / MODAL VIEWS */
+function recordCards(recs){return recs.map(r=>`<div class="record-card"><img src="${r.image}" alt="${r.title}"><button class="record-star ${r.favorite?"on":""}" data-act="toggle-favorite" data-record="${r.id}" aria-label="${r.favorite?"取消收藏":"收藏"}">${r.favorite?"★":"☆"}</button><strong>${r.title}</strong><time>${timeOf(r)}</time></div>`).join("");}
+
+function sheetHeader(title,sub=""){return `<div class="sheet-handle"></div><div class="sheet-head"><div class="sheet-spacer"></div><div class="sheet-title"><h2>${title}</h2>${sub?`<p>${sub}</p>`:""}</div><button class="sheet-close" data-act="close-sheet" aria-label="关闭">×</button></div>`;}
+
+function currentSheetView(){
+  if(!state.sheet)return "";
+  /* 记录中：下单后轻量告知，尚未入册，不计入统计与印章。底部抽屉 + 真实商品图（虚线半透明） */
+  if(state.sheet==="record-pending"){
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet rec-drawer">
+      ${sheetHeader("记录中","这一单，小喵先记下了")}
+      <img class="rec-thumb pending" src="./assets/records/order-eleme-latte.webp" alt="生椰拿铁 · 记录中">
+      <p class="rec-drawer-desc">等你收货或结算，它才会正式写进日历。<br>印章，也在那一刻一起登记入册。</p>
+      <div class="rec-foot">现在还不计入杯数与印章，不会打扰你。</div>
+      <div class="modal-actions"><button class="primary" data-act="close-sheet">知道了</button></div>
+    </div>`;
+  }
+  /* 记录成功：收货/结算后，日历与印章同一刻落定。底部抽屉 + 真实商品图（正常样式） */
+  if(state.sheet==="record-success"){
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet rec-drawer">
+      ${sheetHeader("记录成功","收货那一刻，正式落定")}
+      <img class="rec-thumb" src="./assets/records/order-eleme-latte.webp" alt="生椰拿铁 · 已登记">
+      <p class="rec-drawer-desc">这一单已写进日历，陪你走过的生活，<br>小喵也替你收进了图鉴。</p>
+      <div class="rec-foot">日历与印章，从这一刻才算数。</div>
+      <div class="modal-actions"><button class="primary" data-act="close-sheet">去看看日历</button></div>
+    </div>`;
+  }
+  /* C3 多单合并：同一天多单，抽屉里 2 个奶茶一个登记中（虚线图）、一个登记成功（清晰图） */
+  if(state.sheet==="cell-demo-records"){
+    const card=(cls,src,name,time,stateTag)=>`<div class="record-card ${cls}"><img src="${src}" alt="${name}"><span class="rec-state-tag ${cls}">${stateTag}</span><strong>${name}</strong><time>${time}</time></div>`;
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet">
+      ${sheetHeader("11月16日 · 今天","同一天 2 单 · 合并记录")}
+      <div class="record-grid">${card("pending","./assets/records/order-eleme-latte.webp","生椰拿铁 · 登记中","今天 09:41 下单","登记中")}${card("","./assets/records/order-eleme-peach.jpg","白桃乌龙 · 已登记","今天 14:15 已收货","已登记")}</div>
+      <div class="rec-foot">两单合并为日历上的一格（角标 2）。登记中的商品图为虚线半透明，登记完成的是正常清晰图；等到都收货后，两枚印章在同一刻入册。</div>
+    </div>`;
+  }
+  if(state.sheet==="month-records"){
+    const recs=monthRecords();
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet">${sheetHeader("本月",`${monthQty()} 杯 · ${monthShops()} 家店铺`)}${recs.length?`<div class="record-grid">${recordCards(recs)}</div>`:`<div class="month-list-empty">本月暂无符合条件的订单记录</div>`}</div>`;
+  }
+  if(state.sheet==="day-records"){
+    const recs=recordsOnDate(state.selectedDate||"2026-11-14");
+    const label=state.selectedDate?`${Number(state.selectedDate.slice(5,7))}月${Number(state.selectedDate.slice(8,10))}日`:"当日";
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet">${sheetHeader(label,`${recs.length} 条订单记录`)}${recs.length?`<div class="record-grid">${recordCards(recs)}</div>`:`<div class="month-list-empty">这一天还没有有效订单记录</div>`}</div>`;
+  }
+  if(state.sheet==="month-picker"){
+    const months=["2026-06","2026-07","2026-08","2026-09","2026-10","2026-11"];
+    const countOf=m=>state.records.filter(r=>r.status==="ACTIVE"&&r.localDate.startsWith(m)).length;
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet">${sheetHeader("选择月份","只看有外卖图片的月份 · 按订单业务时间归档")}<div class="month-options">${months.map(m=>{const n=countOf(m);return n?`<button class="month-option ${state.selectedMonth===m?"on":""}" data-act="select-month" data-month="${m}" title="${n} 张外卖图片"><b>${monthLabel(m)}</b><small>${n} 张图片</small></button>`:`<button class="month-option none" disabled aria-disabled="true" title="这个月没有外卖图片"><b>${monthLabel(m)}</b><small>暂无图片</small></button>`;}).join("")}<button class="month-option future" disabled aria-disabled="true"><b>2026年12月</b><small>未来月份</small></button></div></div>`;
+  }
+  if(state.sheet==="badge-filter"){
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet">${sheetHeader("筛选标签","只改变展示，不改变标签归属")}<div style="display:grid;gap:6px">${[["all","全部标签"],["collected","我的收藏"],...TAG_FAMILIES.map(f=>[f.key,f.name])].map(([k,n])=>`<button class="month-option ${(state.badgeFilter===k||(k==="collected"&&state.badgeFilter==="unlocked"))?"on":""}" data-act="choose-badge-filter" data-filter="${k}">${n}</button>`).join("")}</div></div>`;
+  }
+  if(state.sheet==="badge-detail-unlocked"||state.sheet==="badge-detail-locked"){
+    const b=badgeById(state.selectedBadgeId);
+    const owned=b.stage>0;
+    const date=b.earnedAt?b.earnedAt.slice(5).replace("-","/"):"";
+    const art=b.art
+      ?`<img class="seal-art" src="${b.art}" alt="${b.display}">`
+      :`<div class="tag-seal big has-mark" style="--tint:${b.tint}">${b.seal}</div>`;
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet tag-detail life-detail" style="--tint:${b.tint}">
+      ${sheetHeader(b.display,`${b.fam.name} · ${owned?"已收录":"待相遇"}`)}
+      <div class="tag-hero">
+        <div class="detail-seal ${owned?"":"waiting"}">${art}</div>
+        <div class="tag-hero-meta">${owned?`收录于 ${date||"最近"}`:"还没遇见这只小喵"}</div>
+        <p class="tag-hero-story">「${b.story}」</p>
+        ${owned&&b.how?`<div class="badge-how"><span>怎么获得</span><p>${b.how}</p></div>`:""}
+      </div>
+      <p class="detail-note">${owned?"这枚印章来自你真实的生活记录。":"不用刻意做什么。小喵会继续记录，等它自然出现。"}</p>
+      <div class="modal-actions">
+        ${owned?`<button class="secondary" data-act="close-sheet">收好</button><button class="primary" data-act="share-badge" data-badge="${b.id}">分享这枚小喵</button>`:`<button class="primary" data-act="close-sheet">知道啦</button>`}
+      </div>
+    </div>`;
+  }
+  if(state.sheet==="badge-unlock"){
+    const b=badgeById("h-shop");
+    const art=b.art
+      ?`<img class="seal-art" src="${b.art}" alt="${b.display}">`
+      :`<div class="tag-seal big" style="--tint:${b.tint}">${b.seal}</div>`;
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet seal-gain life-gain">
+      <div class="sheet-handle"></div>
+      <div class="gain-art">${art}</div>
+      <div class="gain-kicker">生活里的小惊喜</div>
+      <h2 class="gain-title">${b.display}</h2>
+      <p class="gain-desc">小喵从你的日常记录里，发现了一个有趣的小习惯。</p>
+      <div class="gain-divider"></div>
+      <p class="gain-footnote">不用领取，也不用完成任务。你的生活，本来就值得被记录。</p>
+      <div class="modal-actions"><button class="secondary" data-act="close-sheet">先收好</button><button class="primary" data-act="share-badge" data-badge="${b.id}">分享这枚小喵</button></div>
+    </div>`;
+  }
+  if(state.sheet==="surprise-unlock"){
+    const b=badgeById("t-midnight");
+    const art=b.art
+      ?`<img class="seal-art" src="${b.art}" alt="${b.display}">`
+      :`<div class="tag-seal big" style="--tint:${b.tint}">${b.seal}</div>`;
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet seal-gain life-gain">
+      <div class="sheet-handle"></div>
+      <div class="gain-art">${art}</div>
+      <div class="gain-kicker">生活里的小惊喜</div>
+      <h2 class="gain-title">${b.display}</h2>
+      <p class="gain-desc">原来你已经悄悄收集了这么多深夜时光。</p>
+      <div class="gain-divider"></div>
+      <p class="gain-footnote">这枚不在计划里 · 是小喵在记录里发现的。</p>
+      <div class="modal-actions"><button class="secondary" data-act="close-sheet">先收好</button><button class="primary" data-act="share-badge" data-badge="${b.id}">分享这枚小喵</button></div>
+    </div>`;
+  }
+  if(state.sheet==="newbie-guide"){
+    const b=badgeById("o-hello");
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet seal-gain first-seal-life">
+      <div class="sheet-handle"></div>
+      <div class="gain-art"><img class="seal-art" src="${b.art}" alt="${b.display}"></div>
+      <div class="gain-kicker">新印章已收录</div>
+      <h2 class="gain-title">${b.display}</h2>
+      <p class="gain-desc">你的印章墙，从这一枚开始。</p>
+      <div class="gain-divider"></div>
+      <p class="gain-footnote">往后的每一餐，都可能留下一个关于你的小故事。</p>
+      <div class="modal-actions"><button class="secondary" data-act="share-badge" data-badge="o-hello">分享这枚小喵</button><button class="primary" data-act="newbie-to-wall">看看我的印章墙</button></div>
+    </div>`;
+  }
+  if(state.sheet==="avatar-editor"){
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet avatar-editor">
+      ${sheetHeader("编辑个人资料","给自己换个喜欢的样子")}
+      <div class="avatar-row">
+        <button class="avatar-frame ${state.avatarPicked?"picked":""}" data-act="avatar-choose" aria-label="选择头像">${state.avatarPicked?"🐱":"＋"}</button>
+        <div><b>选择头像</b><small>调用微信原生头像选择，不额外授权</small></div>
+      </div>
+      <div class="avatar-field">
+        <label for="nickInput">昵称<small>微信原生昵称键盘，不打扰</small></label>
+        <input class="nick-input" id="nickInput" maxlength="16" placeholder="给自己起个名" value="${state.nickName||""}">
+      </div>
+      <div class="modal-actions"><button class="secondary" data-act="close-sheet">再想想</button><button class="primary" data-act="avatar-save">保存资料</button></div>
+    </div>`;
+  }
+  if(state.sheet==="avatar-unlock"){
+    const b=badgeById("o-avatar");
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet seal-gain life-gain">
+      <div class="sheet-handle"></div>
+      <div class="gain-art"><img class="seal-art" src="${b.art}" alt="${b.display}"></div>
+      <div class="gain-kicker">新印章已收录</div>
+      <h2 class="gain-title">${b.display}</h2>
+      <p class="gain-desc">这一次，小喵终于有了你的模样。</p>
+      <div class="gain-divider"></div>
+      <p class="gain-footnote">一张头像，一个昵称，都是你留在这里的小小印记。</p>
+      <div class="modal-actions"><button class="secondary" data-act="share-badge" data-badge="o-avatar">分享这枚小喵</button><button class="primary" data-act="avatar-collect">收下，回印章墙</button></div>
+    </div>`;
+  }
+  if(state.sheet==="coupon-unlock"){
+    const b=badgeById("o-wool");
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet seal-gain life-gain">
+      <div class="sheet-handle"></div>
+      <div class="gain-art"><div class="tag-seal big" style="--tint:${b.tint}">${b.seal}</div></div>
+      <div class="gain-kicker">小喵发现了你的小本领</div>
+      <h2 class="gain-title">${b.display}</h2>
+      <p class="gain-desc">你总能把优惠安排得明明白白，这份生活智慧也值得一枚印章。</p>
+      <div class="gain-divider"></div>
+      <p class="gain-footnote">它是从你的日常里自然长出来的，不用特意收集。</p>
+      <div class="modal-actions"><button class="secondary" data-act="close-sheet">收好</button><button class="primary" data-act="share-badge" data-badge="o-wool">分享这枚小喵</button></div>
+    </div>`;
+  }
+  if(state.sheet==="badge-share"){
+    const b=badgeById(state.shareBadgeId||state.selectedBadgeId||"o-hello");
+    const art=b.art
+      ?`<img class="seal-art" src="${b.art}" alt="${b.display}">`
+      :`<div class="tag-seal big" style="--tint:${b.tint}">${b.seal}</div>`;
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet share-sheet">
+      ${sheetHeader("分享这枚小喵","把生活里的小成就，分享给朋友")}
+      <div class="share-card-preview">
+        <div class="share-card-top"><span>我的小喵图鉴</span><span>生活印章 · ${b.fam.name}</span></div>
+        <div class="share-card-art">${art}</div>
+        <h3>${b.display}</h3>
+        <p>${b.story}</p>
+        <div class="share-card-bottom"><span>每一餐，都有自己的小故事</span><b>一起遇见小喵 →</b></div>
+      </div>
+      <p class="share-tip">分享卡片预览 · 正式小程序可接入微信原生分享</p>
+      <div class="modal-actions"><button class="secondary" data-act="close-sheet">先不分享</button><button class="primary" data-act="copy-share-copy">复制分享文案</button></div>
+    </div>`;
+  }
+  if(state.sheet==="order-invalidated"){
+    return `<div class="modal-mask" data-act="close-sheet"></div><div class="modal"><div style="width:62px;height:62px;border-radius:20px;background:#f6e8e3;color:#c65a42;display:grid;place-items:center;font-size:27px;margin:0 auto">↺</div><h2>订单已退款</h2><p>对应记录转为 INVALID，已从日历与本月统计中隐藏；普通收藏型印章按当前策略保留。</p><div class="modal-actions"><button class="primary" data-act="close-sheet">知道了</button></div></div>`;
+  }
+  return "";
+}
+
+/* ⑦ REVIEW SHELL RENDERERS */
+function renderScreen(){
+  const oldScroll=document.querySelector("#screen .page-scroll");
+  if(oldScroll&&state.scrollKey)state.scrollStore[state.scrollKey]=oldScroll.scrollTop;
+  document.getElementById("screen").innerHTML=frameView();
+  const r=routeOf(state.currentRoute);
+  document.getElementById("stageName").textContent=r.name;
+  const sel=document.getElementById("frameSelect");
+  sel.innerHTML=PAGE_TREE.map(g=>g.pages.map(p=>`<optgroup label="${p.code} ${p.name}">${p.frames.map(k=>{const r=routeOf(k);return `<option value="${k}" ${k===state.currentRoute?"selected":""}>${pad2(r.id)} · ${p.name} · ${r.frame}</option>`;}).join("")}</optgroup>`).join("")).join("");
+  state.scrollKey=`${state.currentRoute}|${state.selectedMonth}|${state.stampView}`;
+  const fresh=document.querySelector("#screen .page-scroll");
+  if(fresh&&state.scrollStore[state.scrollKey])fresh.scrollTop=state.scrollStore[state.scrollKey];
+}
+
+function renderTabbar(){
+  const root=document.getElementById("tabbar");
+  const kind=routeOf(state.currentRoute).kind;
+  if(["gallery","detail","external","rule"].includes(kind)){root.innerHTML="";return;}
+  const tabs=[["stamp","印章","◎"],["points","积分","◈"],["mall","积分商城","◇"],["mine","我的","○"]];
+  root.innerHTML=`<nav class="global-tabs" aria-label="全局导航">${tabs.map(([k,n,ic])=>`<button class="${state.globalTab===k?"on":""}" data-act="switch-global-tab" data-tab="${k}"><span class="ico">${ic}</span><span>${n}</span></button>`).join("")}</nav>`;
+}
+
+function renderSheet(){document.getElementById("sheetRoot").innerHTML=currentSheetView();}
+
+function renderRail(){
+  const root=document.getElementById("railBody");
+  let html=`<div class="mode-switch"><button class="mode-btn ${state.railMode==="flow"?"on":""}" data-mode="flow">流程</button><button class="mode-btn ${state.railMode==="page"?"on":""}" data-mode="page">页面</button></div>`;
+  if(state.railMode==="flow"){
+    FLOWS.forEach(g=>{html+=`<div class="group-head">${g.group}<em>${g.flows.length} 条</em></div>`;g.flows.forEach(f=>{html+=`<button class="rail-item ${state.activeFlowId===f.id?"on":""}" data-flow="${f.id}"><span class="rail-dot"></span><span class="rail-name">${f.name}</span><span class="rail-count">${f.steps.length}</span></button>`;});});
+  }else{
+    PAGE_TREE.forEach(g=>{const pages=g.pages.filter(p=>p.code!=="G");if(!pages.length)return;html+=`<div class="group-head">${g.group}<em>${pages.length} 页</em></div>`;pages.forEach(p=>{const on=p.frames.includes(state.currentRoute)||p.sheets.includes(state.sheet);html+=`<button class="page-item ${on?"on":""}" data-page="${p.code}" title="${p.name}：${p.frames.length} 个状态帧 · ${p.sheets.length} 个弹层"><span class="page-code">${p.code}</span><span class="rail-name">${p.name}</span><span class="rail-count">${p.frames.length}</span></button>`;});});
+  }
+  root.innerHTML=html;
+}
+
+function pageByCode(code){for(const g of PAGE_TREE){const p=g.pages.find(x=>x.code===code);if(p)return p;}return null;}
+function pageForCurrent(){for(const g of PAGE_TREE){for(const p of g.pages){if(p.frames.includes(state.currentRoute)||p.sheets.includes(state.sheet))return p;}}return null;}
+
+function renderFlowCol(){
+  const title=document.getElementById("flowTitle"),sub=document.getElementById("flowSub"),root=document.getElementById("flowBody");
+  if(state.railMode==="flow"){
+    const f=flowById(state.activeFlowId);if(!f){root.innerHTML="";return;}
+    title.textContent=`${groupOfFlow(f.id).group} · ${f.id}`;sub.textContent=`${f.name} · ${f.start}`;
+    root.innerHTML=f.steps.map((s,i)=>`${i?`<div class="flow-arrow"></div>`:""}<div class="step ${state.activeStepIndex===i?"on":""} ${s.ext?"ext":""}" data-flow-step="${i}"><div class="step-index">${s.ext?"◇":pad2(i+1)}</div><div><div class="step-title">${s.title}</div><div class="step-sub">${s.sub}</div></div></div>`).join("");
+  }else{
+    const p=pageForCurrent()||PAGE_TREE[0].pages[0];
+    title.textContent=`${p.code} ${p.name}`;
+    sub.textContent=`同一路由 · ${p.frames.length} 个状态帧 · ${p.sheets.length} 个弹层`;
+    let html=`<div class="section-label">STATES / 同一路由下的帧</div>`;
+    html+=p.frames.map((k,i)=>{const meta=p.frameMeta[k];return `<div class="step ${state.currentRoute===k&&!state.sheet?"on":""} ${meta.tag==="状态"?"ext":""}" data-page-route="${k}" title="${k}"><div class="step-index">${pad2(i+1)}</div><div><div class="step-title">${meta.name}</div></div></div>`;}).join("");
+    if(p.sheets.length){html+=`<div class="section-label">SHEETS · 本页弹层</div>`+p.sheets.map(k=>`<div class="step ${state.sheet===k?"on":""}" data-page-sheet="${k}" title="${k}"><div class="step-index" style="border-style:dashed">▸</div><div><div class="step-title">${p.sheetMeta[k].name}</div></div></div>`).join("");}
+    root.innerHTML=html;
+  }
+}
+
+function renderNotes(){
+  const key=state.sheet||state.currentRoute;
+  const n=NOTES[key]||{status:"说明",sections:[{h:"页面",rows:[routeOf(state.currentRoute).name]}]};
+  document.getElementById("noteStatus").textContent=n.status;
+  document.getElementById("noteSub").textContent=`${routeOf(state.currentRoute).name}${state.sheet?` · ${state.sheet}`:""}`;
+  document.getElementById("noteBody").innerHTML=n.sections.map(s=>`<section class="note-section"><h4>${s.h}</h4>${s.rows.map((r,i)=>{const obj=typeof r==="object"?r:{text:r};return `<div class="note-row ${obj.warn?"warn":""}"><i>${pad2(i+1)}</i><span>${obj.text}</span></div>`;}).join("")}</section>`).join("");
+}
+
+function renderAll(){renderScreen();renderTabbar();renderSheet();renderRail();renderFlowCol();renderNotes();}
+
+/* ⑧ NAVIGATION / ACTIONS */
+let toastTimer=null;
+function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.add("on");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("on"),2200);}
+function closeSheet(){if(state.sheet==="badge-share"&&state.shareReturnSheet){state.sheet=state.shareReturnSheet;state.shareReturnSheet=null;}else{state.sheet=null;}renderSheet();renderFlowCol();renderNotes();}
+function openSheet(key){state.sheet=key;state.sheetOrigin=state.currentRoute;renderSheet();renderFlowCol();renderNotes();}
+
+function go(route,{scene=null,keepScene=false}={}){
+  state.sheet=null;
+  if(scene)resetScene(scene);else if(!keepScene)resetScene(routeDefaultScene(route));
+  state.currentRoute=route;
+  setRouteContext(route);
+  const r=routeOf(route);if(r.recordId)state.selectedRecordId=r.recordId;
+  renderAll();
+  /* 新人第一次进印章页：自动弹「初次见面喵」底部抽屉，每个会话只弹一次；
+     流程模式的步骤 02 走 applyStepState 的 autoSheet，不经这里 */
+  if(route==="badge-wall-newbie"&&state.scene==="newbie"&&!state.newbieGuideSeen){
+    state.newbieGuideSeen=true;
+    openSheet("newbie-guide");
+  }
+}
+
+function activateFlowStep(index){
+  const f=flowById(state.activeFlowId);if(!f||!f.steps[index])return;
+  state.activeStepIndex=index;
+  applyStepState(f.steps[index]);
+  renderAll();
+}
+
+function simulateOrder(key){
+  const rec=cloneRecord(key);
+  if(state.processedOrderKeys.has(rec.orderKey)){toast("该订单已处理，未重复生成记录");return;}
+  const firstRun=state.scene==="newbie";
+  const before=monthQty("2026-11");
+  state.records.push(rec);state.processedOrderKeys.add(rec.orderKey);
+  state.scene=firstRun?"after-first":(key==="eleme-new"?"after-eleme":"after-meituan");
+  state.currentRoute=key==="eleme-new"?"stamp-calendar":"stamp-calendar-fallback";
+  state.globalTab="stamp";state.stampView="calendar";state.selectedMonth="2026-11";
+  const unlocked=before<5&&monthQty("2026-11")>=5;
+  renderAll();
+  if(unlocked)openSheet("badge-unlock");
+  toast(firstRun?"首笔订单已自动入历，小喵记下了你的第一段饮食日常":(key==="eleme-new"?"饿了么订单图已自动写入日历":"已命中美团后台配置图并写入日历"));
+}
+
+function setPageSheet(key){
+  /* 菜单解耦（2026-11-16）：菜单点弹窗只开弹窗 + 补内容所需的最小状态，
+     绝不改 currentRoute / globalTab / 月份等导航与业务状态；
+     需要剧情的弹窗（解锁反馈 / 退款失效 / 签到成功）才重置场景，
+     完整剧情演示一律走「流程」模式，菜单不承担剧情。 */
+  if(key==="day-records"&&!state.selectedDate)state.selectedDate="2026-11-14";
+  if(key==="badge-unlock")resetScene("after-eleme");
+  if(key==="order-invalidated")resetScene("refunded");
+  if(key.startsWith("badge-")&&key!=="badge-unlock"&&!state.selectedBadgeId)state.selectedBadgeId=key==="badge-detail-locked"?"h-breadth":"h-shop";
+  /* 菜单解耦补充：详情弹层演示哪个章由章的实际状态决定，避免"已解锁的章被当成未解锁"讲错故事 */
+  /* 详情弹层演示哪一枚由标签实际状态决定：已收弹层优先展示有档位进展的，未点亮弹层优先展示尚未点亮的 */
+  if(key==="badge-detail-locked"&&badgeById(state.selectedBadgeId).stage>0){const cand=computedBadges().find(b=>b.stage===0&&b.tiers.length>1)||computedBadges().find(b=>b.stage===0);if(cand)state.selectedBadgeId=cand.id;}
+  if(key==="badge-detail-unlocked"&&badgeById(state.selectedBadgeId).stage===0){const cand=computedBadges().filter(b=>b.stage>0).sort((a,b)=>(b.status==="progress")-(a.status==="progress"))[0];if(cand)state.selectedBadgeId=cand.id;}
+  openSheet(key);renderAll();
+}
+
+/* ⑨ EVENT DELEGATION */
+document.addEventListener("click",e=>{
+  const actEl=e.target.closest("[data-act]");
+  if(actEl){
+    const act=actEl.dataset.act;
+    if(act==="close-sheet"){closeSheet();return;}
+    if(act==="switch-global-tab"){
+      const tab=actEl.dataset.tab;state.globalTab=tab;
+      const route={stamp:state.stampView==="badges"?"badge-wall-all":"stamp-calendar",points:"points-home",mall:"mall-placeholder",mine:"mine-placeholder"}[tab];
+      go(route,{keepScene:true});return;
+    }
+    if(act==="switch-stamp-view"){
+      const v=actEl.dataset.view;state.stampView=v;go(v==="calendar"?"stamp-calendar":"badge-wall-all",{keepScene:true});return;
+    }
+    if(act==="utility-settings"){toast("设置归入「我的」；本稿暂不展开");return;}
+    if(act==="top-m-entry"){toast("右上 M 入口语义待确认，原型仅还原视觉");return;}
+    if(act==="open-badge-filter"){openSheet("badge-filter");return;}
+    if(act==="open-month-records"){openSheet("month-records");return;}
+    if(act==="open-month-gallery"){state.detailBackRoute="stamp-calendar";go("month-gallery",{keepScene:true});return;}
+    if(act==="open-month-picker"){openSheet("month-picker");return;}
+    if(act==="select-month"){
+      state.selectedMonth=actEl.dataset.month;state.sheet=null;renderAll();toast(`已切换到${monthLabel(state.selectedMonth)}`);return;
+    }
+    if(act==="close-gallery"){go("stamp-calendar",{keepScene:true});return;}
+    if(act==="gallery-layout"){toast("当前使用双列拍立得布局");return;}
+    if(act==="open-day-records"){state.selectedDate=actEl.dataset.date;openSheet("day-records");return;}
+    if(act==="empty-day"){toast("这一天还没有有效订单记录");return;}
+    if(act==="syncing-info"){toast("订单同步中，暂不计入杯数和印章进度");return;}
+    if(act==="set-cell-demo"){state.cellDemo=actEl.dataset.demo;renderAll();return;}
+    if(act==="clear-cell-demo"){state.cellDemo=null;renderAll();return;}
+    if(act==="demo-cell"){
+      const dm=actEl.dataset.demo;
+      if(dm==="C1")openSheet("record-pending");
+      else if(dm==="C2")openSheet("record-success");
+      else if(dm==="C3")openSheet("cell-demo-records");
+      else toast("今天 · 无数据：橙色空格，无商品图");
+      return;
+    }
+    if(act==="open-record-detail"){
+      state.selectedRecordId=actEl.dataset.record;state.detailBackRoute=state.currentRoute==="month-gallery"?"month-gallery":"stamp-calendar";state.sheet=null;
+      state.currentRoute=recordById(state.selectedRecordId)?.platform==="meituan"?"record-detail-meituan":"record-detail-eleme";setRouteContext(state.currentRoute);renderAll();return;
+    }
+    if(act==="detail-back"){go(state.detailBackRoute||"stamp-calendar",{keepScene:true});return;}
+    if(act==="toggle-favorite"||act==="toggle-detail-favorite"){
+      e.stopPropagation();const rec=recordById(actEl.dataset.record);if(rec){rec.favorite=!rec.favorite;renderAll();toast(rec.favorite?"已收藏":"已取消收藏");}return;
+    }
+    if(act==="set-badge-filter"){state.badgeFilter=actEl.dataset.filter;renderAll();return;}
+    if(act==="choose-badge-filter"){state.badgeFilter=actEl.dataset.filter;state.sheet=null;state.sheetOrigin=null;state.currentRoute=(state.badgeFilter==="collected"||state.badgeFilter==="unlocked")?"badge-wall-unlocked":"badge-wall-all";renderAll();return;}
+    if(act==="weak-link"){go(actEl.dataset.target||"points-home");return;}
+    if(act==="open-badge-detail"){
+      state.selectedBadgeId=actEl.dataset.badge;const b=badgeById(state.selectedBadgeId);
+      openSheet(b.stage>0?"badge-detail-unlocked":"badge-detail-locked");return;
+    }
+    if(act==="mystery-hint"){toast("这枚小喵暂时保密，等某个特别的时刻再来见你");return;}
+    if(act==="share-badge"){
+      state.shareBadgeId=actEl.dataset.badge||state.selectedBadgeId||"o-hello";
+      state.shareReturnSheet=state.sheet;
+      openSheet("badge-share");return;
+    }
+    if(act==="copy-share-copy"){
+      const b=badgeById(state.shareBadgeId||state.selectedBadgeId||"o-hello");
+      const copy=`我收录了「${b.display}」🐾\n${b.story}\n你也来看看自己的小喵图鉴吧！`;
+      const copyFallback=()=>{const ta=document.createElement("textarea");ta.value=copy;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand("copy");}catch(e){}ta.remove();toast(ok?"分享文案已复制":copy);};
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(copy).then(()=>toast("分享文案已复制")).catch(copyFallback);}else copyFallback();
+      return;
+    }
+    if(act==="simulate-eleme-order"){simulateOrder("eleme-new");return;}
+    if(act==="simulate-meituan-order"){simulateOrder("mt-new");return;}
+    if(act==="unlock-to-wall"){state.sheet=null;state.currentRoute="badge-wall-all";state.stampView="badges";setRouteContext(state.currentRoute);renderAll();return;}
+    if(act==="newbie-to-wall"){
+      /* 抽屉「去逛逛」：人在印章墙就只关抽屉；从日历页来的则跳墙页 */
+      if(state.currentRoute==="badge-wall-newbie"||state.currentRoute==="badge-wall-all"){closeSheet();return;}
+      state.sheet=null;go("badge-wall-newbie",{keepScene:true});return;
+    }
+    if(act==="gain-next-avatar"){
+      /* 抽屉里的「下一枚」轻提示整行可点：关掉当前抽屉，落到墙页并直接唤起头像输入器 */
+      state.sheet=null;
+      if(state.currentRoute!=="badge-wall-newbie"&&state.currentRoute!=="badge-wall-all")go("badge-wall-newbie",{keepScene:true});
+      openSheet("avatar-editor");return;
+    }
+    if(act==="open-avatar-editor"){openSheet("avatar-editor");return;}
+    if(act==="avatar-choose"){state.avatarPicked=true;renderSheet();return;}
+    if(act==="avatar-save"){
+      const nick=document.getElementById("nickInput");
+      const nickValue=nick?nick.value.trim():state.nickName;
+      if(!state.avatarPicked||!nickValue){toast("资料保存后，小喵会自动为你收录");return;}
+      state.nickName=nickValue;state.avatarDone=true;state.avatarPicked=false;
+      openSheet("avatar-unlock");return;
+    }
+    if(act==="avatar-collect"){closeSheet();renderAll();toast("已收进猫谱 · 手上 2 枚");return;}
+    if(act==="go-order"){closeSheet();go(actEl.dataset.platform==="eleme"?"external-eleme":"external-meituan",{keepScene:true});return;}
+    if(act==="points-checkin"){toast("签到流程与签到成功反馈不在本稿表达范围，签到条为静态展示");return;}
+    if(act==="points-entry"){toast(`「${actEl.dataset.entry}」入口由对应业务线接入，本稿不定义目标页`);return;}
+    if(act==="points-coupon"){
+      const cid=actEl.dataset.cid;
+      if(!cid||state.couponClaimed.has(cid))return;
+      state.couponClaimed.add(cid);
+      const done=state.couponClaimed.size>=6;
+      renderAll();
+      if(done)openSheet("coupon-unlock");
+      else toast("已为你收好这份优惠");
+      return;
+    }
+    if(act==="points-banner"){toast("活动详情页不在本稿范围，仅还原入口");return;}
+    if(act==="points-cap"){toast("小程序胶囊按钮，原型仅还原视觉");return;}
+  }
+
+  const mode=e.target.closest("[data-mode]");
+  if(mode){state.railMode=mode.dataset.mode;renderRail();renderFlowCol();return;}
+  const flow=e.target.closest("[data-flow]");
+  if(flow){state.railMode="flow";state.activeFlowId=flow.dataset.flow;state.activeStepIndex=0;activateFlowStep(0);return;}
+  const flowStep=e.target.closest("[data-flow-step]");
+  if(flowStep){activateFlowStep(Number(flowStep.dataset.flowStep));return;}
+  const page=e.target.closest("[data-page]");
+  if(page){state.railMode="page";const p=pageByCode(page.dataset.page);if(p){go(p.frames[0]);state.railMode="page";renderRail();renderFlowCol();}return;}
+  const pageRoute=e.target.closest("[data-page-route]");
+  if(pageRoute){go(pageRoute.dataset.pageRoute);state.railMode="page";renderRail();renderFlowCol();return;}
+  const pageSheet=e.target.closest("[data-page-sheet]");
+  if(pageSheet){state.railMode="page";setPageSheet(pageSheet.dataset.pageSheet);return;}
+});
+
+document.addEventListener("change",e=>{if(e.target.id==="frameSelect"){go(e.target.value);}});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&state.sheet){closeSheet();return;}
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches(".record-card")){e.preventDefault();e.target.click();}
+});
+
+/* ⑩ INIT */
+renderAll();
+</script>
+</body>
+</html>
