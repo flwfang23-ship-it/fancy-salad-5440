@@ -86,20 +86,20 @@ body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans
 .month-option.none{opacity:.42;cursor:not-allowed;background:#f7f5f2;color:#8f8780}
 .month-option.none small{font-family:inherit}
 .modal-mask{position:absolute;inset:0;background:rgba(20,15,11,.5);pointer-events:auto;animation:fade .18s ease both}.modal{position:absolute;left:38px;right:38px;top:50%;transform:translateY(-50%);background:var(--stamp-paper);border-radius:25px;padding:24px 20px;text-align:center;pointer-events:auto;box-shadow:0 18px 50px rgba(0,0,0,.22);animation:pop .25s cubic-bezier(.2,.8,.25,1) both}.unlock-stamp{width:130px;height:130px;margin:0 auto;border:4px solid var(--stamp-accent);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--stamp-accent);transform:rotate(-5deg);position:relative}.unlock-stamp::after{content:"";position:absolute;inset:7px;border:1px dashed currentColor;border-radius:50%}.unlock-stamp b{font-size:42px}.unlock-stamp span{font-size:13px;font-weight:900}.modal h2{font-size:20px;margin-top:19px}.modal p{font-size:11px;color:#999;line-height:1.65;margin-top:8px}.modal-actions{display:flex;gap:8px;margin-top:19px}.modal-actions button{flex:1;border:0;height:42px;border-radius:13px;font-size:11px;font-weight:800;cursor:pointer}.modal-actions .secondary{background:#f0ece6;color:#776f68}.modal-actions .primary{background:var(--stamp-ink);color:#fff}
-/* 记录中 / 记录成功：下单双时点告知，暖白底 + 单一绿色强调，无渐变发光 */
+/* 已付款 / 记录成功：下单双时点告知，暖白底 + 单一绿色强调，无渐变发光 */
 .rec-ring{width:62px;height:62px;margin:0 auto;border-radius:50%;display:grid;place-items:center;border:2px solid var(--green)}
 .rec-ring span{font-size:27px;font-weight:800;color:var(--green);line-height:1}
 .rec-ring.pending span{animation:lagPulse 1.6s ease-in-out infinite}
 .rec-kicker{margin-top:18px;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--green)}
 .modal.rec-notice h2{margin-top:7px}
 .rec-foot{margin-top:15px;padding-top:13px;border-top:1px solid var(--stamp-line);font-size:9.5px;color:#a49c94;line-height:1.5}
-/* 记录中 / 记录成功：底部抽屉形态，真实商品图 + 状态差异；登记中=虚线半透明，无沙漏图标 */
+/* 已付款 / 记录成功：底部抽屉形态，真实商品图 + 状态差异；已付款=虚线半透明，无沙漏图标 */
 .sheet.rec-drawer .rec-thumb{width:100%;height:140px;object-fit:cover;border-radius:16px;display:block;margin-bottom:16px}
 .sheet.rec-drawer .rec-thumb.pending{border:2px dashed var(--green);opacity:.62}
 .rec-drawer-desc{font-size:11.5px;color:#6f675f;line-height:1.7;margin:0 2px}
 .rec-drawer .rec-foot{margin-top:14px}
 .rec-drawer .modal-actions button{height:44px}
-/* C3 多单抽屉：登记中/已登记 两张卡的状态区分 */
+/* C3 多单抽屉：已付款/已登记 两张卡的状态区分 */
 .record-card.pending img{border:2px dashed var(--green);opacity:.62}
 .rec-state-tag{position:absolute;left:14px;top:14px;padding:2px 6px;border-radius:6px;font-size:8px;font-weight:800;color:#fff;background:var(--green)}
 .rec-state-tag.pending{background:#c9a227}
@@ -126,7 +126,7 @@ body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans
 .day.has-record.demo-focus{background:#fff}
 .day.demo-b{background:var(--stamp-accent);color:#fff;font-weight:800}
 .demo-cell-tag{position:absolute;right:-4px;bottom:-6px;z-index:2;padding:1px 3px;border-radius:4px;background:var(--stamp-ink);color:#fff;font:800 7px var(--mono);box-shadow:0 2px 5px rgba(0,0,0,.16)}
-/* 登记中：真实商品图 + 虚线描边 + 轻微半透明，不用沙漏图标 */
+/* 已付款：真实商品图 + 虚线描边 + 轻微半透明，不用沙漏图标 */
 .day.has-record img.pending{border:1.5px dashed var(--green);opacity:.6;border-radius:10px;padding:1px}
 /* 相册入口：照片堆收在上半区，底部文案留出干净白底 */
 .album-entry{min-height:140px}
@@ -512,7 +512,7 @@ body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans
 /* ① 页面菜单：一级页面（Tab 入口，弹窗挂宿主页）→ 二级页面（整页跳转、非 Tab）→ 外部页面（非 App 内） */
 const PAGE_DEFS=[
   {code:"A",group:"一级页面",page:"印章-日历",kind:"calendar",status:"core",
-   sheets:[{key:"record-pending",name:"记录中抽屉"},{key:"record-success",name:"记录成功抽屉"},{key:"cell-demo-records",name:"多单合并抽屉（C3）"},{key:"month-records",name:"本月记录弹层"},{key:"day-records",name:"当日记录弹层"},{key:"surprise-unlock",name:"意外解锁抽屉"}],
+   sheets:[{key:"record-pending",name:"已付款抽屉"},{key:"record-success",name:"记录成功抽屉"},{key:"cell-demo-records",name:"多单合并抽屉（C3）"},{key:"month-records",name:"本月记录弹层"},{key:"day-records",name:"当日记录弹层"}],
    frames:[
      {key:"stamp-calendar",name:"有记录"},
      {key:"stamp-calendar-newbie",name:"无单用户",scene:"newbie"},
@@ -586,12 +586,12 @@ const PAGE_TREE=[];
 })();
 
 const FLOWS=[
-  /* A · 日历功能：两条线性流程。下单=准备态（记录中，不入册），收货/结算=落定态（正式入册）。 */
+  /* A · 日历功能：两条线性流程。已付款=准备态（不入册），收货/结算=落定态（正式入册）。 */
   {group:"A - 日历功能",flows:[
-    {id:"01",name:"下单后的记录",start:"下单 → 记录中 → 收货 → 记录成功",
+    {id:"01",name:"下单后的记录",start:"下单 → 已付款 → 收货 → 记录成功",
      steps:[
        {title:"01 下单",sub:"美团或饿了么下单，订单回传平台",route:"external-eleme",scene:"before-eleme",ext:true},
-       {title:"02 弹窗 · 记录中",sub:"轻量告知已记下，暂不计入统计与印章",route:"stamp-calendar-syncing",scene:"syncing",autoSheet:"record-pending"},
+       {title:"02 弹窗 · 已付款",sub:"轻量告知已记下，暂不计入统计与印章",route:"stamp-calendar-syncing",scene:"syncing",autoSheet:"record-pending"},
        {title:"03 收货 / 结算",sub:"订单达到有效状态，图片入历",route:"stamp-calendar",scene:"after-eleme"},
        {title:"04 弹窗 · 记录成功",sub:"印章与日历同一刻正式登记入册",route:"stamp-calendar",scene:"after-eleme",autoSheet:"record-success"}
      ]},
@@ -612,8 +612,8 @@ const FLOWS=[
       {title:"05 系统自动收录",sub:"资料保存后自动颁发「露脸的小喵」",route:"badge-wall-newbie",scene:"newbie",avatarDone:true,autoSheet:"avatar-unlock"}
     ]},
     {id:"A2",name:"意外解锁（几天后）",start:"深夜第 3 单 → 惊喜抽屉 → 图鉴多一枚",steps:[
-      {title:"01 几天后的深夜",sub:"第 3 单夜宵，小喵在记录里发现了它",route:"stamp-calendar",scene:"normal",preset:{"t-midnight":1}},
-      {title:"02 惊喜抽屉",sub:"恭喜解锁 · 夜宵猫：这枚不在计划里",route:"stamp-calendar",scene:"normal",preset:{"t-midnight":1},autoSheet:"surprise-unlock"},
+      {title:"01 几天后的深夜",sub:"深夜第 3 单，小喵在记录里发现了它",route:"stamp-calendar",scene:"normal",preset:{"t-midnight":1}},
+      {title:"02 惊喜抽屉",sub:"恭喜解锁 · 守夜喵：这枚不在计划里",route:"stamp-calendar",scene:"normal",preset:{"t-midnight":1},autoSheet:"surprise-unlock"},
       {title:"03 图鉴多一枚",sub:"收下后回图鉴，无任务、无门槛",route:"badge-wall-all",scene:"normal",preset:{"t-midnight":1}}
     ]},
     {id:"03",name:"印章浏览",start:"记录日历 → 印章墙 → 筛选 → 详情",steps:[
@@ -630,32 +630,32 @@ const FLOWS=[
 const NOTES={
   "stamp-calendar":{status:"核心",sections:[
     {h:"页面入口",rows:["全局底栏选择「印章」","印章内部默认选择「记录日历」"]},
-    {h:"数据口径",rows:["只展示 ACTIVE 日历记录","杯数、店铺数、日期角标由同一 records 数组派生","日期归属使用订单业务时间，不使用回调时间"]},
+    {h:"数据口径",rows:["只展示 ACTIVE 日历记录","杯数、店铺数、日期角标由同一 records 数组派生","日期归属使用收货时间，不使用回调时间"]},
     {h:"交互",rows:["点击「本月」打开本月记录弹层","点击照片堆进入月度相册","点击有记录日期打开当日记录"]},
-    {h:"日期格子状态演示（切换器）",rows:["日历卡片上方 4 个标签 B/C1/C2/C3，点选即在日历上演示一种「今天」格子状态，不必做独立状态帧","非今天格子已有真实数据展示（有数据=正常商品图、无数据=空格），无需单独标识，故去掉 A1/A2","B 无数据·今天=橙色填充空格","C1 1 单登记中·今天=虚线半透明商品图；C2 1 单登记完成·今天=正常商品图；C3 多单·今天=合并一格(角标 2)","点高亮的演示格：C1 弹「记录中」抽屉、C2 弹「记录成功」抽屉、C3 弹多单合并抽屉；点「还原真实数据」退出演示","登记中与登记成功用真实商品图的样式差区分（虚线半透明 vs 清晰），不用沙漏图标"]}
+    {h:"日期格子状态演示（切换器）",rows:["日历卡片上方 4 个标签 B/C1/C2/C3，点选即在日历上演示一种「今天」格子状态，不必做独立状态帧","非今天格子已有真实数据展示（有数据=正常商品图、无数据=空格），无需单独标识，故去掉 A1/A2","B 无数据·今天=橙色填充空格","C1 1 单已付款·今天=虚线半透明商品图；C2 1 单登记完成·今天=正常商品图；C3 多单·今天=合并一格(角标 2)","点高亮的演示格：C1 弹「已付款」抽屉、C2 弹「记录成功」抽屉、C3 弹多单合并抽屉；点「还原真实数据」退出演示","已付款与登记成功用真实商品图的样式差区分（虚线半透明 vs 清晰），不用沙漏图标"]}
   ]},
   "stamp-calendar-empty":{status:"状态",sections:[{h:"入口条件",rows:["所选月份没有 ACTIVE 记录"]},{h:"表现",rows:["保留完整日历","本月显示 0 杯 · 0 家店铺","不提供手工新增入口"]}]},
   "cell-demo-records":{status:"演示",sections:[
     {h:"场景",rows:["C3：今天有多单，日历上合并为一格（角标显示单数）","点这一格打开本抽屉，看到合并前的每一单"]},
-    {h:"图片状态差",rows:["登记中的一单：真实商品图 + 虚线描边 + 轻微半透明，角标「登记中」","已登记的一单：同一类真实商品图，正常清晰样式，角标「已登记」","不使用沙漏/转圈图标，只靠图片样式区分登记状态"]},
-    {h:"时点口径",rows:["下单=准备态（登记中，暂不计入杯数与印章）","收货/结算=落定态（正式入册，印章同刻收录）"]}
+    {h:"图片状态差",rows:["已付款的一单：真实商品图 + 虚线描边 + 轻微半透明，角标「已付款」","已登记的一单：同一类真实商品图，正常清晰样式，角标「已登记」","不使用沙漏/转圈图标，只靠图片样式区分登记状态"]},
+    {h:"时点口径",rows:["已付款=准备态（暂不计入杯数与印章）","收货/结算=落定态（正式入册，印章同刻收录）"]}
   ]},
   "record-pending":{status:"核心",sections:[
     {h:"形态",rows:["底部抽屉，不是居中弹窗","展示真实商品图，图片带虚线描边 + 轻微半透明，表示「还没定」","不使用沙漏/转圈图标替代商品图"]},
-    {h:"时点",rows:["用户下单、订单回传之后弹出","此时只是「准备态」，尚未入册"]},
+    {h:"时点",rows:["用户已付款、订单尚未收货时弹出","此时只是「准备态」，尚未入册"]},
     {h:"口径",rows:["轻量告知这一单已记下，等收货/结算才正式写入","明确此刻不计入杯数与印章","不诱导下单、不提示差几单"]},
     {h:"闭环",rows:["用户点「知道了」关闭，无需领取或操作"]}
   ]},
   "record-success":{status:"核心",sections:[
-    {h:"形态",rows:["底部抽屉，与「记录中」同构","同一张真实商品图，图片为正常清晰样式（无虚线、无半透明）","两抽屉对比即可看出「登记中 → 登记成功」的图片状态差"]},
+    {h:"形态",rows:["底部抽屉，与「已付款」同构","同一张真实商品图，图片为正常清晰样式（无虚线、无半透明）","两抽屉对比即可看出「已付款 → 登记成功」的图片状态差"]},
     {h:"时点",rows:["用户已收货 / 已结算，订单达到有效状态后弹出"]},
     {h:"口径",rows:["日历与印章在同一刻正式登记入册","只陈述事实，不叠加任务或进度话术"]},
     {h:"闭环",rows:["用户点「去看看日历」关闭并回到日历页"]}
   ]},
   "stamp-calendar-syncing":{status:"状态",sections:[{h:"入口条件",rows:["平台订单已接收但尚未达到有效状态"]},{h:"逻辑",rows:["SYNCING 不参与统计与印章计算","后台完成同步后页面自动出现记录"]}]},
-  "stamp-calendar-fallback":{status:"状态",sections:[{h:"图片逻辑",rows:["美团不回传订单图","按券/活动、SKU、商品、店铺、品牌、类别依次匹配","本帧命中券模板配置图，来源 ADMIN_RULE"]}]},
-  "month-gallery":{status:"核心",sections:[{h:"数据范围",rows:["展示当前选择月份的 ACTIVE 记录","与日历和本月弹层使用相同媒体资源"]},{h:"交互",rows:["点击月份打开年月选择","有图的月份标注张数并可点，无图月份置灰不可选","仅浏览照片，不进入订单详情","关闭返回记录日历并保留月份"]}]},
-  "badge-wall-all":{status:"核心",sections:[{h:"产品定位",rows:["印章墙是生活图鉴，不是任务中心；用户正常吃饭，系统从真实记录里发现习惯","按生活主题分组：初见与日常 / 时间节律 / 口味偏好 / 饮食习惯 / 城市足迹 / 节气时令 / 使用小纪念 / 特别时刻","顶部只显示已收录数量，不显示总量、百分比或进度条"]},{h:"展示规则",rows:["已收录：显示印章、名称与收录日期","未相遇：显示名称和生活故事，不显示数字条件、剩余次数或进度","神秘小喵：不提前展示名称和触发条件，作为纯惊喜"]},{h:"产品红线",rows:["不出现「差 N 笔」「去下单解锁」「再完成一次」等任务话术","不以额外消费、连续签到或分享作为强制任务","成就由系统自动识别和收录，用户不需要领取"]}]},
+  "stamp-calendar-fallback":{status:"状态",sections:[{h:"图片逻辑",rows:["美团不回传订单图","按券/活动、SKU、商品、店铺、品牌、类别依次匹配","本帧命中桶图，来源 ADMIN_RULE"]}]},
+  "month-gallery":{status:"核心",sections:[{h:"数据范围",rows:["展示当前选择月份的 ACTIVE 记录","与日历和本月弹层使用相同媒体资源"]},{h:"字段读取逻辑",rows:["每张照片对应一条日历记录，图、名、时间都从这条记录读取，不重新取数","图片：直接读记录的打卡图（饿了么读订单图、美团读桶图），与日历格、本月弹层是同一张，不单独取图","商品名：读记录的「商品名称」字段（goods_title），即照片下方那行字","时间：读记录的「收货时间」（receivedAt）并显示，不使用下单时间或回调时间"]},{h:"交互",rows:["点击月份打开年月选择","有图的月份标注张数并可点，无图月份置灰不可选","仅浏览照片，不进入订单详情","关闭返回记录日历并保留月份"]}]},
+  "badge-wall-all":{status:"核心",sections:[{h:"产品定位",rows:["印章墙是生活图鉴，不是任务中心；用户正常吃饭，系统从真实记录里发现习惯","按后台 4.4 分 5 个家族：初见日常 / 时间节律 / 口味偏好 / 饮食习惯 / 城市足迹","顶部只显示已收录数量，不显示总量、百分比或进度条"]},{h:"字段来源",rows:["后台仅配置 2 个用户可见文案字段：story=解锁前文案（未解锁展示）、how=解锁条件（用户可见）（已解锁展示）","研发写死：触发条件类型、判定参数、门槛值与档位（signal / tiers.need / 4.4 口径），后台只读回显，前端不展示","名称、印面字、勋章图、家族与启停状态由后台基础配置下发，本稿按 4.4 固化；stage/stageNew/earnedAt 为演示数据"]},{h:"展示规则",rows:["已收录：显示印章、名称与收录日期","未相遇：显示名称和解锁前文案（生活故事），不显示数字条件、剩余次数或进度","神秘小喵：不提前展示名称和触发条件，作为纯惊喜"]},{h:"产品红线",rows:["不出现「差 N 笔」「去下单解锁」「再完成一次」等任务话术","不以额外消费、连续签到或分享作为强制任务","成就由系统自动识别和收录，用户不需要领取"]}]},
   "badge-wall-unlocked":{status:"状态",sections:[{h:"筛选",rows:["只展示已经自然收录的印章","已收录与进阶中的状态统一呈现，不展示下一档进度","筛选只改变展示，不改变标签归属"]}]},
   "badge-wall-empty":{status:"状态",sections:[{h:"入口条件",rows:["用户没有 ACTIVE 记录且当前筛选下无标签","空态文案只说明原因，不诱导下单"]}]},
   "stamp-calendar-newbie":{status:"主流程 A",sections:[
@@ -684,12 +684,12 @@ const NOTES={
     {h:"第二枚到手",rows:["资料保存后由系统自动收录，不要求用户回到勋章页领取","弹窗展示印章图、名称、生活描述和分享入口","「收下，回印章墙」关闭抽屉即可继续浏览"]}
   ]},
   "coupon-unlock":{status:"自动发现",sections:[
-    {h:"触发",rows:["系统从自然发生的领券与消费记录中识别用户的优惠习惯","用户界面不展示计数、进度或解锁门槛"]},
+    {h:"触发",rows:["系统从自然发生的领券与消费已付款识别用户的优惠习惯","用户界面不展示计数、进度或解锁门槛"]},
     {h:"反馈",rows:["达成后自动收录，轻量提示一次，不要求手动领取","动效克制，不使用连续任务或倒计时强化压力"]},
     {h:"内容与后续",rows:["只展示印章名称和一句生活观察，不展示领券次数、下一档或收集进度","提供分享入口；用户也可以直接收好继续使用","不将领券行为包装成必须完成的勋章任务"]}
   ]},
   "record-detail-eleme":{status:"核心",sections:[{h:"图片来源",rows:["优先使用优惠券实际抵扣商品图片","平台图片转存为自有媒体资源","本帧来源 ELEME_ORDER"]},{h:"权限",rows:["业务字段与图片只读","用户只可收藏"]}]},
-  "record-detail-meituan":{status:"核心",sections:[{h:"图片来源",rows:["美团无回传图","命中后台规则 img-rule-mt-coupon-01 v1","历史记录固化命中版本，配置更新不静默换图"]}]},
+  "record-detail-meituan":{status:"核心",sections:[{h:"图片来源",rows:["美团无回传图","命中桶图 img-rule-mt-coupon-01 v1","历史记录固化命中版本，配置更新不静默换图"]}]},
   "external-eleme":{status:"流程",sections:[{h:"外部步骤",rows:["交互稿不还原外卖平台页面","模拟订单达到已完成/已核销状态","重复订单由平台 + 订单号 + 券实例幂等"]}]},
   "external-meituan":{status:"流程",sections:[{h:"外部步骤",rows:["平台回传订单与券信息，但不回传图片","后续进入后台图片匹配流程"]}]},
   "image-rule-demo":{status:"流程",sections:[{h:"命中顺序",rows:["券/活动 > SKU > 商品 > 店铺 > 品牌 > 类别 > 平台默认 > 系统默认"]},{h:"本次结果",rows:["命中 coupon-template-01","优先级 100","使用 order-meituan-config.webp"]}]},
@@ -702,17 +702,17 @@ const NOTES={
   ]},
   "mall-placeholder":{status:"范围",sections:[{h:"本稿边界",rows:["不定义商品、库存、兑换、支付、物流或退款"]}]},
   "mine-placeholder":{status:"范围",sections:[{h:"本稿边界",rows:["不定义账户、权益、客服和设置详情"]}]},
-  "month-records":{status:"核心",sections:[{h:"入口",rows:["点击记录日历下方「本月」卡片"]},{h:"交互",rows:["默认按业务时间倒序","星标点击阻止卡片跳转","数量与首页统计一致"]}]},
+  "month-records":{status:"核心",sections:[{h:"入口",rows:["点击记录日历下方「本月」卡片"]},{h:"交互",rows:["默认按收货时间倒序","星标点击阻止卡片跳转","数量与首页统计一致"]}]},
   "day-records":{status:"状态",sections:[{h:"入口",rows:["点击含记录的日期格"]},{h:"展示",rows:["同日多条以双列卡片展示"]}]},
   "month-picker":{status:"状态",sections:[{h:"交互",rows:["选择月份后关闭抽屉并刷新相册","未来月份不可选"]}]},
   "badge-filter":{status:"状态",sections:[{h:"筛选",rows:["全部 / 已收录 / 各生活主题","筛选只改变展示，不改变标签归属"]}]},
-  "badge-detail-unlocked":{status:"核心",sections:[{h:"展示",rows:["印章图 + 名称 + 一句生活故事","收录状态和日期","「怎么获得」：用一句文字描述这枚勋章的解锁条件（定性，不出现数字门槛、剩余次数或进度）","已收录勋章提供分享入口"]},{h:"口径",rows:["解锁条件只在已收录后回看，未相遇时不提前展示","条件用故事化文字表达，不出现「差 N 笔」「去下单解锁」等任务话术"]},{h:"交互",rows:["用户可以分享自己的生活成就","不需要点击认领，不通过「我也是这类人」改变勋章数据"]}]},
-  "badge-detail-locked":{status:"状态",sections:[{h:"展示",rows:["显示印章名称和一段生活故事，状态为「待相遇」","不展示数字条件、档位名称、剩余次数或进度条","不提供去下单、去签到、去领券等任务入口"]},{h:"交互",rows:["用户看完故事即可关闭","不催促用户完成任何动作，等待真实生活记录自然触发"]}]},
+  "badge-detail-unlocked":{status:"核心",sections:[{h:"展示",rows:["印章图 + 名称 + 一句生活故事","收录状态和日期","「怎么获得」：读后台配置字段「解锁条件（用户可见）」，解锁后展示的一句话，直白说明用户做了什么，不出现数字门槛、剩余次数或进度","已收录勋章提供分享入口"]},{h:"口径",rows:["解锁条件只在已收录后回看，未相遇时不提前展示","条件用故事化文字表达，不出现「差 N 笔」「去下单解锁」等任务话术"]},{h:"交互",rows:["用户可以分享自己的生活成就","不需要点击认领，不通过「我也是这类人」改变勋章数据"]}]},
+  "badge-detail-locked":{status:"状态",sections:[{h:"展示",rows:["显示印章名称和一段生活故事，状态为「待相遇」","这段生活故事读后台配置字段「解锁前文案」：只做模糊暗示，不含数字与触发条件","不展示数字条件、档位名称、剩余次数或进度条","不提供去下单、去签到、去领券等任务入口"]},{h:"交互",rows:["用户看完故事即可关闭","不催促用户完成任何动作，等待真实生活记录自然触发"]}]},
   "badge-share":{status:"状态",sections:[{h:"分享",rows:["预览卡片统一 5:4，复用勋章插画、名称与生活故事","复制分享文案；正式小程序接入微信原生分享能力"]}]},
-  "badge-unlock":{status:"核心",sections:[{h:"触发",rows:["同一家店累计订单首次达到 5 单，进阶到第 2 档","同一标签只弹一次，重复订单不再弹"]},{h:"文案口径",rows:["讲「你的图鉴多了一枚」，不讲「解锁奖励」","强调标签由行为自动长出，不用领不用换"]}]},
+  "badge-unlock":{status:"核心",sections:[{h:"触发",rows:["达到勋章触发口径（见后台 4.4）时，小喵自动把印章记进图鉴","同一枚印章只弹一次，重复订单不再弹"]},{h:"文案口径",rows:["讲「你的图鉴多了一枚」，不讲「解锁奖励」","强调标签由行为自动长出，不用领不用换"]}]},
   "order-invalidated":{status:"状态",sections:[{h:"退款逻辑",rows:["记录转 INVALID 并从日历、统计、列表、相册隐藏","未完成进度重算","普通收藏型印章本演示默认保留"]}]},
   "surprise-unlock":{status:"主流程 A2",sections:[
-    {h:"定位",rows:["第二层「隐藏条件」印章的解锁瞬间：用户什么都没做，小喵在记录里发现了他","与到手抽屉同构（life-gain），小字是「生活里的小惊喜」而不是「新印章已收录」"]},
+    {h:"定位",rows:["隐藏条件印章的解锁瞬间：用户什么都没做，小喵在记录里发现了他","与到手抽屉同构（life-gain），小字是「生活里的小惊喜」而不是「新印章已收录」"]},
     {h:"内容",rows:["印面/插画 + 章名 + 一句惊喜文案「原来你已经悄悄收集了这么多深夜时光」","分割线下只给一句轻提示「这枚不在计划里 · 是小喵在记录里发现的」，不做任务预告","主按钮「分享这枚小喵」；次按钮「先收好」仅关闭"]},
     {h:"红线",rows:["不引导下一单、不展示还差什么、不倒计时"]}
   ]},
@@ -720,131 +720,106 @@ const NOTES={
 
 /* ③ MOCK DATA */
 const RECORD_LIBRARY={
-  r1:{id:"r1",orderKey:"eleme|E1001|C001",platform:"eleme",title:"生椰拿铁",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-04T20:06:00+08:00",localDate:"2026-11-04",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-latte.webp",favorite:false},
-  r2:{id:"r2",orderKey:"meituan|M1002|C002",platform:"meituan",title:"青提乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-11T14:15:00+08:00",localDate:"2026-11-11",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
-  r3:{id:"r3",orderKey:"eleme|E1003|C003",platform:"eleme",title:"桑葚酸奶昔",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-13T20:06:00+08:00",localDate:"2026-11-13",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-berry.webp",favorite:false},
-  r4:{id:"r4",orderKey:"eleme|E1004|C004",platform:"eleme",title:"白桃乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-14T20:57:00+08:00",localDate:"2026-11-14",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-peach.jpg",favorite:false},
-  r5:{id:"r5",orderKey:"meituan|M1005|C005",platform:"meituan",title:"轻乳茉莉",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-14T14:15:00+08:00",localDate:"2026-11-14",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
+  r1:{id:"r1",orderKey:"eleme|E1001|C001",platform:"eleme",title:"生椰拿铁",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-11-04T20:06:00+08:00",localDate:"2026-11-04",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-latte.webp",favorite:false},
+  r2:{id:"r2",orderKey:"meituan|M1002|C002",platform:"meituan",title:"青提乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-11-11T14:15:00+08:00",localDate:"2026-11-11",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
+  r3:{id:"r3",orderKey:"eleme|E1003|C003",platform:"eleme",title:"桑葚酸奶昔",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-11-13T20:06:00+08:00",localDate:"2026-11-13",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-berry.webp",favorite:false},
+  r4:{id:"r4",orderKey:"eleme|E1004|C004",platform:"eleme",title:"白桃乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-11-14T20:57:00+08:00",localDate:"2026-11-14",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-peach.jpg",favorite:false},
+  r5:{id:"r5",orderKey:"meituan|M1005|C005",platform:"meituan",title:"轻乳茉莉",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-11-14T14:15:00+08:00",localDate:"2026-11-14",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
   /* 历史月份记录：用于月度相册按月份筛选，6/7/8 月留空 */
-  h901:{id:"h901",orderKey:"eleme|H0901|D901",platform:"eleme",title:"冰摇柠檬茶",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-09-03T15:20:00+08:00",localDate:"2026-09-03",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-latte.webp",favorite:false},
-  h902:{id:"h902",orderKey:"meituan|H0902|D902",platform:"meituan",title:"桂花乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-09-12T14:10:00+08:00",localDate:"2026-09-12",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
-  h903:{id:"h903",orderKey:"eleme|H0903|D903",platform:"eleme",title:"白桃乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-09-25T20:40:00+08:00",localDate:"2026-09-25",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-peach.jpg",favorite:false},
-  h1001:{id:"h1001",orderKey:"eleme|H1001|E001",platform:"eleme",title:"桑葚酸奶昔",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-10-08T19:30:00+08:00",localDate:"2026-10-08",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-berry.webp",favorite:false},
-  h1002:{id:"h1002",orderKey:"meituan|H1002|E002",platform:"meituan",title:"轻乳茉莉",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-10-19T13:50:00+08:00",localDate:"2026-10-19",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
-  "eleme-new":{id:"eleme-new",orderKey:"eleme|E2005|C205",platform:"eleme",title:"桑葚酸奶昔",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-16T10:47:00+08:00",localDate:"2026-11-16",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-berry.webp",favorite:false},
-  "mt-new":{id:"mt-new",orderKey:"meituan|M2005|C305",platform:"meituan",title:"品牌日限定奶茶",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-16T10:47:00+08:00",localDate:"2026-11-16",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
-  syncing:{id:"syncing",orderKey:"eleme|E3006|C306",platform:"eleme",title:"订单同步中",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-16T10:47:00+08:00",localDate:"2026-11-16",status:"SYNCING",imageSource:"PLATFORM_DEFAULT",image:"./assets/defaults/eleme-default.svg",favorite:false},
-  "img-fallback":{id:"img-fallback",orderKey:"meituan|M2099|C399",platform:"meituan",title:"葡萄冻冻",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",businessAt:"2026-11-16T09:12:00+08:00",localDate:"2026-11-16",status:"ACTIVE",imageSource:"SYSTEM_DEFAULT",image:"./assets/defaults/global-default.svg",imageFallbackReason:"平台图下载失败 HTTP 403，已回退系统默认图，后台重试中",favorite:false}
+  h901:{id:"h901",orderKey:"eleme|H0901|D901",platform:"eleme",title:"冰摇柠檬茶",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-09-03T15:20:00+08:00",localDate:"2026-09-03",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-latte.webp",favorite:false},
+  h902:{id:"h902",orderKey:"meituan|H0902|D902",platform:"meituan",title:"桂花乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-09-12T14:10:00+08:00",localDate:"2026-09-12",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
+  h903:{id:"h903",orderKey:"eleme|H0903|D903",platform:"eleme",title:"白桃乌龙",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-09-25T20:40:00+08:00",localDate:"2026-09-25",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-peach.jpg",favorite:false},
+  h1001:{id:"h1001",orderKey:"eleme|H1001|E001",platform:"eleme",title:"桑葚酸奶昔",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-10-08T19:30:00+08:00",localDate:"2026-10-08",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-berry.webp",favorite:false},
+  h1002:{id:"h1002",orderKey:"meituan|H1002|E002",platform:"meituan",title:"轻乳茉莉",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-10-19T13:50:00+08:00",localDate:"2026-10-19",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
+  "eleme-new":{id:"eleme-new",orderKey:"eleme|E2005|C205",platform:"eleme",title:"桑葚酸奶昔",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-11-16T10:47:00+08:00",localDate:"2026-11-16",status:"ACTIVE",imageSource:"ELEME_ORDER",image:"./assets/records/order-eleme-berry.webp",favorite:false},
+  "mt-new":{id:"mt-new",orderKey:"meituan|M2005|C305",platform:"meituan",title:"品牌日限定奶茶",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-11-16T10:47:00+08:00",localDate:"2026-11-16",status:"ACTIVE",imageSource:"ADMIN_RULE",image:"./assets/records/order-meituan-config.webp",imageRuleId:"img-rule-mt-coupon-01",imageRuleVersion:1,favorite:false},
+  syncing:{id:"syncing",orderKey:"eleme|E3006|C306",platform:"eleme",title:"订单同步中",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-11-16T10:47:00+08:00",localDate:"2026-11-16",status:"SYNCING",imageSource:"PLATFORM_DEFAULT",image:"./assets/defaults/eleme-default.svg",favorite:false},
+  "img-fallback":{id:"img-fallback",orderKey:"meituan|M2099|C399",platform:"meituan",title:"葡萄冻冻",quantity:1,shopId:"s1",shopName:"午后茶铺",city:"上海",receivedAt:"2026-11-16T09:12:00+08:00",localDate:"2026-11-16",status:"ACTIVE",imageSource:"SYSTEM_DEFAULT",image:"./assets/defaults/global-default.svg",imageFallbackReason:"平台图下载失败 HTTP 403，已回退系统默认图，后台重试中",favorite:false}
 };
 
-/* 印章 = 身份标签。图鉴面向全平台所有用户，标签按「族」分组、按「档位」进阶。
-   决定状态的只有可判定信号：时长/日期/节气/品类/门店/平台/频次/活动，不做天气与情绪。 */
+/* 印章 = 身份标签。按后台 4.4《勋章设计》全量落地：17 枚勋章 / 5 个家族，单档口径。
+   触发只依赖可判定信号：注册资料事件 / 订单时段 / 品类关键词桶 / 平台 / 门店，不做天气与情绪。 */
 const TAG_FAMILIES=[
-  {key:"onsite",name:"初见与日常",tint:"#5b7f7a",hint:"从第一次见面开始，慢慢留下生活印记"},
+  {key:"onsite",name:"初见日常",tint:"#5b7f7a",hint:"从第一次见面开始，慢慢留下生活印记"},
   {key:"time",name:"时间节律",tint:"#c2703f",hint:"从吃饭时间里，慢慢看见你的生活节奏"},
   {key:"taste",name:"口味偏好",tint:"#b4553f",hint:"常吃的东西，藏着自己的小偏爱"},
   {key:"habit",name:"饮食习惯",tint:"#6f8d4b",hint:"重复出现的小习惯，会慢慢变成专属印记"},
-  {key:"city",name:"城市足迹",tint:"#8c5d9f",hint:"从熟悉的店，到走过的城市"},
-  {key:"season",name:"节气时令",tint:"#4e7c8a",hint:"一年到头，总有一些值得记住的味道"},
-  {key:"usage",name:"使用小纪念",tint:"#8b9272",hint:"偶尔的互动，也会成为一段小小回忆"},
-  {key:"event",name:"特别时刻",tint:"#c79a3e",hint:"偶尔遇见的小惊喜，也值得被记住"}
+  {key:"city",name:"城市足迹",tint:"#8c5d9f",hint:"从熟悉的店，到走过的城市"}
 ];
 
-/* tiers.need 仅供后台规则计算，前端图鉴、详情与分享页均不展示数字门槛。stage：老用户场景下已达成的档数（原型 mock）。
-   stageNew：新用户（0 单）场景下的档数——只有不依赖下单的标签才给值，其余由 0 起算。
-   signal：成就来源。order=订单派生（默认）/ signup 注册资料 / checkin 签到 / coupon 领券 /
-           link 转链 / invite 邀请。除 order 外都不需要下单。 */
+/* 字段来源（与后台 4.2《勋章配置》对齐）：
+   ① 后台仅配置 2 个用户可见文案字段，C 端按解锁状态分别读取——
+      story = 解锁前文案：未解锁时展示，只做模糊暗示，不含数字与触发条件；
+      how    = 解锁条件（用户可见）：已解锁后展示，直白说明用户做了什么。
+   ② 判定类字段全部研发写死在代码里，后台只读回显、不提供编辑入口——
+      signal = 触发条件类型（signup 注册/资料事件、order 订单派生）；
+      tiers[].need = 门槛值；触发参数与 4.4 口径、档位（本期单档）同样写死。
+      tiers.need 仅供后台计算，前端任何页面都不展示数字门槛。
+   ③ name/seal/art/family/状态由后台基础配置下发，本稿按 4.4 固化；
+      stage/stageNew/earnedAt/holders 为演示与只读参考数据，不参与判定。 */
 const TAG_LIBRARY=[
-  /* —— 入场与日常：不点外卖也能拿到的第一批，保证新用户进来不是空手。
-        小饭喵世界观：图鉴 = 猫谱，每枚标签都是一只猫的名字 —— */
-  {id:"o-hello",family:"onsite",seal:"喵",name:"初次见面喵",holders:"128万",stage:1,stageNew:1,earnedAt:"2026-11-16",signal:"signup",
+  /* —— 初见日常（2）：注册与资料事件，不点外卖也能拿到 —— */
+  {id:"o-hello",family:"onsite",seal:"喵",name:"初次见面喵",holders:"100%",stage:1,stageNew:1,earnedAt:"2026-11-16",signal:"signup",
    art:"assets/badges/badge-cat-hello.png",
    story:"每只小喵的故事，都从一次初次见面开始",how:"第一次来到这里时，小喵自动把你记下",
    tiers:[{name:"初次见面喵",need:1}]},
-  {id:"o-avatar",family:"onsite",seal:"像",name:"露脸的小喵",holders:"86万",stage:1,stageNew:0,earnedAt:"2026-11-16",signal:"signup",
+  {id:"o-avatar",family:"onsite",seal:"像",name:"露脸的小喵",holders:"需补资料字段",stage:1,stageNew:0,earnedAt:"2026-11-16",signal:"signup",
    art:"assets/badges/badge-cat-avatar.png",
    story:"你的专属小喵名片，慢慢有了自己的模样",how:"填好头像和昵称，专属小喵就有了模样",
    tiers:[{name:"露脸的小喵",need:1}]},
-  {id:"o-checkin",family:"usage",seal:"签",name:"守点的小喵",holders:"41万",stage:2,stageNew:0,earnedAt:"2026-11-14",signal:"checkin",
-   story:"忙碌的日子里，你总能给自己留一个短暂的停靠点",how:"养成固定时间来看看的习惯后自然收录",
-   tiers:[{name:"准时打卡的小喵",need:3},{name:"连开七天的猫",need:7},{name:"月度全勤猫",need:30}]},
-  {id:"o-wool",family:"usage",seal:"券",name:"薅羊毛的猫",holders:"52万",stage:2,stageNew:0,signal:"coupon",
-   story:"红包、满减、神券包，没有一个能逃出你的收藏夹",how:"爱把红包满减收进收藏夹时慢慢浮现",
-   tiers:[{name:"薅羊毛的猫",need:6},{name:"羊毛大师",need:30},{name:"平台债主",need:100}]},
-  {id:"o-link",family:"usage",seal:"链",name:"甩链接的猫",holders:"7.9万",stage:0,stageNew:0,signal:"link",
-   story:"你分享的那份好吃，常常也会成为朋友的灵感",how:"把好吃的分给朋友时悄悄记下",
-   tiers:[{name:"甩链接的猫",need:1},{name:"带饭小队长",need:10},{name:"转链老炮",need:50}]},
-  {id:"o-invite",family:"usage",seal:"邀",name:"带朋友入伙的猫",holders:"3.4万",stage:0,stageNew:0,signal:"invite",
-   story:"你带来的朋友，后来都成了这儿的常驻猫",how:"带上朋友一起加入时收录",
-   tiers:[{name:"带来第一个朋友",need:1},{name:"猫群小队长",need:5},{name:"朋友圈猫团长",need:20}]},
 
-  {id:"t-midnight",family:"time",seal:"夜",name:"夜宵猫",holders:"9800+",stage:0,earnedAt:"2026-11-13",
-   story:"城市安静下来，你的夜宵雷达才刚刚启动",how:"常在深夜下单加餐时被小喵发现",
-   tiers:[{name:"半夜加餐的小喵",need:3},{name:"夜宵猫",need:8},{name:"凌晨城市合伙人",need:20}]},
-  {id:"t-lunch",family:"time",seal:"午",name:"踩点干饭猫",holders:"2.8万",stage:0,
-   story:"午休的钟声一响，干饭计划准时上线",how:"总在午休点开饭点时收录",tiers:[{name:"踩点干饭猫",need:15}]},
-  {id:"t-bedside",family:"time",seal:"床",name:"床上点餐猫仙",holders:"1.2万",stage:0,
-   story:"周末睁眼第一件事不是起床，是先点外卖再继续躺",how:"周末赖在床上点餐时自然出现",tiers:[{name:"床上点餐猫仙",need:8}]},
-  {id:"t-breakfast",family:"time",seal:"早",name:"蹲点取早餐的猫",holders:"1.3万",stage:0,
-   story:"清晨的第一口热乎，像给一天按下启动键",how:"常在清晨下单第一口时收录",tiers:[{name:"蹲点取早餐的猫",need:5}]},
+  /* —— 时间节律（3）：按 created_at 北京时段判定，均 ≥1 单 —— */
+  {id:"t-lunch",family:"time",seal:"饭",name:"干饭喵",holders:"38.19%",stage:1,stageNew:0,earnedAt:"2026-11-11",signal:"order",
+   story:"一天里最踏实的一餐，总落在正午前后",how:"常在中午好好吃饭时，被小喵悄悄记下",
+   tiers:[{name:"干饭喵",need:1}]},
+  {id:"t-wait",family:"time",seal:"等",name:"等门喵",holders:"38.60%",stage:1,stageNew:0,earnedAt:"2026-11-13",signal:"order",
+   story:"天色刚暗，你就知道该给自己留一顿好饭了",how:"常在傍晚那顿饭里，被小喵记下",
+   tiers:[{name:"等门喵",need:1}]},
+  {id:"t-midnight",family:"time",seal:"夜",name:"守夜喵",holders:"23.38%",stage:0,earnedAt:"2026-11-13",signal:"order",
+   story:"城市安静下来，你的深夜才刚刚开始",how:"常在深夜下单加餐时被小喵发现",
+   tiers:[{name:"守夜喵",need:1}]},
 
-  {id:"p-fried",family:"taste",seal:"炸",name:"快乐水炸鸡猫",holders:"1.6万",stage:0,
-   story:"汉堡薯条快乐水三位一体，缺一个都算不上正经一餐",how:"炸鸡配快乐水反复出现时收录",tiers:[{name:"炸鸡配快乐水的猫",need:10}]},
-  {id:"p-rice",family:"taste",seal:"饭",name:"干饭永动机猫",holders:"3.1万",stage:0,
-   story:"忙归忙，正餐总有一份踏实的安排",how:"正餐总有一份踏实安排时被记下",tiers:[{name:"干饭猫本猫",need:15}]},
-  {id:"p-hotpot",family:"taste",seal:"锅",name:"独享火锅的猫",holders:"9300+",stage:0,
-   story:"一个人的火锅也要有仪式感，锅底小料一个不少",how:"一个人也认真吃火锅时收录",tiers:[{name:"独享火锅的猫",need:5}]},
-  {id:"p-carb",family:"taste",seal:"面",name:"碳水教派的猫",holders:"1.4万",stage:0,
-   story:"没有碳水的一天是不完整的一天，这是信仰问题",how:"顿顿离不开碳水时自然浮现",tiers:[{name:"碳水教派的猫",need:20}]},
-  {id:"p-dessert",family:"taste",seal:"甜",name:"饭后要甜点的猫",holders:"6800+",stage:0,
-   story:"一顿饭没有甜品，就像一天没有结尾",how:"每一餐都要以甜点收尾时收录",tiers:[{name:"饭后要甜点的猫",need:8}]},
-  {id:"p-bakery",family:"taste",seal:"包",name:"把面包当饭的猫",holders:"5900+",stage:0,
-   story:"别人买面包当早餐，你买面包当正餐",how:"把面包当正餐时被小喵记下",tiers:[{name:"把面包当饭的猫",need:15}]},
+  /* —— 口味偏好（8）：goods_title 命中对应关键词桶，均 ≥1 单 —— */
+  {id:"p-carb",family:"taste",seal:"碳",name:"碳水喵",holders:"38.43%",stage:1,stageNew:0,earnedAt:"2026-11-04",signal:"order",
+   story:"没有碳水的一天，总觉得少了点什么",how:"当米饭面食常出现在你的订单里时收录",
+   tiers:[{name:"碳水喵",need:1}]},
+  {id:"p-fried",family:"taste",seal:"炸",name:"咔嚓喵",holders:"14.61%",stage:0,signal:"order",
+   story:"那一口酥脆的声音，是快乐最直接的样子",how:"当炸物开始常驻你的餐桌时慢慢收录",
+   tiers:[{name:"咔嚓喵",need:1}]},
+  {id:"p-milktea",family:"taste",seal:"茶",name:"奶茶喵",holders:"9.52%",stage:1,stageNew:0,earnedAt:"2026-11-14",signal:"order",
+   story:"奶茶的甜度、冰量和那一口熟悉感，都是你的专属偏爱",how:"常点那杯熟悉的奶茶时慢慢收录",
+   tiers:[{name:"奶茶喵",need:1}]},
+  {id:"p-hotpot",family:"taste",seal:"锅",name:"咕嘟喵",holders:"4.68%",stage:0,signal:"order",
+   story:"热气腾腾的锅气，是给自己的一点安慰",how:"当热乎乎的锅物出现在订单里时收录",
+   tiers:[{name:"咕嘟喵",need:1}]},
+  {id:"p-coffee",family:"taste",seal:"C",name:"早C喵",holders:"4.61%",stage:0,signal:"order",
+   story:"一天的节奏，常常从熟悉的咖啡香开始",how:"当咖啡成为你开启一天的方式时收录",
+   tiers:[{name:"早C喵",need:1}]},
+  {id:"p-dessert",family:"taste",seal:"甜",name:"甜心喵",holders:"4.13%",stage:0,signal:"order",
+   story:"一顿饭没有甜品，就像一天没有结尾",how:"当餐后总有甜点相伴时慢慢收录",
+   tiers:[{name:"甜心喵",need:1}]},
+  {id:"p-fruit",family:"taste",seal:"果",name:"维C喵",holders:"2.82%",stage:0,signal:"order",
+   story:"在满满一餐里，你还记得给自己留一份清爽",how:"当水果常出现在你的订单里时收录",
+   tiers:[{name:"维C喵",need:1}]},
+  {id:"p-salad",family:"taste",seal:"草",name:"吃草喵",holders:"1.27%",stage:0,signal:"order",
+   story:"偶尔的一口清爽，是你给生活留的小彩蛋",how:"当轻食沙拉悄悄出现时，小喵会记下",
+   tiers:[{name:"吃草喵",need:1}]},
 
-  {id:"p-milktea",family:"taste",seal:"茶",name:"奶茶收藏家",holders:"",stage:0,
-   story:"奶茶的甜度、冰量和那一口熟悉感，都是你的专属偏爱",how:"常点那杯熟悉的奶茶时慢慢收录",tiers:[{name:"奶茶收藏家",need:10},{name:"奶茶地图绘制员",need:30}]},
-  {id:"p-coffee",family:"taste",seal:"咖",name:"咖啡续命喵",holders:"",stage:0,
-   story:"一天的节奏，常常从熟悉的咖啡香开始",how:"一天从熟悉的咖啡香开始时收录",tiers:[{name:"咖啡续命喵",need:10},{name:"咖啡巡游者",need:30}]},
+  /* —— 饮食习惯（3）：双平台 / 凑单 / 同一家店 —— */
+  {id:"h-dual",family:"habit",seal:"双",name:"双碗喵",holders:"10.45%",stage:1,stageNew:0,earnedAt:"2026-11-11",signal:"order",
+   story:"两个平台轮着点，哪个顺手就宠幸哪个",how:"当你在不同平台都留下订单时自然收录",
+   tiers:[{name:"双碗喵",need:1}]},
+  {id:"h-coupon",family:"habit",seal:"拼",name:"拼桌喵",holders:"5.88%",stage:0,signal:"order",
+   story:"一个人点，也要凑够满满一桌才满足",how:"当你的订单里总有多件商品时慢慢收录",
+   tiers:[{name:"拼桌喵",need:1}]},
+  {id:"h-shop",family:"habit",seal:"专",name:"专一喵",holders:"2.99%",stage:1,stageNew:0,earnedAt:"2026-11-04",signal:"order",
+   story:"认准一家就不换，连备注都倒背如流",how:"当你反复光顾同一家店时自然出现",
+   tiers:[{name:"专一喵",need:3}]},
 
-  {id:"h-first",family:"habit",seal:"初",name:"第一口就上头的猫",holders:"3.8万",stage:1,earnedAt:"2026-11-04",
-   story:"有些味道，第一口就成了心头好",how:"第一次点单就认定一个味道时收录",tiers:[{name:"第一口就上头的猫",need:1}]},
-  {id:"h-shop",family:"habit",seal:"熟",name:"老板认识的那只猫",holders:"4.7万",stage:2,earnedAt:"2026-11-04",
-   story:"熟悉到店员都快替你背下那句备注了",how:"在同一家店点到混脸熟时自然出现",
-   tiers:[{name:"混了个脸熟",need:3},{name:"老板记得你的甜度",need:5},{name:"编外合伙人",need:15}]},
-  {id:"h-breadth",family:"habit",seal:"广",name:"巡街探店的猫",holders:"3.3万",stage:0,
-   story:"你总能在街角发现一家值得回头的店",how:"在街角不断发现新店时慢慢收录",
-   tiers:[{name:"闻遍一条街的小喵",need:5},{name:"巡街探店的猫",need:10}]},
-  {id:"h-category",family:"habit",seal:"全",name:"什么都想尝的猫",holders:"3.8万",stage:0,
-   story:"平台有多少品类，你的收藏夹就有多少分组",how:"收藏夹横跨好几个品类时浮现",
-   tiers:[{name:"什么都想尝一口",need:3},{name:"外卖百科猫",need:6},{name:"干饭版图无死角",need:10}]},
-  {id:"h-volume",family:"habit",seal:"量",name:"点单编年史猫",holders:"3.9万",stage:0,
-   story:"你的点单记录，够写一部外卖编年史",how:"点单记录越攒越厚时自然记下",
-   tiers:[{name:"稳定干饭的猫",need:30},{name:"吨吨吨大师",need:100}]},
-  {id:"h-dual",family:"habit",seal:"衡",name:"两碗水端平的猫",holders:"1.4万",stage:1,earnedAt:"2026-11-11",
-   story:"满减是唯一的忠诚，甜度才是底线",how:"在美团点了2单，在饿了么点了2单",tiers:[{name:"两碗水端平的猫",need:1}]},
-  {id:"h-constant",family:"habit",seal:"恒",name:"只认一家的猫",holders:"3.6万",stage:0,
-   story:"永远同一杯，备注都不用改，店老板都认识你了",how:"反复点同一杯、备注都不用改时收录",tiers:[{name:"只认一家的猫",need:10}]},
-  {id:"h-coupon",family:"habit",seal:"凑",name:"凑单精算猫",holders:"2.7万",stage:0,
-   story:"为了刚刚好的优惠，凑单比点单更认真",how:"为了刚刚好的优惠认真凑单时记下",tiers:[{name:"凑单精算猫",need:5}]},
-  {id:"h-note",family:"habit",seal:"注",name:"备注栏写小说的猫",holders:"1.8万",stage:0,
-   story:"少冰三分糖去珍珠双份芋泥，备注栏就是你的个人主页",how:"把备注栏写成个人主页时收录",tiers:[{name:"备注栏写小说的猫",need:5}]},
-
-  {id:"c-newcity",family:"city",seal:"迁",name:"先喝一杯再搬家的猫",holders:"2.1万",stage:1,earnedAt:"2026-11-04",
-   story:"行李没拆先下单，熟悉的甜度落胃才算落地",how:"搬到新城市先下单熟悉的味道时收录",tiers:[{name:"先喝一杯再搬家的猫",need:1}]},
-  {id:"c-hometown",family:"city",seal:"乡",name:"回乡认路的猫",holders:"6900+",stage:0,
-   story:"回到家第一杯，用来校准外面的味道到底差在哪",how:"回到家第一杯校准味道时自然出现",tiers:[{name:"回乡认路的猫",need:1}]},
-
-  {id:"s-liqiu",family:"season",seal:"秋",name:"立秋贪杯猫",holders:"5.2万",stage:0,
-   story:"秋天的第一杯，朋友圈和外卖单同时到",how:"立秋这天下单第一杯时收录",tiers:[{name:"立秋贪杯猫",need:1}]},
-  {id:"s-dongzhi",family:"season",seal:"冬",name:"冬至蹲灶台的猫",holders:"3.4万",stage:0,
-   story:"冬至这天，南北之争在订单里握手言和",how:"冬至这天用订单参与南北之争时记下",tiers:[{name:"冬至蹲灶台的猫",need:1}]},
-  {id:"s-full",family:"season",seal:"节",name:"节气全勤猫",holders:"1800+",stage:0,
-   story:"你总能在季节更替里，记住那些特别的日子",how:"跟着季节更替记住特别日子时慢慢收录",tiers:[{name:"节气常客",need:3},{name:"节气全勤猫",need:6}]},
-
-  {id:"e-free",family:"event",seal:"鲤",name:"免单锦鲤猫",holders:"2300+",stage:0,
-   story:"榜单冲过、免单中过，运气这东西是真实存在的",how:"运气好到被免单砸中时收录",tiers:[{name:"免单锦鲤猫",need:1}]},
-  {id:"e-share",family:"event",seal:"晒",name:"晒单摆拍猫",holders:"7400+",stage:0,
-   story:"你总能把好好吃饭这件事，认真留个纪念",how:"把好好吃饭认真留个纪念时记下",tiers:[{name:"晒单摆拍猫",need:5}]}
+  /* —— 城市足迹（1）：探索型标签 —— */
+  {id:"h-breadth",family:"city",seal:"店",name:"探店喵",holders:"6.94%",stage:0,signal:"order",
+   story:"街角新开的那家店，你总是第一个知道",how:"当你不断发现新的好店时慢慢收录",
+   tiers:[{name:"探店喵",need:3}]}
 ];
 const BADGE_LIBRARY=TAG_LIBRARY;
 
@@ -916,15 +891,15 @@ function resetScene(scene="normal"){
 }
 
 const activeRecords=()=>state.records.filter(r=>r.status==="ACTIVE");
-const monthRecords=(month=state.selectedMonth)=>activeRecords().filter(r=>r.localDate.startsWith(month)).sort((a,b)=>b.businessAt.localeCompare(a.businessAt));
+const monthRecords=(month=state.selectedMonth)=>activeRecords().filter(r=>r.localDate.startsWith(month)).sort((a,b)=>b.receivedAt.localeCompare(a.receivedAt));
 const monthQty=(month=state.selectedMonth)=>monthRecords(month).reduce((n,r)=>n+r.quantity,0);
 const distinct=(arr,key)=>new Set(arr.map(x=>x[key]).filter(Boolean)).size;
 const monthShops=(month=state.selectedMonth)=>distinct(monthRecords(month),"shopId");
 const monthCities=(month=state.selectedMonth)=>distinct(monthRecords(month),"city");
 const recordById=id=>state.records.find(r=>r.id===id)||RECORD_LIBRARY[id]||null;
-const recordsOnDate=date=>activeRecords().filter(r=>r.localDate===date).sort((a,b)=>b.businessAt.localeCompare(a.businessAt));
+const recordsOnDate=date=>activeRecords().filter(r=>r.localDate===date).sort((a,b)=>b.receivedAt.localeCompare(a.receivedAt));
 const pad2=n=>String(n).padStart(2,"0");
-const timeOf=r=>r?`${Number(r.localDate.slice(5,7))}月${Number(r.localDate.slice(8,10))}日 ${r.businessAt.slice(11,16)}`:"";
+const timeOf=r=>r?`${Number(r.localDate.slice(5,7))}月${Number(r.localDate.slice(8,10))}日 ${r.receivedAt.slice(11,16)}`:"";
 const monthLabel=m=>{const [y,mo]=m.split("-");return `${y}年${Number(mo)}月`;};
 const routeOf=k=>ROUTES[k]||ROUTES["stamp-calendar"];
 const flowById=id=>{for(const g of FLOWS){const f=g.flows.find(x=>x.id===id);if(f)return f;}return null;};
@@ -940,7 +915,7 @@ function computedBadges(){
        保证无单用户进来时手里已经有「初次见面喵」这类不打折的成就 */
     let stage=isNew?(t.stageNew||0):(t.stage||0);
     /* 领券族：当天领满 6 张即达成第一档，不需要等结算 */
-    if(t.id==="o-wool"&&state.couponClaimed.size>=6)stage=Math.max(stage,1);
+    if(t.id==="h-coupon"&&state.couponClaimed.size>=6)stage=Math.max(stage,1);
     /* 露脸的小喵：完成头像昵称输入才算到手，新用户默认 0，点它走输入器 */
     if(t.id==="o-avatar"&&state.avatarDone)stage=Math.max(stage,1);
     /* 流程预置的「意外解锁」（主流程 A2）：模拟系统在后台记录后突然颁发 */
@@ -1029,10 +1004,10 @@ function topBar(title="印章",sub=""){return `<div class="product-top"><button 
 /* 日期格子状态演示：B/C1/C2/C3 演示「今天」格(16日)。
    一个可切换的日历即可表达全部 4 种情况，无需做成独立状态帧。
    A1/A2（非今天的有/无数据格）由日历上已有的真实数据格展示，不再单独演示。
-   登记中的图用真实商品图 + 虚线半透明（class=pending），不使用沙漏图标。 */
+   已付款的图用真实商品图 + 虚线半透明（class=pending），不使用沙漏图标。 */
 const DEMO_TODAY="2026-11-16";
-const CELL_DEMO_LABELS=[["B","空·今天"],["C1","登记中"],["C2","已登记"],["C3","多单·今"]];
-const CELL_DEMO_DESC={B:"B 无数据 · 今天 → 橙色空格",C1:"C1 1 单登记中 · 今天 → 虚线半透明图",C2:"C2 1 单登记完成 · 今天 → 清晰图",C3:"C3 多单 · 今天 → 合并一格（角标 2）"};
+const CELL_DEMO_LABELS=[["B","空·今天"],["C1","已付款"],["C2","已登记"],["C3","多单·今"]];
+const CELL_DEMO_DESC={B:"B 无数据 · 今天 → 橙色空格",C1:"C1 1 单已付款 · 今天 → 虚线半透明图",C2:"C2 1 单登记完成 · 今天 → 清晰图",C3:"C3 多单 · 今天 → 合并一格（角标 2）"};
 function demoCellOverride(date,d){
   const s=state.cellDemo;
   if(!s)return null;
@@ -1081,7 +1056,7 @@ function calendarView(){
   return `<div class="mobile-page paper-bg">
     ${topBar("印章")}${stampSwitch("calendar")}
     <div class="page-scroll">
-      <section class="today"><h1>${state.selectedMonth==="2026-11"?"今天":monthLabel(state.selectedMonth)}</h1><p>${state.selectedMonth==="2026-11"?"2026年11月16日，周一":"按订单业务时间归档"}</p></section>
+      <section class="today"><h1>${state.selectedMonth==="2026-11"?"今天":monthLabel(state.selectedMonth)}</h1><p>${state.selectedMonth==="2026-11"?"2026年11月16日，周一":"按收货时间归档"}</p></section>
       <section class="cell-demo" aria-label="日期格子状态切换">
         <div class="cell-demo-head"><b>日期格子状态</b><span>${state.cellDemo?CELL_DEMO_DESC[state.cellDemo]:"点标签切换，点高亮格看抽屉"}</span></div>
         <div class="cell-demo-chips">${CELL_DEMO_LABELS.map(([k,lab])=>`<button class="cell-demo-chip ${state.cellDemo===k?"on":""}" data-act="set-cell-demo" data-demo="${k}"><b>${k}</b><span>${lab}</span></button>`).join("")}</div>
@@ -1091,12 +1066,12 @@ function calendarView(){
         <div class="week-row"><span>周一</span><span>周二</span><span>周三</span><span>周四</span><span>周五</span><span>周六</span><span>周日</span></div>
         <div class="day-grid">${calendarCells()}</div>
       </section>
-      ${state.scene==="newbie"?`<section class="newbie-cta"><img class="newbie-art" src="assets/badges/badge-cat-hello.png" alt=""><div class="newbie-copy"><b>你的小喵图鉴已开张</b><span>接下来的每一餐，都可能留下一个专属小印记。</span></div><button class="newbie-btn" data-act="newbie-to-wall">看看图鉴 ›</button></section>`:""}
+      ${state.scene==="newbie"?`<section class="newbie-cta"><img class="newbie-art" src="assets/badges/badge-cat-hello.png" alt=""><div class="newbie-copy"><!-- <b>你的小喵图鉴已开张</b> --><span>接下来的每一餐，都可能留下一个专属小印记。</span></div><button class="newbie-btn" data-act="newbie-to-wall">看看图鉴 ›</button></section>`:""}
       <section class="month-section">
         <button class="month-summary" data-act="open-month-records"><small>本月</small><div class="month-total"><b>${monthQty()}</b><span>杯</span></div><div class="month-shops">${monthShops()} 家店铺</div><img src="${cover}" alt="本月代表记录"></button>
         <button class="album-entry" data-act="open-month-gallery"><div class="album-stack"><img src="${cover}" alt=""><img src="${alt}" alt=""></div><span>月度回顾</span><b>查看相册 ›</b></button>
       </section>
-      <div class="source-tip"><i>${sync?"⋯":fallback?"美":state.scene==="newbie"?"✦":"✓"}</i><span>${sync?"订单已接收，达到有效状态后会自动进入日历。":fallback?"美团订单未返回图片，已命中后台配置图 img-rule-mt-coupon-01。":state.scene==="newbie"?"小喵会从之后的真实饮食记录里，慢慢发现你的生活习惯，并在合适的时候自动收录。":"记录由有效优惠券订单自动生成，无需手工上传。"}</span></div>
+      <div class="source-tip"><i>${sync?"⋯":fallback?"美":state.scene==="newbie"?"✦":"✓"}</i><span>${sync?"订单已接收，达到有效状态后会自动进入日历。":fallback?"美团订单未返回图片，已命中桶图 img-rule-mt-coupon-01。":state.scene==="newbie"?"小喵会从之后的真实饮食记录里，慢慢发现你的生活习惯，并在合适的时候自动收录。":"记录由有效优惠券订单自动生成，无需手工上传。"}</span></div>
     </div>
   </div>`;
 }
@@ -1174,12 +1149,12 @@ function galleryView(){
 function detailView(){
   const rec=recordById(state.selectedRecordId)||recordById(routeOf(state.currentRoute).recordId);
   if(!rec)return `<div class="mobile-page placeholder-page"><div class="placeholder-icon">⌁</div><h1>记录不存在</h1></div>`;
-  const sourceMap={ELEME_ORDER:"饿了么订单图",ADMIN_RULE:"后台配置图",PLATFORM_DEFAULT:"平台默认图",SYSTEM_DEFAULT:"系统默认图"};
+  const sourceMap={ELEME_ORDER:"饿了么订单图",ADMIN_RULE:"桶图",PLATFORM_DEFAULT:"平台默认图",SYSTEM_DEFAULT:"系统默认图"};
   return `<div class="mobile-page paper-bg">
     <div class="product-top"><button class="round-btn" data-act="detail-back">‹</button><div class="product-title">订单记录</div><div class="top-spacer"></div></div>
     <div class="page-scroll" style="padding:0 0 25px">
       <div class="detail-hero"><img src="${rec.image}" alt="${rec.title}"></div>
-      <div class="detail-body">${rec.imageFallbackReason?`<div class="notice-bar bad"><i>!</i><div>图片已按兜底链回退：先用后台配置图，再平台默认图，最后系统默认图，日期格不会留空白。${rec.imageFallbackReason?`<br>${rec.imageFallbackReason}`:""}</div></div>`:""}<div class="detail-kicker"><span class="platform-dot ${rec.platform}">${rec.platform==="eleme"?"饿":"美"}</span><span>${rec.platform==="eleme"?"饿了么":"美团"} · 订单自动入历</span></div><h1>${rec.title}</h1><div class="detail-meta">${rec.shopName} · ${timeOf(rec)}</div>
+      <div class="detail-body">${rec.imageFallbackReason?`<div class="notice-bar bad"><i>!</i><div>图片已按兜底链回退：先用桶图，再平台默认图，最后系统默认图，日期格不会留空白。${rec.imageFallbackReason?`<br>${rec.imageFallbackReason}`:""}</div></div>`:""}<div class="detail-kicker"><span class="platform-dot ${rec.platform}">${rec.platform==="eleme"?"饿":"美"}</span><span>${rec.platform==="eleme"?"饿了么":"美团"} · 订单自动入历</span></div><h1>${rec.title}</h1><div class="detail-meta">${rec.shopName} · ${timeOf(rec)}</div>
         <div class="detail-rows"><div class="detail-row"><span>图片来源</span><b>${sourceMap[rec.imageSource]}</b></div><div class="detail-row"><span>记录状态</span><b>${rec.status}${rec.imageFallbackReason?` <span class="fail-tag">已兜底</span>`:""}</b></div><div class="detail-row"><span>城市 / 数量</span><b>${rec.city} · ${rec.quantity} 杯</b></div>${rec.imageRuleId?`<div class="detail-row"><span>命中配置</span><b>${rec.imageRuleId} · v${rec.imageRuleVersion}</b></div>`:""}${rec.imageFallbackReason?`<div class="detail-row"><span>取图结果</span><b>重试中 · 成功后更新</b></div>`:""}<div class="detail-row"><span>订单号</span><b>${rec.orderKey.split("|")[1].slice(0,2)}****${rec.orderKey.split("|")[1].slice(-2)}</b></div></div>
         <button class="favorite-btn" data-act="toggle-detail-favorite" data-record="${rec.id}">${rec.favorite?"★ 已收藏":"☆ 收藏这条记录"}</button>
       </div>
@@ -1254,11 +1229,11 @@ function sheetHeader(title,sub=""){return `<div class="sheet-handle"></div><div 
 
 function currentSheetView(){
   if(!state.sheet)return "";
-  /* 记录中：下单后轻量告知，尚未入册，不计入统计与印章。底部抽屉 + 真实商品图（虚线半透明） */
+  /* 已付款：下单后轻量告知，尚未入册，不计入统计与印章。底部抽屉 + 真实商品图（虚线半透明） */
   if(state.sheet==="record-pending"){
     return `<div class="mask" data-act="close-sheet"></div><div class="sheet rec-drawer">
-      ${sheetHeader("记录中","这一单，小喵先记下了")}
-      <img class="rec-thumb pending" src="./assets/records/order-eleme-latte.webp" alt="生椰拿铁 · 记录中">
+      ${sheetHeader("已付款","这一单，小喵先记下了")}
+      <img class="rec-thumb pending" src="./assets/records/order-eleme-latte.webp" alt="生椰拿铁 · 已付款">
       <p class="rec-drawer-desc">等你收货或结算，它才会正式写进日历。<br>印章，也在那一刻一起登记入册。</p>
       <div class="rec-foot">现在还不计入杯数与印章，不会打扰你。</div>
       <div class="modal-actions"><button class="primary" data-act="close-sheet">知道了</button></div>
@@ -1274,13 +1249,13 @@ function currentSheetView(){
       <div class="modal-actions"><button class="primary" data-act="close-sheet">去看看日历</button></div>
     </div>`;
   }
-  /* C3 多单合并：同一天多单，抽屉里 2 个奶茶一个登记中（虚线图）、一个登记成功（清晰图） */
+  /* C3 多单合并：同一天多单，抽屉里 2 个奶茶一个已付款（虚线图）、一个登记成功（清晰图） */
   if(state.sheet==="cell-demo-records"){
-    const card=(cls,src,name,time,stateTag)=>`<div class="record-card ${cls}"><img src="${src}" alt="${name}"><span class="rec-state-tag ${cls}">${stateTag}</span><strong>${name}</strong><time>${time}</time></div>`;
+    const card=(cls,src,name,time,stateTag)=>`<div class="record-card ${cls}"><img src="${src}" alt="${name}"><span class="rec-state-tag ${cls}">${stateTag}</span><strong>${name}</strong>${time?`<time>${time}</time>`:""}</div>`;
     return `<div class="mask" data-act="close-sheet"></div><div class="sheet">
       ${sheetHeader("11月16日 · 今天","同一天 2 单 · 合并记录")}
-      <div class="record-grid">${card("pending","./assets/records/order-eleme-latte.webp","生椰拿铁 · 登记中","今天 09:41 下单","登记中")}${card("","./assets/records/order-eleme-peach.jpg","白桃乌龙 · 已登记","今天 14:15 已收货","已登记")}</div>
-      <div class="rec-foot">两单合并为日历上的一格（角标 2）。登记中的商品图为虚线半透明，登记完成的是正常清晰图；等到都收货后，两枚印章在同一刻入册。</div>
+      <div class="record-grid">${card("pending","./assets/records/order-eleme-latte.webp","生椰拿铁 · 已付款","","已付款")}${card("","./assets/records/order-eleme-peach.jpg","白桃乌龙 · 已登记","今天 14:15 已收货","已登记")}</div>
+      <div class="rec-foot">两单合并为日历上的一格（角标 2）。已付款的商品图为虚线半透明，登记完成的是正常清晰图；等到都收货后，两枚印章在同一刻入册。</div>
     </div>`;
   }
   if(state.sheet==="month-records"){
@@ -1295,7 +1270,7 @@ function currentSheetView(){
   if(state.sheet==="month-picker"){
     const months=["2026-06","2026-07","2026-08","2026-09","2026-10","2026-11"];
     const countOf=m=>state.records.filter(r=>r.status==="ACTIVE"&&r.localDate.startsWith(m)).length;
-    return `<div class="mask" data-act="close-sheet"></div><div class="sheet">${sheetHeader("选择月份","只看有外卖图片的月份 · 按订单业务时间归档")}<div class="month-options">${months.map(m=>{const n=countOf(m);return n?`<button class="month-option ${state.selectedMonth===m?"on":""}" data-act="select-month" data-month="${m}" title="${n} 张外卖图片"><b>${monthLabel(m)}</b><small>${n} 张图片</small></button>`:`<button class="month-option none" disabled aria-disabled="true" title="这个月没有外卖图片"><b>${monthLabel(m)}</b><small>暂无图片</small></button>`;}).join("")}<button class="month-option future" disabled aria-disabled="true"><b>2026年12月</b><small>未来月份</small></button></div></div>`;
+    return `<div class="mask" data-act="close-sheet"></div><div class="sheet">${sheetHeader("选择月份","只看有外卖图片的月份 · 按收货时间归档")}<div class="month-options">${months.map(m=>{const n=countOf(m);return n?`<button class="month-option ${state.selectedMonth===m?"on":""}" data-act="select-month" data-month="${m}" title="${n} 张外卖图片"><b>${monthLabel(m)}</b><small>${n} 张图片</small></button>`:`<button class="month-option none" disabled aria-disabled="true" title="这个月没有外卖图片"><b>${monthLabel(m)}</b><small>暂无图片</small></button>`;}).join("")}<button class="month-option future" disabled aria-disabled="true"><b>2026年12月</b><small>未来月份</small></button></div></div>`;
   }
   if(state.sheet==="badge-filter"){
     return `<div class="mask" data-act="close-sheet"></div><div class="sheet">${sheetHeader("筛选标签","只改变展示，不改变标签归属")}<div style="display:grid;gap:6px">${[["all","全部标签"],["collected","我的收藏"],...TAG_FAMILIES.map(f=>[f.key,f.name])].map(([k,n])=>`<button class="month-option ${(state.badgeFilter===k||(k==="collected"&&state.badgeFilter==="unlocked"))?"on":""}" data-act="choose-badge-filter" data-filter="${k}">${n}</button>`).join("")}</div></div>`;
@@ -1394,7 +1369,7 @@ function currentSheetView(){
     </div>`;
   }
   if(state.sheet==="coupon-unlock"){
-    const b=badgeById("o-wool");
+    const b=badgeById("h-coupon");
     return `<div class="mask" data-act="close-sheet"></div><div class="sheet seal-gain life-gain">
       <div class="sheet-handle"></div>
       <div class="gain-art"><div class="tag-seal big" style="--tint:${b.tint}">${b.seal}</div></div>
@@ -1403,7 +1378,7 @@ function currentSheetView(){
       <p class="gain-desc">你总能把优惠安排得明明白白，这份生活智慧也值得一枚印章。</p>
       <div class="gain-divider"></div>
       <p class="gain-footnote">它是从你的日常里自然长出来的，不用特意收集。</p>
-      <div class="modal-actions"><button class="secondary" data-act="close-sheet">收好</button><button class="primary" data-act="share-badge" data-badge="o-wool">分享这枚小喵</button></div>
+      <div class="modal-actions"><button class="secondary" data-act="close-sheet">收好</button><button class="primary" data-act="share-badge" data-badge="h-coupon">分享这枚小喵</button></div>
     </div>`;
   }
   if(state.sheet==="badge-share"){
@@ -1535,7 +1510,7 @@ function simulateOrder(key){
   const unlocked=before<5&&monthQty("2026-11")>=5;
   renderAll();
   if(unlocked)openSheet("badge-unlock");
-  toast(firstRun?"首笔订单已自动入历，小喵记下了你的第一段饮食日常":(key==="eleme-new"?"饿了么订单图已自动写入日历":"已命中美团后台配置图并写入日历"));
+  toast(firstRun?"首笔订单已自动入历，小喵记下了你的第一段饮食日常":(key==="eleme-new"?"饿了么订单图已自动写入日历":"已命中美团桶图并写入日历"));
 }
 
 function setPageSheet(key){
