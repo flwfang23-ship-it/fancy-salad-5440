@@ -602,7 +602,7 @@ const FLOWS=[
        {title:"03 月度相册",sub:"双列拍立得式回顾，按月份筛选",route:"month-gallery",scene:"normal"}
      ]}
   ]},
-  /* B · 印章功能：三条流程已人工审核，保持原样 */
+  /* B · 印章功能：四条流程（A1/A2/03 已人工审核保持原样；S1 分享勋章为 2026-11-18 补充） */
   {group:"B - 印章功能",flows:[
     {id:"A1",name:"新人首日两抽屉",start:"积分页落地 → 印章页抽屉 → 改头像 → 第二枚",steps:[
       {title:"01 积分页落地",sub:"新人从积分页进来，不弹任何窗",route:"points-home",scene:"newbie"},
@@ -622,6 +622,11 @@ const FLOWS=[
       {title:"03 筛选",sub:"只看已解锁印章",route:"badge-wall-unlocked",scene:"normal",autoSheet:"badge-filter"},
       {title:"04 已收录的印章",sub:"查看生活故事、收录日期与分享入口",route:"badge-wall-all",scene:"normal",autoSheet:"badge-detail-unlocked",badgeId:"h-shop"},
       {title:"05 尚未相遇的印章",sub:"只看故事线索，不显示触发条件",route:"badge-wall-all",scene:"normal",autoSheet:"badge-detail-locked",badgeId:"h-breadth"}
+    ]},
+    {id:"S1",name:"分享勋章",start:"已收录详情/到手抽屉 → 分享预览卡 → 复制文案 → 返回",steps:[
+      {title:"01 从已收录详情进入",sub:"印章墙点开已收录勋章，「怎么获得」下方有分享入口",route:"badge-wall-all",scene:"normal",autoSheet:"badge-detail-unlocked",badgeId:"h-shop",shareBadgeId:"h-shop"},
+      {title:"02 分享预览卡",sub:"点「分享这枚小喵」，弹出 5:4 预览卡：插画/印面字 + 名称 + 一句生活故事 + 图鉴落款",route:"badge-wall-all",scene:"normal",autoSheet:"badge-share",badgeId:"h-shop",shareBadgeId:"h-shop"},
+      {title:"03 复制文案与返回",sub:"点「复制分享文案」toast 提示已复制；点「先不分享」回到来源弹层",route:"badge-wall-all",scene:"normal",autoSheet:"badge-share",badgeId:"h-shop",shareBadgeId:"h-shop"}
     ]}
   ]}
 ];
@@ -703,7 +708,7 @@ const NOTES={
   "badge-filter":{status:"状态",sections:[{h:"筛选",rows:["全部 / 已收录 / 各生活主题","筛选只改变展示，不改变标签归属"]}]},
   "badge-detail-unlocked":{status:"核心",sections:[{h:"展示",rows:["印章图 + 名称 + 一句生活故事","收录状态和日期","「怎么获得」：读后台配置字段「解锁条件（用户可见）」，解锁后展示的一句话，直白说明用户做了什么，不出现数字门槛、剩余次数或进度","已收录勋章提供分享入口"]},{h:"口径",rows:["解锁条件只在已收录后回看，未相遇时不提前展示","条件用故事化文字表达，不出现「差 N 笔」「去下单解锁」等任务话术"]},{h:"交互",rows:["用户可以分享自己的生活成就","不需要点击认领，不通过「我也是这类人」改变勋章数据"]}]},
   "badge-detail-locked":{status:"状态",sections:[{h:"展示",rows:["显示印章名称和一段生活故事，状态为「待相遇」","这段生活故事读后台配置字段「解锁前文案」：只做模糊暗示，不含数字与触发条件","不展示数字条件、档位名称、剩余次数或进度条","不提供去下单、去签到、去领券等任务入口"]},{h:"交互",rows:["用户看完故事即可关闭","不催促用户完成任何动作，等待真实生活记录自然触发"]}]},
-  "badge-share":{status:"状态",sections:[{h:"分享",rows:["预览卡片统一 5:4，复用勋章插画、名称与生活故事","复制分享文案；正式小程序接入微信原生分享能力"]}]},
+  "badge-share":{status:"状态",sections:[{h:"入口",rows:["已收录勋章详情、到手反馈抽屉、意外解锁抽屉、新人第一枚/第二枚抽屉均可点「分享这枚小喵」","未收录勋章不提供分享入口"]},{h:"分享预览卡",rows:["统一 5:4 预览卡：复用勋章插画（无图回退印面字）+ 名称 + 一句生活故事","页眉「我的小喵图鉴 / 生活印章·家族」，页脚「每一餐都有自己的小故事 / 一起遇见小喵 →」","分享是自愿行为，不作为解锁任务，不改变勋章数据"]},{h:"操作",rows:["点「复制分享文案」→ toast 提示「分享文案已复制」","点「先不分享」→ 回到来源弹层；本稿复制文案，正式小程序接微信原生分享"]}]},
   "badge-unlock":{status:"核心",sections:[{h:"触发",rows:["达到勋章触发口径（见后台 4.4）时，小喵自动把印章记进图鉴","同一枚印章只弹一次，重复订单不再弹"]},{h:"文案口径",rows:["讲「你的图鉴多了一枚」，不讲「解锁奖励」","强调标签由行为自动长出，不用领不用换"]}]},
   "order-invalidated":{status:"状态",sections:[{h:"退款逻辑",rows:["记录转 INVALID 并从日历、统计、列表、相册隐藏","未完成进度重算","普通收藏型印章本演示默认保留"]}]},
   "surprise-unlock":{status:"主流程 A2",sections:[
@@ -966,6 +971,7 @@ function applyStepState(step){
   state.currentRoute=step.route;
   state.sheet=null;
   if(step.badgeId)state.selectedBadgeId=step.badgeId;
+  if(step.shareBadgeId)state.shareBadgeId=step.shareBadgeId;
   if(step.focus==="favorite"){
     const r=state.records.find(x=>x.id==="r4");if(r)r.favorite=true;
   }
