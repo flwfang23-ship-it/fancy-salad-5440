@@ -521,7 +521,7 @@ const PAGE_DEFS=[
      {key:"stamp-calendar-fallback",name:"美团配置图",scene:"after-meituan"}
    ]},
   {code:"B",group:"一级页面",page:"印章-印章墙",kind:"badge",status:"core",
-   sheets:[{key:"badge-filter",name:"族筛选弹层"},{key:"badge-detail-unlocked",name:"标签详情（已收）"},{key:"badge-detail-locked",name:"标签详情（未点亮）"},{key:"badge-unlock",name:"自动发现成就反馈"},{key:"badge-share",name:"勋章分享预览"},{key:"newbie-guide",name:"初次见面喵抽屉"},{key:"avatar-editor",name:"头像昵称输入器"},{key:"avatar-unlock",name:"第二枚到手抽屉"}],
+   sheets:[{key:"badge-filter",name:"族筛选弹层"},{key:"badge-detail-unlocked",name:"标签详情（已收）"},{key:"badge-detail-locked",name:"标签详情（未点亮）"},{key:"badge-unlock",name:"自动发现成就反馈"},{key:"badge-share",name:"勋章分享预览"},{key:"newbie-guide",name:"初次见面喵抽屉"},{key:"avatar-editor",name:"头像昵称输入器"},{key:"avatar-unlock",name:"第二枚到手抽屉"},{key:"surprise-unlock",name:"意外解锁抽屉"}],
    frames:[
      {key:"badge-wall-all",name:"标签图鉴",filter:"all"},
      {key:"badge-wall-newbie",name:"无单用户图鉴",scene:"newbie",filter:"all"},
@@ -530,7 +530,7 @@ const PAGE_DEFS=[
      {key:"badge-computing",name:"判定计算中",scene:"computing",filter:"all"}
    ]},
   {code:"C",group:"一级页面",page:"积分",kind:"points",status:"core",
-   sheets:[{key:"coupon-unlock",name:"薅羊毛的猫到手弹窗"}],
+   sheets:[],
    frames:[
      {key:"points-home",name:"积分首页"}
    ]},
@@ -683,11 +683,6 @@ const NOTES={
   "avatar-unlock":{status:"主流程 A",sections:[
     {h:"第二枚到手",rows:["资料保存后由系统自动收录，不要求用户回到勋章页领取","弹窗展示印章图、名称、生活描述和分享入口","「收下，回印章墙」关闭抽屉即可继续浏览"]}
   ]},
-  "coupon-unlock":{status:"自动发现",sections:[
-    {h:"触发",rows:["系统从自然发生的领券与消费已付款识别用户的优惠习惯","用户界面不展示计数、进度或解锁门槛"]},
-    {h:"反馈",rows:["达成后自动收录，轻量提示一次，不要求手动领取","动效克制，不使用连续任务或倒计时强化压力"]},
-    {h:"内容与后续",rows:["只展示印章名称和一句生活观察，不展示领券次数、下一档或收集进度","提供分享入口；用户也可以直接收好继续使用","不将领券行为包装成必须完成的勋章任务"]}
-  ]},
   "record-detail-eleme":{status:"核心",sections:[{h:"图片来源",rows:["优先使用优惠券实际抵扣商品图片","平台图片转存为自有媒体资源","本帧来源 ELEME_ORDER"]},{h:"权限",rows:["业务字段与图片只读","用户只可收藏"]}]},
   "record-detail-meituan":{status:"核心",sections:[{h:"图片来源",rows:["美团无回传图","命中桶图 img-rule-mt-coupon-01 v1","历史记录固化命中版本，配置更新不静默换图"]}]},
   "external-eleme":{status:"流程",sections:[{h:"外部步骤",rows:["交互稿不还原外卖平台页面","模拟订单达到已完成/已核销状态","重复订单由平台 + 订单号 + 券实例幂等"]}]},
@@ -702,7 +697,7 @@ const NOTES={
   ]},
   "mall-placeholder":{status:"范围",sections:[{h:"本稿边界",rows:["不定义商品、库存、兑换、支付、物流或退款"]}]},
   "mine-placeholder":{status:"范围",sections:[{h:"本稿边界",rows:["不定义账户、权益、客服和设置详情"]}]},
-  "month-records":{status:"核心",sections:[{h:"入口",rows:["点击记录日历下方「本月」卡片"]},{h:"交互",rows:["默认按收货时间倒序","星标点击阻止卡片跳转","数量与首页统计一致"]}]},
+  "month-records":{status:"核心",sections:[{h:"入口",rows:["点击记录日历下方「本月」卡片"]},{h:"交互",rows:["默认按收货时间倒序","卡片仅浏览，不进入订单详情；星标可收藏","数量与首页统计一致"]}]},
   "day-records":{status:"状态",sections:[{h:"入口",rows:["点击含记录的日期格"]},{h:"展示",rows:["同日多条以双列卡片展示"]}]},
   "month-picker":{status:"状态",sections:[{h:"交互",rows:["选择月份后关闭抽屉并刷新相册","未来月份不可选"]}]},
   "badge-filter":{status:"状态",sections:[{h:"筛选",rows:["全部 / 已收录 / 各生活主题","筛选只改变展示，不改变标签归属"]}]},
@@ -914,8 +909,6 @@ function computedBadges(){
     /* 新用户/空数据场景：订单派生的标签归零，站内行为标签用 stageNew 自己的进度，
        保证无单用户进来时手里已经有「初次见面喵」这类不打折的成就 */
     let stage=isNew?(t.stageNew||0):(t.stage||0);
-    /* 领券族：当天领满 6 张即达成第一档，不需要等结算 */
-    if(t.id==="h-coupon"&&state.couponClaimed.size>=6)stage=Math.max(stage,1);
     /* 露脸的小喵：完成头像昵称输入才算到手，新用户默认 0，点它走输入器 */
     if(t.id==="o-avatar"&&state.avatarDone)stage=Math.max(stage,1);
     /* 流程预置的「意外解锁」（主流程 A2）：模拟系统在后台记录后突然颁发 */
@@ -961,7 +954,7 @@ function setRouteContext(route){
 function applyStepState(step){
   state.couponClaimed=new Set();
   resetScene(step.scene||"normal");
-  /* 流程步骤可预置领券进度，用于演示「领满 6 张」之后的形态 */
+  /* 流程步骤可预置领券进度，用于演示积分页红包已领态（不参与勋章判定） */
   if(step.coupons){
     const ids=[];POINT_COUPONS.forEach((c,ci)=>c.items.forEach((_,ii)=>ids.push(`${ci}-${ii}`)));
     ids.slice(0,step.coupons).forEach(id=>state.couponClaimed.add(id));
@@ -1368,19 +1361,6 @@ function currentSheetView(){
       <div class="modal-actions"><button class="secondary" data-act="share-badge" data-badge="o-avatar">分享这枚小喵</button><button class="primary" data-act="avatar-collect">收下，回印章墙</button></div>
     </div>`;
   }
-  if(state.sheet==="coupon-unlock"){
-    const b=badgeById("h-coupon");
-    return `<div class="mask" data-act="close-sheet"></div><div class="sheet seal-gain life-gain">
-      <div class="sheet-handle"></div>
-      <div class="gain-art"><div class="tag-seal big" style="--tint:${b.tint}">${b.seal}</div></div>
-      <div class="gain-kicker">小喵发现了你的小本领</div>
-      <h2 class="gain-title">${b.display}</h2>
-      <p class="gain-desc">你总能把优惠安排得明明白白，这份生活智慧也值得一枚印章。</p>
-      <div class="gain-divider"></div>
-      <p class="gain-footnote">它是从你的日常里自然长出来的，不用特意收集。</p>
-      <div class="modal-actions"><button class="secondary" data-act="close-sheet">收好</button><button class="primary" data-act="share-badge" data-badge="h-coupon">分享这枚小喵</button></div>
-    </div>`;
-  }
   if(state.sheet==="badge-share"){
     const b=badgeById(state.shareBadgeId||state.selectedBadgeId||"o-hello");
     const art=b.art
@@ -1626,10 +1606,8 @@ document.addEventListener("click",e=>{
       const cid=actEl.dataset.cid;
       if(!cid||state.couponClaimed.has(cid))return;
       state.couponClaimed.add(cid);
-      const done=state.couponClaimed.size>=6;
       renderAll();
-      if(done)openSheet("coupon-unlock");
-      else toast("已为你收好这份优惠");
+      toast("已为你收好这份优惠");
       return;
     }
     if(act==="points-banner"){toast("活动详情页不在本稿范围，仅还原入口");return;}
