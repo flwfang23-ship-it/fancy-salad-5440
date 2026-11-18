@@ -480,6 +480,27 @@ body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans
 .share-sheet .modal-actions button{height:42px}
 .share-sheet .modal-actions .primary{background:var(--stamp-ink);color:#fff}
 .share-sheet .modal-actions .secondary{background:#f0ece6;color:#776f68}
+ /* 微信分享卡片（外部页面帧）：聊天窗口里的小程序分享卡片 */
+.wx-chat-page{background:#ededed;align-items:stretch;justify-content:flex-start;text-align:left;padding:0}
+.wx-nav{height:48px;background:#f7f7f7;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:13px;color:#333;border-bottom:1px solid #e2e2e2;flex:none}
+.wx-nav b{font-size:15px}.wx-nav span{font-size:16px;color:#666}
+.wx-chat-body{flex:1;overflow-y:auto;padding:18px 12px}
+.wx-msg-row{display:flex;gap:9px;align-items:flex-start}
+.wx-avatar{width:34px;height:34px;border-radius:6px;background:#efe7d8;color:#8a6f45;display:grid;place-items:center;font-size:15px;font-weight:800;flex:none}
+.wx-bubble{background:#fff;border-radius:4px 11px 11px 11px;padding:9px 9px 8px;width:calc(100% - 46px);box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.wx-share-title{font-size:12.5px;line-height:1.5;color:#222;padding:1px 3px 8px}
+.wx-share-card{border:1px solid #ececec;border-radius:8px;overflow:hidden;background:#fff}
+.wx-share-cover{height:150px;position:relative;background:linear-gradient(135deg,#fbe6c9,#f3c98e);display:grid;place-items:center;overflow:hidden}
+.wx-share-hero{height:118px;object-fit:contain}
+.wx-share-seal{width:82px;height:82px;border-radius:26px;background:rgba(255,255,255,.7);border:2px solid #fff;display:grid;place-items:center;font-size:40px;font-weight:900;color:#8a5a22;box-shadow:0 6px 16px rgba(138,90,34,.18)}
+.wx-share-cover-tag{position:absolute;left:9px;top:9px;background:rgba(255,255,255,.82);color:#8a5a22;font-size:9px;font-weight:700;padding:3px 8px;border-radius:9px}
+.wx-share-info{padding:9px 11px 3px}.wx-share-info b{display:block;font-size:13px;color:#222}.wx-share-info span{display:block;font-size:10px;color:#999;margin-top:3px}
+.wx-share-stats{display:flex;padding:8px 11px 11px;gap:6px}
+.wx-share-stats>div{flex:1;background:#faf7f1;border-radius:7px;padding:7px 2px;text-align:center}
+.wx-share-stats b{display:block;font-size:17px;color:#8a5a22;font-weight:850}.wx-share-stats span{display:block;font-size:9px;color:#9a8f80;margin-top:2px}
+.wx-share-appbar{border-top:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;padding:8px 11px;font-size:10px;color:#888}
+.wx-share-appbar em{font-style:normal;background:#07c160;color:#fff;padding:3px 12px;border-radius:11px;font-size:10px;font-weight:700}
+.wx-share-note{font-size:10px;color:#999;line-height:1.6;margin:14px 4px 0;text-align:center}
 </style>
 </head>
 <body>
@@ -561,7 +582,8 @@ const PAGE_DEFS=[
    frames:[
      {key:"external-eleme",name:"饿了么订单",kind:"external",platform:"eleme"},
      {key:"external-meituan",name:"美团订单",kind:"external",platform:"meituan"},
-     {key:"image-rule-demo",name:"后台图片规则命中",kind:"rule"}
+     {key:"image-rule-demo",name:"后台图片规则命中",kind:"rule"},
+     {key:"external-share",name:"微信分享卡片（分享出去的效果）",kind:"external",platform:"share"}
    ]}
 ];
 
@@ -626,7 +648,8 @@ const FLOWS=[
     {id:"S1",name:"分享勋章",start:"已收录详情/到手抽屉 → 分享预览卡 → 复制文案 → 返回",steps:[
       {title:"01 从已收录详情进入",sub:"印章墙点开已收录勋章，「怎么获得」下方有分享入口",route:"badge-wall-all",scene:"normal",autoSheet:"badge-detail-unlocked",badgeId:"h-shop",shareBadgeId:"h-shop"},
       {title:"02 分享预览卡",sub:"点「分享这枚小喵」，弹出 5:4 预览卡：插画/印面字 + 名称 + 一句生活故事 + 图鉴落款",route:"badge-wall-all",scene:"normal",autoSheet:"badge-share",badgeId:"h-shop",shareBadgeId:"h-shop"},
-      {title:"03 复制文案与返回",sub:"点「复制分享文案」toast 提示已复制；点「先不分享」回到来源弹层",route:"badge-wall-all",scene:"normal",autoSheet:"badge-share",badgeId:"h-shop",shareBadgeId:"h-shop"}
+      {title:"03 复制文案与返回",sub:"点「复制分享文案」toast 提示已复制；点「先不分享」回到来源弹层",route:"badge-wall-all",scene:"normal",autoSheet:"badge-share",badgeId:"h-shop",shareBadgeId:"h-shop"},
+       {title:"04 分享出去后的效果",sub:"好友在微信聊天里看到的小程序分享卡片：标题 + 勋章形象 + 数据格 + 小程序标识",route:"external-share",scene:"normal"}
     ]}
   ]}
 ];
@@ -709,6 +732,7 @@ const NOTES={
   "badge-detail-unlocked":{status:"核心",sections:[{h:"展示",rows:["印章图 + 名称 + 一句生活故事","收录状态和日期","「怎么获得」：读后台配置字段「解锁条件（用户可见）」，解锁后展示的一句话，直白说明用户做了什么，不出现数字门槛、剩余次数或进度","已收录勋章提供分享入口"]},{h:"口径",rows:["解锁条件只在已收录后回看，未相遇时不提前展示","条件用故事化文字表达，不出现「差 N 笔」「去下单解锁」等任务话术"]},{h:"交互",rows:["用户可以分享自己的生活成就","不需要点击认领，不通过「我也是这类人」改变勋章数据"]}]},
   "badge-detail-locked":{status:"状态",sections:[{h:"展示",rows:["显示印章名称和一段生活故事，状态为「待相遇」","这段生活故事读后台配置字段「解锁前文案」：只做模糊暗示，不含数字与触发条件","不展示数字条件、档位名称、剩余次数或进度条","不提供去下单、去签到、去领券等任务入口"]},{h:"交互",rows:["用户看完故事即可关闭","不催促用户完成任何动作，等待真实生活记录自然触发"]}]},
   "badge-share":{status:"状态",sections:[{h:"入口",rows:["已收录勋章详情、到手反馈抽屉、意外解锁抽屉、新人第一枚/第二枚抽屉均可点「分享这枚小喵」","未收录勋章不提供分享入口"]},{h:"分享预览卡",rows:["统一 5:4 预览卡：复用勋章插画（无图回退印面字）+ 名称 + 一句生活故事","页眉「我的小喵图鉴 / 生活印章·家族」，页脚「每一餐都有自己的小故事 / 一起遇见小喵 →」","分享是自愿行为，不作为解锁任务，不改变勋章数据"]},{h:"操作",rows:["点「复制分享文案」→ toast 提示「分享文案已复制」","点「先不分享」→ 回到来源弹层；本稿复制文案，正式小程序接微信原生分享"]}]},
+  "external-share":{status:"外部",sections:[{h:"帧定位",rows:["勋章分享出去后，好友在微信聊天窗口看到的小程序卡片效果","属外部页面，非 App 内页面；区别于 badge-share「分享前的预览卡」"]},{h:"卡片构成",rows:["标题「把我的小喵印章分享给你~」","主形象复用被分享勋章的插画（无图回退印面字）","信息区：我的小喵图鉴 + 一句生活故事","数据格：已收录印章 / 图鉴家族 / 记录天数（示意数据，不参与校验）","底部「小喵图鉴 · 小程序」标识与「打开」入口"]},{h:"口径",rows:["分享为自愿行为，不改变勋章数据","本帧只还原展示，不实现微信原生分享"]}]},
   "badge-unlock":{status:"核心",sections:[{h:"触发",rows:["达到勋章触发口径（见后台 4.4）时，小喵自动把印章记进图鉴","同一枚印章只弹一次，重复订单不再弹"]},{h:"文案口径",rows:["讲「你的图鉴多了一枚」，不讲「解锁奖励」","强调标签由行为自动长出，不用领不用换"]}]},
   "order-invalidated":{status:"状态",sections:[{h:"退款逻辑",rows:["记录转 INVALID 并从日历、统计、列表、相册隐藏","未完成进度重算","普通收藏型印章本演示默认保留"]}]},
   "surprise-unlock":{status:"主流程 A2",sections:[
@@ -1161,7 +1185,14 @@ function detailView(){
   </div>`;
 }
 
+function externalShareView(){
+  const b=badgeById("o-hello");
+  const art=b.art?`<img class="wx-share-hero" src="${b.art}" alt="${b.display}">`:`<div class="wx-share-seal">${b.seal}</div>`;
+  return `<div class="mobile-page wx-chat-page"><div class="wx-nav"><span>‹</span><b>小喵图鉴</b><span>•••</span></div><div class="wx-chat-body"><div class="wx-msg-row"><div class="wx-avatar">猫</div><div class="wx-bubble"><div class="wx-share-title">把我的小喵印章分享给你~</div><div class="wx-share-card"><div class="wx-share-cover">${art}<span class="wx-share-cover-tag">生活印章 · 小喵图鉴</span></div><div class="wx-share-info"><b>我的小喵图鉴</b><span>每一餐，都有自己的小故事</span></div><div class="wx-share-stats"><div><b>6</b><span>已收录印章</span></div><div><b>5</b><span>图鉴家族</span></div><div><b>12</b><span>记录天数</span></div></div><div class="wx-share-appbar"><span>小喵图鉴 · 小程序</span><em>打开</em></div></div></div></div><p class="wx-share-note">这是勋章分享到微信后，好友在聊天窗口看到的小程序卡片效果。</p></div></div>`;
+}
+
 function externalView(platform){
+  if(platform==="share")return externalShareView();
   const isEleme=platform==="eleme";
   return `<div class="mobile-page external-page"><div class="external-mark">${isEleme?"饿":"美"}</div><h1>${isEleme?"饿了么":"美团"}订单（外部步骤）</h1><p>交互稿不还原第三方下单页面。点击下方按钮，模拟一笔优惠券订单达到有效状态并回流。</p><div class="external-card"><div class="external-row"><span>订单状态</span><b>已完成 / 已核销</b></div><div class="external-row"><span>优惠券</span><b>coupon-template-01</b></div><div class="external-row"><span>订单图片</span><b>${isEleme?"回传商品图":"不回传"}</b></div><div class="external-row"><span>幂等键</span><b>${isEleme?"E2005":"M2005"} + 券实例</b></div></div><button class="simulate-btn" data-act="${isEleme?"simulate-eleme-order":"simulate-meituan-order"}">模拟订单回流</button></div>`;
 }
