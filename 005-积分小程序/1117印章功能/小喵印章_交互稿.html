@@ -498,10 +498,10 @@ body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans
 .wx-share-seal span{font-size:32px;font-weight:900;line-height:1}
 .wx-share-seal small{font-size:8px;font-weight:700;margin-top:3px;letter-spacing:1px}
 .wx-share-cover-tag{position:absolute;left:9px;top:9px;background:rgba(255,255,255,.86);color:#8a5a22;font-size:9px;font-weight:700;padding:3px 8px;border-radius:9px;z-index:3}
-.wx-share-cover-badge{position:absolute;left:9px;bottom:9px;background:rgba(138,90,34,.82);color:#fff;font-size:8px;padding:3px 7px;border-radius:8px;z-index:3}
+.wx-share-cover-badge{position:absolute;left:9px;bottom:9px;background:rgba(255,255,255,.94);color:#c0392b;border:1px solid #e6a49a;font-size:9px;font-weight:700;padding:3px 7px;border-radius:8px;z-index:3}
 .wx-share-info{padding:10px 11px 4px}.wx-share-info b{display:block;font-size:13px;color:#222}
 .wx-share-story{display:block;font-size:10.5px;color:#7a6151;margin-top:5px;line-height:1.5;font-style:italic}
-.wx-share-story-src{display:block;font-size:8px;color:#b0a599;margin-top:4px}
+.wx-share-story-src{display:block;font-size:9px;color:#c0392b;font-weight:700;margin-top:4px}
 .wx-share-stats{display:flex;padding:8px 11px 11px;gap:6px}
 .wx-share-stats>div{flex:1;background:#faf7f1;border-radius:7px;padding:7px 2px;text-align:center}
 .wx-share-stats b{display:block;font-size:17px;color:#8a5a22;font-weight:850}.wx-share-stats span{display:block;font-size:9px;color:#9a8f80;margin-top:2px}
@@ -656,7 +656,7 @@ const FLOWS=[
       {title:"01 从已收录详情进入",sub:"印章墙点开已收录勋章，「怎么获得」下方有分享入口",route:"badge-wall-all",scene:"normal",autoSheet:"badge-detail-unlocked",badgeId:"h-shop",shareBadgeId:"h-shop"},
       {title:"02 分享预览卡",sub:"点「分享这枚小喵」，弹出 5:4 预览卡：插画/印面字 + 名称 + 一句生活故事 + 图鉴落款",route:"badge-wall-all",scene:"normal",autoSheet:"badge-share",badgeId:"h-shop",shareBadgeId:"h-shop"},
       {title:"03 复制文案与返回",sub:"点「复制分享文案」toast 提示已复制；点「先不分享」回到来源弹层",route:"badge-wall-all",scene:"normal",autoSheet:"badge-share",badgeId:"h-shop",shareBadgeId:"h-shop"},
-       {title:"04 分享出去后的效果",sub:"好友在微信聊天里看到的小程序卡片：主视觉取后台「分享图」（勋章形象+盖章印章），文案取后台「生活故事」，底部小程序标识",route:"external-share",scene:"normal"}
+       {title:"04 分享出去后的效果",sub:"好友在微信聊天里看到的小程序卡片：主视觉取后台「分享图」（勋章形象+盖章印章），文案取后台「解锁前文案」，卡片上红字标出图片与文案来源",route:"external-share",scene:"normal"}
     ]}
   ]}
 ];
@@ -739,7 +739,7 @@ const NOTES={
   "badge-detail-unlocked":{status:"核心",sections:[{h:"展示",rows:["印章图 + 名称 + 一句生活故事","收录状态和日期","「怎么获得」：读后台配置字段「解锁条件（用户可见）」，解锁后展示的一句话，直白说明用户做了什么，不出现数字门槛、剩余次数或进度","已收录勋章提供分享入口"]},{h:"口径",rows:["解锁条件只在已收录后回看，未相遇时不提前展示","条件用故事化文字表达，不出现「差 N 笔」「去下单解锁」等任务话术"]},{h:"交互",rows:["用户可以分享自己的生活成就","不需要点击认领，不通过「我也是这类人」改变勋章数据"]}]},
   "badge-detail-locked":{status:"状态",sections:[{h:"展示",rows:["显示印章名称和一段生活故事，状态为「待相遇」","这段生活故事读后台配置字段「解锁前文案」：只做模糊暗示，不含数字与触发条件","不展示数字条件、档位名称、剩余次数或进度条","不提供去下单、去签到、去领券等任务入口"]},{h:"交互",rows:["用户看完故事即可关闭","不催促用户完成任何动作，等待真实生活记录自然触发"]}]},
   "badge-share":{status:"状态",sections:[{h:"入口",rows:["已收录勋章详情、到手反馈抽屉、意外解锁抽屉、新人第一枚/第二枚抽屉均可点「分享这枚小喵」","未收录勋章不提供分享入口"]},{h:"分享预览卡",rows:["统一 5:4 预览卡：复用勋章插画（无图回退印面字）+ 名称 + 一句生活故事","页眉「我的小喵图鉴 / 生活印章·家族」，页脚「每一餐都有自己的小故事 / 一起遇见小喵 →」","分享是自愿行为，不作为解锁任务，不改变勋章数据"]},{h:"操作",rows:["点「复制分享文案」→ toast 提示「分享文案已复制」","点「先不分享」→ 回到来源弹层；本稿复制文案，正式小程序接微信原生分享"]}]},
-  "external-share":{status:"外部",sections:[{h:"帧定位",rows:["勋章分享出去后，好友在微信聊天窗口看到的小程序卡片效果","属外部页面，非 App 内页面；区别于 badge-share「分享前的预览卡」"]},{h:"卡片构成",rows:["标题「把我的「勋章名」分享给你~」","主视觉＝后台配置的「分享图」：横版趣味主视觉，勋章形象与盖章印章叠合（本稿以此叠层示意）；后台未配图时回退到「勋章图 + 印面字印章」合成","文案＝后台配置的「生活故事」，如「每只小喵的故事，都从一次初次见面开始」，卡片上标注来源","数据格：已收录印章 / 图鉴家族 / 记录天数（示意数据，不参与校验）","底部「小喵图鉴 · 小程序」标识与「打开」入口"]},{h:"口径",rows:["分享图与生活故事均来自后台 4.2 配置，运营改图改文案不需发版","分享为自愿行为，不改变勋章数据","本帧只还原展示，不实现微信原生分享"]}]},
+  "external-share":{status:"外部",sections:[{h:"帧定位",rows:["勋章分享出去后，好友在微信聊天窗口看到的小程序卡片效果","属外部页面，非 App 内页面；区别于 badge-share「分享前的预览卡」"]},{h:"卡片构成",rows:["标题「把我的「勋章名」分享给你~」","主视觉＝后台配置的「分享图」：横版趣味主视觉，勋章形象与盖章印章叠合（本稿以此叠层示意）；后台未配图时回退到「勋章图 + 印面字印章」合成","文案＝后台既有的「解锁前文案」字段（即那句生活化小故事，不新增字段），如「每只小喵的故事，都从一次初次见面开始」，卡片上用红字标注来源","数据格：已收录印章 / 图鉴家族 / 记录天数（示意数据，不参与校验）","底部「小喵图鉴 · 小程序」标识与「打开」入口"]},{h:"口径",rows:["分享图来自后台 4.2 配置；文案复用后台既有的「解锁前文案」，不新增字段；图片与文案来源均在卡片上以红字标出","分享为自愿行为，不改变勋章数据","本帧只还原展示，不实现微信原生分享"]}]},
   "badge-unlock":{status:"核心",sections:[{h:"触发",rows:["达到勋章触发口径（见后台 4.4）时，小喵自动把印章记进图鉴","同一枚印章只弹一次，重复订单不再弹"]},{h:"文案口径",rows:["讲「你的图鉴多了一枚」，不讲「解锁奖励」","强调标签由行为自动长出，不用领不用换"]}]},
   "order-invalidated":{status:"状态",sections:[{h:"退款逻辑",rows:["记录转 INVALID 并从日历、统计、列表、相册隐藏","未完成进度重算","普通收藏型印章本演示默认保留"]}]},
   "surprise-unlock":{status:"主流程 A2",sections:[
@@ -1197,7 +1197,7 @@ function externalShareView(){
   /* 分享图（后台配置）：原型用「勋章形象 + 盖章印章」叠层演示这张趣味主视觉；后台未配图时同样回退到勋章图+印面字合成 */
   const hero=b.art?`<img class="wx-share-hero" src="${b.art}" alt="${b.display}">`:`<div class="wx-share-hero-fallback">${b.seal}</div>`;
   const seal=`<div class="wx-share-seal"><span>${b.seal}</span><small>已收录</small></div>`;
-  return `<div class="mobile-page wx-chat-page"><div class="wx-nav"><span>‹</span><b>小喵图鉴</b><span>•••</span></div><div class="wx-chat-body"><div class="wx-msg-row"><div class="wx-avatar">猫</div><div class="wx-bubble"><div class="wx-share-title">把我的「${b.display}」分享给你~</div><div class="wx-share-card"><div class="wx-share-cover">${hero}${seal}<span class="wx-share-cover-tag">生活印章 · ${b.fam.name}</span><span class="wx-share-cover-badge">分享图 · 后台配置</span></div><div class="wx-share-info"><b>${b.display}</b><span class="wx-share-story">${b.story}</span><span class="wx-share-story-src">文来自后台「生活故事」</span></div><div class="wx-share-stats"><div><b>6</b><span>已收录印章</span></div><div><b>5</b><span>图鉴家族</span></div><div><b>12</b><span>记录天数</span></div></div><div class="wx-share-appbar"><span>小喵图鉴 · 小程序</span><em>打开</em></div></div></div></div><p class="wx-share-note">勋章分享到微信后，好友在聊天窗口看到的小程序卡片。主视觉为后台配置的「分享图」（本稿用勋章形象+盖章印章示意），文案取后台「生活故事」。</p></div></div>`;
+  return `<div class="mobile-page wx-chat-page"><div class="wx-nav"><span>‹</span><b>小喵图鉴</b><span>•••</span></div><div class="wx-chat-body"><div class="wx-msg-row"><div class="wx-avatar">猫</div><div class="wx-bubble"><div class="wx-share-title">把我的「${b.display}」分享给你~</div><div class="wx-share-card"><div class="wx-share-cover">${hero}${seal}<span class="wx-share-cover-tag">生活印章 · ${b.fam.name}</span><span class="wx-share-cover-badge">图片来源：后台「分享图」</span></div><div class="wx-share-info"><b>${b.display}</b><span class="wx-share-story">${b.story}</span><span class="wx-share-story-src">文案来源：后台「解锁前文案」</span></div><div class="wx-share-stats"><div><b>6</b><span>已收录印章</span></div><div><b>5</b><span>图鉴家族</span></div><div><b>12</b><span>记录天数</span></div></div><div class="wx-share-appbar"><span>小喵图鉴 · 小程序</span><em>打开</em></div></div></div></div><p class="wx-share-note">勋章分享到微信后，好友在聊天窗口看到的小程序卡片。图片来源：后台配置的「分享图」（本稿用勋章形象+盖章印章示意）；文案来源：后台「解锁前文案」。两处来源在卡片上均以红字标注。</p></div></div>`;
 }
 
 function externalView(platform){
