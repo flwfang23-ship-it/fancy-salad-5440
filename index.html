@@ -416,7 +416,9 @@ var 系统数据 = [
       ]},
       {类型:'文件夹', 显示:'1117印章功能', 目录名:'1117印章功能', 图标:'🐱', 文件:[
         {名:'小喵印章后台配置_原型.html', 显示:'印章后台原型', 类型:'html'},
-        {名:'小喵印章_交互稿.html', 显示:'小喵印章交互稿', 类型:'html'}
+        {名:'小喵印章_交互稿.html', 显示:'小喵印章交互稿', 类型:'html'},
+        {名:'00A-需求澄清记录.md', 显示:'需求澄清记录', 类型:'md'},
+        {名:'执行手册.html', 显示:'🧪 测试执行手册', 类型:'html'}
       ]}
     ],
     说明: '积分小程序 · 积分相关方案'
@@ -562,11 +564,11 @@ function 打开外链索引(索引, el) {
   var 空 = document.getElementById('空状态');
   空.style.display = 'flex';
   空.innerHTML =
-    '<span class="图标">📚</span>' +
+    '<span class="图标">🔗</span>' +
     '<span class="标题">' + 项.显示 + '</span>' +
-    '<span class="说明">该文档在飞书知识库中维护，已在<text style="color:#15803d;font-weight:700;">新窗口</text>打开' +
-    '<br><a class="外链按钮" href="' + 项.链接 + '" target="_blank" rel="noopener noreferrer">如未自动打开，点此前往飞书 ↗</a>' +
-    '<span class="外链提示">飞书页面可能需要登录并具有访问权限后才能查看</span></span>';
+    '<span class="说明">该内容为外部页面，已在<text style="color:#15803d;font-weight:700;">新窗口</text>打开' +
+    '<br><a class="外链按钮" href="' + 项.链接 + '" target="_blank" rel="noopener noreferrer">如未自动打开，点此前往 ↗</a>' +
+    '<span class="外链提示">' + (项.说明 || '外部链接，访问权限由目标页面决定') + '</span></span>';
   document.getElementById('状态文字').textContent = '外链: ' + 项.显示;
 }
 
@@ -802,11 +804,11 @@ function 打开外链(文件索引, el) {
   var 空 = document.getElementById('空状态');
   空.style.display = 'flex';
   空.innerHTML =
-    '<span class="图标">📚</span>' +
+    '<span class="图标">🔗</span>' +
     '<span class="标题">' + f.显示 + '</span>' +
-    '<span class="说明">该文档在飞书知识库中维护，已在<text style="color:#15803d;font-weight:700;">新窗口</text>打开' +
-    '<br><a class="外链按钮" href="' + f.链接 + '" target="_blank" rel="noopener noreferrer">如未自动打开，点此前往飞书 ↗</a>' +
-    '<span class="外链提示">飞书页面可能需要登录并具有访问权限后才能查看</span></span>';
+    '<span class="说明">该内容为外部页面，已在<text style="color:#15803d;font-weight:700;">新窗口</text>打开' +
+    '<br><a class="外链按钮" href="' + f.链接 + '" target="_blank" rel="noopener noreferrer">如未自动打开，点此前往 ↗</a>' +
+    '<span class="外链提示">' + (f.说明 || '外部链接，访问权限由目标页面决定') + '</span></span>';
   document.getElementById('状态文字').textContent = '外链: ' + f.显示;
 }
 
