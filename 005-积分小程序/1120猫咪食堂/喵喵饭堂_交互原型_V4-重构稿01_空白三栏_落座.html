@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>喵喵饭堂 · V4.8 · 双向互动、每日额度与隐藏勋章</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   A. 工作台外壳 —— 仿 V3-R1 三栏结构（236 / 306 / 1fr）
+   ═══════════════════════════════════════════════════════════ */
+:root{
+  --wb-bg:#F6F4EF; --wb-paper:#FCFAF6; --wb-panel:#FFFFFF;
+  --wb-ink:#2C2621; --wb-ink2:#6B6157; --wb-ink3:#A79C90;
+  --wb-line:#EAE4DA; --wb-line2:#F2EDE5; --wb-accent:#B9713F; --wb-accent2:#8E5530; --wb-soft:#F5EADF;
+  --wb-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  --wb-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  /* 手机壳内 —— 照 02-页面示例 三份样稿的视觉规范 */
+  --bg:#F7F7F7; --card:#FFFFFF;
+  --ink:#16181D; --ink-2:#5E636B; --ink-3:#9BA1A9;
+  --line:#EDEEF1; --line-2:#E2E4E8;
+  --brand:#2EC46B; --brand-d:#159A50; --brand-soft:#EDFBF3; --brand-line:#CFEFDD;
+  --r-lg:20px; --r-md:16px;
+  --shadow:0 1px 2px rgba(20,24,30,.04),0 8px 22px rgba(20,24,30,.05);
+  --num:'Archivo','PingFang SC',sans-serif;
+  --sans:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{height:100vh;overflow:hidden;background:var(--wb-bg);font-family:var(--wb-sans);color:var(--wb-ink)}
+.app{display:grid;grid-template-columns:236px 306px minmax(0,1fr);height:100vh}
+.rail{background:var(--wb-panel);border-right:1px solid var(--wb-line);display:flex;flex-direction:column;min-height:0}
+.rail-h{padding:18px 16px 12px;border-bottom:1px solid var(--wb-line2)}
+.rail-h .k{font-size:9.5px;letter-spacing:.22em;color:var(--wb-ink3)}
+.rail-h .t{margin-top:8px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}
+.rail-h .s{margin-top:6px;font-size:10.5px;color:var(--wb-ink3)}
+.rail-body{flex:1;overflow-y:auto;padding:10px 10px 20px}
+.mode-switch{display:flex;gap:2px;margin-bottom:8px;padding:3px;background:var(--wb-bg);border-radius:7px}
+.ms{flex:1;border:0;background:transparent;font-size:11px;color:var(--wb-ink3);padding:6px 0;border-radius:5px;cursor:pointer;font-family:var(--wb-sans)}
+.ms.on{background:var(--wb-panel);color:var(--wb-ink);font-weight:800;border:1px solid var(--wb-line)}
+.rg-h{padding:12px 8px 6px;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:var(--wb-ink2)}
+.ri{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:7px;cursor:pointer;font-size:12.5px;color:var(--wb-ink2)}
+.ri:hover{background:var(--wb-bg)}
+.ri.on{background:var(--wb-paper);color:var(--wb-ink);font-weight:700;border:1px solid var(--wb-line)}
+.ri .n{flex:1}
+.ri .c{font-family:var(--wb-mono);font-size:9px;color:var(--wb-ink3)}
+.ri.route-node{border-left:2px solid var(--brand-line);padding-left:9px}
+.ri.route-node.on{border-left-color:var(--brand-d)}
+.route-subs{margin-top:2px}
+.route-subs .rs-h{font-size:10px;font-weight:800;color:var(--wb-ink2);margin-bottom:6px}
+.route-subs .rs-list{display:flex;flex-wrap:wrap;gap:4px}
+.route-subs .rs{font-family:var(--wb-mono);font-size:9px;padding:2px 6px;border-radius:5px;background:var(--wb-bg);color:var(--wb-ink3);border:1px solid var(--line-2)}
+.route-subs .rs.on{background:var(--brand-soft);color:var(--brand-d);border-color:var(--brand-line);font-weight:700}
+.flowcol{background:var(--wb-paper);border-right:1px solid var(--wb-line);display:flex;flex-direction:column;min-height:0}
+.fc-h{padding:16px 16px 10px;border-bottom:1px solid var(--wb-line2)}
+.fc-h .t{font-size:12.5px;font-weight:800}
+.fc-h .s{margin-top:5px;font-size:10.5px;color:var(--wb-ink3);line-height:1.5}
+.fc-body{flex:1;overflow-y:auto;padding:12px 12px 24px}
+.fc-grp{padding:13px 4px 5px;font-size:9px;letter-spacing:.12em;color:var(--wb-ink3);font-weight:700}
+.step{display:flex;gap:10px;cursor:pointer;padding:7px 8px;border-radius:7px}
+.step:hover{background:var(--wb-bg)}
+.step.on{background:var(--wb-panel);border:1px solid var(--wb-line)}
+.step .idx{min-width:38px;height:21px;padding:0 6px;border-radius:6px;border:1px solid var(--wb-line);display:grid;place-items:center;font-family:var(--wb-sans);font-size:9px;flex-shrink:0;color:var(--wb-ink2);white-space:nowrap}
+.step.on .idx{background:var(--wb-ink);border-color:var(--wb-ink);color:#fff}
+.step .t{font-size:12px;font-weight:500}
+.step .s{font-size:10px;color:var(--wb-ink3);margin-top:2px}
+.arrow{margin:0 0 0 18px;height:12px;border-left:1px dashed var(--wb-line)}
+.stage{display:flex;gap:22px;align-items:center;justify-content:center;padding:22px;min-width:0;overflow:auto}
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;flex:none}
+.phone-cap{font-size:10px;color:var(--wb-ink3);letter-spacing:.12em}
+.phone{width:392px;max-width:100%;height:min(820px,calc(100vh - 96px));background:var(--bg);border:1px solid var(--wb-line);border-radius:42px;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.panel{width:284px;flex:none;background:var(--wb-panel);border:1px solid var(--wb-line);border-radius:14px;height:min(820px,calc(100vh - 96px));display:flex;flex-direction:column;overflow:hidden;align-self:center}
+.panel-h{padding:15px 16px 12px;border-bottom:1px solid var(--wb-line2)}
+.panel-h .k{font-size:9.5px;letter-spacing:.2em;color:var(--wb-ink3)}
+.panel-h .t{font-size:13px;font-weight:800;margin-top:7px}
+.panel-h .d{font-size:10.5px;color:var(--wb-ink2);margin-top:6px;line-height:1.6}
+.panel-b{flex:1;overflow-y:auto;padding:15px 16px}
+.sec{margin-bottom:17px}
+.sec h4{font-size:10px;letter-spacing:.12em;color:var(--wb-accent);font-weight:800;margin-bottom:8px}
+.rule{display:flex;gap:8px;font-size:11px;line-height:1.65;color:var(--wb-ink2);margin-bottom:7px}
+.rule i{flex:none;width:4px;height:4px;border-radius:50%;background:var(--wb-accent);margin-top:7px}
+.api{font-family:var(--wb-mono);font-size:9.5px;color:var(--wb-accent2);background:var(--wb-paper);border:1px solid var(--wb-line2);border-radius:5px;padding:5px 7px;display:inline-block;margin:0 5px 6px 0}
+.state-box{font-family:var(--wb-mono);font-size:10px;line-height:1.9;color:var(--wb-ink2);background:var(--wb-paper);border:1px solid var(--wb-line2);border-radius:8px;padding:10px 12px}
+.state-box b{color:var(--wb-accent2)}
+.panel-f{padding:11px 16px;border-top:1px solid var(--wb-line2);font-size:9.5px;color:var(--wb-ink3);line-height:1.5}
+
+/* ═══════════════════════════════════════════════════════════
+   B. 手机壳内 —— 视觉规范取自 02-页面示例（会员成长/邀请好友/外卖点餐）
+   ═══════════════════════════════════════════════════════════ */
+.statusbar{display:flex;align-items:center;justify-content:space-between;padding:13px 24px 0;font:700 12.5px/1 var(--num);flex:none;color:var(--ink)}
+.sb-icons{display:flex;align-items:center;gap:5px}
+.appbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px 8px;flex:none}
+.appbar h1{font-size:19px;font-weight:700;letter-spacing:-.01em;line-height:1.25;white-space:nowrap;font-family:var(--sans)}
+.appbar h1 em{font-style:normal;position:relative;z-index:0}
+.appbar h1 em::after{content:"";position:absolute;left:-1px;right:-1px;bottom:2px;height:7px;border-radius:3px;background:rgba(46,196,107,.24);z-index:-1}
+.capsule{display:flex;align-items:center;gap:9px;height:30px;padding:0 10px;border:1px solid var(--line-2);border-radius:999px;background:#fff;color:var(--ink-2);pointer-events:none;flex:none}
+.capsule i{width:1px;height:12px;background:var(--line-2)}
+.annot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 16px 8px;font-size:10px;color:var(--ink-3);flex:none;font-family:var(--sans)}
+.annot .fl{display:flex;align-items:center;gap:7px;min-width:0}
+.annot .fl i{width:5px;height:5px;border-radius:50%;background:var(--brand);flex:none}
+.fsel{background:#fff;border:1px solid var(--line-2);border-radius:8px;padding:5px 7px;font-size:9.5px;color:var(--ink-2);max-width:180px;outline:none;cursor:pointer;font-family:var(--sans);flex:none}
+.page{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:12px;padding:6px 16px 24px;scrollbar-width:none;font-family:var(--sans)}
+.page::-webkit-scrollbar{display:none}
+.page>*{flex:0 0 auto}
+.card,.cta,.party-banner,.cp-sign{animation:rise .46s cubic-bezier(.2,.8,.3,1) both;animation-delay:calc(var(--i,0)*65ms)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:18px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.sec-title{position:relative;padding-left:11px;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.sec-title::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:14px;border-radius:2px;background:var(--brand)}
+.sec-more{font-size:11.5px;color:var(--ink-3)}
+/* 饭堂现场 · 2D 桌子场景（表达逻辑照旧稿 V3-R2：座位 + 动销） */
+.party-banner{display:flex;align-items:center;gap:10px;padding:13px 15px;border:1.5px solid var(--brand-line);border-radius:var(--r-md);background:var(--brand-soft)}
+.party-banner .pb-em{font-size:23px;flex:none}
+.party-banner .pb-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.party-banner .pb-tx b{font-size:14.5px;font-weight:700;color:var(--ink)}
+.party-banner .pb-tx small{font-size:10.5px;color:var(--brand-d)}
+.party-banner .pb-live{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--brand-d);flex:none}
+.party-banner .pb-live i{width:6px;height:6px;border-radius:50%;background:var(--brand);animation:blink 1.9s infinite}
+@keyframes blink{50%{opacity:.3}}
+/* 状态筛选 tab：饭堂首页左上角，全部 + 三态 */
+.status-tabs{display:flex;gap:6px;padding:0;overflow-x:auto;scrollbar-width:none;font-family:var(--sans)}
+.status-tabs::-webkit-scrollbar{display:none}
+.st-tab{flex:none;display:flex;align-items:center;gap:5px;padding:7px 12px;border:1px solid var(--line-2);border-radius:99px;background:#fff;color:var(--ink-2);font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap;transition:background .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease}
+.st-tab i{font-style:normal;font-family:var(--num);font-size:10px;color:var(--ink-3)}
+.st-tab.on{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 4px 12px rgba(46,196,107,.28)}
+.st-tab.on i{color:rgba(255,255,255,.85)}
+.st-tab:not(.on):hover{border-color:var(--brand);color:var(--brand-d)}
+.room-empty{grid-column:1/-1;padding:40px 10px;text-align:center;color:var(--ink-3);font-size:12px;font-family:var(--sans)}
+.room{position:relative}
+.room-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 2px 10px;border-bottom:1px dashed var(--line-2);margin-bottom:12px}
+.room-bar .rb-t{font-size:11.5px;font-weight:700;color:var(--ink-2)}
+.room-bar .rb-live{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--brand-d);flex:none}
+.room-bar .rb-live i{width:6px;height:6px;border-radius:50%;background:var(--brand);animation:blink 1.9s infinite}
+.room-tables{display:grid;grid-template-columns:1fr 1fr;gap:10px 8px}
+.dtbl{position:relative;height:160px;border:1px solid var(--line-2);border-radius:16px;background:#FAFBFC}
+.dtbl.wide{grid-column:1/-1;height:164px}
+/* 桌面包得住座位气泡：顶部座位下移 18px，气泡（-14px）仍在桌内 */
+.dt-surface{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:46px;border:1px solid var(--line-2);border-radius:12px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none}
+.dtbl.wide .dt-surface{width:120px;height:50px}
+.dt-no{font-family:var(--num);font-size:8px;color:var(--ink-3)}
+.dt-mood{font-size:8px;color:var(--brand-d);font-weight:700;white-space:nowrap}
+.dt-seat{position:absolute;width:40px;height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:11px;cursor:pointer}
+.pos-t{top:18px;left:50%;transform:translateX(-50%)}
+.pos-b{bottom:8px;left:50%;transform:translateX(-50%)}
+.pos-l{left:4px;top:50%;transform:translateY(-50%)}
+.pos-r{right:4px;top:50%;transform:translateY(-50%)}
+.dtbl.wide .pos-l{left:8%}
+.dtbl.wide .pos-r{right:8%}
+.dt-seat:hover{background:var(--brand-soft)}
+.dt-seat.empty{border:1.5px dashed var(--line-2);background:#fff}
+.dt-seat.empty:hover{border-color:var(--brand);background:var(--brand-soft)}
+.dt-plus{font-size:16px;color:var(--ink-3);font-weight:300;line-height:1}
+.dt-cat{font-size:22px;line-height:1;position:relative;display:block}
+.dt-act{position:absolute;right:-4px;bottom:-2px;font-size:10px;line-height:1}
+.dt-seat.me{background:var(--brand-soft);border:1.5px solid var(--brand);cursor:pointer}
+.dt-me-tag{position:absolute;bottom:-4px;right:-2px;background:var(--brand);color:#fff;font-size:8px;font-weight:800;padding:1px 6px;border-radius:8px;white-space:nowrap}
+/* 头顶餐食气泡：在吃什么一眼可见；还没想好显示「?」 */
+.food-bubble{position:absolute;z-index:6;top:-14px;left:50%;transform:translateX(-50%);min-width:21px;height:21px;padding:0 4px;border:1.5px solid var(--brand-line);border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;pointer-events:none;white-space:nowrap}
+.food-bubble:after{content:"";position:absolute;left:50%;bottom:-4px;width:6px;height:6px;background:#fff;border-right:1.5px solid var(--brand-line);border-bottom:1.5px solid var(--brand-line);transform:translateX(-50%) rotate(45deg)}
+.food-bubble.think{border-color:var(--line-2);color:var(--ink-3);font-size:10px;font-weight:800;background:var(--bg);border-style:dashed}
+.food-bubble.think:after{background:var(--bg);border-color:var(--line-2)}
+.food-bubble.wait{border-color:#d9a441;background:#fff8e6;color:#8a5d00}
+.food-bubble.wait:after{background:#fff8e6;border-color:#d9a441}
+.food-bubble.wait:before{content:"⏳";font-size:9px;margin-right:2px}
+.food-bubble.eat{border-color:#4f9d69;background:#f1f9f3}
+.food-bubble.eat:after{background:#f1f9f3;border-color:#4f9d69}
+.food-bubble.eat:before{content:"🍚";font-size:9px;margin-right:2px}
+/* 动作动销：每种动作一套独立动画 */
+.dt-seat.act-chew .dt-cat{animation:scChew 1.5s ease-in-out infinite;transform-origin:50% 76%}
+.dt-seat.act-sip .dt-cat{animation:scSip 2.6s ease-in-out infinite;transform-origin:50% 80%}
+.dt-seat.act-zZ .dt-cat{animation:scBreathe 2.9s ease-in-out infinite;transform-origin:50% 92%}
+.dt-seat.act-peek .dt-cat{animation:scPeek 2.2s ease-in-out infinite}
+.dt-seat.act-wait .dt-cat{animation:scWait 2.1s ease-in-out infinite;transform-origin:50% 85%}
+.dt-seat.act-delivered .dt-cat{animation:scHop 1.4s ease-in-out infinite}
+@keyframes scChew{0%,100%{transform:rotate(0) translateY(0)}18%{transform:rotate(9deg) translateY(2px)}34%{transform:rotate(-4deg) translateY(1px)}52%{transform:rotate(8deg) translateY(2px)}70%{transform:rotate(0) translateY(0)}84%{transform:rotate(-3deg) translateY(0)}}
+@keyframes scSip{0%,26%,100%{transform:translateY(0) rotate(0)}40%{transform:translateY(-3px) rotate(-8deg)}54%{transform:translateY(-2px) rotate(-6deg)}70%{transform:translateY(0) rotate(0)}}
+@keyframes scBreathe{0%,100%{transform:scale(1,1) rotate(-4deg)}50%{transform:scale(1.06,1.03) rotate(-6deg)}}
+@keyframes scPeek{0%,20%,100%{transform:translateX(0) translateY(0)}35%{transform:translateX(4px) translateY(-2px)}48%{transform:translateX(4px) translateY(-2px)}62%{transform:translateX(-1px) translateY(1px)}}
+@keyframes scWait{0%,100%{transform:translateY(0)}45%{transform:translateY(-3px)}60%{transform:translateY(0)}}
+@keyframes scHop{0%,100%{transform:translateY(0) scale(1)}45%{transform:translateY(-4px) scale(1.06)}}
+.dt-seat.act-zZ .dt-cat:after{content:"z Z";position:absolute;right:-11px;top:-12px;font-size:9px;line-height:1;color:var(--ink-3);font-weight:800;animation:scZ 2.9s ease-out infinite;pointer-events:none}
+@keyframes scZ{0%{opacity:0;transform:translate(0,2px) scale(.7)}35%{opacity:1;transform:translate(3px,-4px) scale(1)}80%,100%{opacity:0;transform:translate(7px,-12px) scale(1)}}
+/* 场景故事气泡：落在餐桌内的座位间空角，不遮座位与餐食气泡；两行文案；尾巴朝发言猫 */
+.dt-bubble{position:absolute;z-index:3;padding:5px 8px;background:#fff;border:1px solid var(--line-2);border-radius:10px;font-size:9px;line-height:1.5;color:var(--ink-2);text-align:center;pointer-events:none;box-shadow:var(--shadow)}
+.dt-bubble:after{content:"";position:absolute;width:8px;height:8px;background:#fff;transform:rotate(45deg)}
+.dt-bubble.tail-b:after{left:var(--tx,14px);bottom:-5px;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.dt-bubble.tail-r:after{top:var(--ty,12px);right:-5px;border-top:1px solid var(--line-2);border-right:1px solid var(--line-2)}
+.dt-bubble.tail-l:after{top:var(--ty,12px);left:-5px;border-left:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.encounter-entry{display:flex;align-items:center;gap:10px;width:100%;padding:12px 12px;border:1px solid var(--line-2);border-radius:14px;background:#fff;text-align:left;cursor:pointer;font-family:var(--sans);transition:background .15s,border-color .15s}
+.encounter-entry:active{background:var(--brand-soft);border-color:var(--brand-line)}
+.encounter-entry .ee-ic{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:var(--brand-soft);font-size:19px;flex:none}
+.encounter-entry .ee-tx{flex:1;min-width:0}
+.encounter-entry .ee-tx b{display:block;font-size:12.5px;color:var(--ink);font-weight:700}
+.encounter-entry .ee-tx small{display:block;margin-top:3px;font-size:10px;color:var(--ink-3)}
+.encounter-entry .ee-go{font-size:11px;color:var(--brand-d);font-weight:700;white-space:nowrap}
+
+/* 今日饭桌话题：轻提醒 + 饭堂入口卡片 + 统一底部抽屉 */
+.topic-reminder{display:flex;align-items:center;gap:9px;padding:10px 11px;border:1px solid var(--brand-line);border-radius:14px;background:#F4FCF7;font-family:var(--sans);animation:rise .3s ease both}
+.topic-reminder .tr-ill{width:42px;height:42px;border-radius:13px;background:#E4F7EB;display:grid;place-items:center;font-size:22px;flex:none}
+.topic-reminder .tr-copy{flex:1;min-width:0}
+.topic-reminder .tr-copy b{display:block;font-size:12px;color:var(--ink);font-weight:800}
+.topic-reminder .tr-copy small{display:block;margin-top:3px;font-size:10px;color:var(--ink-3);line-height:1.4}
+.topic-reminder .tr-actions{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none}
+.topic-reminder .tr-open{border:0;border-radius:999px;background:var(--brand);color:#fff;padding:7px 10px;font:700 10px var(--sans);white-space:nowrap;cursor:pointer}
+.topic-reminder .tr-later{border:0;background:transparent;color:var(--ink-3);font:10px var(--sans);cursor:pointer}
+.topic-sheet{font-family:var(--sans)}
+.topic-kicker{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 13px}
+.topic-kicker span{font-size:10px;color:var(--ink-3)}
+.topic-state{padding:5px 9px;border-radius:999px;background:var(--brand-soft);color:var(--brand-d);font-size:10px;font-weight:800}
+.topic-question{font-size:21px;line-height:1.4;font-weight:800;color:var(--ink);letter-spacing:-.02em;margin:6px 0 5px}
+.topic-sub{font-size:11px;line-height:1.6;color:var(--ink-3);margin-bottom:14px}
+.topic-options{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.topic-option{min-height:76px;border:1px solid var(--line-2);border-radius:14px;background:#fff;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;padding:12px;cursor:pointer;text-align:left;font-family:var(--sans)}
+.topic-option:active{border-color:var(--brand);background:var(--brand-soft)}
+.topic-option .to-emoji{font-size:21px;line-height:1}
+.topic-option b{font-size:12px;color:var(--ink);font-weight:700}
+.topic-footnote{margin-top:12px;text-align:center;font-size:10px;color:var(--ink-3)}
+.topic-result-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 12px}
+.topic-result-head b{font-size:14px;color:var(--ink)}
+.topic-total{font-size:10px;color:var(--ink-3)}
+.topic-result-row{margin:10px 0 12px}
+.topic-result-label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:11.5px;color:var(--ink-2)}
+.topic-result-label b{font-weight:700;color:var(--ink)}
+.topic-track{height:8px;border-radius:99px;background:#F0F1F2;overflow:hidden}
+.topic-track i{display:block;height:100%;border-radius:99px;background:#2EC46B}
+.topic-result-row.selected .topic-track i{background:#F06B36}
+.topic-result-row.selected .topic-result-label b{color:#D85D2B}
+.topic-comments{margin-top:17px;padding-top:13px;border-top:1px solid var(--line-2)}
+.topic-comments-title{font-size:12px;font-weight:800;color:var(--ink);margin-bottom:10px}
+.topic-comment{display:flex;align-items:flex-start;gap:9px;padding:8px 0}
+.topic-comment .tcc-face{width:31px;height:31px;border-radius:10px;background:var(--brand-soft);display:grid;place-items:center;font-size:17px;flex:none}
+.topic-comment .tcc-body{flex:1;min-width:0}
+.topic-comment .tcc-body b{display:block;font-size:10.5px;color:var(--ink);margin-bottom:3px}
+.topic-comment .tcc-body span{font-size:11px;color:var(--ink-2);line-height:1.5}
+.topic-ended{padding:10px 12px;border-radius:12px;background:#F6F6F6;color:var(--ink-2);font-size:11px;line-height:1.6;margin-bottom:12px}
+.topic-test-tools{padding:12px;border:1px solid var(--wb-line2);border-radius:9px;background:var(--wb-paper);margin-bottom:16px}
+.topic-test-tools .tt-title{font-size:10px;font-weight:800;color:var(--wb-accent);margin-bottom:6px}
+.topic-test-tools .tt-now{font:10px var(--wb-mono);color:var(--wb-ink2);margin-bottom:8px}
+.topic-test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.topic-test-grid button,.topic-test-reset{border:1px solid var(--wb-line);border-radius:6px;background:#fff;padding:6px 3px;font:10px var(--wb-sans);color:var(--wb-ink2);cursor:pointer}
+.topic-test-grid button:active,.topic-test-reset:active{background:var(--wb-soft)}
+.topic-test-reset{width:100%;margin-top:6px;color:var(--wb-accent2)}
+.sheet.topic-sheet{max-height:84%;padding-bottom:26px}
+/* 猫咪偶遇：轻动作互动选择与反馈 */
+.interaction-target{display:flex;align-items:center;gap:10px;margin:2px 0 13px;padding:10px 11px;border-radius:13px;background:var(--bg)}
+.interaction-target>span{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#fff;font-size:25px;flex:none}
+.interaction-target>div{flex:1;min-width:0}
+.interaction-target b{display:block;font-size:12.5px;color:var(--ink);font-weight:800}
+.interaction-target small{display:block;margin-top:4px;font-size:10px;line-height:1.5;color:var(--ink-3)}
+.interaction-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.interaction-choice{min-height:82px;display:flex;align-items:center;gap:9px;padding:11px 10px;border:1px solid var(--line-2);border-radius:14px;background:#fff;text-align:left;cursor:pointer;font-family:var(--sans);transition:background .15s,border-color .15s,transform .15s}
+.interaction-choice:active{background:var(--brand-soft);border-color:var(--brand);transform:scale(.985)}
+.interaction-choice.sent{opacity:.48;background:#F7F7F7;cursor:default}
+.interaction-choice .ic-emoji{font-size:25px;flex:none}
+.interaction-choice .ic-copy{flex:1;min-width:0}
+.interaction-choice .ic-copy b{display:block;font-size:12px;color:var(--ink);font-weight:800}
+.interaction-choice .ic-copy small{display:block;margin-top:4px;font-size:9.5px;color:var(--ink-3);line-height:1.4}
+.interaction-choice .ic-state{font-size:9px;color:var(--brand-d);font-weight:800;white-space:nowrap}
+.interaction-privacy-note,.received-stat-note{margin-top:11px;font-size:10px;line-height:1.6;color:var(--ink-3)}
+.interaction-soft-note{margin-top:12px;font-size:10px;line-height:1.6;text-align:center;color:var(--ink-3)}
+.interaction-quota{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 2px;padding:10px 11px;border-radius:12px;background:#F5F8F6;border:1px solid #E4F0E8}
+.interaction-quota b{font-size:11px;color:var(--ink);white-space:nowrap}
+.interaction-quota span{font-size:10px;color:var(--ink-2);text-align:right;line-height:1.5}
+.interaction-quota.is-full{background:#FBF5EF;border-color:#F0E2D3}
+.interaction-quota.is-full b{color:#9A5C2F}
+.interaction-quota-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.interaction-quota-mini>div{padding:8px 6px;border-radius:10px;background:#F7F8F8;text-align:center}
+.interaction-quota-mini b{display:block;font:700 13px var(--num);color:var(--ink)}
+.interaction-quota-mini small{display:block;margin-top:3px;font-size:9px;color:var(--ink-3)}
+.interaction-result-pair{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
+.interaction-result-pair>div{padding:9px 7px;border-radius:10px;background:#F7F8F8;text-align:center}
+.interaction-result-pair b{display:block;font-size:13px;color:var(--brand-d)}
+.interaction-result-pair small{display:block;margin-top:3px;font-size:9px;color:var(--ink-3)}
+.interaction-session-tools{display:flex;gap:6px;margin:8px 0}
+.interaction-session-tools button{flex:1;border:1px solid var(--wb-line);border-radius:6px;background:#fff;padding:7px 4px;font:10px var(--wb-sans);color:var(--wb-ink2);cursor:pointer}
+.interaction-session-tools button.on{background:var(--wb-soft);border-color:var(--wb-accent);color:var(--wb-accent2);font-weight:800}
+.interaction-stage{display:flex;align-items:center;justify-content:center;gap:15px;padding:20px 12px 16px;border-radius:17px;background:var(--brand-soft)}
+.interaction-performer{display:flex;flex-direction:column;align-items:center;gap:5px;animation:catInteractionBob 1.15s ease-in-out infinite alternate}
+.interaction-performer.target{animation-delay:.18s}
+.interaction-performer>span{width:66px;height:66px;display:grid;place-items:center;border-radius:21px;background:#fff;font-size:38px;box-shadow:0 4px 12px rgba(30,50,40,.07)}
+.interaction-performer small{font-size:10px;color:var(--ink-2);font-weight:700}
+.interaction-action-mark{font-size:31px;animation:interactionPop .72s ease-in-out infinite alternate}
+@keyframes catInteractionBob{from{transform:translateY(3px) rotate(-3deg)}to{transform:translateY(-5px) rotate(3deg)}}
+@keyframes interactionPop{from{transform:scale(.88) rotate(-8deg)}to{transform:scale(1.12) rotate(8deg)}}
+.interaction-result-title{margin-top:15px;text-align:center;font-size:16px;font-weight:800;color:var(--ink)}
+.interaction-result-copy{margin-top:8px;padding:12px 14px;border-radius:13px;background:var(--bg);font-size:12px;line-height:1.7;color:var(--ink-2);text-align:center}
+.interaction-count-result{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:13px;font-size:11px;color:var(--ink-2)}
+.interaction-count-result b{font-size:15px;color:var(--brand-d);font-weight:800}
+.received-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.received-stat{display:flex;align-items:center;gap:9px;min-width:0;padding:10px;border-radius:12px;background:#F7F8F8}
+.received-stat .rs-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:#fff;font-size:18px;flex:none}
+.received-stat .rs-copy{min-width:0}
+.received-stat .rs-copy b{display:block;font-size:13px;color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums}
+.received-stat .rs-copy small{display:block;margin-top:2px;font-size:9.5px;color:var(--ink-3)}
+.received-stat-grid.compact .received-stat{padding:8px}
+.received-stat-grid.compact .received-stat .rs-icon{width:28px;height:28px;font-size:16px}
+.received-set-block{padding-bottom:2px}
+
+/* 小猫勋章：隐藏条件、自然收集，不做任务列表 */
+.cat-badge-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.cat-badge-head .set-h{margin:0}
+.cat-badge-count{font-size:10px;color:var(--brand-d);font-weight:800;white-space:nowrap}
+.cat-badge-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.cat-badge-card{min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px 9px;border-radius:12px;background:#F7F8F8;text-align:center}
+.cat-badge-card .cb-medal{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:#fff;font-size:23px;box-shadow:0 2px 7px rgba(25,35,30,.05)}
+.cat-badge-card b{display:block;max-width:100%;font-size:9.5px;line-height:1.35;color:var(--ink-2);font-weight:800;word-break:break-word}
+.cat-badge-card.locked{background:#F8F8F8}
+.cat-badge-card.locked .cb-medal{background:#ECEEEF;color:#AEB4B7;font-size:20px;box-shadow:none}
+.cat-badge-card.locked b{color:#A0A6A9;font-weight:600}
+.cat-badge-note{margin-top:9px;font-size:10px;line-height:1.55;color:var(--ink-3)}
+.cat-badge-unlock{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:13px;padding:10px 12px;border-radius:11px;background:#FFF8E9;border:1px solid #F4E6C8;color:#8A6727;font-size:11px;line-height:1.5;text-align:center}
+.cat-badge-unlock b{font-weight:800;color:#78551C}
+
+.enc-cat-head{display:flex;align-items:center;gap:11px;margin:4px 0 13px}
+.enc-cat-face{width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:var(--brand-soft);font-size:31px;flex:none}
+.enc-cat-meta b{display:block;font-size:14px;color:var(--ink);font-weight:800}
+.enc-cat-meta small{display:block;margin-top:4px;font-size:10.5px;color:var(--ink-3)}
+.cat-action-note{margin:0 0 13px;font-size:12px;line-height:1.6;color:var(--ink-3)}
+.cat-action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.cat-action-btn{min-height:112px;padding:14px 10px;border-radius:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:var(--sans);text-align:center}
+.cat-action-btn.primary{border:1px solid var(--brand);background:var(--brand);color:#fff;box-shadow:0 6px 16px rgba(46,196,107,.18)}
+.cat-action-btn.secondary{border:1px solid var(--line-2);background:#fff;color:var(--ink)}
+.cat-action-btn:active{transform:scale(.98)}
+.cat-action-icon{font-size:23px;line-height:1.1}
+.cat-action-btn b{font-size:13px;line-height:1.3}
+.cat-action-btn small{font-size:10px;line-height:1.35;opacity:.78}
+.cat-profile-hero{display:flex;align-items:center;gap:13px;padding:3px 0 15px}
+.cat-profile-face{width:66px;height:66px;border-radius:20px;background:var(--brand-soft);display:grid;place-items:center;font-size:39px;flex:none}
+.cat-profile-meta b{display:block;font-size:16px;font-weight:800;color:var(--ink)}
+.cat-profile-meta small{display:block;margin-top:4px;font-size:11px;color:var(--ink-3)}
+.cat-profile-section{margin-top:12px;padding:13px;border:1px solid var(--line-2);border-radius:14px;background:#fff}
+.cat-profile-section-title{font-size:12px;font-weight:800;color:var(--ink);margin-bottom:10px}
+.cat-profile-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;font-size:11.5px;color:var(--ink-3)}
+.cat-profile-row b{font-size:11.5px;color:var(--ink-2);font-weight:700;text-align:right}
+.cat-food-main,.cat-food-empty{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:var(--brand-soft)}
+.cat-food-icon{width:42px;height:42px;border-radius:12px;background:#fff;display:grid;place-items:center;font-size:23px;flex:none}
+.cat-food-main b,.cat-food-empty b{display:block;font-size:13px;color:var(--ink);font-weight:800}
+.cat-food-main small,.cat-food-empty small{display:block;margin-top:4px;font-size:10.5px;color:var(--ink-3);line-height:1.5}
+.cat-food-empty{background:var(--bg)}
+.cat-food-empty>span{font-size:27px}
+.cat-delivery-row{margin-top:8px;padding-top:11px;border-top:1px dashed var(--line-2)}
+/* 我的用餐：首页不占版面，缩为右侧吸附圆圈入口，点开进底部抽屉 */
+.me-orb{position:absolute;right:12px;bottom:70px;z-index:20;width:54px;height:54px;border-radius:50%;background:var(--brand);border:3px solid #fff;box-shadow:0 8px 20px rgba(46,196,107,.38);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:transform .15s ease;font-family:var(--sans)}
+.me-orb:active{transform:scale(.92)}
+.me-orb .o-cat{font-size:24px;line-height:1}
+.me-orb .o-badge{position:absolute;right:-2px;bottom:-2px;width:20px;height:20px;border-radius:50%;background:#fff;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:11px;line-height:1}
+.me-orb .o-badge.sit{color:var(--brand-d);font-weight:800}
+/* 领券圆入口：吸附在设置圆正上方，同为圆形，用暖橙区分「券」 */
+.cp-orb{position:absolute;right:12px;bottom:136px;z-index:21;width:54px;height:54px;border-radius:50%;background:#FF8A3D;border:3px solid #fff;box-shadow:0 8px 20px rgba(255,138,61,.38);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:transform .15s ease;font-family:var(--sans)}
+.cp-orb:active{transform:scale(.92)}
+.cp-orb.hide{display:none}
+.cp-orb .cp-ic{font-size:22px;line-height:1}
+.cp-orb .cp-dot{position:absolute;right:-2px;top:-2px;width:12px;height:12px;border-radius:50%;background:#FF3B30;border:2px solid #fff}
+/* 领券帧 · 领外卖红包（照业务截图：签到条 + 双列券卡） */
+.cp-sign{display:flex;align-items:center;gap:10px;padding:14px 15px;border-radius:var(--r-md);background:#2EC46B;color:#fff}
+.cp-sign .sg-tx{flex:1;font-size:13.5px;font-weight:700;line-height:1.4}
+.cp-sign .sg-coin{font-size:14px}
+.cp-sign .sg-btn{height:32px;padding:0 15px;border:0;border-radius:999px;background:#fff;color:#159A50;font-size:12.5px;font-weight:800;cursor:pointer;font-family:var(--sans);flex:none}
+.cp-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:2px 2px 0}
+.cp-head b{font-size:18px;font-weight:700}
+.cp-head span{font-size:10.5px;color:var(--ink-3);flex:none}
+.cp-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cp-col{display:flex;flex-direction:column;gap:9px}
+.cp-col-h{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.cp-logo{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-weight:800;color:#fff;flex:none}
+.cp-logo.tb{background:#FF5000}
+.cp-logo.mt{background:#FFD100;color:#3A2C00}
+.cp-card{border-radius:var(--r-md);padding:13px 12px;text-align:center}
+.cp-card.tb{background:#FFF0EA;border:1.5px solid #FFD9C7}
+.cp-card.mt{background:#FFF9E0;border:1.5px solid #FFEFA8}
+.cp-card .cc-t{font-size:14px;font-weight:800;line-height:1.35}
+.cp-card.tb .cc-t{color:#E14A00}
+.cp-card.mt .cc-t{color:#4A3800}
+.cp-card .cc-s{margin-top:3px;font-size:10.5px;color:var(--ink-3)}
+.cp-get{width:100%;height:34px;margin-top:11px;border:0;border-radius:10px;font-size:12.5px;font-weight:800;color:#fff;cursor:pointer;font-family:var(--sans)}
+.cp-card.tb .cp-get{background:#FF6A2B}
+.cp-card.mt .cp-get{background:#FFC300;color:#4A3800}
+.cp-get:active{opacity:.82}
+/* 业务帧：整屏空白，中间只放一行产品文案 */
+.page>.biz-blank{flex:1 1 auto;min-height:330px;display:flex;align-items:center;justify-content:center;padding:0 34px;text-align:center}
+.biz-blank .bz-tx{font-size:14px;line-height:1.9;color:var(--ink-3);font-family:var(--sans)}
+/* 非饭堂帧：隐藏底部导航与两个吸附圆，表达已跳出饭堂 */
+.phone.offsite .tabbar,.phone.offsite .me-orb,.phone.offsite .cp-orb{display:none}
+.back-btn{width:28px;height:28px;border:0;border-radius:50%;background:var(--bg);color:var(--ink-2);font-size:20px;line-height:1;display:none;place-items:center;cursor:pointer;flex:none;font-family:var(--sans);padding:0}
+.back-btn.on{display:grid}
+.api-btn{cursor:pointer;border-color:var(--brand-line);color:var(--brand-d);background:var(--brand-soft)}
+.api-btn:hover{border-color:var(--brand)}
+.meal-top{display:flex;align-items:center;gap:13px}
+.meal-av{width:54px;height:54px;border-radius:16px;background:var(--brand-soft);display:grid;place-items:center;font-size:30px;flex:none}
+.meal-nm{font-size:15px;font-weight:700}
+.meal-st{margin-top:4px;font-size:11.5px;color:var(--ink-3)}
+.chip{font-size:10px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--bg);color:var(--ink-3);flex:none;margin-left:auto}
+.chip.on{background:var(--brand-soft);color:var(--brand-d)}
+.meal-line{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-2);font-size:12px;color:var(--ink-2);line-height:1.7}
+/* 我的猫 · 设置抽屉：资料设置与互动统计 */
+.set-line{margin-top:12px;padding-top:11px;border-top:1px dashed var(--line-2);font-size:11.5px;color:var(--ink-3);line-height:1.65}
+.set-block{margin-top:13px;padding-top:12px;border-top:1px dashed var(--line-2)}
+.set-h{font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:9px}
+.name-input{width:100%;height:44px;border:1px solid var(--line-2);border-radius:12px;padding:0 14px;font-size:14px;font-family:var(--sans);color:var(--ink);background:#fff;outline:none}
+.name-input:focus{border-color:var(--brand)}
+.face-row{display:flex;gap:8px;flex-wrap:wrap}
+.face{width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:20px;cursor:pointer;background:#fff;transition:border-color .12s ease,background .12s ease}
+.face.on{border-color:var(--brand);background:var(--brand-soft)}
+.quote-row{display:flex;gap:7px;flex-wrap:wrap}
+.qopt{padding:7px 11px;border:1.5px solid var(--line-2);border-radius:999px;font-size:11.5px;color:var(--ink-2);cursor:pointer;background:#fff;white-space:nowrap;transition:border-color .12s ease,background .12s ease}
+.qopt.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-d);font-weight:700}
+.set-tip{font-size:12px;color:var(--ink-3);line-height:1.65}
+.btn-primary{width:100%;height:50px;border:0;border-radius:999px;background:var(--brand);color:#fff;font-family:var(--sans);font-size:15.5px;font-weight:700;cursor:pointer;box-shadow:0 7px 18px rgba(46,196,107,.28);transition:transform .12s ease,box-shadow .12s ease}
+.btn-primary:active{transform:translateY(1px);box-shadow:0 3px 10px rgba(46,196,107,.22)}
+.btn-ghost{width:100%;height:44px;border:1px solid var(--line-2);border-radius:999px;background:#fff;color:var(--ink-2);font-family:var(--sans);font-size:13.5px;font-weight:700;cursor:pointer}
+.btn-row{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.cta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:var(--r-md);background:var(--brand-soft);color:var(--brand-d);font-size:13px;font-weight:700;cursor:pointer}
+.cta:active{opacity:.75}
+.foot{text-align:center;font-size:11px;color:var(--ink-3);padding:2px 0 8px}
+.tabbar{height:56px;flex:none;border-top:1px solid var(--line);display:flex;background:#fff}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9.5px;color:var(--ink-3);font-family:var(--sans)}
+.tab.on{color:var(--brand-d);font-weight:700}
+.tab .ic{font-size:18px;line-height:1}
+.mask{position:absolute;inset:0;background:rgba(18,20,24,.38);opacity:0;pointer-events:none;transition:opacity .24s ease;z-index:30}
+.mask.on{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:10px 20px 26px;z-index:31;transform:translateY(101%);transition:transform .3s cubic-bezier(.2,.9,.3,1);max-height:80%;overflow-y:auto;scrollbar-width:none;font-family:var(--sans)}
+.sheet::-webkit-scrollbar{display:none}
+.sheet.on{transform:translateY(0)}
+.sheet.encounter-sheet{max-height:76%;padding-bottom:28px}
+/* 入座邀请 / 入座成功：直接引用设计稿截图，整图即主动作，右上 X 关闭 */
+.sheet.as-img{padding:0;background:#fff;border-radius:0;overflow:hidden}
+.sheet.as-img .img-sheet{position:relative;display:block;width:100%;line-height:0;cursor:pointer}
+.sheet.as-img .img-sheet img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+.sheet.as-img .hit-x{position:absolute;left:80%;top:0;width:20%;height:13%;border:0;background:transparent;cursor:pointer;padding:0}
+.sheet.as-img .img-sheet:active img{filter:brightness(.97)}
+.sheet-bar{width:36px;height:4px;border-radius:99px;background:#DCDEE3;margin:0 auto 16px}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.sheet-head h2{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.sheet-close{width:30px;height:30px;border-radius:50%;border:0;background:#F3F4F6;color:var(--ink-2);display:grid;place-items:center;cursor:pointer;font-size:16px;flex:none}
+.wz-step{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--brand-d);margin-bottom:8px}
+.wz-title{font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.35}
+.wz-sub{margin-top:8px;font-size:12.5px;color:var(--ink-3);line-height:1.7}
+.wz-quote{margin-top:14px;padding:12px 14px;border-left:3px solid var(--brand);background:var(--bg);border-radius:0 10px 10px 0;font-size:12.5px;line-height:1.7;color:var(--ink-2)}
+.wz-art{height:124px;border-radius:var(--r-md);background:var(--brand-soft);display:flex;align-items:center;justify-content:center;gap:8px;font-size:36px;margin-bottom:16px;position:relative}
+.wz-art .cap{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:10px;color:var(--brand-d);font-weight:700}
+.wz-num{font-family:var(--num);font-size:36px;font-weight:800;line-height:1;color:var(--ink)}
+.wz-num small{font-family:var(--sans);font-size:11px;font-weight:500;color:var(--ink-3);margin-left:6px}
+.wz-bar{display:flex;gap:5px;margin:14px 0 16px}
+.wz-bar i{flex:1;height:4px;border-radius:2px;background:var(--line-2)}
+.wz-bar i.on{background:var(--brand)}
+.wz-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 15px;border:1px solid var(--line-2);border-radius:var(--r-md);margin-top:10px;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;background:#fff}
+.wz-opt:hover{border-color:var(--brand);color:var(--brand-d)}
+.wz-opt .go{color:var(--ink-3)}
+.seat-pick{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:16px}
+.sp{aspect-ratio:1;border:1.5px solid var(--line-2);border-radius:12px;display:grid;place-items:center;font-size:19px;cursor:pointer;background:#fff}
+.sp.free{border-style:dashed;color:var(--brand)}
+.sp.taken{opacity:.5}
+.sp.sel{border-color:var(--brand);background:var(--brand-soft);font-weight:800}
+.wz-confirm{margin-top:14px;padding:12px 14px;border:1px solid var(--brand-line);border-radius:var(--r-md);background:var(--brand-soft);font-size:12.5px;color:var(--brand-d);line-height:1.6}
+.wz-confirm .row{display:flex;gap:8px;margin-top:10px}
+.wz-confirm .row div{flex:1;text-align:center;padding:10px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer}
+.wz-confirm .yes{background:var(--brand);color:#fff}
+.wz-confirm .no{background:#fff;border:1px solid var(--line-2);color:var(--ink-2)}
+.coupon{display:flex;align-items:center;gap:12px;padding:14px;border:1.5px solid var(--line-2);border-radius:var(--r-md);margin-top:10px;cursor:pointer}
+.coupon.on{border-color:var(--brand);background:var(--brand-soft)}
+.coupon .off{font-family:var(--num);font-size:22px;font-weight:800;color:var(--brand-d);flex:none}
+.coupon .tx b{display:block;font-size:13.5px;font-weight:700}
+.coupon .tx small{display:block;margin-top:3px;font-size:11px;color:var(--ink-3)}
+.coupon .pick{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--brand-d);flex:none}
+.note{margin-top:14px;padding:11px 13px;border-radius:10px;background:var(--bg);font-size:11.5px;color:var(--ink-2);line-height:1.7}
+.toast{position:absolute;left:50%;bottom:92px;transform:translate(-50%,10px);background:rgba(22,24,29,.92);color:#fff;font-size:12.5px;padding:10px 16px;border-radius:999px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease;z-index:40;font-family:var(--sans)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* 饭堂奇遇：左下角常驻入口，不主动打断用户 */
+.mystery-orb{position:absolute;left:12px;bottom:70px;z-index:20;height:44px;min-width:112px;padding:0 12px 0 9px;border:1px solid #EAD9C5;border-radius:999px;background:#FFFDF9;color:#725238;display:flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(70,48,25,.12);cursor:pointer;font:700 11px var(--sans);transition:transform .16s ease,border-color .16s ease}
+.mystery-orb:active{transform:scale(.94)}
+.mystery-orb .mo-ic{width:27px;height:27px;border-radius:50%;background:#F7E9D8;display:grid;place-items:center;font-size:16px;animation:mysteryWiggle 3.6s ease-in-out infinite}
+.mystery-orb .mo-new{position:absolute;right:3px;top:1px;min-width:14px;height:14px;border-radius:99px;background:#F05A47;border:2px solid #fff;display:none}
+.mystery-orb.has-new .mo-new{display:block}
+.topic-orb{left:12px;bottom:122px;border-color:#D6E3F5;background:#F9FCFF;color:#47627F}
+.topic-orb .mo-ic{background:#E8F1FF;animation:none}
+@keyframes mysteryWiggle{0%,86%,100%{transform:rotate(0)}89%{transform:rotate(-9deg)}92%{transform:rotate(8deg)}95%{transform:rotate(-5deg)}}
+.phone.offsite .tabbar,.phone.offsite .me-orb,.phone.offsite .cp-orb,.phone.offsite .mystery-orb,.phone.offsite .topic-orb{display:none}
+/* 饭堂奇遇抽屉：与现有底部抽屉共用容器 */
+.sheet.mystery-sheet{max-height:86%;padding-bottom:25px}
+.mystery-ui{font-family:var(--sans);color:var(--ink)}
+.mystery-kicker{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 12px;font-size:10px;color:var(--ink-3)}
+.mystery-pill{padding:5px 9px;border-radius:99px;background:#F6EFE6;color:#936A42;font-size:9.5px;font-weight:800;white-space:nowrap}
+.mystery-hero{position:relative;display:flex;align-items:center;gap:10px;padding:11px;border:1px solid #EADCCB;border-radius:17px;background:#FBF6EF;margin-bottom:13px;overflow:hidden}
+.mystery-box-art{width:64px;height:64px;border-radius:17px;background:#F3E3D0;display:grid;place-items:center;font-size:43px;flex:none;position:relative}
+.mystery-box-art:after{content:'✦';position:absolute;right:8px;top:4px;color:#C58D54;font-size:14px}
+.mystery-hero-copy{min-width:0;flex:1}
+.mystery-hero-copy b{display:block;font-size:14px;line-height:1.5;color:var(--ink)}
+.mystery-hero-copy small{display:block;margin-top:5px;font-size:10.5px;line-height:1.55;color:var(--ink-3)}
+.mystery-progress{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 1px 6px;font-size:10px;color:var(--ink-3)}
+.mystery-progress b{color:var(--ink-2);font-weight:700}
+.mystery-track{height:6px;border-radius:99px;background:#F0ECE6;overflow:hidden;margin-bottom:8px}
+.mystery-track i{display:block;height:100%;border-radius:99px;background:#C58D54}
+.mystery-stats{display:flex;gap:7px;margin:8px 0 10px}
+.mystery-stat{flex:1;padding:7px 6px;border-radius:10px;background:#F7F7F6;text-align:center}
+.mystery-stat b{display:block;font:800 14px var(--num);color:var(--ink)}
+.mystery-stat small{display:block;margin-top:2px;font-size:8.5px;color:var(--ink-3)}
+.mystery-main-btn{width:100%;height:47px;border:0;border-radius:999px;background:#2C2925;color:#fff;font:700 13px var(--sans);cursor:pointer}
+.mystery-main-btn:disabled{background:#E7E5E1;color:#A6A19A;cursor:not-allowed}
+.mystery-secondary-btn{width:100%;height:43px;margin-top:9px;border:1px solid var(--line-2);border-radius:999px;background:#fff;color:var(--ink-2);font:700 12px var(--sans);cursor:pointer}
+.mystery-note{margin-top:10px;text-align:center;font-size:9.5px;line-height:1.55;color:var(--ink-3)}
+.mystery-scene{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;min-height:102px;padding:12px;border:1px solid #EEE6DC;border-radius:16px;background:#FBF8F3;margin:10px 0 14px;overflow:hidden}
+.mystery-scene.rare{background:#F8F1E5;border-color:#E8D1A9}
+.mystery-character{width:62px;height:62px;border-radius:18px;background:#fff;display:grid;place-items:center;font-size:36px;box-shadow:0 2px 7px rgba(30,25,18,.05)}
+.mystery-character.small{width:50px;height:50px;border-radius:15px;font-size:29px}
+.mystery-scene .mystery-prop{font-size:33px;align-self:center}
+.mystery-spark{position:absolute;right:13px;top:8px;color:#C58D54;font-size:16px}
+.mystery-event-title{font-size:19px;line-height:1.4;font-weight:800;color:var(--ink);margin:5px 0 5px}
+.mystery-event-desc{font-size:11.5px;line-height:1.65;color:var(--ink-3);margin-bottom:10px}
+.mystery-story{padding:10px 12px;border-radius:12px;background:#F7F7F6;color:var(--ink-2);font-size:11.5px;line-height:1.7;margin:8px 0 10px}
+.mystery-type{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:99px;background:#F3EFE9;color:#8A6A48;font-size:9.5px;font-weight:800}
+.mystery-type.rare{background:#F6E8CB;color:#94651D}
+.mystery-choice{width:100%;display:flex;align-items:center;gap:9px;padding:10px 12px;margin-top:6px;border:1px solid var(--line-2);border-radius:12px;background:#fff;color:var(--ink);font:600 12px var(--sans);text-align:left;cursor:pointer}
+.mystery-choice:active{background:#FBF6EF;border-color:#D9BE9D}
+.mystery-choice .mc-no{width:24px;height:24px;border-radius:8px;background:#F5F3F0;display:grid;place-items:center;font:700 10px var(--num);color:#8D8175;flex:none}
+.mystery-result{padding:14px;border:1px solid #EADCCB;border-radius:14px;background:#FBF6EF;margin:12px 0}
+.mystery-result b{display:block;font-size:14px;color:var(--ink);margin-bottom:6px}
+.mystery-result p{font-size:11.5px;line-height:1.75;color:var(--ink-2)}
+.mystery-book-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 12px}
+.mystery-book-head b{font-size:13px}
+.mystery-book-head span{font-size:10px;color:var(--ink-3)}
+.mystery-book-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.mystery-book-item{min-height:104px;padding:11px;border:1px solid var(--line-2);border-radius:13px;background:#fff;text-align:left;display:flex;flex-direction:column;gap:5px;cursor:pointer;font-family:var(--sans)}
+.mystery-book-item.locked{background:#F7F7F6;color:#B8B8B8;cursor:default}
+.mystery-book-item .mb-art{font-size:27px;line-height:1.1}
+.mystery-book-item b{font-size:10.5px;color:var(--ink);line-height:1.4}
+.mystery-book-item.locked b{color:#A8A8A8}
+.mystery-book-item small{font-size:9px;color:var(--ink-3)}
+.mystery-book-item .mb-rare{font-size:8.5px;color:#9A6C22;font-weight:800}
+.mystery-inline-link{border:0;background:transparent;color:var(--ink-3);font:10.5px var(--sans);padding:8px 0;cursor:pointer}
+.mystery-end-label{padding:10px 12px;border-radius:11px;background:#F4F4F2;color:#77736D;font-size:10.5px;line-height:1.6;margin-top:10px}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="rail-h">
+      <div class="k">MIAOMIAO CANTEEN</div>
+      <div class="t"><span>🐱</span>喵喵饭堂</div>
+      <div class="s">V4.8 · 双向互动、每日额度与隐藏勋章</div>
+    </div>
+    <div class="rail-body" id="railBody"></div>
+  </aside>
+
+  <section class="flowcol">
+    <div class="fc-h"><div class="t" id="fcTitle"></div><div class="s" id="fcSub"></div></div>
+    <div class="fc-body" id="fcBody"></div>
+  </section>
+
+  <main class="stage">
+    <div class="phone-wrap">
+      <div class="phone-cap">微信小程序预览 · 饭堂主场景</div>
+      <div class="phone" id="phone">
+        <div class="statusbar">
+          <span>9:41</span>
+          <div class="sb-icons" aria-hidden="true">
+            <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+            <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.6a9.5 9.5 0 0 1 13 0"/><path d="M3.6 6.3a6 6 0 0 1 7.8 0"/><path d="M6.2 9a2.4 2.4 0 0 1 2.6 0"/></svg>
+            <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x=".5" y=".5" width="19" height="10" rx="3" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="15" height="7" rx="1.6" fill="currentColor"/><path d="M21.4 4v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".5"/></svg>
+          </div>
+        </div>
+        <header class="appbar">
+          <button class="back-btn" id="backBtn" data-act="back-hall" aria-label="返回饭堂">‹</button>
+          <h1 id="appTitle">今天也有人<em>陪你吃饭</em></h1>
+          <div class="capsule" aria-hidden="true"><span>•••</span><i></i><span>◉</span></div>
+        </header>
+        <div class="annot">
+          <div class="fl"><i></i><span id="annotName"></span></div>
+          <select class="fsel" id="frameSel" aria-label="帧选择"></select>
+        </div>
+        <main class="page" id="screen"></main>
+        <nav class="tabbar" id="tabbar"></nav>
+        <div class="mask" id="mask" data-act="close"></div>
+        <section class="sheet" id="sheet" aria-label="交互弹窗"></section>
+        <button class="cp-orb hide" id="cpOrb" data-act="coupon-entry" aria-label="领券点餐"><span class="cp-ic">🎟️</span><span class="cp-dot"></span></button>
+        <button class="mystery-orb topic-orb" id="topicOrb" data-act="topic-open" aria-label="今日话题"><span class="mo-ic">💬</span><span>今日话题</span><i class="mo-new"></i></button>
+        <button class="mystery-orb" id="mysteryOrb" data-act="mystery-open" aria-label="饭堂奇遇"><span class="mo-ic">🎁</span><span>饭堂奇遇</span><i class="mo-new"></i></button>
+        <button class="me-orb" id="meOrb" data-act="me-entry" aria-label="我的猫"></button>
+        <div class="toast" id="toast"></div>
+      </div>
+    </div>
+    <aside class="panel">
+      <div class="panel-h"><div class="k">当前场景 / 抽屉说明</div><div class="t" id="panelT"></div><div class="d" id="panelD"></div></div>
+      <div class="panel-b" id="panelB"></div>
+      <div class="panel-f">饭堂是唯一主场景；饭堂奇遇已独立登记为叠层路由 r-mystery，猫咪偶遇与今日饭桌话题仍由各自入口承接。</div>
+    </aside>
+  </main>
+</div>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════════════════════════
+   喵喵饭堂 · V4.8：双向轻互动 + 中午 / 晚上分场额度
+   ───────────────────────────────────────────────────────────────────────
+   针对 V3-R1 的 bug 温床，本稿立三条纪律：
+   ① 单一状态源：业务状态只在 act() 里改，render() 是 state 的纯函数
+   ② go() 只切帧，绝不偷补状态；评审跳帧走 applyPreset() 一次性快照
+   ③ 静态弹窗与向导弹窗合并为一套 sheet 引擎；无 setTimeout 隐式推进
+   帧体系红线保留：ROUTES / PAGE_TREE / FLOWS / frameSel / go(key) / data-go
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── 模拟数据层 ── */
+/* 三态状态机（所有猫，含自己的猫）：none 未点餐 / paid 等餐中（已付款）/ received 干饭中（已收货）。
+   餐食 dish 仅 paid / received 有值；未点餐不虚构菜品，头顶显示「?」。接入后 dish 来自订单接口。 */
+const DISHES = ["牛肉面","鸡腿饭","阳春面","小笼包"];
+const CATS = [
+  {id:"c01",name:"小橘今天吃啥",emoji:"🐱",status:"received",dish:"牛肉面",personality:"干饭王"},
+  {id:"c02",name:"早八打工猫",emoji:"😸",status:"received",dish:"冰美式",personality:"打工猫"},
+  {id:"c03",name:"奶盖不加冰",emoji:"😻",status:"paid",dish:"珍珠奶茶",personality:"美食家"},
+  {id:"c04",name:"慢慢吃小猫",emoji:"😽",status:"received",dish:"鸡腿饭",personality:"社恐猫"},
+  {id:"c05",name:"饭饭第一名",emoji:"😼",status:"received",dish:"红烧牛肉饭",personality:"干饭王"},
+  {id:"c06",name:"今天不加班",emoji:"🙀",status:"none",dish:null,personality:"摆烂猫"},
+  {id:"c07",name:"夜宵巡逻员",emoji:"😿",status:"none",dish:null,personality:"社恐猫"},
+  {id:"c08",name:"碳水爱好者",emoji:"😹",status:"received",dish:"小笼包",personality:"干饭王"},
+  {id:"c09",name:"拿铁续命",emoji:"🐈",status:"paid",dish:"拿铁",personality:"打工猫"},
+  {id:"c10",name:"窗边晒太阳",emoji:"😺",status:"none",dish:null,personality:"摆烂猫"},
+  {id:"c11",name:"咕噜噜吃饭",emoji:"🐱",status:"received",dish:"阳春面",personality:"美食家"},
+  {id:"c12",name:"三分糖选手",emoji:"😻",status:"paid",dish:"三分糖奶茶",personality:"戏精猫"},
+  {id:"c13",name:"摸鱼一级选手",emoji:"😸",status:"none",dish:null,personality:"打工猫"},
+  {id:"c14",name:"加班到深夜",emoji:"😿",status:"paid",dish:"冷萃",personality:"打工猫"},
+  {id:"c15",name:"布丁加双份",emoji:"😽",status:"received",dish:"焦糖布丁",personality:"美食家"},
+  {id:"c16",name:"工位长猫了",emoji:"🙀",status:"none",dish:null,personality:"摆烂猫"},
+  {id:"c17",name:"珍珠多一点",emoji:"😹",status:"paid",dish:"珍珠奶茶",personality:"戏精猫"},
+  {id:"c18",name:"干饭不排队",emoji:"😼",status:"received",dish:"鸡腿饭",personality:"干饭王"},
+  {id:"c19",name:"角落小声喵",emoji:"🐈",status:"none",dish:null,personality:"社恐猫"}
+];
+const catById = id => CATS.find(c=>c.id===id) || null;
+/* 猫咪偶遇改为轻量动作互动：不建立人猫关系链，不记录互动发起者身份。 */
+const CAT_INTERACTION_TYPES = [
+  {id:"wave",label:"挥挥手",icon:"👋",hint:"轻轻打个招呼",past:"挥过手",variants:[
+    {text:"探头挥挥手",emoji:"👋",feedback:"你从桌边探出脑袋挥挥手，TA也笑着朝你挥了挥爪子。"},
+    {text:"双爪挥手",emoji:"🙌",feedback:"你举起两只爪子热情挥手，TA也跟着开心地晃了晃爪子。"},
+    {text:"挥手时冒出小星星",emoji:"✨",feedback:"挥手的瞬间冒出几颗小星星，饭桌气氛都变可爱了。"},
+    {text:"挥到一半害羞躲起来",emoji:"🙈",feedback:"你挥到一半突然害羞，躲回桌边，只露出一双眼睛。"}
+  ]},
+  {id:"cup",label:"碰个杯",icon:"🧋",hint:"奶茶、咖啡都可以",past:"碰过杯",variants:[
+    {text:"碰奶茶",emoji:"🧋",feedback:"两杯奶茶轻轻碰在一起，吸管都跟着晃了晃。"},
+    {text:"碰咖啡",emoji:"☕",feedback:"咖啡杯发出清脆的一声，今天也要好好吃饭。"},
+    {text:"碰杯碰出小爱心",emoji:"💚",feedback:"杯子刚碰上，就冒出一颗小爱心。"},
+    {text:"碰完自己先喝了一大口",emoji:"😋",feedback:"杯子刚碰完，你就忍不住先喝了一大口。"}
+  ]},
+  {id:"share",label:"递个菜",icon:"🥟",hint:"分享一口好吃的",past:"递过吃的",variants:[
+    {text:"递一笼小笼包",emoji:"🥟",feedback:"你把热乎乎的小笼包推过去，香气一下子飘满饭桌。"},
+    {text:"递一碗面",emoji:"🍜",feedback:"你把一碗面轻轻递过去，TA的眼睛一下亮了。"},
+    {text:"递一颗糖",emoji:"🍬",feedback:"一颗小糖果落在桌边，今天也有一点甜。"},
+    {text:"递完发现自己也饿了",emoji:"🤤",feedback:"菜刚递出去，你的肚子也跟着咕噜叫了起来。"}
+  ]},
+  {id:"eat",label:"一起吃饭吗",icon:"🍚",hint:"把小椅子搬过来",past:"一起吃过饭",variants:[
+    {text:"坐到旁边",emoji:"🪑",feedback:"你把小椅子挪到旁边，饭桌一下子热闹起来。"},
+    {text:"面对面吃饭",emoji:"🍱",feedback:"你们面对面坐好，开始享受这顿饭。"},
+    {text:"挤在同一张桌子",emoji:"🐾",feedback:"桌子有点挤，但两只猫都吃得很开心。"},
+    {text:"把自己的小椅子搬过来",emoji:"🪑",feedback:"你吭哧吭哧搬来小椅子，终于找到一起吃饭的位置。"}
+  ]}
+];
+const CAT_INTERACTION_KEY="mmc_cat_interactions_v1";
+const INTERACTION_SEED={me:{wave:114,cup:86,share:52,eat:39}};
+CATS.forEach((cat,i)=>{
+  INTERACTION_SEED[cat.id]={wave:68+i*3,cup:43+i*2,share:24+i,eat:16+(i%6)*3};
+});
+function emptyInteractionCounts(){return {wave:0,cup:0,share:0,eat:0};}
+const INTERACTION_SESSION_LIMIT=10;
+const INTERACTION_DAILY_LIMIT=20;
+function loadCatInteractionStore(){
+  const counts={};
+  Object.keys(INTERACTION_SEED).forEach(id=>counts[id]={...INTERACTION_SEED[id]});
+  try{
+    const saved=JSON.parse(localStorage.getItem(CAT_INTERACTION_KEY)||"{}");
+    Object.keys(saved.counts||{}).forEach(id=>counts[id]={...(counts[id]||emptyInteractionCounts()),...saved.counts[id]});
+    const sent=Array.isArray(saved.sent)?saved.sent:[];
+    const sentCounts={me:emptyInteractionCounts()};
+    if(saved.sentCounts&&typeof saved.sentCounts==="object"){
+      Object.keys(saved.sentCounts).forEach(id=>sentCounts[id]={...emptyInteractionCounts(),...saved.sentCounts[id]});
+    }else{
+      /* V4.6 数据迁移：从已有去重记录恢复当前用户发起互动的累计数。 */
+      sent.forEach(key=>{const type=String(key).split(":").pop();if(Object.prototype.hasOwnProperty.call(sentCounts.me,type))sentCounts.me[type]++;});
+    }
+    return {version:2,counts,sentCounts,sent,usage:saved.usage&&typeof saved.usage==="object"?saved.usage:{}};
+  }catch(e){return {version:2,counts,sentCounts:{me:emptyInteractionCounts()},sent:[],usage:{}};}
+}
+const catInteractionStore=loadCatInteractionStore();
+
+/* 小猫勋章：解锁条件仅在代码逻辑中判断，不向用户展示。 */
+const CAT_BADGE_KEY="mmc_cat_badges_v1";
+const CAT_BADGE_DEFS=[
+  {id:"first_meet",name:"初次见面喵",icon:"👋"},
+  {id:"face_reveal",name:"露脸的小喵",icon:"🐱"},
+  {id:"wave",name:"挥手小喵",icon:"✨"},
+  {id:"cup",name:"碰杯搭子",icon:"🧋"},
+  {id:"share",name:"分享美味喵",icon:"🥟"},
+  {id:"eat",name:"饭搭子喵",icon:"🍚"},
+  {id:"all_actions",name:"百变互动喵",icon:"🌟"},
+  {id:"wander",name:"串门小能手",icon:"🐾"}
+];
+function loadCatBadgeStore(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(CAT_BADGE_KEY)||"{}");
+    return {version:1,unlocked:Array.isArray(saved.unlocked)?saved.unlocked.filter(id=>CAT_BADGE_DEFS.some(b=>b.id===id)):[]};
+  }catch(e){return {version:1,unlocked:[]};}
+}
+const catBadgeStore=loadCatBadgeStore();
+function saveCatBadgeStore(){try{localStorage.setItem(CAT_BADGE_KEY,JSON.stringify(catBadgeStore));}catch(e){/* 本地存储不可用时保留当前会话 */}}
+function catBadgeDefinition(id){return CAT_BADGE_DEFS.find(b=>b.id===id);}
+function catBadgeUnlocked(id){return catBadgeStore.unlocked.includes(id);}
+function syncCatBadges(){
+  const sent=catInteractionStore.sent||[];
+  const types=new Set(sent.map(key=>String(key).split(":").pop()));
+  const targets=new Set(sent.map(key=>String(key).split(":")[0]));
+  const earned=[];
+  const criteria={
+    first_meet:sent.length>=1,
+    face_reveal:!!(state.myName&&state.myName!=="我家的小饭喵"&&state.myFace&&state.myFace!=="🐱"),
+    wave:types.has("wave"),
+    cup:types.has("cup"),
+    share:types.has("share"),
+    eat:types.has("eat"),
+    all_actions:["wave","cup","share","eat"].every(t=>types.has(t)),
+    wander:targets.size>=5
+  };
+  CAT_BADGE_DEFS.forEach(b=>{
+    if(criteria[b.id]&&!catBadgeUnlocked(b.id)){catBadgeStore.unlocked.push(b.id);earned.push(b);}
+  });
+  if(earned.length)saveCatBadgeStore();
+  return earned;
+}
+function catBadgesHTML(){
+  const unlocked=catBadgeStore.unlocked.length;
+  return '<div class="set-block cat-badges-block"><div class="cat-badge-head"><div class="set-h">小猫勋章</div><span class="cat-badge-count">已获得 '+unlocked+' 枚</span></div>'
+    +'<div class="cat-badge-grid">'+CAT_BADGE_DEFS.map(b=>{
+      const got=catBadgeUnlocked(b.id);
+      return '<div class="cat-badge-card '+(got?'earned':'locked')+'"><span class="cb-medal">'+(got?b.icon:'?')+'</span><b>'+(got?b.name:'神秘勋章')+'</b></div>';
+    }).join("")+'</div><div class="cat-badge-note">饭堂里的小惊喜，会在不经意间被收藏。</div></div>';
+}
+function saveCatInteractionStore(){try{localStorage.setItem(CAT_INTERACTION_KEY,JSON.stringify(catInteractionStore));}catch(e){/* 本地存储不可用时保留当前会话 */}}
+function catInteractionCount(catId,type){return Number(catInteractionStore.counts[catId]?.[type]||0);}
+function catInteractionSentCount(actorId,type){return Number(catInteractionStore.sentCounts?.[actorId]?.[type]||0);}
+function interactionSentKey(catId,type){return catId+":"+type;}
+function hasSentCatInteraction(catId,type){return catInteractionStore.sent.includes(interactionSentKey(catId,type));}
+function interactionDateKey(){return state.topicClock?.dateKey||localDateKey();}
+function interactionUsageDay(){
+  const key=interactionDateKey();
+  if(!catInteractionStore.usage[key])catInteractionStore.usage[key]={lunch:0,evening:0};
+  const d=catInteractionStore.usage[key];
+  if(!Number.isFinite(d.lunch))d.lunch=0;
+  if(!Number.isFinite(d.evening))d.evening=0;
+  return d;
+}
+function interactionQuotaState(){
+  const d=interactionUsageDay(),session=state.interactionSession||"lunch";
+  const lunch=Number(d.lunch||0),evening=Number(d.evening||0),total=lunch+evening;
+  const used=session==="evening"?evening:lunch;
+  const remaining=Math.max(0,INTERACTION_SESSION_LIMIT-used);
+  return {session,lunch,evening,total,used,remaining,sessionLimit:INTERACTION_SESSION_LIMIT,dailyLimit:INTERACTION_DAILY_LIMIT,full:remaining<=0||total>=INTERACTION_DAILY_LIMIT};
+}
+function interactionQuotaMessage(q=interactionQuotaState()){
+  if(q.total>=INTERACTION_DAILY_LIMIT)return "今天 20 次互动额度已用完，明天再来吧。";
+  if(q.session==="lunch"&&q.remaining<=0)return "中午 10 次互动已用完，晚上再来吧。";
+  if(q.session==="evening"&&q.remaining<=0)return "晚上 10 次互动已用完，明天再来吧。";
+  return "本场还可互动 "+q.remaining+" 次。";
+}
+function sendCatInteraction(catId,type){
+  if(!CAT_INTERACTION_TYPES.some(x=>x.id===type))return {ok:false,reason:"invalid",count:catInteractionCount(catId,type)};
+  const key=interactionSentKey(catId,type);
+  if(hasSentCatInteraction(catId,type))return {ok:false,reason:"duplicate",count:catInteractionCount(catId,type)};
+  const quota=interactionQuotaState();
+  if(quota.full)return {ok:false,reason:"quota",quota,count:catInteractionCount(catId,type)};
+  if(!catInteractionStore.counts[catId])catInteractionStore.counts[catId]=emptyInteractionCounts();
+  if(!catInteractionStore.sentCounts.me)catInteractionStore.sentCounts.me=emptyInteractionCounts();
+  /* 一次动作双向记账：发起方记录「我发起的互动」，接收方记录「收到的互动」。 */
+  catInteractionStore.counts[catId][type]=catInteractionCount(catId,type)+1;
+  catInteractionStore.sentCounts.me[type]=catInteractionSentCount("me",type)+1;
+  const usage=interactionUsageDay();
+  usage[quota.session]=Number(usage[quota.session]||0)+1;
+  catInteractionStore.sent.push(key);
+  saveCatInteractionStore();
+  const after=interactionQuotaState();
+  return {ok:true,receiverCount:catInteractionCount(catId,type),senderCount:catInteractionSentCount("me",type),quota:after};
+}
+function simulateIncomingInteraction(type){
+  if(!CAT_INTERACTION_TYPES.some(x=>x.id===type))return;
+  /* 模拟其他用户向「我的猫」发起互动：只增加我的收到统计，不消耗我的发起额度。 */
+  catInteractionStore.counts.me[type]=catInteractionCount("me",type)+1;
+  saveCatInteractionStore();
+}
+function setInteractionSession(session){if(session!=="lunch"&&session!=="evening")return;state.interactionSession=session;}
+function resetCatInteractionDemo(){
+  catInteractionStore.counts={};
+  Object.keys(INTERACTION_SEED).forEach(id=>catInteractionStore.counts[id]={...INTERACTION_SEED[id]});
+  catInteractionStore.sentCounts={me:emptyInteractionCounts()};
+  catInteractionStore.sent=[];
+  catInteractionStore.usage[interactionDateKey()]={lunch:0,evening:0};
+  saveCatInteractionStore();
+}
+function interactionStatsHTML(catId,compact=false){
+  return '<div class="received-stat-grid '+(compact?'compact':'')+'">'
+    +CAT_INTERACTION_TYPES.map(a=>'<div class="received-stat"><span class="rs-icon">'+a.icon+'</span><div class="rs-copy"><b>'+catInteractionCount(catId,a.id)+' 位</b><small>'+a.label+'</small></div></div>').join("")
+    +'</div>';
+}
+function interactionSentStatsHTML(actorId="me",compact=false){
+  return '<div class="received-stat-grid '+(compact?'compact':'')+'">'
+    +CAT_INTERACTION_TYPES.map(a=>'<div class="received-stat"><span class="rs-icon">'+a.icon+'</span><div class="rs-copy"><b>'+catInteractionSentCount(actorId,a.id)+' 次</b><small>'+a.label+'</small></div></div>').join("")
+    +'</div>';
+}
+function interactionQuotaMiniHTML(){
+  const q=interactionQuotaState();
+  return '<div class="interaction-quota-mini">'
+    +'<div><b>'+q.lunch+'/10</b><small>中午场</small></div>'
+    +'<div><b>'+q.evening+'/10</b><small>晚上场</small></div>'
+    +'<div><b>'+q.total+'/20</b><small>今日总计</small></div>'
+    +'</div>';
+}
+function openCatTargetFor(catId=null,origin="cat"){
+  if(!state.seated){toast("先坐下来，再和猫咪互动吧");return;}
+  const available=CATS.filter(c=>state.seats.some(seat=>seat.cat===c.id));
+  const randomPool=available.filter(c=>CAT_INTERACTION_TYPES.some(a=>!hasSentCatInteraction(c.id,a.id)));
+  const cat=catId?available.find(c=>c.id===catId):(randomPool.length?randomPool:available)[Math.floor(Math.random()*(randomPool.length?randomPool:available).length)];
+  if(!cat){toast("这只猫暂时不在饭堂里啦");return;}
+  state.catInteraction={catId:cat.id,step:"actions",origin,originFlow:state.activeFlow||"01",actionType:null,variantIndex:null,completed:false,previewOnly:false};
+  state.sheet="cat-actions";state.wiz=null;state.notice=null;state.activeFlow="02";
+}
+function openRandomCatTarget(origin="manual"){openCatTargetFor(null,origin);}
+/* 我的猫资料：名称 / 表情（一排预设）/ 会话（预设库选一条，不选不显示会话气泡） */
+const FACES=["🐱","😺","😸","😻","😼","😽","🙀","😿","🐈","🐈‍⬛"];
+const QUOTES=["这口面，真香。","三分糖，刚刚好。","吃面还是吃肉呢？","干饭干饭！","好香，等不及了。","慢慢吃，不着急。"];
+/* 三态命名：未点餐 / 等餐中 / 干饭中；动销由状态唯一决定，不另设动作维度 */
+const CAT_STATUS={none:"未点餐",paid:"等餐中",received:"干饭中"};
+/* 饭堂首页左上角筛选 tab：全部 + 三态，命名与状态机同源 */
+const STATUS_TABS=[{k:"all",n:"全部"},{k:"none",n:CAT_STATUS.none},{k:"paid",n:CAT_STATUS.paid},{k:"received",n:CAT_STATUS.received}];
+const CAT_ACT_CLASS={none:"peek",paid:"wait",received:"chew"};
+const CAT_ACT_ICON={none:"👀",paid:"⏳",received:"🍚"};
+const CAT_ACT_LABEL={none:"探头看看 · 还没点",paid:"期待张望 · 等餐中",received:"低头干饭 · 已收货"};
+const TABLE_MOODS=["热乎开席","边吃边聊","刚点上","还在挑","慢慢等"];
+/* 餐食 → 头顶气泡图标（猫在吃什么，一眼可见） */
+const DISH_ICON=[
+  [/面|拉面|阳春|米线/,"🍜"],[/奶茶|奶盖|三分糖|芋泥/,"🧋"],[/咖啡|美式|拿铁|冷萃/,"☕"],
+  [/饭/,"🍚"],[/包子|小笼/,"🥟"],[/布丁|甜|蛋糕/,"🍮"]
+];
+const mealIcon = s => {if(!s)return "";for(const [re,em] of DISH_ICON)if(re.test(s))return em;return "🍽️";};
+const pad2 = n => String(n).padStart(2,"0");
+/* 领券帧 · 领外卖红包（照业务截图：签到条 + 淘宝闪购 / 美团双列券卡） */
+const SIGN_BAR={tx:"连续签到5天 · 今日+35",coin:"🪙",btn:"去签到"};
+const RED_PACKS=[
+  {col:"tb",logo:"淘",brand:"淘宝闪购",cards:[
+    {t:"领最高20元红包",s:"天天必领",btn:"领取+5"},
+    {t:"最高可叠加20元",s:"限时专享红包",btn:"领取+5"}
+  ]},
+  {col:"mt",logo:"美",brand:"美团红包",cards:[
+    {t:"8-10红包",s:"天天必领",btn:"领取+5"},
+    {t:"最高可叠加20元",s:"天天必领",btn:"领取+5"}
+  ]}
+];
+
+/* ── 叠层弹窗路由登记（B 方案：只拆登记，不动渲染模型）──────────────────
+   frame 仍只管底图（hall-joined），sheet 仍只管叠层（mystery）。
+   本次先把「饭堂奇遇」单独登记为一条路由 r-mystery：给它一个稳定 ID 与子态清单，
+   供左栏「页面」模式、stepMatches 高亮推导、FRAME NOTES 三处共用。
+   注意：不新增整屏帧、不把抽屉升级成页面、不把通知做成独立路由 —— 
+   09/11 通知底图仍是饭堂主场景，「帧管底图 / sheet 管叠层」这层分离保持不变。
+   subs 的 id 与 FLOWS[04] 各步 mysteryDemo 一一对应（工作流侧的画面标识）。 */
+const SHEET_ROUTES = {
+  "r-mystery":{
+    n:"饭堂奇遇", host:"hall-joined", sheet:"mystery", shape:"底部抽屉",
+    act:"mystery-open",
+    desc:"左下角常驻入口；用户主动打开奇遇盒，随机发现一个猫咪小故事。",
+    subs:[
+      {id:"entry",     n:"左下角 · 饭堂奇遇入口"},
+      {id:"unseated",  n:"未入座点击入口"},
+      {id:"preopen",   n:"11:00 前 · 尚未开放"},
+      {id:"home",      n:"饭堂奇遇首页"},
+      {id:"watch",     n:"watch · 纯观看"},
+      {id:"guess",     n:"guess · 猜结果"},
+      {id:"quick",     n:"quick · 快速选择"},
+      {id:"help",      n:"help · 帮忙事件"},
+      {id:"duo",       n:"duo · 双猫故事"},
+      {id:"rare",      n:"rare · 稀有事件"},
+      {id:"completed", n:"事件完成 · 收录成功"},
+      {id:"book",      n:"奇遇图鉴"},
+      {id:"ended",     n:"13:00 · 停止开启新奇遇"},
+      {id:"resume",    n:"已开启事件继续完成"},
+      {id:"nextday",   n:"次日 11:00 · 更新奇遇池"}
+    ],
+    api:["getDailyMysteryPool","drawMysteryEvent","completeMysteryEvent","getMysteryAtlas"]
+  }
+};
+
+/* ── 页面树 / 交互流程：饭堂是主场景；偶遇全程由底部抽屉承接 ── */
+const ROUTES = {
+  "hall-live":    {id:1, n:"饭堂 · 进行中 · 未入座"},
+  "hall-joined":  {id:2, n:"饭堂 · 已入座 · 未点餐"},
+  "hall-waiting": {id:3, n:"饭堂 · 等餐中 · 已付款"},
+  "hall-eating":  {id:4, n:"饭堂 · 干饭中 · 已收货"},
+  "hall-night":   {id:5, n:"饭堂 · 深夜食堂"},
+  "coupon":       {id:6, n:"领券 · 领外卖红包"},
+  "biz-order":    {id:7, n:"业务帧 · 去下单"},
+  "biz-receive":  {id:8, n:"业务帧 · 待收货"}
+};
+/* 页面模式：第一栏 = 一级页面，第二栏 = 该页面的二级帧。
+   二级帧既可以是整屏帧（k: ROUTES key），也可以是流程里的可复现画面快照（flow + idx → gotoStep）。 */
+const PAGE_TREE = [
+  {g:"一级页面",items:[
+    {id:"hall-other",n:"公共饭堂-其他",desc:"饭堂场景、入座、我的猫、猫咪互动、今日饭桌与订单通知",groups:[
+      {g:"饭堂场景",frames:[
+        {id:"ho-live",n:"未入座",k:"hall-live"},
+        {id:"ho-joined",n:"已入座",flow:"01",idx:3},
+        {id:"ho-waiting",n:"等餐中",k:"hall-waiting"},
+        {id:"ho-eating",n:"干饭中",k:"hall-eating"},
+        {id:"ho-night",n:"深夜食堂",k:"hall-night"}
+      ]},
+      {g:"入座抽屉",frames:[
+        {id:"ho-ask",n:"入座邀请",flow:"01",idx:1},
+        {id:"ho-seated",n:"入座成功",flow:"01",idx:2}
+      ]},
+      {g:"我的猫",frames:[
+        {id:"ho-settings",n:"设置我的猫",flow:"01",idx:4}
+      ]},
+      {g:"猫咪互动",frames:[
+        {id:"ho-cat",n:"点击猫咪",flow:"02",idx:0},
+        {id:"ho-cat-random",n:"随机互动一只猫",flow:"02",idx:1},
+        {id:"ho-cat-profile",n:"看看他在吃什么",flow:"02",idx:2},
+        {id:"ho-cat-actions",n:"选择一种互动",flow:"02",idx:3},
+        {id:"ho-cat-result",n:"动作反馈",flow:"02",idx:4},
+        {id:"ho-cat-quota",n:"每日互动额度",flow:"02",idx:5},
+        {id:"ho-cat-stats",n:"双向互动统计",flow:"02",idx:7}
+      ]},
+      {g:"今日饭桌",frames:[
+        {id:"ho-topic-remind",n:"话题轻提醒",flow:"03",idx:1},
+        {id:"ho-topic-entry",n:"话题入口卡片",flow:"03",idx:2},
+        {id:"ho-topic-vote",n:"尚未投票",flow:"03",idx:3},
+        {id:"ho-topic-result",n:"投票结果",flow:"03",idx:4},
+        {id:"ho-topic-ended",n:"13:00 结束",flow:"03",idx:5},
+        {id:"ho-topic-next",n:"次日新一轮",flow:"03",idx:6}
+      ]},
+      {g:"订单通知",frames:[
+        {id:"ho-paid",n:"已付款通知",flow:"01",idx:8},
+        {id:"ho-received",n:"已收货通知",flow:"01",idx:10},
+        {id:"ho-leave",n:"离开座位",flow:"01",idx:11}
+      ]}
+    ]},
+    {id:"hall-mystery",n:"公共饭堂-奇遇",desc:"左下角奇遇入口与随机小故事；13:00 停止开启新奇遇",groups:[
+      {g:"入口与开放规则",frames:[
+        {id:"hm-entry",n:"左下角 · 饭堂奇遇入口",flow:"04",idx:0},
+        {id:"hm-unseated",n:"未入座点击入口",flow:"04",idx:1},
+        {id:"hm-preopen",n:"11:00 前 · 尚未开放",flow:"04",idx:2}
+      ]},
+      {g:"发现与六种奇遇",frames:[
+        {id:"hm-home",n:"饭堂奇遇首页",flow:"04",idx:3},
+        {id:"hm-watch",n:"watch · 纯观看",flow:"04",idx:4},
+        {id:"hm-guess",n:"guess · 猜结果",flow:"04",idx:7},
+        {id:"hm-quick",n:"quick · 快速选择",flow:"04",idx:8},
+        {id:"hm-help",n:"help · 帮忙事件",flow:"04",idx:9},
+        {id:"hm-duo",n:"duo · 双猫故事",flow:"04",idx:10},
+        {id:"hm-rare",n:"rare · 稀有事件",flow:"04",idx:5}
+      ]},
+      {g:"完成与图鉴",frames:[
+        {id:"hm-completed",n:"事件完成 · 收录成功",flow:"04",idx:12},
+        {id:"hm-book",n:"奇遇图鉴",flow:"04",idx:13},
+        {id:"hm-ended",n:"13:00 · 停止开启新奇遇",flow:"04",idx:14},
+        {id:"hm-resume",n:"已开启事件继续完成",flow:"04",idx:15},
+        {id:"hm-nextday",n:"次日 11:00 · 更新奇遇池",flow:"04",idx:16}
+      ]}
+    ]},
+    {id:"coupon",n:"领券",desc:"整屏领外卖红包；领取后进入去下单业务帧",groups:[
+      {g:"领券整屏",frames:[
+        {id:"cp-frame",n:"领外卖红包",k:"coupon"}
+      ]}
+    ]}
+  ]},
+  {g:"其他",items:[
+    {id:"demo",n:"演示帧",desc:"外部点餐业务占位帧",groups:[
+      {g:"业务演示帧",frames:[
+        {id:"demo-order",n:"去下单",k:"biz-order"},
+        {id:"demo-receive",n:"等待收货",k:"biz-receive"}
+      ]}
+    ]}
+  ]}
+];
+function pageNode(id){for(const g of PAGE_TREE){const it=g.items.find(x=>x.id===id);if(it)return it;}return null;}
+function pageFrameNode(pageId,frameId){const p=pageNode(pageId);if(!p)return null;for(const g of p.groups){const f=g.frames.find(x=>x.id===frameId);if(f)return f;}return null;}
+function pageFrameCount(p){let n=0;p.groups.forEach(g=>{n+=g.frames.length;});return n;}
+const FLOWS = [{
+  id:"01", n:"落座与用餐", g:"饭堂主流程",
+  start:"进入饭堂 → 入座抽屉 → 入座成功抽屉 → 回到饭堂 → 设置我的猫 / 领券点餐 → 订单状态更新 → 离座",
+  lanes:[
+    {g:"入座 · 抽屉承接",steps:[
+      {t:"饭堂主场景（未入座）",s:"浏览饭堂里的猫咪与空位；点击入座邀请或空位「＋」",k:"hall-live",kind:"场景"},
+      {t:"入座邀请",s:"底部抽屉；点击整张邀请图直接入座",k:"hall-live",wiz:"ask",kind:"抽屉"},
+      {t:"入座成功",s:"底部抽屉；点击关闭后回到饭堂主场景",k:"hall-joined",wiz:"seated",kind:"抽屉"},
+      {t:"饭堂主场景（已入座）",s:"自己的猫已经落座；点击其他猫可互动或查看资料，不自动弹出、不要求回应",k:"hall-joined",kind:"场景"}
+    ]},
+    {g:"我的猫 · 设置抽屉",steps:[
+      {t:"设置我的猫",s:"名称 / 表情 / 会话；收藏小猫勋章；查看双向互动统计与每日额度（勋章条件隐藏）",k:"hall-joined",set:true,kind:"抽屉"}
+    ]},
+    {g:"点餐 · 原有链路",steps:[
+      {t:"领券入口",s:"点击饭堂右下角券入口，进入领券整屏",k:"hall-joined",entry:true,kind:"入口"},
+      {t:"领取外卖红包",s:"淘宝闪购 / 美团红包双列券卡",k:"coupon",kind:"整屏"},
+      {t:"去下单",s:"外部点餐业务占位帧",k:"biz-order",kind:"整屏"},
+      {t:"已付款通知",s:"底图为饭堂主场景（等餐中）；设计稿截图底部抽屉 · 点整张图进入待收货业务帧",k:"hall-waiting",notice:"paid",kind:"抽屉"},
+      {t:"等待收货",s:"外部订单等待收货业务帧",k:"biz-receive",kind:"整屏"},
+      {t:"已收货通知",s:"底图为饭堂主场景（干饭中）；设计稿截图底部抽屉 · 点整张图回饭堂看干饭动画",k:"hall-eating",notice:"received",kind:"抽屉"}
+    ]},
+    {g:"离座",steps:[
+      {t:"离开座位",s:"回到未入座饭堂；猫咪名称 / 表情 / 会话设置保留",k:"hall-live",leave:true,kind:"场景"}
+    ]}
+  ]
+},{
+  id:"02", n:"猫咪偶遇（轻互动）", g:"饭堂里的轻互动",
+  start:"点击猫咪 / 随机互动 → 功能抽屉 → 选择挥手、碰杯、递菜或一起吃饭 → 播放动作反馈；一次互动同时更新发起方与接收方数据。每人每天最多 20 次：中午 10 次、晚上 10 次；中午用完后等晚上额度恢复。",
+  lanes:[
+    {g:"进入猫咪功能抽屉",steps:[
+      {t:"点击饭堂里的猫咪",s:"点击任意其他猫，打开统一抽屉：互动 / 看看他在吃什么",k:"hall-joined",catAction:true,kind:"抽屉"},
+      {t:"随机互动一只猫",s:"从饭堂现有猫咪中随机选一只；用户主动开启，不自动弹出",k:"hall-joined",catAction:true,randomCat:true,kind:"抽屉"},
+      {t:"看看他在吃什么",s:"查看猫咪资料、收到的四类互动人数、餐品和外卖状态",k:"hall-joined",catProfile:true,kind:"抽屉"}
+    ]},
+    {g:"互动 · 四种轻动作",steps:[
+      {t:"选择一种互动",s:"挥挥手 / 碰个杯 / 递个菜 / 一起吃饭吗；每种动作随机出现一种小表现",k:"hall-joined",catInteractionStep:"actions",kind:"抽屉"},
+      {t:"动作反馈",s:"播放两只猫的动作反馈；发起方「我发起的互动」+1，接收方「收到的互动」+1；不展示对方身份、不要求回应",k:"hall-joined",catInteractionStep:"result",kind:"抽屉"},
+      {t:"每日互动额度",s:"每人每天最多 20 次：中午场 10 次、晚上场 10 次；中午额度用完后提示「晚上再来」，晚上额度用完后次日重置",k:"hall-joined",catInteractionStep:"quota",kind:"规则"},
+      {t:"完成，回到饭堂",s:"关闭反馈抽屉；不需要对方回应，也没有待处理消息",k:"hall-joined",end:true,kind:"场景"}
+    ]},
+    {g:"我的猫 · 互动统计",steps:[
+      {t:"查看双向互动统计",s:"分别展示「收到的互动」与「我发起的互动」四类累计数据，并展示中午 / 晚上 / 今日额度使用情况",k:"hall-joined",set:true,kind:"抽屉"}
+    ]}
+  ]
+},{
+  id:"03", n:"今日饭桌话题（投票抽屉）", g:"饭堂里的集体闲聊",
+  start:"成功入座 → 轻量话题提醒 → 打开今日话题 → 四选一投票 → 查看统计与猫咪回答 → 13:00 锁定结果 → 次日更新话题",
+  lanes:[
+    {g:"入座后 · 话题提醒",steps:[
+      {t:"成功入座后触发",s:"关闭「坐好了」抽屉后判断时间；仅 11:00—13:00 且当天未提醒时出现",k:"hall-joined",topicDemo:"reminder",kind:"场景"},
+      {t:"轻量提醒浮层",s:"饭桌上有个新话题！可点击看看，也可稍后再看；关闭后不重复提醒",k:"hall-joined",topicPrompt:true,kind:"浮层"},
+      {t:"饭堂话题入口卡片",s:"提醒关闭后仍保留入口；未投票 / 已投票 / 已结束显示不同状态",k:"hall-joined",topicEntry:true,kind:"入口"}
+    ]},
+    {g:"参与话题 · 投票抽屉",steps:[
+      {t:"今日话题 · 尚未投票",s:"展示当天问题和四个选项；点击其中一个立即完成投票",k:"hall-joined",topicDemo:"question",topicQuestion:true,kind:"抽屉"},
+      {t:"投票完成 · 查看结果",s:"立即展示各选项百分比、总票数和其他猫咪的预设回答；本人选项高亮",k:"hall-joined",topicDemo:"voted",topicResults:true,kind:"抽屉"}
+    ]},
+    {g:"时间变化 · 每日更新",steps:[
+      {t:"13:00 · 今日话题结束",s:"投票选项全部收起，只能查看最终统计与猫咪回答",k:"hall-joined",topicDemo:"ended",topicEnded:true,kind:"抽屉"},
+      {t:"次日 11:00 · 新一轮话题",s:"切换新话题 ID 与日期；提醒、投票资格和统计各自重新开始",k:"hall-joined",topicDemo:"nextday",topicPrompt:true,kind:"浮层"}
+    ]}
+  ]
+},{
+  id:"04", n:"饭堂奇遇（随机探索）", g:"饭堂里的随机小故事",
+  start:"点击左下角常驻入口 → 打开奇遇盒 → 随机遇见事件 → 观看 / 参与 → 趣味反馈 → 收入奇遇图鉴",
+  lanes:[
+    {g:"常驻入口 · 开放规则",steps:[
+      {t:"左下角 · 饭堂奇遇入口",s:"饭堂场景常驻；不自动弹出、不打断浏览",k:"hall-joined",sub:"entry",mysteryDemo:"entry",kind:"入口"},
+      {t:"未入座点击入口",s:"入口可见；点击提示先找位置坐下，不打开奇遇",k:"hall-live",sub:"unseated",mysteryDemo:"unseated",kind:"提示"},
+      {t:"11:00 前 · 尚未开放",s:"可以预览奇遇盒；新奇遇按钮不可开启，等待 11:00",k:"hall-joined",sub:"preopen",mysteryDemo:"preopen",kind:"抽屉"}
+    ]},
+    {g:"奇遇首页 · 随机发现",steps:[
+      {t:"饭堂奇遇首页",s:"展示今日奇遇盒、发现进度和图鉴入口，不罗列可点击任务",k:"hall-joined",sub:"home",mysteryDemo:"home",kind:"抽屉"},
+      {t:"抽取普通奇遇",s:"从当日未完成事件中随机抽取；未完成退出后可继续",k:"hall-joined",sub:"watch",mysteryDemo:"watch",kind:"抽屉"},
+      {t:"稀有奇遇 · 特别发现",s:"低概率抽中；特殊标识、专属故事与反馈",k:"hall-joined",sub:"rare",mysteryDemo:"rare",kind:"稀有"}
+    ]},
+    {g:"六种奇遇 · 10—30 秒小故事",steps:[
+      {t:"watch · 纯观看",s:"看完一段猫咪小故事，点击完成即可收录",k:"hall-joined",sub:"watch",mysteryDemo:"watch",kind:"故事"},
+      {t:"guess · 猜结果",s:"选择你猜测的结果，揭晓事件真相",k:"hall-joined",sub:"guess",mysteryDemo:"guess",kind:"互动"},
+      {t:"quick · 快速选择",s:"替纠结的猫咪选一杯饮品，查看对应反馈",k:"hall-joined",sub:"quick",mysteryDemo:"quick",kind:"互动"},
+      {t:"help · 帮忙事件",s:"帮猫咪解决小麻烦，触发后续反馈",k:"hall-joined",sub:"help",mysteryDemo:"help",kind:"互动"},
+      {t:"duo · 双猫故事",s:"两只猫同时看中最后一块蛋糕；可帮忙，也可围观",k:"hall-joined",sub:"duo",mysteryDemo:"duo",kind:"双猫"},
+      {t:"rare · 稀有事件",s:"遇见隐藏猫咪，展示专属稀有反馈",k:"hall-joined",sub:"rare",mysteryDemo:"rare",kind:"稀有"}
+    ]},
+    {g:"完成与收集 · 长期图鉴",steps:[
+      {t:"事件完成 · 收录成功",s:"完成后标记已发现；退出未完成事件不会误记为发现",k:"hall-joined",sub:"completed",mysteryDemo:"completed",kind:"反馈"},
+      {t:"奇遇图鉴",s:"已发现展示完整故事；未发现显示剪影；稀有事件特殊标识",k:"hall-joined",sub:"book",mysteryDemo:"book",kind:"图鉴"},
+      {t:"13:00 · 停止开启新奇遇",s:"不能抽取新事件；图鉴仍可查看",k:"hall-joined",sub:"ended",mysteryDemo:"ended",kind:"结束"},
+      {t:"已开启事件继续完成",s:"13:00 后已开启的奇遇仍可继续，完成后正常收录",k:"hall-joined",sub:"resume",mysteryDemo:"resume",kind:"继续"},
+      {t:"次日 11:00 · 更新奇遇池",s:"日期切换，今日完成记录重置；长期图鉴保留",k:"hall-joined",sub:"nextday",mysteryDemo:"nextday",kind:"新一轮"}
+    ]}
+  ]
+}];
+const CHANGELOG = {
+  "hall-live":{title:"进行中 · 有空位",desc:"未入座态：场景里没有我的猫，右下角圆圈是「我的猫」设置入口（未入座也能用）。",rules:[
+    "全场景统一三态，别家猫与自己的猫一致：未点餐 / 等餐中 / 干饭中",
+    "未点餐 = 灰色虚线「?」气泡；等餐中 = 琥珀色「⏳ + 菜品」气泡；干饭中 = 绿色「🍚 + 菜品」气泡",
+    "三态是唯一动作维度，不另设「喝东西 / 睡觉」等动作；状态由订单数据决定",
+    "座位上不显示昵称与餐食文字，信息只靠头顶气泡 + 动作角标；hover title 携带评审信息",
+    "场景表达照旧稿 V3-R2：5 桌围坐 20 座，故事气泡落桌内空角、尾巴指向发言猫",
+    "入座邀请使用 assets/invite.jpg 底部抽屉，点击整张图直接入座（分配第一个空位）",
+    "入座两条路径：点击入座邀请图片 / 点击场景空位「＋」；均无选座弹窗",
+    "左上角状态筛选 tab：全部 / 未点餐 / 等餐中 / 干饭中，角标 = 当前该状态猫数（含自己的猫）",
+    "筛选 = 只显示命中该状态的饭桌（命中 0 的隐藏）；按命中猫数降序排，猫越多越靠前，命中数相同按桌号升序",
+    "「全部」按每桌有猫座位数降序；筛选态仅用于浏览，入座前需切回「全部」",
+    "饭堂现场计数由当前座位实时算出，不写死在线数"
+  ],api:["getRoomState","getOnlineCount","saveCatProfile"]},
+  "hall-joined":{title:"已入座 · 未点餐",desc:"主链终点。四个常驻入口：左下今日话题 / 饭堂奇遇，右下领券 / 设置猫咪。",rules:[
+    "左下两个入口：今日话题在上、饭堂奇遇在下；右下两个吸附圆：cp-orb 领券（上）/ me-orb 设置猫咪（下）",
+    "四个入口在饭堂场景常驻，不随订单状态隐藏；整屏帧统一隐藏",
+    "设置弹窗只管三块：猫咪名称 / 猫咪表情 / 小猫会话；订单区与领券按钮全部移除",
+    "领券入口独立在页面上（券圆），不在任何弹窗里",
+    "小猫会话：从预设库选一条，坐下时桌面挂出会话气泡（尾巴指向我的猫）；不选不显示",
+    "表情即时生效：场景座位与设置圆同步换成所选猫脸；座位标签固定显示「我」",
+    "自己的猫同样走三态：未点餐 → 等餐中 → 干饭中",
+    "入座成功使用 assets/seated.jpg 底部抽屉；关闭后回到已入座饭堂主场景",
+    "入座成功后不自动弹出猫咪社交提醒；用户主动点击猫咪或随机互动入口",
+    "点击任意其他猫咪，打开统一功能抽屉：左侧「互动」，右侧「看看他在吃什么」",
+    "左侧互动提供挥挥手 / 碰个杯 / 递个菜 / 一起吃饭吗四种动作；每次随机呈现一种小表现",
+    "完成动作后，只增加目标猫对应动作的累计人数；不建立人猫关系",
+    "互动只记录聚合人数，不记录或展示互动者身份；不发消息、不要求对方回应",
+    "同一体验者对同一只猫的同一种动作在原型中只计一次，避免重复刷数",
+    "右侧查看猫咪资料、收到的四类互动人数与餐品 / 外卖状态；纯查看不改变计数",
+    "今日饭桌话题：关闭入座成功抽屉后，仅在 11:00—13:00 且当天未提醒时显示轻量提醒；饭堂入口卡片始终保留",
+    "提醒每天最多一次；关闭提醒不代表投票；投票每天最多一次，13:00 后只读最终结果"
+  ],api:["assignSeat","saveCatProfile","getRoomState","getCatInteractionStats","getDailyTopic"]},
+  "coupon":{title:"领券帧 · 领外卖红包",desc:"整屏帧：照业务截图，签到条 + 淘宝闪购 / 美团红包双列券卡。点任一「领取+5」进入去下单业务帧。",rules:[
+    "领券是独立整屏帧（手机壳内容整体替换），不是弹窗；顶部出现返回箭头",
+    "券卡文案与配色照截图：橙色系淘宝闪购 / 黄色系美团红包，各两张券卡",
+    "点「领取+5」= 领券成功，直接进入 08 业务帧 · 去下单",
+    "不放演示字段、不放「模拟领券」字样；券面文案即业务真实文案",
+    "此帧隐藏底部 tabbar、me-orb、cp-orb（表达已离开饭堂页面）"
+  ],api:["getCouponList","claimCoupon"]},
+  "biz-order":{title:"业务帧 · 去下单",desc:"整屏空白帧：中间只有一行产品文案提示去下单；已付款由系统检索驱动。",rules:[
+    "外部点餐平台占位帧，画整屏空白 + 中间一行提示文字，不画任何平台界面",
+    "不放按钮、不放演示字段；「已付款」由右侧接口面板的回调触发（工作流侧）",
+    "已付款通知不叠在本帧：回调后底图切到饭堂主场景 hall-waiting（等餐中）再弹通知",
+    "此帧隐藏底部 tabbar、me-orb、cp-orb"
+  ],api:["onOrderPaidCallback"]},
+  "biz-receive":{title:"业务帧 · 待收货",desc:"整屏空白帧：中间只有一行产品文案提示收货；已收货由系统检索驱动。",rules:[
+    "与去下单业务帧同为空白占位，仅中间提示文案不同",
+    "「已收货」由右侧接口面板的回调触发（工作流侧），不在页面放触发按钮",
+    "已收货通知不叠在本帧：回调后底图切到饭堂主场景 hall-eating（干饭中）再弹通知",
+    "此帧隐藏底部 tabbar、me-orb、cp-orb"
+  ],api:["onOrderReceivedCallback"]},
+  "hall-waiting":{title:"等餐中 · 已付款",desc:"饭堂主场景：自己的猫进入「等餐中」，头顶出现对应餐食气泡；也是 09 已付款通知的底图。",rules:[
+    "状态由系统检索驱动（订单回调），按钮不直接改状态",
+    "等餐中的猫：琥珀色「⏳ + 菜品」气泡 + 期待张望动销",
+    "09 已付款通知（assets/paid.jpg 整图抽屉）叠在本帧的饭堂主场景之上，不叠在空白业务帧上",
+    "点整张图进入 10 业务帧 · 待收货；点右上 X 或遮罩只关窗，画面留在饭堂主场景",
+    "评审跳帧可直达，用于单独验收三态视觉"
+  ],api:["onOrderPaidCallback"]},
+  "hall-eating":{title:"干饭中 · 已收货",desc:"饭堂主场景：自己的猫进入「干饭中」，低头咀嚼；也是 11 已收货通知的底图。",rules:[
+    "干饭中的猫：绿色「🍚 + 菜品」气泡 + 低头咀嚼动销",
+    "已收货回调：底图切到本帧（饭堂主场景），弹整图通知抽屉，猫随即低头干饭（无「开吃」一步）",
+    "11 已收货通知（assets/received.jpg 整图抽屉）叠在本帧的饭堂主场景之上，不叠在空白业务帧上",
+    "点整张图或右上 X 关窗，画面留在饭堂主场景看干饭动画",
+    "名称 / 表情 / 会话设置离座后保留，下次入座沿用",
+    "离座随时可用，回到 hall-live"
+  ],api:["onOrderReceivedCallback","leaveSeat"]},
+  "hall-night":{title:"深夜食堂",desc:"同一套落座交互，只换时段气氛。",rules:["时段切换不改变三态状态机","深夜文案单独配置，不新增交互分支"],api:["getTimeSlot"]}
+};
+
+/* 评审跳帧预设：唯一一处「一次性补齐状态」的入口，取代 V3 散落在 go() 里的补丁 */
+const PRESETS = {
+  "hall-live":    {seated:false,mySeat:null,order:"none",orderDish:null,coupon:null},
+  "hall-joined":  {seated:true,order:"none",orderDish:null,coupon:null},
+  "coupon":       {seated:true,order:"none",orderDish:null,coupon:null},
+  "biz-order":    {seated:true,order:"none",orderDish:null,coupon:0},
+  "biz-receive":  {seated:true,order:"paid",orderDish:"牛肉面",coupon:0},
+  "hall-waiting": {seated:true,order:"paid",orderDish:"牛肉面",coupon:0},
+  "hall-eating":  {seated:true,order:"received",orderDish:"鸡腿饭",coupon:0},
+  "hall-night":   {seated:false,mySeat:null,order:"none",orderDish:null,coupon:null}
+};
+/* 判断是否为「跳出饭堂」的整屏帧 */
+const isOffsite = k => k==="coupon"||k==="biz-order"||k==="biz-receive";
+const isStandalone = k => isOffsite(k);
+
+/* ── 今日饭桌话题：按日期生成话题；提醒与投票分开持久化 ── */
+const TOPIC_BANK=[
+  {id:"lunch-mood",title:"今天这顿，你是哪种？",sub:"选一个最像你现在的状态。",options:[{e:"🍚",t:"认真干饭"},{e:"☕",t:"咖啡续命"},{e:"📱",t:"边吃边刷"},{e:"😴",t:"吃完就困"}],counts:[126,84,60,30],comments:[{face:"😼",name:"小橘",text:"干饭，谁来都不好使。"},{face:"🐱",name:"奶盖",text:"第三杯咖啡在路上。"},{face:"😽",name:"懒懒",text:"困了，这是宿命。"}]},
+  {id:"lunch-must",title:"午饭时你最不能少什么？",sub:"饭桌上的刚需，选一个。",options:[{e:"🥣",t:"一口热汤"},{e:"🧋",t:"冰冰的饮料"},{e:"🍰",t:"饭后甜点"},{e:"🐾",t:"一起吃的人"}],counts:[92,108,56,44],comments:[{face:"🐻",name:"汤汤",text:"没有汤，这顿饭不完整。"},{face:"😺",name:"冰冰",text:"饭可以晚点吃，饮料不能化。"},{face:"🐈",name:"团子",text:"有人一起吃，普通盒饭都香。"}]},
+  {id:"lunch-habit",title:"吃饭的时候，你最常做什么？",sub:"选一个最像你的饭桌日常。",options:[{e:"🥢",t:"专心干饭"},{e:"🎬",t:"追剧刷视频"},{e:"💬",t:"回工作消息"},{e:"☁️",t:"发呆放空"}],counts:[114,96,42,48],comments:[{face:"😸",name:"饭饭",text:"先吃饱，天大的事等会儿说。"},{face:"🐱",name:"小屏",text:"下饭剧比菜还重要。"},{face:"🙀",name:"加班猫",text:"消息追着我跑到饭桌了。"}]}
+];
+function localDateKey(d=new Date()){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function shiftDateKey(key,days){const a=key.split("-").map(Number),d=new Date(a[0],a[1]-1,a[2]+days);return localDateKey(d);}
+function topicMetaFor(key){const a=key.split("-").map(Number),d=new Date(a[0],a[1]-1,a[2]);const dayNo=Math.floor(d.getTime()/86400000);return TOPIC_BANK[((dayNo%TOPIC_BANK.length)+TOPIC_BANK.length)%TOPIC_BANK.length];}
+function loadTopicStore(){try{return JSON.parse(localStorage.getItem("mmc_daily_topic_v1")||'{"days":{}}');}catch(e){return {days:{}};}}
+let topicStore=loadTopicStore();
+function saveTopicStore(){try{localStorage.setItem("mmc_daily_topic_v1",JSON.stringify(topicStore));}catch(e){}}
+function seedTopicDay(key){const meta=topicMetaFor(key);return {reminded:false,vote:null,counts:meta.counts.slice(),topicId:meta.id};}
+
+/* ── 饭堂奇遇：六种事件类型；每日完成记录与长期图鉴分开保存 ── */
+const MYSTERY_KEY="mmc_hall_mystery_v1";
+const MYSTERY_BANK=[
+  {id:"m_watch_noodles",type:"watch",typeLabel:"纯观看",title:"谁的面这么香？",desc:"隔壁桌的猫咪正在疯狂吸鼻子。",rarity:"normal",art:"🍜",cats:[{face:"🐱",name:"小橘"},{face:"😻",name:"奶盖"}],story:"小橘刚把一碗牛肉面端上桌，隔壁的奶盖就忍不住探出半个脑袋。它努力装作只是路过，鼻子却已经诚实地跟着香味转了三圈。",resultTitle:"香味传染成功",resultText:"原来小橘偷偷加了双倍牛肉！奶盖闻着闻着，也给自己点了一碗。两只猫最后隔桌吃面，连汤都喝得干干净净。"},
+  {id:"m_guess_bun",type:"guess",typeLabel:"猜结果",title:"包子失踪案",desc:"蒸笼里最后一个小笼包突然不见了。",rarity:"normal",art:"🥟",cats:[{face:"😼",name:"饭饭"},{face:"😽",name:"慢慢"}],story:"刚刚还在蒸笼里的最后一个小笼包不见了。桌边三只猫都说自己没动过，只有一只猫的嘴角沾着一点面粉……你猜是谁吃掉了？",options:["饭饭：它说自己只吃了一个","慢慢：它一直在认真喝汤","角落小猫：它已经偷偷擦嘴了"],correctIndex:2,feedbacks:["饭饭确实吃了一个，但它吃的是前一个！","慢慢连筷子都没放下，看来不是它。","猜对啦！角落小猫终于承认：太香了，没忍住。"],resultTitle:"真相揭晓"},
+  {id:"m_quick_drink",type:"quick",typeLabel:"快速选择",title:"午餐选择困难症",desc:"这只猫咪盯着饮品单，已经纠结五分钟了。",rarity:"normal",art:"🧋",cats:[{face:"🙀",name:"选择困难猫"}],story:"它一会儿看冰美式，一会儿看珍珠奶茶，最后连热牛奶都加入了候选。再纠结下去，午休都要结束啦！帮它选一杯吧。",options:["冰美式","珍珠奶茶","热牛奶"],feedbacks:["一口冰美式下去，猫咪瞬间清醒：这就是打工猫的续命水！","珍珠一颗一颗吸上来，猫咪开心得尾巴都摇起来了。","热牛奶刚好暖手，猫咪舒服地眯起眼：今天就走温柔路线。"],resultTitle:"选择已送达"},
+  {id:"m_help_chopsticks",type:"help",typeLabel:"帮忙事件",title:"筷子掉地上了！",desc:"猫咪正准备开吃，筷子却骨碌骨碌滚到了桌子底下。",rarity:"normal",art:"🥢",cats:[{face:"😿",name:"小慢"}],story:"小慢伸爪去够，怎么也够不到。它抬头看了看你，眼睛里写满了求助：这顿饭不会要用爪子吃吧？",resultTitle:"小麻烦解决啦",resultText:"你帮它叫来了饭堂阿姨，换了一双干净的新筷子。小慢终于能安心吃饭，还把第一口好吃的留给了你。"},
+  {id:"m_duo_cake",type:"duo",typeLabel:"双猫故事",title:"最后一块蛋糕",desc:"两只猫同时看中了盘子里最后一块蛋糕。",rarity:"normal",art:"🍰",cats:[{face:"😺",name:"布丁"},{face:"😼",name:"奶油"}],story:"布丁和奶油同时伸出爪子，又同时停住。它们互相看了看，谁也不想先放弃。你要不要帮它们想个办法？",options:["把蛋糕分成两半","石头剪刀布决定","让今天生日的猫先吃"],feedbacks:["好主意！一块蛋糕变成两份快乐，两只猫都满意了。","三局两胜！奶油赢了，但它把第一口分给了布丁。","原来今天真的是布丁生日！奶油主动把蛋糕推了过去。"],resultTitle:"皆大欢喜",resultText:"布丁和奶油最后分享了蛋糕。它们决定，下次再遇到喜欢的东西，也要一起商量着来。"},
+  {id:"m_rare_partner",type:"rare",typeLabel:"稀有奇遇",title:"神秘饭搭子",desc:"一只戴着小围巾的陌生猫咪，悄悄出现在饭堂角落。",rarity:"rare",art:"🎀",cats:[{face:"😽",name:"阿团"}],story:"你发现角落里有一只从没见过的猫咪。它戴着一条小围巾，面前放着一份神秘甜品。它似乎也注意到了你，轻轻把甜品盒往你这边推了推。",resultTitle:"遇见隐藏猫咪",resultText:"它叫阿团，是饭堂里偶尔才会出现的神秘饭搭子。它把隐藏甜品分给了你一半，还说：下次有好吃的，我还会来找你。"}
+];
+function loadMysteryStore(){
+  const base={days:{},discovered:{}};
+  try{const raw=JSON.parse(localStorage.getItem(MYSTERY_KEY)||"{}");return {days:raw.days&&typeof raw.days==="object"?raw.days:{},discovered:raw.discovered&&typeof raw.discovered==="object"?raw.discovered:{}};}
+  catch(e){return base;}
+}
+let mysteryStore=loadMysteryStore();
+function saveMysteryStore(){try{localStorage.setItem(MYSTERY_KEY,JSON.stringify(mysteryStore));}catch(e){}}
+function seedMysteryDay(){return {completedIds:[],openedIds:[],activeEventId:null,activePhase:"story",activeChoice:null,activeOutcome:null,rareDrawn:false};}
+function mysteryDay(){
+  const key=state.topicClock.dateKey;
+  if(!mysteryStore.days[key]){mysteryStore.days[key]=seedMysteryDay();saveMysteryStore();}
+  const d=mysteryStore.days[key];
+  if(!Array.isArray(d.completedIds))d.completedIds=[];
+  if(!Array.isArray(d.openedIds))d.openedIds=[];
+  if(typeof d.rareDrawn!=="boolean")d.rareDrawn=false;
+  return d;
+}
+function mysteryStatus(){return topicStatus();}
+function mysteryEventById(id){return MYSTERY_BANK.find(x=>x.id===id)||null;}
+function mysteryDiscoveredCount(){return Object.keys(mysteryStore.discovered).length;}
+function mysteryAvailablePool(){const d=mysteryDay();return MYSTERY_BANK.filter(e=>!d.completedIds.includes(e.id)&&!(e.rarity==="rare"&&d.rareDrawn));}
+function openMysteryHome(){
+  if(!state.seated){toast("先找个位置坐下，再来探索饭堂奇遇。");return;}
+  state.mystery.view="home";state.mystery.eventId=null;state.mystery.sub=homeSubByStatus();
+  state.sheet="mystery";state.wiz=null;state.notice=null;state.activeFlow="04";
+}
+function startMysteryEvent(forceId=null){
+  if(!state.seated){toast("先找个位置坐下，再来探索饭堂奇遇。");return;}
+  const d=mysteryDay();
+  if(d.activeEventId&&!d.completedIds.includes(d.activeEventId)){
+    state.mystery.view="event";state.mystery.eventId=d.activeEventId;state.mystery.review=false;
+    state.mystery.sub=(mysteryEventById(d.activeEventId)||{}).type||"watch";
+    state.sheet="mystery";return;
+  }
+  if(mysteryStatus()==="upcoming"){toast("饭堂奇遇 11:00 开启，等会儿再来看看。 ");return;}
+  if(mysteryStatus()==="ended"){toast("今天的午餐奇遇已结束，明天 11:00 再来。 ");return;}
+  const pool=mysteryAvailablePool();
+  if(!pool.length){toast("今天的奇遇都探索过啦，去图鉴回顾一下吧。 ");state.mystery.view="home";state.sheet="mystery";return;}
+  let chosen=forceId?pool.find(e=>e.id===forceId):null;
+  if(!chosen){
+    const rare=pool.find(e=>e.rarity==="rare");
+    const normal=pool.filter(e=>e.rarity!=="rare");
+    chosen=rare&&(normal.length===0||Math.random()<0.05)?rare:normal[Math.floor(Math.random()*normal.length)]||rare;
+  }
+  if(!chosen){toast("暂时没有新的奇遇。 ");return;}
+  d.activeEventId=chosen.id;d.activePhase="story";d.activeChoice=null;d.activeOutcome=null;d.openedIds.push(chosen.id);
+  if(chosen.rarity==="rare")d.rareDrawn=true;
+  saveMysteryStore();
+  state.mystery.view="event";state.mystery.eventId=chosen.id;state.mystery.review=false;
+  state.mystery.sub=chosen.type;   /* 事件子态 = 六种奇遇之一 */
+  state.sheet="mystery";state.wiz=null;state.notice=null;
+}
+function mysterySetResult(outcome,title){
+  const d=mysteryDay(),ev=mysteryEventById(d.activeEventId);
+  if(!ev)return;
+  d.activePhase="result";d.activeOutcome=outcome||ev.resultText||"一段新的饭堂故事，已经被你发现啦。";d.activeResultTitle=title||ev.resultTitle||"奇遇反馈";saveMysteryStore();
+}
+function finishMysteryEvent(){
+  const d=mysteryDay(),id=d.activeEventId,ev=mysteryEventById(id);
+  if(!ev)return;
+  if(!d.completedIds.includes(id))d.completedIds.push(id);
+  const first=!mysteryStore.discovered[id];
+  if(first)mysteryStore.discovered[id]={date:state.topicClock.dateKey,type:ev.type,rarity:ev.rarity};
+  d.activeEventId=null;d.activePhase="story";d.activeChoice=null;d.activeOutcome=null;d.activeResultTitle=null;
+  saveMysteryStore();state.mystery.view="home";state.mystery.eventId=null;state.mystery.review=false;state.mystery.sub="completed";
+  toast(first?(ev.rarity==="rare"?"稀有奇遇已收入图鉴！":"新奇遇已收入图鉴！"):"这段故事已完成，图鉴记录保留啦。");
+}
+function setupMysteryDemo(mode,eventId=null){
+  state.activeFlow="04";state.sheet=null;state.wiz=null;state.notice=null;
+  /* mode 即 SHEET_ROUTES["r-mystery"].subs 的稳定子态 ID，写入后供 mysterySub()/stepMatches 精确判定 */
+  state.mystery={view:"home",eventId:null,review:false,sub:mode};
+  if(mode==="unseated"){
+    state.frame="hall-live";state.seated=false;state.mySeat=null;state.catInteraction=null;state.topicPromptVisible=false;return;
+  }
+  state.frame="hall-joined";state.seated=true;
+  if(state.mySeat===null||!state.seats.some(x=>x.cat==="me")){const i=state.seats.findIndex(x=>!x.cat);if(i>=0){state.seats[i].cat="me";state.mySeat=i;}}
+  if(mode==="preopen")state.topicClock.minutes=650;
+  else if(mode==="ended"||mode==="resume")state.topicClock.minutes=780;
+  else if(mode==="nextday"){state.topicClock.dateKey=shiftDateKey(state.topicClock.dateKey,1);state.topicClock.minutes=660;}
+  else state.topicClock.minutes=720;
+  let d=mysteryDay();
+  if(mode==="entry"){state.sheet=null;state.mystery.view="home";return;}
+  if(mode==="completed"){
+    const ev=mysteryEventById("m_watch_noodles");
+    if(!d.completedIds.includes(ev.id))d.completedIds.push(ev.id);
+    if(!mysteryStore.discovered[ev.id])mysteryStore.discovered[ev.id]={date:state.topicClock.dateKey,type:ev.type,rarity:ev.rarity};
+    d.activeEventId=null;saveMysteryStore();state.sheet="mystery";return;
+  }
+  if(mode==="book"){
+    ["m_watch_noodles","m_guess_bun","m_rare_partner"].forEach(id=>{const ev=mysteryEventById(id);if(!mysteryStore.discovered[id])mysteryStore.discovered[id]={date:state.topicClock.dateKey,type:ev.type,rarity:ev.rarity};});
+    saveMysteryStore();state.mystery.view="book";state.sheet="mystery";return;
+  }
+  if(mode==="ended"){d.activeEventId=null;state.sheet="mystery";saveMysteryStore();return;}
+  if(mode==="resume"){
+    const id="m_help_chopsticks";d.activeEventId=id;d.activePhase="story";d.activeChoice=null;d.activeOutcome=null;state.mystery.view="event";state.mystery.eventId=id;state.sheet="mystery";saveMysteryStore();return;
+  }
+  if(mode==="nextday"){state.sheet="mystery";saveMysteryStore();return;}
+  const id=eventId||({watch:"m_watch_noodles",guess:"m_guess_bun",quick:"m_quick_drink",help:"m_help_chopsticks",duo:"m_duo_cake",rare:"m_rare_partner"}[mode]);
+  if(id){d.activeEventId=id;d.activePhase="story";d.activeChoice=null;d.activeOutcome=null;d.activeResultTitle=null;if(id==="m_rare_partner")d.rareDrawn=true;state.mystery.view="event";state.mystery.eventId=id;state.sheet="mystery";saveMysteryStore();}
+  else state.sheet="mystery";
+}
+
+/* ── 单一状态源 ── */
+function freshSeats(){
+  return Array.from({length:20},(_,i)=>({i, cat:i<CATS.length?CATS[i].id:null}));
+}
+const state = {
+  railMode:"flow", activeFlow:"01", activeStep:{l:0,i:0},
+  /* 页面模式：page = 一级页面选中项；pageFrame = 二级帧选中项；两者独立于当前帧，避免点帧时菜单乱跳 */
+  page:"hall-other", pageFrame:null,
+  frame:"hall-live", history:[], slot:"午餐",
+  /* 我的猫资料：名称 + 表情 + 会话（用户可设置，离座后保留） */
+  myName:"我家的小饭喵", myFace:"🐱", myQuote:null,
+  /* 落座业务状态：以下字段是唯一事实来源 */
+  seats:freshSeats(),
+  seated:false, mySeat:null,
+  order:"none", orderDish:null, coupon:null,
+  /* UI 层 */
+  filter:"all",   /* 饭堂状态筛选 tab：all / none / paid / received */
+  sheet:null, wiz:null, notice:null, toastMsg:"",
+  catInteraction:null, interactionSession:"lunch",
+  topicClock:{dateKey:localDateKey(),minutes:720}, topicPromptVisible:false,
+  mystery:{view:"home",eventId:null,review:false,sub:"entry"}   /* sub = SHEET_ROUTES["r-mystery"] 的当前子态 ID，只用于中栏高亮推导 */
+};
+function topicDay(){
+  const key=state.topicClock.dateKey;
+  if(!topicStore.days[key]){topicStore.days[key]=seedTopicDay(key);saveTopicStore();}
+  const day=topicStore.days[key];
+  const meta=topicMetaFor(key);
+  if(day.topicId!==meta.id){topicStore.days[key]=seedTopicDay(key);saveTopicStore();}
+  return topicStore.days[key];
+}
+function topicStatus(){return state.topicClock.minutes<660?"upcoming":state.topicClock.minutes>=780?"ended":"open";}
+function topicTimeText(){return String(Math.floor(state.topicClock.minutes/60)).padStart(2,"0")+":"+String(state.topicClock.minutes%60).padStart(2,"0");}
+function topicDateText(){return state.topicClock.dateKey.replace(/-/g,".");}
+function maybeShowTopicReminder(){
+  if(!state.seated||topicStatus()!=="open"){state.topicPromptVisible=false;return;}
+  const day=topicDay();
+  state.topicPromptVisible=!day.reminded&&day.vote===null;
+  if(state.topicPromptVisible){day.reminded=true;saveTopicStore();}
+}
+function openTopicSheet(){
+  if(!state.seated){toast("先坐下来加入饭局，再参与今日话题");return;}
+  const day=topicDay();day.reminded=true;saveTopicStore();
+  state.topicPromptVisible=false;state.sheet="topic";state.wiz=null;state.notice=null;state.activeFlow="03";
+}
+function resetTopicDay(key=state.topicClock.dateKey){topicStore.days[key]=seedTopicDay(key);saveTopicStore();}
+function setTopicClock(value){
+  if(value==="nextday"){state.topicClock.dateKey=shiftDateKey(state.topicClock.dateKey,1);state.topicClock.minutes=660;}
+  else{const a=String(value).split(":").map(Number);state.topicClock.minutes=a[0]*60+a[1];}
+  if(state.activeFlow==="03")maybeShowTopicReminder();
+  /* 奇遇独立路由：时间模拟后同步子态，让中栏高亮跟着时间走（13:00 → ended，次日 → nextday） */
+  if(state.activeFlow==="04"&&state.sheet==="mystery"&&state.mystery.view==="home"){
+    state.mystery.sub = value==="nextday"?"nextday":homeSubByStatus();
+  }
+}
+function setupTopicDemo(mode){
+  state.frame="hall-joined";state.seated=true;state.filter="all";state.sheet=null;state.wiz=null;state.notice=null;state.topicPromptVisible=false;
+  if(state.mySeat===null){const i=state.seats.findIndex(x=>!x.cat);if(i>=0){state.seats[i].cat="me";state.mySeat=i;}}
+  state.catInteraction=null;state.activeFlow="03";
+  if(mode==="nextday")state.topicClock.dateKey=shiftDateKey(state.topicClock.dateKey,1);
+  if(["reminder","question","voted","nextday"].includes(mode))state.topicClock.minutes=mode==="nextday"?660:720;
+  if(mode==="ended")state.topicClock.minutes=780;
+  resetTopicDay();
+  const day=topicDay();
+  if(mode==="reminder"||mode==="nextday"){day.reminded=true;saveTopicStore();state.topicPromptVisible=true;}
+  else if(mode==="question"){day.reminded=true;saveTopicStore();state.sheet="topic";}
+  else if(mode==="voted"){day.reminded=true;day.vote=1;day.counts[1]++;saveTopicStore();state.sheet="topic";}
+  else if(mode==="ended"){day.reminded=true;saveTopicStore();state.sheet="topic";}
+}
+
+/* ── 叠层弹窗路由 r-mystery：奇遇独立成一条路由，画面仍是「饭堂帧 + mystery 抽屉」 ──
+   currentRouteId() 只从 state 推导当前所处路由，不新增帧、不改渲染模型；
+   gotoSheet(id) 是「页面」模式点节点的唯一入口，并进 act() 体系，不是第五处补丁。 */
+function currentRouteId(){
+  if(state.sheet==="mystery")return "r-mystery";
+  return null;
+}
+function homeSubByStatus(){
+  const st=mysteryStatus();
+  return st==="upcoming"?"preopen":st==="ended"?"ended":"home";
+}
+/* 从当前画面纯推导奇遇子态 ID；只有 home/completed/nextday 三个评审快照共用 view==="home"，
+   用 state.mystery.sub 兜底区分（这三个本就是跳帧快照，不是产品里可辨的不同画面）。 */
+function mysterySub(){
+  const s=state,st=mysteryStatus();
+  if(s.sheet!=="mystery")return s.sheet===null?(s.seated?"entry":"unseated"):null;
+  const v=s.mystery.view;
+  if(v==="book"||v==="review")return "book";
+  if(v==="event"){
+    if(st==="ended")return "resume";
+    const ev=mysteryEventById(s.mystery.eventId||mysteryDay().activeEventId);
+    return ev?ev.type:null;
+  }
+  if(st==="upcoming")return "preopen";
+  if(st==="ended")return "ended";
+  if(s.mystery.sub==="completed")return "completed";
+  if(s.mystery.sub==="nextday")return "nextday";
+  return "home";
+}
+function gotoSheet(id){
+  const r=SHEET_ROUTES[id];if(!r)return;
+  if(id==="r-mystery"){
+    if(!state.seated||isOffsite(state.frame))applyPreset(r.host);
+    openMysteryHome();
+    state.activeFlow="04";
+  }
+}
+
+/* ── 唯一写入口 ── */
+function go(key){
+  if(!ROUTES[key])return;
+  if(state.frame!==key)state.history.push(state.frame);
+  state.frame=key;
+  syncStep();
+}
+/* 所见即所得：中栏高亮由当前画面（帧 + 弹窗组合）精确推导。
+   同一饭堂画面会被入座、点餐和离座等多个流程复用，
+   优先保持当前所在泳道，避免跨分支乱跳。 */
+function stepMatches(st){
+  const s=state;
+  if(st.frames ? !st.frames.includes(s.frame) : st.k!==s.frame)return false;
+  const sh=s.sheet;
+  if(st.notice)return sh==="notice"&&s.notice===st.notice;
+  if(st.set)return sh==="settings";
+  if(st.wiz)return sh==="wizard"&&s.wiz&&s.wiz.step===st.wiz;
+  if(st.catAction)return sh==="cat-actions"&&!!s.catInteraction;
+  if(st.catProfile)return sh==="cat-profile"&&!!s.catInteraction;
+  if(st.catInteractionStep)return sh==="encounter"&&s.catInteraction&&s.catInteraction.step===st.catInteractionStep;
+  if(st.topicPrompt)return sh===null&&s.topicPromptVisible;
+  if(st.topicEntry)return sh===null&&!s.topicPromptVisible;
+  if(st.topicQuestion)return sh==="topic"&&topicStatus()==="open"&&topicDay().vote===null;
+  if(st.topicResults)return sh==="topic"&&topicDay().vote!==null;
+  if(st.topicEnded)return sh==="topic"&&topicStatus()==="ended";
+  /* 饭堂奇遇独立路由 r-mystery：按稳定子态 ID 精确匹配。
+     旧版 5 个弱标记都只判 view==="home"，导致首页 / 完成 / 结束 / 次日 5 屏互相抢高亮，
+     「13:00 停止开启新奇遇」点了不亮；现统一塌成一条。 */
+  if(st.sub!==undefined)return st.sub===mysterySub();
+  if(st.end)return sh===null&&!s.catInteraction;
+  if(st.entry)return sh===null;
+  return sh===null;
+}
+function syncStep(){
+  const f=FLOWS.find(x=>x.id===state.activeFlow); if(!f)return;
+  const hits=[];
+  f.lanes.forEach((l,li)=>l.steps.forEach((st,i)=>{if(stepMatches(st))hits.push({l:li,i});}));
+  if(!hits.length)return;
+  const cur=state.activeStep;
+  const exact=cur&&hits.find(h=>h.l===cur.l&&h.i===cur.i);
+  const same=exact||(cur&&hits.find(h=>h.l===cur.l));
+  state.activeStep=same||hits[0];
+}
+function applyPreset(key){
+  /* 评审跳帧：一次性把会话设为该帧的自洽快照，只在此处发生 */
+  state.seats=freshSeats();
+  Object.assign(state,PRESETS[key]);
+  if(state.seated){
+    const i=state.seats.findIndex(s=>!s.cat);
+    if(i>=0){state.seats[i].cat="me";state.mySeat=i;}
+  }
+  state.frame=key; state.sheet=null; state.wiz=null; state.notice=null; state.history=[];
+  state.catInteraction=null;
+  state.filter="all";   /* 评审跳帧回到该帧标准视图，不继承筛选 */
+  syncStep();
+}
+function openWiz(step){ state.sheet="wizard"; state.wiz={step:step||"ask"}; }
+function closeSheet(){
+  const closingSeatIntro=state.sheet==="wizard"&&state.wiz&&state.wiz.step==="seated";
+  const closingCatFlow=["cat-actions","cat-profile","encounter"].includes(state.sheet)&&state.catInteraction;
+  const returnFlow=closingCatFlow?(state.catInteraction.originFlow||"01"):null;
+  const closingTopic=state.sheet==="topic";
+  const closingMystery=state.sheet==="mystery";
+  state.sheet=null; state.wiz=null; state.notice=null;
+  if(closingTopic)state.activeFlow="03";
+  if(closingMystery){state.mystery.view="home";state.mystery.review=false;state.mystery.sub="entry";state.activeFlow="04";}
+  if(closingCatFlow){state.catInteraction=null;state.activeFlow=returnFlow;}
+  /* 入座成功只触发今日饭桌话题的轻提醒；猫咪互动完全由用户主动发起。 */
+  if(closingSeatIntro&&state.seated){maybeShowTopicReminder();if(state.topicPromptVisible)state.activeFlow="03";}
+}
+function toast(msg){ state.toastMsg=msg; }
+/* 点「＋」直接入座：无选座弹窗，坐到点击的那个座位，随即弹入座成功 */
+function sitAt(i){
+  if(state.seats[i].cat){toast("这个座位已有猫咪在用啦");return;}
+  state.seats.forEach(x=>{if(x.cat==="me")x.cat=null;});   /* 防御：不留第二个「我」 */
+  state.seats[i].cat="me"; state.mySeat=i; state.seated=true;
+  state.frame="hall-joined"; state.order="none"; state.orderDish=null; state.coupon=null;
+  state.catInteraction=null;
+  state.sheet="wizard"; state.wiz={step:"seated"};
+}
+function leaveSeat(){
+  state.seats=freshSeats();
+  state.seated=false; state.mySeat=null;
+  state.order="none"; state.orderDish=null; state.coupon=null;
+  state.catInteraction=null; state.topicPromptVisible=false;
+  state.frame="hall-live"; state.sheet=null; state.wiz=null; state.notice=null;
+  /* myName / myFace / myQuote 保留：我的猫资料跨会话沿用 */
+}
+
+function act(name,p){
+  const s=state;
+  switch(name){
+    case "mode": s.railMode=p.mode; break;
+    case "page": /* 页面模式：只切换一级页面，第二栏整列换成该页面的二级帧 */
+      s.railMode="page"; s.page=p.id; s.pageFrame=null; break;
+    case "page-frame": { /* 点二级帧：只换右侧预览，不改第一栏选中项 */
+      const fr=pageFrameNode(p.page,p.id); if(!fr)break;
+      s.page=p.page; s.pageFrame=fr.id;
+      if(fr.flow){s.activeFlow=fr.flow;gotoStep(fr.idx);}
+      else {s.activeFlow="01";applyPreset(fr.k);}
+      break;
+    }
+    case "flow":
+      s.railMode="flow"; s.activeFlow=p.id;
+      gotoStep(0);   /* 点左侧流程 → 同时跳到该流程第一步，右侧预览立即有反馈 */
+      break;
+    case "step": gotoStep(p.idx); break;
+    case "topic-open": openTopicSheet(); break;
+    case "topic-dismiss": {const d=topicDay();d.reminded=true;saveTopicStore();s.topicPromptVisible=false;break;}
+    case "topic-vote": {
+      if(!s.seated){toast("先入座，再参与饭桌话题");break;}
+      if(topicStatus()!=="open"){toast("今天的话题投票已经结束");break;}
+      const d=topicDay(),idx=Number(p.i),meta=topicMetaFor(s.topicClock.dateKey);
+      if(d.vote!==null){toast("今天已经投过票啦");break;}
+      if(!Number.isInteger(idx)||idx<0||idx>=meta.options.length)break;
+      d.vote=idx;d.counts[idx]++;d.reminded=true;saveTopicStore();s.topicPromptVisible=false;s.sheet="topic";s.activeFlow="03";toast("投票成功，来看看大家怎么选");break;
+    }
+    case "topic-clock": setTopicClock(p.v);break;
+    case "topic-reset": resetTopicDay();s.topicPromptVisible=false;s.sheet=null;toast("已重置今日话题演示数据；可再切换到 11:00 测试提醒");break;
+    case "mystery-open": openMysteryHome(); break;
+    case "mystery-start": startMysteryEvent(); break;
+    case "mystery-book": s.mystery.view="book";s.mystery.sub="book";s.sheet="mystery";break;
+    case "mystery-home": s.mystery.view="home";s.mystery.sub=homeSubByStatus();s.sheet="mystery";break;
+    case "mystery-review": s.mystery.view="review";s.mystery.eventId=p.id;s.mystery.review=true;s.mystery.sub="book";s.sheet="mystery";break;
+    case "mystery-review-back": s.mystery.view="book";s.mystery.sub="book";s.sheet="mystery";break;
+    case "mystery-watch": {const ev=mysteryEventById(mysteryDay().activeEventId);if(ev)mysterySetResult(ev.resultText,ev.resultTitle);break;}
+    case "mystery-help": {const ev=mysteryEventById(mysteryDay().activeEventId);if(ev)mysterySetResult(ev.resultText,ev.resultTitle);break;}
+    case "mystery-choice": {
+      const d=mysteryDay(),ev=mysteryEventById(d.activeEventId),idx=Number(p.i);
+      if(!ev||!Array.isArray(ev.options)||!ev.options[idx])break;
+      d.activeChoice=idx;
+      const feedback=ev.feedbacks&&ev.feedbacks[idx]||ev.resultText||"猫咪开心地收下了你的建议。";
+      const title=ev.type==="guess"?(idx===ev.correctIndex?"猜对啦！":"真相揭晓"):(ev.resultTitle||"趣味反馈");
+      mysterySetResult(feedback,title);break;
+    }
+    case "mystery-finish": finishMysteryEvent();break;
+    case "mystery-clock": setTopicClock(p.v);break;
+    case "mystery-test-rare": setupMysteryDemo("rare","m_rare_partner");break;
+    case "mystery-reset": {const key=state.topicClock.dateKey;mysteryStore.days[key]=seedMysteryDay();saveMysteryStore();state.mystery.view="home";state.mystery.eventId=null;state.sheet="mystery";toast("已重置今日奇遇，可重新抽取事件");break;}
+    case "frame": s.pageFrame=null; applyPreset(p.key); break;
+    case "goto-sheet": gotoSheet(p.id); break;   /* 「页面」模式点叠层路由节点 */
+    case "filter": if(STATUS_TABS.some(x=>x.k===p.v)){s.filter=p.v;} break;
+    case "close": closeSheet(); break;
+    case "me-entry": case "me-tap":   /* 右下角设置圆 & 场景点自己的猫 → 同一设置弹窗 */
+      s.sheet="settings"; s.wiz=null; s.notice=null; break;
+    case "set-face": if(p.v){s.myFace=String(p.v);const earned=syncCatBadges();if(earned.length)toast("小猫悄悄收下一枚新勋章："+earned.map(b=>b.name).join("、"));} break;
+    case "set-quote": s.myQuote=p.v||null; break;   /* 小猫会话：不选（空值）= 不显示 */
+    case "set-name": {const v=String(p.v||"").trim(); if(v)s.myName=v.slice(0,8);const earned=syncCatBadges();if(earned.length)toast("小猫悄悄收下一枚新勋章："+earned.map(b=>b.name).join("、")); break;}
+    case "cat-peek": openCatTargetFor(p.cat,"cat"); break;
+    case "open-encounter": openRandomCatTarget("manual"); break;
+    case "cat-action-interact": if(s.catInteraction){s.catInteraction.step="actions";s.catInteraction.completed=false;s.sheet="encounter";s.wiz=null;s.notice=null;} break;
+    case "cat-action-profile": if(s.catInteraction){s.sheet="cat-profile";s.wiz=null;s.notice=null;} break;
+    case "cat-interaction-select": {
+      if(!s.catInteraction||s.catInteraction.completed)break;
+      const cat=catById(s.catInteraction.catId),type=CAT_INTERACTION_TYPES.find(x=>x.id===p.type);
+      if(!cat||!type)break;
+      const sent=sendCatInteraction(cat.id,type.id);
+      if(!sent.ok){
+        if(sent.reason==="quota")toast(interactionQuotaMessage(sent.quota));
+        else if(sent.reason==="duplicate")toast("这个动作已经对 TA 做过啦，换一种试试");
+        break;
+      }
+      const variantIndex=Math.floor(Math.random()*type.variants.length);
+      s.catInteraction.actionType=type.id;
+      s.catInteraction.variantIndex=variantIndex;
+      s.catInteraction.receiverCount=sent.receiverCount;
+      s.catInteraction.senderCount=sent.senderCount;
+      s.catInteraction.quotaAfter=sent.quota;
+      s.catInteraction.newBadges=syncCatBadges();
+      s.catInteraction.completed=true;
+      s.catInteraction.previewOnly=false;
+      s.catInteraction.step="result";
+      s.sheet="encounter";
+      break;
+    }
+    case "cat-interaction-done": closeSheet(); break;
+    case "interaction-session": setInteractionSession(p.v); break;
+    case "interaction-nextday": s.topicClock.dateKey=shiftDateKey(s.topicClock.dateKey,1);s.interactionSession="lunch";toast("已切换到次日，中午 10 次额度已重置");break;
+    case "simulate-incoming": {
+      const type=CAT_INTERACTION_TYPES.find(x=>x.id===p.type);
+      if(!type)break;
+      simulateIncomingInteraction(type.id);
+      toast("已模拟有一只猫向你"+type.label);
+      break;
+    }
+    case "interaction-reset": resetCatInteractionDemo();toast("已重置互动统计演示数据");break;
+    case "wiz": if(s.wiz){s.wiz.step=p.step;} else openWiz(p.step); break;
+    case "ask-sit":       /* 入座邀请：点整张图直接入座 → 显示入座成功抽屉 */
+      if(s.seated){toast("已经坐下啦");break;}
+      { const i=s.seats.findIndex(x=>!x.cat);
+        if(i<0){toast("饭堂暂时没有空位啦");break;}
+        sitAt(i); }
+      break;
+    case "seat-from-scene":   /* 点空位「＋」直接入座 */
+      if(s.seated){toast("已经坐下啦，想换座请先离座");break;}
+      sitAt(p.i); break;
+    case "coupon-entry":   /* 券圆 → 领券整屏帧 */
+      if(!s.seated){toast("先坐下，再领券点餐");break;}
+      if(s.order!=="none"){toast("已经点过餐啦");break;}
+      s.frame="coupon"; s.sheet=null; s.wiz=null; s.notice=null; break;
+    case "coupon-claim":   /* 领券成功 → 去下单业务帧 */
+      s.coupon=p.i===undefined?0:Number(p.i);
+      s.frame="biz-order"; s.sheet=null; s.wiz=null; s.notice=null;
+      toast("红包领到啦，去下单吧"); break;
+    case "back-hall":      /* 领券与外部点餐整屏帧返回饭堂 */
+      s.frame=s.seated?"hall-joined":"hall-live";
+      s.sheet=null; s.wiz=null; s.notice=null;
+      if(s.frame==="hall-live"){s.catInteraction=null;}
+      s.activeFlow="01";
+      break;
+    case "order-callback":   /* 系统检索到已付款 → 底图切到饭堂主场景（等餐中），通知抽屉叠在饭堂上 */
+      s.frame="hall-waiting";
+      s.order="paid"; s.orderDish=DISHES[Math.floor(Math.random()*DISHES.length)];
+      s.sheet="notice"; s.notice="paid"; s.wiz=null;
+      toast("系统检索到订单：已付款"); break;
+    case "receive-callback":   /* 系统检索到已收货 → 底图切到饭堂主场景（干饭中），通知抽屉叠在饭堂上 */
+      if(s.order!=="paid"){toast("当前没有等餐中的订单");break;}
+      s.frame="hall-eating";
+      s.order="received"; s.sheet="notice"; s.notice="received"; s.wiz=null;
+      toast("已收货，猫咪开饭啦"); break;
+    case "done":           /* 通知窗「好的」：已付款 → 待收货业务帧；已收货 → 留在饭堂看干饭 */
+      if(s.notice==="paid"){s.frame="biz-receive";closeSheet();}
+      else if(s.notice==="received"){s.frame="hall-eating";closeSheet();}
+      else closeSheet();
+      break;
+    case "leave": leaveSeat(); s.activeStep={l:3,i:0}; toast("已离座，回到饭堂"); break;
+    case "sign": toast("签到属于成长任务，本稿未接入"); break;
+    case "tab": toast("本稿只盘落座一个交互，其余页暂未接入"); break;
+    default: break;
+  }
+  syncStep();   /* 中栏高亮跟随当前画面 */
+  render();
+}
+function gotoStep(idx){
+  const f=FLOWS.find(x=>x.id===state.activeFlow); if(!f)return;
+  let n=0; let target=null;
+  f.lanes.forEach((l,li)=>l.steps.forEach((st,i)=>{if(n===idx){target={l:li,i,st};}n++;}));
+  if(!target)return;
+  state.activeStep={l:target.l,i:target.i};
+  const st=target.st;
+  applyPreset(st.k);
+  if(st.wiz)openWiz(st.wiz);
+  if(st.set){state.sheet="settings";state.wiz=null;state.notice=null;}
+  if(st.catAction){openCatTargetFor(st.randomCat?null:"c01","manual");if(state.catInteraction){state.sheet="cat-actions";state.wiz=null;state.notice=null;}}
+  if(st.catProfile){openCatTargetFor(st.catId||"c01","manual");if(state.catInteraction){state.sheet="cat-profile";state.wiz=null;state.notice=null;}}
+  if(st.catInteractionStep){
+    openCatTargetFor(st.catId||"c01","manual");
+    if(state.catInteraction){
+      state.catInteraction.step=st.catInteractionStep;
+      if(st.catInteractionStep==="result"){
+        state.catInteraction.actionType="wave";state.catInteraction.variantIndex=0;state.catInteraction.previewOnly=true;state.catInteraction.completed=true;
+      }
+      state.sheet="encounter";state.wiz=null;state.notice=null;
+    }
+  }
+  if(st.notice){
+    state.sheet="notice"; state.notice=st.notice; state.wiz=null;
+    if(st.notice==="paid"){state.order="paid";state.orderDish=state.orderDish||DISHES[0];}
+    if(st.notice==="received"){state.order="received";state.orderDish=state.orderDish||DISHES[1];}
+  }
+  if(st.leave){leaveSeat();}
+  if(st.topicDemo)setupTopicDemo(st.topicDemo);
+  if(st.topicPrompt&&!st.topicDemo)setupTopicDemo("reminder");
+  if(st.topicEntry){setupTopicDemo("reminder");state.topicPromptVisible=false;state.sheet=null;}
+  if(st.mysteryDemo)setupMysteryDemo(st.mysteryDemo,st.eventId||null);
+  /* applyPreset() 内部的 syncStep() 会冲掉开头锁定的泳道；在最终同步前重新锁定，
+     让「同一画面被多条分支共用」（如 watch / rare）也能精确落在点击的那一步。 */
+  state.activeStep={l:target.l,i:target.i};
+  syncStep();
+}
+
+/* ── 纯渲染 ── */
+function render(){ renderRail(); renderFlowCol(); renderAnnot(); renderFrameSel(); renderScreen(); renderSheet(); renderPanel(); renderTabbar(); renderOrb(); renderTopicOrb(); renderMysteryOrb(); renderToast(); }
+
+function renderRail(){
+  const el=document.getElementById("railBody");
+  let html='<div class="mode-switch"><div class="ms '+(state.railMode==="flow"?"on":"")+'" data-act="mode" data-mode="flow">流程</div><div class="ms '+(state.railMode==="page"?"on":"")+'" data-act="mode" data-mode="page">页面</div></div>';
+  if(state.railMode==="flow"){
+    html+='<div class="rg-h">互动流程</div>';
+    FLOWS.forEach(f=>{
+      html+='<div class="ri '+(state.activeFlow===f.id?"on":"")+'" data-act="flow" data-id="'+f.id+'"><span class="n">'+f.n+'</span></div>';
+    });
+  }else{
+    PAGE_TREE.forEach(g=>{
+      html+='<div class="rg-h">'+g.g+'</div>';
+      g.items.forEach(it=>{
+        const on=state.page===it.id;
+        html+='<div class="ri '+(on?"on":"")+'" data-act="page" data-id="'+it.id+'"><span class="n">'+it.n+'</span><span class="c">'+pageFrameCount(it)+'</span></div>';
+      });
+    });
+  }
+  el.innerHTML=html;
+}
+function renderFlowCol(){
+  if(state.railMode==="page"){renderPageFrames();return;}
+  const f=FLOWS.find(x=>x.id===state.activeFlow);
+  document.getElementById("fcTitle").textContent=f.n;
+  document.getElementById("fcSub").textContent=f.start;
+  let html="",n=0;
+  f.lanes.forEach((l,li)=>{
+    html+='<div class="fc-grp">'+l.g+'</div>';
+    l.steps.forEach((st,i)=>{
+      const on=state.activeStep&&state.activeStep.l===li&&state.activeStep.i===i;
+      const kind=st.kind||(st.catInteractionStep||st.wiz||st.set||st.notice?"抽屉":st.prompt?"气泡":st.entry?"入口":(st.k==="coupon"||st.k==="biz-order"||st.k==="biz-receive")?"整屏":"场景");
+      html+='<div class="step '+(on?"on":"")+'" data-act="step" data-idx="'+n+'"><div class="idx">'+kind+'</div><div><div class="t">'+st.t+'</div><div class="s">'+st.s+'</div></div></div>';
+      if(i<l.steps.length-1)html+='<div class="arrow"></div>';
+      n++;
+    });
+  });
+  document.getElementById("fcBody").innerHTML=html;
+}
+/* 页面模式第二栏：当前一级页面下的二级帧，点帧只换右侧预览 */
+function renderPageFrames(){
+  const p=pageNode(state.page)||PAGE_TREE[0].items[0];
+  document.getElementById("fcTitle").textContent=p.n;
+  document.getElementById("fcSub").textContent=p.desc;
+  let html="",n=0;
+  p.groups.forEach(g=>{
+    html+='<div class="fc-grp">'+g.g+'</div>';
+    g.frames.forEach(fr=>{
+      n++;
+      const on=state.pageFrame===fr.id;
+      html+='<div class="step '+(on?"on":"")+'" data-act="page-frame" data-page="'+p.id+'" data-id="'+fr.id+'"><div class="idx">'+pad2(n)+'</div><div><div class="t">'+fr.n+'</div></div></div>';
+    });
+  });
+  document.getElementById("fcBody").innerHTML=html;
+}
+function renderAnnot(){ document.getElementById("annotName").textContent=ROUTES[state.frame].n; }
+function renderFrameSel(){
+  const el=document.getElementById("frameSel");
+  el.innerHTML=Object.keys(ROUTES).map(k=>'<option value="'+k+'" '+(k===state.frame?"selected":"")+'>'+ROUTES[k].n+'</option>').join("");
+}
+function renderTabbar(){
+  const tabs=[["🍚","饭堂",true],["🐱","我的猫",false],["🏅","印章墙",false]];
+  document.getElementById("tabbar").innerHTML=tabs.map(t=>'<div class="tab '+(t[2]?"on":"")+'" data-act="tab"><span class="ic">'+t[0]+'</span>'+t[1]+'</div>').join("");
+}
+
+/* ── 饭堂现场 · 2D 桌子场景（表达逻辑照旧稿 V3-R2：5 桌围坐 20 座 + 头顶餐食气泡 + 动作动销）── */
+/* 故事气泡：t = 桌号；落在该桌座位间空角（几何已核对不遮任何座位与餐食气泡）；tail 指向发言猫 */
+const CHATTER=[
+  {t:2,txt:"三分糖，<br>刚刚好。",style:"left:6px;top:4px;width:80px",tail:"tail-b",tx:"40px"},            /* c12 · 宽桌左座，尾巴下指其餐食气泡 */
+  {t:2,txt:"这杯拿铁，<br>第三杯了。",style:"left:calc(50% + 28px);top:4px;width:72px",tail:"tail-l",ty:"10px"}, /* c09 · 宽桌顶座，尾巴左指 */
+  {t:3,txt:"吃面还是<br>吃肉呢？",style:"left:4px;top:4px;width:52px",tail:"tail-r",ty:"8px"}             /* c13 · 3号桌顶座，尾巴右指 */
+];
+/* 状态筛选：座位状态（含自己的猫，空位为 null）→ 桌命中数 → 可见饭桌（按命中数降序） */
+function seatStatus(idx){
+  const seat=state.seats[idx];
+  if(!seat||!seat.cat)return null;
+  if(seat.cat==="me")return state.order;
+  const c=catById(seat.cat);
+  return c?c.status:null;
+}
+function tableHit(t,f){
+  let n=0;
+  for(let k=0;k<4;k++){const st=seatStatus(t*4+k);if(st&&(f==="all"||st===f))n++;}
+  return n;
+}
+function statusCount(f){
+  let n=0;
+  for(let i=0;i<20;i++){const st=seatStatus(i);if(st&&(f==="all"||st===f))n++;}
+  return n;
+}
+/* 筛选满足状态的饭桌；命中猫数越多越靠前，命中数相同按桌号升序（稳定） */
+function visibleTables(){
+  const f=state.filter||"all",list=[];
+  for(let t=0;t<5;t++){
+    const hit=tableHit(t,f);
+    if(f==="all"||hit>0)list.push({t,hit});
+  }
+  return list.sort((a,b)=>b.hit-a.hit||a.t-b.t);
+}
+/* 左上角筛选 tab：全部 + 三态，角标 = 当前该状态猫数（含自己的猫） */
+function statusTabsHTML(){
+  return '<div class="status-tabs" role="tablist" aria-label="按用餐状态筛选饭桌">'
+    +STATUS_TABS.map(x=>{
+      const on=(state.filter||"all")===x.k;
+      return '<button class="st-tab'+(on?" on":"")+'" data-act="filter" data-v="'+x.k+'" role="tab" aria-selected="'+on+'">'+x.n+'<i>'+statusCount(x.k)+'</i></button>';
+    }).join("")+'</div>';
+}
+function foodBubbleHTML(status,dish){
+  if(!dish)return '<span class="food-bubble think">?</span>';
+  const cls=status==="paid"?"wait":status==="received"?"eat":"";
+  return '<span class="food-bubble'+(cls?" "+cls:"")+'">'+mealIcon(dish)+'</span>';
+}
+function sceneHTML(){
+  const pos=["pos-t","pos-r","pos-b","pos-l"];
+  let tables="";
+  const list=visibleTables();
+  list.forEach(({t})=>{
+    let cells="";
+    for(let k=0;k<4;k++){
+      const idx=t*4+k, seat=state.seats[idx];
+      if(!seat.cat){
+        cells+='<div class="dt-seat empty '+pos[k]+'" data-act="seat-from-scene" data-i="'+idx+'" title="'+pad2(idx+1)+' 号空位"><span class="dt-plus">＋</span></div>';
+      }else if(seat.cat==="me"){
+        const st=state.order;
+        const act=CAT_ACT_CLASS[st]||"peek";
+        const dish=state.orderDish;
+        const fb=foodBubbleHTML(st,dish);
+        cells+='<div class="dt-seat me act-'+act+' '+pos[k]+'" data-act="me-tap" title="'+state.myName+' · 座位 '+pad2(idx+1)+' · '+CAT_STATUS[st]+' · '+CAT_ACT_LABEL[act]+'">'
+          +fb+'<span class="dt-me-tag">我</span><span class="dt-cat">'+state.myFace+'<span class="dt-act">'+CAT_ACT_ICON[st]+'</span></span></div>';
+      }else{
+        const c=catById(seat.cat);
+        if(!c)continue;
+        const act=CAT_ACT_CLASS[c.status]||"peek";
+        const fb=foodBubbleHTML(c.status,c.dish);
+        cells+='<div class="dt-seat act-'+act+' '+pos[k]+'" data-act="cat-peek" data-cat="'+c.id+'" title="'+c.name+' · '+CAT_STATUS[c.status]+(c.dish?" · "+c.dish:"")+" · "+CAT_ACT_LABEL[act]+'">'
+          +fb+'<span class="dt-cat">'+c.emoji+'<span class="dt-act">'+CAT_ACT_ICON[c.status]+'</span></span></div>';
+      }
+    }
+    const chat=CHATTER.filter(x=>x.t===t).map(x=>'<span class="dt-bubble '+x.tail+'" style="'+x.style+(x.tx?';--tx:'+x.tx:"")+(x.ty?';--ty:'+x.ty:"")+'">'+x.txt+'</span>').join("");
+    const myChat=(state.seated&&state.myQuote&&t===Math.floor(state.mySeat/4))
+      ? (state.mySeat%4===2
+        ? '<span class="dt-bubble tail-l" style="left:106px;top:112px;width:50px;--ty:12px">'+state.myQuote+'</span>'
+        : '<span class="dt-bubble tail-b" style="left:2px;top:2px;width:54px;--tx:24px">'+state.myQuote+'</span>')
+      : "";
+    tables+='<div class="dtbl'+(t===2?" wide":"")+'"><div class="dt-surface"><span class="dt-no">'+pad2(t+1)+' 号桌</span><span class="dt-mood">'+TABLE_MOODS[t]+'</span></div>'+cells+chat+myChat+'</div>';
+  });
+  const night=state.frame==="hall-night";
+  return '<div class="room">'
+    +'<div class="room-bar"><span class="rb-t">🍽️ '+(night?"深夜食堂 · 夜深了，还有人陪吃":"午餐 · 饭堂正在营业")+'</span><span class="rb-live"><i></i>实时</span></div>'
+    +'<div class="room-tables">'+(tables||'<div class="room-empty">这个状态暂时没有饭桌</div>')+'</div>'
+    +'</div>';
+}
+/* 我的猫 · 设置抽屉：猫咪资料 + 收到的互动统计 + 离座入口。 */
+function settingsBodyHTML(){
+  const s=state;
+  const st=s.seated?CAT_STATUS[s.order]:"未入座";
+  const top='<div class="meal-top"><div class="meal-av">'+s.myFace+'</div><div><div class="meal-nm">'+s.myName+'</div>'
+    +'<div class="meal-st">'+(s.seated?"座位 "+pad2(s.mySeat+1)+" · "+st:st)+'</div></div><span class="chip on">'+st+'</span></div>'
+    +'<div class="set-line">设置猫咪形象，收藏饭堂里的小勋章，也看看 TA 收到的互动。</div>';
+  const stats='<div class="set-block received-set-block"><div class="set-h">收到的互动</div>'+interactionStatsHTML("me")+'</div>'
+    +'<div class="set-block received-set-block"><div class="set-h">我发起的互动</div>'+interactionSentStatsHTML("me")+'</div>'
+    +'<div class="set-block received-set-block"><div class="set-h">今日互动额度</div>'+interactionQuotaMiniHTML()+'</div>';
+  const badges=catBadgesHTML();
+  const b1='<div class="set-block"><div class="set-h">猫咪名称</div><input class="name-input" data-set="name" value="'+s.myName+'" maxlength="8" placeholder="给它起个名字"></div>';
+  const b2='<div class="set-block"><div class="set-h">猫咪表情</div><div class="face-row">'
+    +FACES.map(f=>'<span class="face'+(f===s.myFace?" on":"")+'" data-act="set-face" data-v="'+f+'">'+f+'</span>').join("")+'</div></div>';
+  const b3='<div class="set-block"><div class="set-h">小猫会话</div><div class="quote-row">'
+    +'<span class="qopt'+(s.myQuote?"":" on")+'" data-act="set-quote" data-v="">不显示</span>'
+    +QUOTES.map(q=>'<span class="qopt'+(q===s.myQuote?" on":"")+'" data-act="set-quote" data-v="'+q+'">'+q+'</span>').join("")+'</div></div>';
+  const b4=s.seated
+    ? '<div class="set-block"><div class="btn-row"><button class="btn-ghost" data-act="leave">离开座位</button></div></div>'
+    : "";
+  return top+badges+b1+b2+b3+stats+b4;
+}
+/* 无图兜底：两张通知已由 NOTICE_IMG 整图抽屉接管，此处仅在缺图时提供纯文字版本 */
+function noticeBodyHTML(){
+  const N=state.notice==="received"
+    ?{t:"外卖到啦",sub:"「"+state.orderDish+"」已收货，猫猫开饭啦。",btn:"好的"}
+    :{t:"饭堂收到订单",sub:"「"+state.orderDish+"」已付款，猫猫正等着开饭。",btn:"好的"};
+  return '<div class="wz-title">'+N.t+'</div><div class="wz-sub">'+N.sub+'</div>'
+    +'<div class="btn-row"><button class="btn-primary" data-act="done">'+N.btn+'</button></div>';
+}
+function catActionBodyHTML(){
+  const e=state.catInteraction;
+  const cat=e&&catById(e.catId);
+  if(!cat)return '<div class="wz-sub">这只猫咪暂时离开了，稍后再遇见吧。</div>';
+  return '<div class="cat-action-body">'
+    +'<div class="enc-cat-head"><div class="enc-cat-face">'+cat.emoji+'</div><div class="enc-cat-meta"><b>'+cat.name+'</b><small>'+cat.personality+' · 饭堂里的小伙伴</small></div></div>'
+    +'<div class="cat-action-note">想和 TA 怎么互动？也可以先看看 TA 今天吃了什么。</div>'
+    +'<div class="cat-action-row">'
+    +'<button class="cat-action-btn primary" data-act="cat-action-interact"><span class="cat-action-icon">👋</span><b>互动</b><small>挥手 · 碰杯 · 递菜 · 一起吃饭</small></button>'
+    +'<button class="cat-action-btn secondary" data-act="cat-action-profile"><span class="cat-action-icon">🍜</span><b>看看他在吃什么</b><small>猫咪资料 · 外卖信息</small></button>'
+    +'</div></div>';
+}
+function catProfileBodyHTML(){
+  const e=state.catInteraction;
+  const cat=e&&catById(e.catId);
+  if(!cat)return '<div class="wz-sub">这只猫咪暂时离开了，稍后再遇见吧。</div>';
+  const hasOrder=cat.status!=="none"&&!!cat.dish;
+  const meal=hasOrder
+    ? '<div class="cat-food-main"><span class="cat-food-icon">'+mealIcon(cat.dish)+'</span><div><b>'+cat.dish+'</b><small>'+(cat.status==="paid"?'正在等待外卖送达':'已经收货，正在享用')+'</small></div></div>'
+    : '<div class="cat-food-empty"><span>🤔</span><div><b>还没点餐</b><small>这只猫还在考虑今天吃什么。</small></div></div>';
+  const delivery=cat.status==="received"?'已收货 · 干饭中':cat.status==="paid"?'等餐中 · 已付款':'暂未下单';
+  return '<div class="cat-profile-body">'
+    +'<div class="cat-profile-hero"><div class="cat-profile-face">'+cat.emoji+'</div><div class="cat-profile-meta"><b>'+cat.name+'</b><small>'+cat.personality+'</small></div></div>'
+    +'<div class="cat-profile-section"><div class="cat-profile-section-title">收到的互动</div>'+interactionStatsHTML(cat.id,true)+'</div>'
+    +'<div class="cat-profile-section"><div class="cat-profile-section-title">TA 的外卖信息</div>'
+    +meal
+    +'<div class="cat-profile-row cat-delivery-row"><span>订单状态</span><b>'+delivery+'</b></div>'
+    +'</div>'
+    +'<div class="btn-row"><button class="btn-primary" data-act="close">关闭</button></div>'
+    +'</div>';
+}
+function catInteractionBodyHTML(){
+  const e=state.catInteraction;
+  if(!e)return '<div class="wz-sub">这只猫咪暂时离开了，稍后再遇见吧。</div>';
+  const cat=catById(e.catId);
+  if(!cat)return '<div class="wz-sub">这只猫咪暂时离开了，稍后再遇见吧。</div>';
+  if(e.step==="actions"){
+    const quota=interactionQuotaState();
+    const choices=CAT_INTERACTION_TYPES.map((a,i)=>{
+      const sent=hasSentCatInteraction(cat.id,a.id),blocked=quota.full||sent;
+      return '<button class="interaction-choice '+(blocked?'sent':'')+'" data-act="cat-interaction-select" data-type="'+a.id+'" '+(blocked?'disabled':'')+'>'
+        +'<span class="ic-emoji">'+a.icon+'</span><span class="ic-copy"><b>'+a.label+'</b><small>'+a.hint+'</small></span>'
+        +'<span class="ic-state">'+(sent?'已互动':quota.full?'额度用完':'选择')+'</span></button>';
+    }).join("");
+    return '<div class="interaction-sheet"><div class="interaction-target"><span>'+cat.emoji+'</span><div><b>'+cat.name+'</b><small>选一个小动作，给 TA 一点饭堂里的友好。</small></div></div>'
+      +'<div class="interaction-quota '+(quota.full?'is-full':'')+'"><b>'+(quota.session==="lunch"?'中午场':'晚上场')+' · '+quota.used+'/10</b><span>'+(quota.total+'/20 次今日额度')+'<br>'+interactionQuotaMessage(quota)+'</span></div>'
+      +'<div class="interaction-choice-grid">'+choices+'</div></div>';
+  }
+  const action=CAT_INTERACTION_TYPES.find(x=>x.id===e.actionType)||CAT_INTERACTION_TYPES[0];
+  const variant=action.variants[e.variantIndex||0];
+  const receiverCount=Number(e.receiverCount||catInteractionCount(cat.id,action.id));
+  const senderCount=Number(e.senderCount||catInteractionSentCount("me",action.id));
+  const q=e.quotaAfter||interactionQuotaState();
+  return '<div class="interaction-result">'
+    +'<div class="interaction-stage"><div class="interaction-performer"><span>'+state.myFace+'</span><small>我</small></div><div class="interaction-action-mark">'+variant.emoji+'</div><div class="interaction-performer target"><span>'+cat.emoji+'</span><small>'+cat.name+'</small></div></div>'
+    +'<div class="interaction-result-title">'+variant.text+'</div>'
+    +'<div class="interaction-result-copy">'+variant.feedback+'</div>'
+    +(e.newBadges&&e.newBadges.length?'<div class="cat-badge-unlock">🏅 小猫悄悄收下一枚新勋章：<b>'+e.newBadges.map(b=>b.name).join('、')+'</b></div>':'')
+    +'<div class="interaction-result-pair"><div><b>+1</b><small>你发起的 '+action.label+'</small></div><div><b>+1</b><small>'+cat.name+' 收到的 '+action.label+'</small></div></div>'
+    +'<div class="interaction-count-result"><b>'+receiverCount+' 位</b><span>'+cat.name+' 收到过'+action.past+' · 你累计发起 '+senderCount+' 次'+action.label+'</span></div>'
+    +'<div class="interaction-quota"><b>'+(q.session==="lunch"?'中午场':'晚上场')+' · '+q.used+'/10</b><span>今日总计 '+q.total+'/20 次<br>'+interactionQuotaMessage(q)+'</span></div>'
+    +'<div class="btn-row"><button class="btn-primary" data-act="cat-interaction-done">完成</button></div>'
+    +'</div>';
+}
+function topicResultsHTML(meta,day,status){
+  const total=day.counts.reduce((a,b)=>a+b,0)||1;
+  const raw=day.counts.map(v=>Math.round(v/total*100));
+  const sum=raw.reduce((a,b)=>a+b,0);raw[raw.length-1]+=100-sum;
+  const ended=status==="ended";
+  const rows=meta.options.map((o,i)=>'<div class="topic-result-row '+(day.vote===i?"selected":"")+'"><div class="topic-result-label"><b>'+(o.e?o.e+" ":"")+o.t+(day.vote===i?'　✓ 你的选择':'')+'</b><span>'+raw[i]+'%</span></div><div class="topic-track"><i style="width:'+raw[i]+'%"></i></div></div>').join("");
+  const comments=meta.comments.map(c=>'<div class="topic-comment"><span class="tcc-face">'+c.face+'</span><div class="tcc-body"><b>'+c.name+'</b><span>「'+c.text+'」</span></div></div>').join("");
+  return '<div class="topic-sheet">'
+    +'<div class="topic-kicker"><span>今日饭桌话题 · '+topicDateText()+'</span><b class="topic-state">'+(ended?'今日话题已结束':'已参与')+'</b></div>'
+    +'<div class="topic-question">'+meta.title+'</div>'
+    +(ended?'<div class="topic-ended">13:00 投票已截止，以下为今日最终统计。明天 11:00 将开启新话题。</div>': '<div class="topic-sub">你已经加入今天的饭局，来看看大家的答案吧。</div>')
+    +'<div class="topic-result-head"><b>大家的选择</b><span class="topic-total">'+total+' 票</span></div>'+rows
+    +'<div class="topic-comments"><div class="topic-comments-title">饭桌上的声音</div>'+comments+'</div>'
+    +'<div class="btn-row"><button class="btn-primary" data-act="close">关闭</button></div></div>';
+}
+function topicSheetHTML(){
+  const meta=topicMetaFor(state.topicClock.dateKey),day=topicDay(),status=topicStatus();
+  if(day.vote!==null)return topicResultsHTML(meta,day,status);
+  if(status==="upcoming")return '<div class="topic-sheet"><div class="topic-kicker"><span>今日饭桌话题 · '+topicDateText()+'</span><b class="topic-state">11:00 开放</b></div><div class="topic-question">'+meta.title+'</div><div class="topic-sub">今天的话题还没开始，11:00 开放投票，13:00 截止。</div><div class="btn-row"><button class="btn-ghost" data-act="close">知道啦</button></div></div>';
+  if(status==="ended")return topicResultsHTML(meta,day,status);
+  return '<div class="topic-sheet">'
+    +'<div class="topic-kicker"><span>今日饭桌话题 · '+topicDateText()+'</span><b class="topic-state">11:00—13:00 开放</b></div>'
+    +'<div class="topic-question">'+meta.title+'</div><div class="topic-sub">'+meta.sub+' 选好即投票，每天只能选一次。</div>'
+    +'<div class="topic-options">'+meta.options.map((o,i)=>'<button class="topic-option" data-act="topic-vote" data-i="'+i+'"><span class="to-emoji">'+o.e+'</span><b>'+o.t+'</b></button>').join("")+'</div></div>';
+}
+
+function renderOrb(){
+  const meEl=document.getElementById("meOrb"), cpEl=document.getElementById("cpOrb"), s=state;
+  const badge=s.seated?CAT_ACT_ICON[s.order]:"＋";
+  meEl.innerHTML='<span class="o-cat">'+s.myFace+'</span><span class="o-badge '+(s.seated?"":"sit")+'">'+badge+'</span>';
+  meEl.title="我的猫 · "+s.myName;
+  /* 券圆：四个常驻入口之一，进入饭堂即可见；整屏帧由 .offsite 统一隐藏 */
+  const show=!isOffsite(s.frame);
+  cpEl.classList.toggle("hide",!show);
+  cpEl.title="领券点餐";
+}
+function renderMysteryOrb(){
+  const el=document.getElementById("mysteryOrb");if(!el)return;
+  const hidden=isOffsite(state.frame);el.style.display=hidden?"none":"flex";
+  const d=mysteryDay(),hasNew=mysteryStatus()==="open"&&mysteryAvailablePool().length>0;
+  el.classList.toggle("has-new",!!(state.seated&&hasNew));
+  el.title=state.seated?"饭堂奇遇 · 随机发现猫咪小故事":"饭堂奇遇 · 先找个位置坐下";
+}
+function renderTopicOrb(){
+  const el=document.getElementById("topicOrb");if(!el)return;
+  el.style.display=isOffsite(state.frame)?"none":"flex";
+  const hasNew=topicStatus()==="open"&&topicDay().vote===null;
+  el.classList.toggle("has-new",!!(state.seated&&hasNew));
+  el.title=state.seated?"今日话题 · 参与投票":"今日话题 · 先找个位置坐下";
+}
+function topicReminderHTML(){
+  return '<section class="topic-reminder" style="--i:1"><div class="tr-ill">🐱💬</div><div class="tr-copy"><b>饭桌上有个新话题！</b><small>来聊两句，看看大家怎么选。</small></div><div class="tr-actions"><button class="tr-open" data-act="topic-open">看看大家在聊什么</button><button class="tr-later" data-act="topic-dismiss">稍后再看</button></div></section>';
+}
+function viewHall(){
+  const s=state;
+  const night=s.frame==="hall-night";
+  /* 时段表达照旧稿 V3-R2：营业横幅取代时段 tab，深夜食堂只换气氛不改状态机 */
+  const banner='<section class="party-banner" style="--i:0"><span class="pb-em">'+(night?"🌙":"🍱")+'</span>'
+    +'<div class="pb-tx"><b>'+(night?"深夜食堂":"午餐派对")+'</b><small>'+(night?"21:00–24:00 · 安静陪伴":"11:00–13:00 · 午餐时段开席")+'</small></div>'
+    +'<span class="pb-live"><i></i>正在营业</span></section>';
+  const f=s.filter||"all";
+  const shown=visibleTables().length, cnt=statusCount(f);
+  const more=f==="all" ? shown+" 张饭桌 · "+cnt+" 只猫咪" : shown+" 张饭桌 · "+cnt+" 只"+CAT_STATUS[f];
+  const scene='<section class="card" style="--i:1"><div class="sec-head"><h2 class="sec-title">饭堂现场</h2><span class="sec-more">'+more+'</span></div>'
+    +sceneHTML()+'</section>';
+  const topicReminder=state.topicPromptVisible?topicReminderHTML():"";
+  const encounterEntry='<button class="encounter-entry" data-act="open-encounter"><span class="ee-ic">👋</span><span class="ee-tx"><b>随机互动一只猫</b><small>挥挥手、碰个杯，送个小动作</small></span><span class="ee-go">去互动 →</span></button>';
+  return statusTabsHTML()+banner+topicReminder+scene+encounterEntry+'<p class="foot">先看大家吃什么，再坐下来一起吃</p>';
+}
+/* 猫咪偶遇采用轻动作互动；入口直接打开统一底部抽屉。 */
+/* 领券帧：照业务截图，签到条 + 淘宝闪购 / 美团红包双列券卡；点任一「领取+5」进入去下单业务帧 */
+function viewCoupon(){
+  const cols=RED_PACKS.map((g,gi)=>
+    '<div class="cp-col"><div class="cp-col-h"><span class="cp-logo '+g.col+'">'+g.logo+'</span>'+g.brand+'</div>'
+    +g.cards.map((c,ci)=>'<div class="cp-card '+g.col+'"><div class="cc-t">'+c.t+'</div><div class="cc-s">'+c.s+'</div>'
+      +'<button class="cp-get" data-act="coupon-claim" data-i="'+(gi*2+ci)+'">'+c.btn+'</button></div>').join("")
+    +'</div>').join("");
+  return '<div class="cp-sign" style="--i:0"><span class="sg-tx">'+SIGN_BAR.tx+' '+SIGN_BAR.coin+'</span>'
+    +'<button class="sg-btn" data-act="sign">'+SIGN_BAR.btn+'</button></div>'
+    +'<section class="card" style="--i:1"><div class="cp-head"><b>领外卖红包</b><span>以活动实际资格为准</span></div>'
+    +'<div class="cp-cols" style="margin-top:14px">'+cols+'</div></section>';
+}
+/* 业务帧：整屏空白，中间只有一行产品文案 */
+function viewBiz(){
+  const tx=state.frame==="biz-order"
+    ? "红包领好了，去点餐平台把餐点好<br>饭堂会同步收到订单"
+    : "订单已付款，外卖到了记得点收货<br>猫猫等不及啦";
+  return '<div class="biz-blank"><div class="bz-tx">'+tx+'</div></div>';
+}
+function renderScreen(){
+  const phone=document.getElementById("phone");
+  const back=document.getElementById("backBtn");
+  const title=document.getElementById("appTitle");
+  const off=isStandalone(state.frame);
+  phone.classList.toggle("offsite",off);
+  back.classList.toggle("on",off);
+  const cap={coupon:"领外卖红包","biz-order":"去点餐","biz-receive":"等收货"};
+  title.innerHTML=off?cap[state.frame]:"今天也有人<em>陪你吃饭</em>";
+  const el=document.getElementById("screen");
+  el.innerHTML=state.frame==="coupon"?viewCoupon()
+    :(state.frame==="biz-order"||state.frame==="biz-receive")?viewBiz()
+    :viewHall();
+}
+
+/* ── 弹窗引擎：一套 sheet，wizard 按 wiz.step 渲染 ── */
+const WIZ_TITLE = {ask:"入座邀请",seated:"坐好啦"};
+/* 入座邀请 / 入座成功 / 两张订单通知直接引用设计稿截图：底部抽屉 = 一整张图，整图即主动作，右上 X 关闭。
+   图不改画、不重绘、不叠字；交互只由热区承担，演示态与业务态共用同一张图。 */
+const IMG_SHEET = {
+  ask:   {src:"assets/invite.jpg", act:"ask-sit", alt:"入座邀请"},
+  seated:{src:"assets/seated.jpg", act:"done",    alt:"已入座"}
+};
+/* 已付款 / 已收货通知沿用同一套整图抽屉：点整张图 = done（按 notice 分流），X 与遮罩只关窗 */
+const NOTICE_IMG = {
+  paid:    {src:"assets/paid.jpg",     act:"done", alt:"已付款通知"},
+  received:{src:"assets/received.jpg", act:"done", alt:"已收货通知"}
+};
+function imgSheetHTML(key){
+  const c=IMG_SHEET[key]||NOTICE_IMG[key]; if(!c)return "";
+  return '<div class="img-sheet" data-act="'+c.act+'" role="button" tabindex="0" aria-label="'+c.alt+'">'
+    +'<img src="'+c.src+'" alt="'+c.alt+'">'
+    +'<button class="hit-x" data-act="close" aria-label="关闭"></button></div>';
+}
+function wizardHTML(){
+  /* 图片抽屉接管入座邀请 / 入座成功；此处仅作无图时的兜底 */
+  if(!state.wiz)return "";
+  return '<div class="wz-title">开饭啦！</div>'
+    +'<div class="wz-sub">饭堂还有空位，点场景里的空位「＋」就能坐下。</div>'
+    +'<div class="btn-row"><button class="btn-primary" data-act="done">我先看看</button></div>';
+}
+function mysteryHomeHTML(){
+  const d=mysteryDay(),status=mysteryStatus(),active=d.activeEventId&&!d.completedIds.includes(d.activeEventId),pool=mysteryAvailablePool();
+  const discovered=mysteryDiscoveredCount(),completed=d.completedIds.length;
+  let label="打开今日奇遇",disabled=false,sub="打开奇遇盒，随机发现一段猫咪小故事。";
+  if(active){label="继续上次奇遇";sub="上次的故事还没看完，接着探索吧。";}
+  else if(status==="upcoming"){label="11:00 开启";disabled=true;sub="午餐奇遇将在 11:00 开始，先坐下来等一会儿。";}
+  else if(status==="ended"){label="今日奇遇已结束";disabled=true;sub="今天不再开启新故事，已发现的奇遇仍可在图鉴回顾。";}
+  else if(pool.length===0){label="今日故事已探索完";disabled=true;sub="今天的故事都发现啦，去图鉴回顾一下吧。";}
+  return '<div class="mystery-ui">'
+    +'<div class="mystery-kicker"><span>午餐派对 · 11:00—13:00</span><span class="mystery-pill">随机探索</span></div>'
+    +'<div class="mystery-hero"><div class="mystery-box-art">🎁</div><div class="mystery-hero-copy"><b>今天的饭堂，好像发生了不少有趣的事。</b><small>打开奇遇盒，看看猫咪们又遇到了什么小故事。</small></div></div>'
+    +'<div class="mystery-progress"><span>今日探索进度</span><b>'+completed+' / '+MYSTERY_BANK.length+'</b></div>'
+    +'<div class="mystery-track"><i style="width:'+Math.min(100,completed/MYSTERY_BANK.length*100)+'%"></i></div>'
+    +'<div class="mystery-stats"><div class="mystery-stat"><b>'+discovered+'</b><small>图鉴已发现</small></div><div class="mystery-stat"><b>'+Math.max(0,MYSTERY_BANK.length-discovered)+'</b><small>尚未发现</small></div><div class="mystery-stat"><b>✦ '+(mysteryStore.discovered.m_rare_partner?"已遇见":"待发现")+'</b><small>稀有奇遇</small></div></div>'
+    +'<button class="mystery-main-btn" data-act="mystery-start" '+(disabled?'disabled':'')+'>'+label+'</button>'
+    +'<button class="mystery-secondary-btn" data-act="mystery-book">打开奇遇图鉴</button>'
+    +(status==="ended"&&active?'<div class="mystery-end-label">午餐时间已结束，已开启的奇遇仍可继续完成。</div>':status==="ended"?'<div class="mystery-end-label">今日奇遇已结束 · 明天 11:00 更新新一轮</div>':status==="upcoming"?'<div class="mystery-end-label">奇遇 11:00 开放</div>':'')
+    +'</div>';
+}
+function mysteryBookHTML(){
+  const discovered=mysteryDiscoveredCount();
+  const cards=MYSTERY_BANK.map(ev=>{
+    const known=!!mysteryStore.discovered[ev.id];
+    const rare=ev.rarity==="rare";
+    return '<button class="mystery-book-item '+(known?'':'locked')+'" '+(known?'data-act="mystery-review" data-id="'+ev.id+'"':'disabled')+'>'
+      +'<span class="mb-art">'+(known?ev.art:'❔')+'</span>'
+      +'<b>'+(known?ev.title:'尚未发现')+'</b>'
+      +(rare?'<span class="mb-rare">✦ 稀有奇遇</span>':'<small>'+(known?ev.typeLabel:'故事隐藏中')+'</small>')
+      +'</button>';
+  }).join("");
+  return '<div class="mystery-ui"><div class="mystery-book-head"><b>我的奇遇图鉴</b><span>已发现 '+discovered+' / '+MYSTERY_BANK.length+'</span></div>'
+    +'<div class="mystery-book-grid">'+cards+'</div>'
+    +'<div class="btn-row"><button class="btn-ghost" data-act="mystery-home">返回奇遇首页</button></div></div>';
+}
+function mysteryEventHTML(review=false){
+  const d=mysteryDay(),id=review?state.mystery.eventId:(d.activeEventId||state.mystery.eventId),ev=mysteryEventById(id);
+  if(!ev)return '<div class="mystery-ui"><div class="wz-sub">这段奇遇暂时找不到了。</div><button class="btn-ghost" data-act="mystery-home">返回奇遇首页</button></div>';
+  const rare=ev.rarity==="rare",type='<span class="mystery-type '+(rare?'rare':'')+'">'+(rare?'✦ ':'')+ev.typeLabel+'</span>';
+  const cats=ev.cats.map((c,i)=>'<div class="mystery-character '+(i>0?'small':'')+'">'+c.face+'</div>').join(rare?'<span class="mystery-prop">🎀</span>':'<span class="mystery-prop">'+ev.art+'</span>');
+  const scene='<div class="mystery-scene '+(rare?'rare':'')+'">'+(rare?'<span class="mystery-spark">✦ ✧ ✦</span>':'')+cats+'</div>';
+  if(review){
+    return '<div class="mystery-ui"><div class="mystery-kicker"><span>奇遇图鉴 · 已发现</span>'+type+'</div><div class="mystery-event-title">'+ev.title+'</div>'+scene+'<div class="mystery-story">'+ev.story+'</div><div class="mystery-result"><b>'+ev.resultTitle+'</b><p>'+ev.resultText+'</p></div><div class="btn-row"><button class="btn-primary" data-act="mystery-review-back">返回图鉴</button></div></div>';
+  }
+  if(d.activePhase==="result"){
+    return '<div class="mystery-ui"><div class="mystery-kicker"><span>奇遇进行中</span>'+type+'</div><div class="mystery-event-title">'+ev.title+'</div>'+scene+'<div class="mystery-result"><b>'+(d.activeResultTitle||ev.resultTitle||'趣味反馈')+'</b><p>'+(d.activeOutcome||ev.resultText||'猫咪们开心地继续吃饭啦。')+'</p></div><button class="mystery-main-btn" data-act="mystery-finish">完成奇遇 · 收入图鉴</button></div>';
+  }
+  let actions='';
+  if(ev.type==="watch")actions='<button class="mystery-main-btn" data-act="mystery-watch">看看后来发生了什么</button>';
+  else if(ev.type==="help")actions='<button class="mystery-main-btn" data-act="mystery-help">帮它一下</button>';
+  else if(ev.type==="rare")actions='<button class="mystery-main-btn" data-act="mystery-watch">揭开神秘饭盒</button>';
+  else if(ev.type==="duo")actions='<div class="mystery-event-desc">你想怎么帮它们？也可以先看看热闹。</div>'
+    +ev.options.map((o,i)=>'<button class="mystery-choice" data-act="mystery-choice" data-i="'+i+'"><span class="mc-no">0'+(i+1)+'</span>'+o+'</button>').join("")
+    +'<button class="mystery-inline-link" data-act="mystery-watch">先看看它们怎么解决</button>';
+  else actions=ev.options.map((o,i)=>'<button class="mystery-choice" data-act="mystery-choice" data-i="'+i+'"><span class="mc-no">0'+(i+1)+'</span>'+o+'</button>').join("");
+  return '<div class="mystery-ui"><div class="mystery-kicker"><span>随机遇见 · '+(ev.typeLabel||'饭堂奇遇')+'</span>'+type+'</div>'
+    +'<div class="mystery-event-title">'+ev.title+'</div><div class="mystery-event-desc">'+ev.desc+'</div>'+scene
+    +'<div class="mystery-story">'+ev.story+'</div>'
+    +(ev.type==="guess"||ev.type==="quick"?'<div class="mystery-event-desc">'+(ev.type==="guess"?'你猜最后发生了什么？':'帮 TA 做个决定吧。')+'</div>':'')
+    +actions+'</div>';
+}
+function mysterySheetHTML(){
+  const v=state.mystery.view;
+  if(v==="book")return mysteryBookHTML();
+  if(v==="event")return mysteryEventHTML(false);
+  if(v==="review")return mysteryEventHTML(true);
+  return mysteryHomeHTML();
+}
+
+function renderSheet(){
+  const mask=document.getElementById("mask"),sh=document.getElementById("sheet");
+  if(!state.sheet){mask.classList.remove("on");sh.classList.remove("on");sh.classList.remove("as-img");sh.classList.remove("encounter-sheet");sh.classList.remove("cat-profile-sheet");sh.classList.remove("topic-sheet");sh.classList.remove("mystery-sheet");sh.innerHTML="";return;}
+  const step=state.wiz?state.wiz.step:"";
+  const noticeImg=state.sheet==="notice"&&!!NOTICE_IMG[state.notice];
+  const asImg=(state.sheet==="wizard"&&!!IMG_SHEET[step])||noticeImg;
+  sh.classList.toggle("as-img",asImg);
+  sh.classList.toggle("encounter-sheet",["encounter","cat-actions","cat-profile"].includes(state.sheet));
+  sh.classList.toggle("cat-profile-sheet",state.sheet==="cat-profile");
+  sh.classList.toggle("topic-sheet",state.sheet==="topic");
+  sh.classList.toggle("mystery-sheet",state.sheet==="mystery");
+  let html="";
+  if(asImg){ html=imgSheetHTML(noticeImg?state.notice:step); }
+  else{
+    let title="",body="";
+    if(state.sheet==="settings"){title="我的猫";body=settingsBodyHTML();}
+    else if(state.sheet==="notice"){title="订单通知";body=noticeBodyHTML();}
+    else if(state.sheet==="cat-actions"){title="和 TA 互动";body=catActionBodyHTML();}
+    else if(state.sheet==="cat-profile"){title="TA 的饭堂生活";body=catProfileBodyHTML();}
+    else if(state.sheet==="encounter"){
+      const step=state.catInteraction?.step;
+      title=step==="actions"?"选个互动动作":"互动完成";
+      body=catInteractionBodyHTML();
+    }
+    else if(state.sheet==="topic"){title="今日饭桌话题";body=topicSheetHTML();}
+    else if(state.sheet==="mystery"){title=state.mystery.view==="book"?"奇遇图鉴":state.mystery.view==="event"?"发现一段奇遇":state.mystery.view==="review"?"奇遇回顾":"饭堂奇遇";body=mysterySheetHTML();}
+    else{title=WIZ_TITLE[step]||"提示";body=wizardHTML();}
+    html='<div class="sheet-bar"></div><div class="sheet-head"><h2>'+title+'</h2><div class="sheet-close" data-act="close">×</div></div>'+body;
+  }
+  sh.innerHTML=html;
+  mask.classList.add("on");sh.classList.add("on");
+}
+function renderPanel(){
+  let c=CHANGELOG[state.frame]||{title:ROUTES[state.frame].n,desc:"",rules:[],api:[]};
+  if(state.sheet==="cat-actions"){
+    c={title:"猫咪功能选择 · 底部抽屉",desc:"点击饭堂里的其他猫咪或随机互动入口，先打开统一功能抽屉。",rules:["左侧「互动」进入四种轻动作选择", "右侧「看看他在吃什么」查看猫咪资料、四类互动人数与外卖信息", "关闭抽屉不会产生互动，也不会留下待回复消息", "不需要聊天，不发消息，也不要求对方回应"],api:["openCatTargetFor","getCatInteractionStats"]};
+  }else if(state.sheet==="cat-profile"){
+    c={title:"猫咪资料 · 外卖信息抽屉",desc:"展示猫咪资料、四类收到的互动人数和当前餐食 / 外卖状态。",rules:["不展示互动者身份，只展示每类动作的累计人数", "已点餐猫咪展示餐品与等餐 / 已收货状态", "未点餐猫咪展示未点餐状态，不虚构餐品", "纯查看不改变互动计数；关闭后回到饭堂"],api:["getCatProfile","getCatInteractionStats","getCatOrderStatus"]};
+  }else if(state.sheet==="encounter"){
+    const step=state.catInteraction?.step;
+    c={title:step==="actions"?"猫咪偶遇 · 四种动作选择":"猫咪偶遇 · 动作反馈",desc:"用户主动选择一个小动作，随机呈现一种可爱表现；一次互动同时更新发起方与接收方的聚合统计。",rules:["四种动作：挥挥手 / 碰个杯 / 递个菜 / 一起吃饭吗", "一次互动双方都记数：发起方「我发起的互动」+1，接收方「收到的互动」+1", "每天最多 20 次：中午场 10 次、晚上场 10 次；中午用完后等晚上，晚上用完次日重置", "额度按发起用户统计，跨目标猫、跨动作共享；无效重复动作不消耗额度", "同一用户对同一只猫的同一种动作只计一次；不保存或展示对方身份", "不发通知、不要求对方回应、不产生关系升级"],api:["recordCatInteractionForBothUsers","getInteractionQuota","getCatInteractionStats"]};
+  }else if(state.sheet==="topic"){
+    c={title:"今日饭桌话题 · 投票抽屉",desc:"饭堂里的集体闲聊；未投票显示四选一，投票后显示结果，13:00 后只读最终统计。",rules:["必须先成功入座才能参与投票", "每天 11:00 开放、13:00 截止；用户每天只能投票一次", "投票不需要填写文字；13:00 后自动结束", "关闭提醒不等于投票；提醒与投票状态分别保存", "投票后立即显示百分比和预设猫咪回答", "13:00 后隐藏所有投票选项，只能查看最终结果", "本地原型用 localStorage 模拟；生产环境以服务端时间、投票资格和统计为准"],api:["getDailyTopic","castDailyVote","getDailyTopicResult","hasRemindedToday"]};
+  }else if(state.sheet==="mystery"){
+    c={title:"饭堂奇遇 · 随机探索抽屉",desc:"左下角常驻入口；用户主动打开奇遇盒，随机发现一个猫咪小故事。",rules:["入口只在饭堂场景常驻显示，不自动弹窗打断用户", "未入座点击提示先找位置；成功入座后才可开启奇遇", "11:00 开放新奇遇，13:00 后停止抽取新事件", "单个故事约 10—30 秒；完成才收录，中途关闭不算已发现", "已开启但未完成的事件可在 13:00 后继续完成", "watch / guess / quick / help / duo / rare 六种事件均有独立交互", "完成事件才标记已发现；中途关闭保留未完成状态", "图鉴长期保存已发现记录，未发现事件显示剪影", "本地原型用 localStorage 模拟；生产环境由服务端管理事件抽取、次数、完成记录与时间"],api:["getDailyMysteryPool","drawMysteryEvent","completeMysteryEvent","getMysteryAtlas"]};
+  }else if(state.activeFlow==="03"){
+    c={title:"今日饭桌话题 · 互动流程",desc:"成功入座后轻提醒；用户主动打开同一个底部抽屉参与投票，不新增独立页面。",rules:["提醒只在入座成功后、11:00—13:00 且当天未提醒时触发", "用户点「稍后再看」后当天不再主动弹出，饭堂入口卡片仍保留", "提醒状态与投票状态分开；退出重进、离座重入都不重复提醒", "次日按新日期切换 topicId，重新开放提醒和投票", "生产环境所有关键校验由服务端完成"],api:["getDailyTopic","hasRemindedToday","castDailyVote","getDailyTopicResult"]};
+  }else if(state.activeFlow==="04"){
+    c={title:"饭堂奇遇入口 · 常驻浮层",desc:"左下角入口固定出现在饭堂场景，不主动弹出；点击后才打开奇遇首页。",rules:["未入座点击只提示先找位置，不打开奇遇抽屉", "11:00 前可以预览奇遇首页，但不能抽取新事件", "11:00—13:00 可主动开启新奇遇；13:00 后停止抽取", "奇遇与猫咪偶遇、今日饭桌话题相互独立", "入口在领券 / 外部点餐整屏帧隐藏，返回饭堂后恢复"],api:["openMysteryHome","getDailyMysteryPool"]};
+  }else if(state.sheet==="settings"){
+    c={title:"我的猫 · 设置抽屉",desc:"设置猫咪名称、表情和会话；在同一抽屉展示小猫勋章、双向互动统计与每日额度。",rules:["勋章只展示已获得与神秘剪影，不展示解锁条件、任务进度或待完成事项", "勋章由日常互动和资料完善行为自然触发，获得时只给轻提示，不出现领奖流程", "分别展示「收到的互动」与「我发起的互动」四类聚合数据", "收到的互动只记其他猫咪向 TA 发起的动作，只展示累计人数，不展示互动者身份", "一次互动同时更新双方各自的数据，不给对方发送消息", "每天最多 20 次：中午 10 次、晚上 10 次；两场额度独立", "离座后保留猫咪名称、表情和会话设置"],api:["saveCatProfile","getCatInteractionStats","getInteractionQuota","getCatBadges"]};
+  }else if(state.sheet==="wizard"&&state.wiz?.step==="seated"){
+    c={title:"入座成功 · 底部抽屉",desc:"点击关闭后回到饭堂主场景；猫咪互动由用户主动发起，不自动弹出提醒。",rules:["用户已成功占位", "关闭后只按今日饭桌话题规则判断是否展示轻提醒", "点击其他猫咪或随机互动入口，才打开猫咪互动抽屉"],api:["assignSeat"]};
+  }else if(state.sheet==="wizard"&&state.wiz?.step==="ask"){
+    c={title:"入座邀请 · 底部抽屉",desc:"点击邀请图直接入座；也可以关闭抽屉后点击饭堂里的空位「＋」。",rules:["入座成功后显示入座成功抽屉", "不增加选座确认步骤"],api:["assignSeat"]};
+  }else if(state.sheet==="notice"){
+    c={title:"订单通知 · 图片底部抽屉",desc:"整张设计稿截图做底部抽屉；两张通知的底图都是饭堂主场景，不是空白业务帧。点图推进，点 X 或遮罩只关窗。",rules:[
+      "已付款：底图为饭堂主场景 hall-waiting（等餐中），图 assets/paid.jpg「订单配送中」；点整张图进入待收货业务帧",
+      "已收货：底图为饭堂主场景 hall-eating（干饭中），图 assets/received.jpg「已送达，开始享用」；点整张图关窗，留在饭堂看干饭动画",
+      "底图保留饭堂的筛选 tab、场景动销与右下角入口，通知只叠一层抽屉",
+      "图不改画、不重绘、不叠字；交互只由整图与右上 X 热区承担",
+      "通知由系统检索回调触发（工作流侧），页面内不放触发按钮"
+    ],api:["onOrderPaidCallback","onOrderReceivedCallback"]};
+  }
+  document.getElementById("panelT").textContent=c.title;
+  document.getElementById("panelD").textContent=c.desc;
+  let html='<div class="sec"><h4>规则</h4>'+c.rules.map(r=>'<div class="rule"><i></i><span>'+r+'</span></div>').join("")+'</div>';
+  if(state.activeFlow==="03"){
+    html+='<div class="topic-test-tools"><div class="tt-title">话题时间模拟 · 测试入口</div><div class="tt-now">'+topicDateText()+'　'+topicTimeText()+'</div>'
+      +'<div class="topic-test-grid">'
+      +'<button data-act="topic-clock" data-v="10:50">10:50</button><button data-act="topic-clock" data-v="11:00">11:00</button><button data-act="topic-clock" data-v="12:00">12:00</button>'
+      +'<button data-act="topic-clock" data-v="13:00">13:00</button><button data-act="topic-clock" data-v="nextday">次日 11:00</button><button data-act="topic-reset">重置今日</button>'
+      +'</div><div class="rule" style="margin-top:8px;margin-bottom:0"><i></i><span>原型默认模拟 12:00；时间切换会即时刷新提醒、投票和截止状态。</span></div></div>';
+  }
+  if(currentRouteId()==="r-mystery"){
+    const R=SHEET_ROUTES["r-mystery"],cur=mysterySub();
+    html+='<div class="sec"><h4>玩法路由 · r-mystery</h4><div class="rule"><i></i><span>奇遇已独立登记为一条叠层弹窗路由：宿主帧 '+R.host+'，叠层 '+R.sheet+'，形态 '+R.shape+'；不新增整屏帧、不改变「帧管底图 / sheet 管叠层」。</span></div>'
+      +'<div class="route-subs"><div class="rs-h">子态 '+R.subs.length+' 个 · 当前命中：<b style="color:var(--brand-d)">'+cur+'</b></div><div class="rs-list">'
+      +R.subs.map(x=>'<span class="rs '+(x.id===cur?"on":"")+'">'+x.id+'</span>').join("")+'</div></div></div>';
+  }
+  if(state.activeFlow==="04"){
+    const md=mysteryDay(),active=md.activeEventId?mysteryEventById(md.activeEventId):null;
+    html+='<div class="topic-test-tools"><div class="tt-title">奇遇时间模拟 · 测试入口</div><div class="tt-now">'+topicDateText()+'　'+topicTimeText()+'</div>'
+      +'<div class="topic-test-grid">'
+      +'<button data-act="mystery-clock" data-v="10:50">10:50</button><button data-act="mystery-clock" data-v="11:00">11:00</button><button data-act="mystery-clock" data-v="12:00">12:00</button>'
+      +'<button data-act="mystery-clock" data-v="13:00">13:00</button><button data-act="mystery-clock" data-v="nextday">次日 11:00</button><button data-act="mystery-reset">重置今日</button>'
+      +'</div><div class="rule" style="margin-top:8px;margin-bottom:0"><i></i><span>时间与今日饭桌话题共用午餐时钟；已开启事件在 13:00 后仍可完成。</span></div>'
+      +'<div class="topic-test-grid" style="margin-top:7px"><button data-act="step" data-idx="0" style="grid-column:span 3">返回饭堂入口</button><button data-act="mystery-test-rare" style="grid-column:span 3">测试稀有奇遇</button></div>'
+      +'<div class="rule" style="margin-top:8px;margin-bottom:0"><i></i><span>当前事件：'+(active?active.title:'无')+' · 今日完成 '+md.completedIds.length+'/'+MYSTERY_BANK.length+' · 图鉴 '+mysteryDiscoveredCount()+'/'+MYSTERY_BANK.length+'</span></div></div>';
+  }
+  if(state.activeFlow==="02"){
+    const iq=interactionQuotaState();
+    html+='<div class="topic-test-tools"><div class="tt-title">每日互动额度 · 测试入口</div>'
+      +'<div class="tt-now">当前：'+(iq.session==="lunch"?'中午场':'晚上场')+'　已用 '+iq.used+'/10　今日 '+iq.total+'/20</div>'
+      +'<div class="interaction-session-tools">'
+      +'<button class="'+(iq.session==="lunch"?'on':'')+'" data-act="interaction-session" data-v="lunch">切换中午场</button>'
+      +'<button class="'+(iq.session==="evening"?'on':'')+'" data-act="interaction-session" data-v="evening">切换晚上场</button>'
+      +'</div><div class="rule" style="margin:0 0 8px"><i></i><span>每人每天最多 20 次：中午 10 次、晚上 10 次。中午额度用完后需等晚上；晚上用完后次日重置。</span></div>'
+      +'<div class="topic-test-grid">'
+      +CAT_INTERACTION_TYPES.map(a=>'<button data-act="simulate-incoming" data-type="'+a.id+'">模拟收到 '+a.icon+'</button>').join("")
+      +'<button data-act="interaction-reset" style="grid-column:span 3">重置互动统计与今日额度</button>'
+      +'<button data-act="interaction-nextday" style="grid-column:span 3">模拟次日 · 额度重置</button>'
+      +'</div><div class="rule" style="margin-top:8px;margin-bottom:0"><i></i><span>模拟收到互动不消耗我的发起额度；真实互动会同时增加发起方与接收方对应统计。次日测试会切换日期并回到中午场。</span></div></div>';
+  }
+  /* 接口（模拟）：系统检索回调在工作流侧可点，页面内不放触发按钮 */
+  const cbMap={onOrderPaidCallback:"order-callback",onOrderReceivedCallback:"receive-callback"};
+  html+='<div class="sec"><h4>接口（模拟）</h4>'+c.api.map(a=>cbMap[a]
+      ? '<button class="api api-btn" data-act="'+cbMap[a]+'" title="工作流侧触发系统检索">'+a+'() ▸</button>'
+      : '<span class="api">'+a+'()</span>').join("")
+    +'</div>';
+  html+='<div class="sec"><h4>当前状态快照 · 用于逐交互验收</h4><div class="state-box">'
+    +'frame = <b>'+state.frame+'</b><br>'
+    +'route = <b>'+(currentRouteId()||'null')+'</b><br>'
+    +'route.sub = <b>'+(currentRouteId()?mysterySub():'-')+'</b><br>'
+    +'seated = <b>'+state.seated+'</b><br>'
+    +'mySeat = <b>'+(state.mySeat===null?"null":state.mySeat+1)+'</b><br>'
+    +'order = <b>'+state.order+'</b> ('+CAT_STATUS[state.order]+')<br>'
+    +'filter = <b>'+(state.filter||"all")+'</b><br>'
+    +'orderDish = <b>'+(state.orderDish||"null")+'</b><br>'
+    +'coupon = <b>'+(state.coupon===null?"null":state.coupon)+'</b><br>'
+    +'myName = <b>'+state.myName+'</b><br>'
+    +'myFace = <b>'+state.myFace+'</b><br>'
+    +'myQuote = <b>'+(state.myQuote||"未选择")+'</b><br>'
+    +'sheet = <b>'+(state.sheet||"null")+'</b><br>'
+    +'notice = <b>'+(state.notice||"null")+'</b><br>'
+    +'wiz.step = <b>'+(state.wiz?state.wiz.step:"null")+'</b><br>'
+    +'catInteraction.step = <b>'+(state.catInteraction?state.catInteraction.step:"null")+'</b><br>'
+    +'catInteraction.cat = <b>'+(state.catInteraction?state.catInteraction.catId:"null")+'</b><br>'
+    +'catAction = <b>'+(state.sheet==="cat-actions")+'</b><br>'
+    +'catProfile = <b>'+(state.sheet==="cat-profile")+'</b><br>'
+    +'interaction.session = <b>'+(state.interactionSession||'lunch')+'</b><br>'
+    +'interaction.quota = <b>'+interactionQuotaState().total+'/20</b><br>'
+    +'catBadges.unlocked = <b>'+catBadgeStore.unlocked.length+'/'+CAT_BADGE_DEFS.length+'</b><br>'
+    +'topic.date = <b>'+state.topicClock.dateKey+'</b><br>'
+    +'topic.time = <b>'+topicTimeText()+'</b><br>'
+    +'topic.status = <b>'+topicStatus()+'</b><br>'
+    +'topic.reminded = <b>'+topicDay().reminded+'</b><br>'
+    +'topic.vote = <b>'+(topicDay().vote===null?'null':topicDay().vote)+'</b><br>'
+    +'mystery.view = <b>'+state.mystery.view+'</b><br>'
+    +'mystery.active = <b>'+(mysteryDay().activeEventId||'null')+'</b><br>'
+    +'mystery.phase = <b>'+mysteryDay().activePhase+'</b><br>'
+    +'mystery.status = <b>'+mysteryStatus()+'</b><br>'
+    +'mystery.completedToday = <b>'+mysteryDay().completedIds.length+'</b><br>'
+    +'mystery.discovered = <b>'+mysteryDiscoveredCount()+'</b></div></div>';
+  document.getElementById("panelB").innerHTML=html;
+}
+function renderToast(){
+  const el=document.getElementById("toast");
+  if(!state.toastMsg){el.classList.remove("on");return;}
+  el.textContent=state.toastMsg;el.classList.add("on");
+  clearTimeout(renderToast._t);
+  renderToast._t=setTimeout(()=>{state.toastMsg="";document.getElementById("toast").classList.remove("on");},1900);
+}
+
+/* ── 事件委托：所有点击汇入 act() 一处 ── */
+document.addEventListener("click",e=>{
+  const el=e.target.closest("[data-act]");
+  if(!el)return;
+  const p={};
+  ["mode","id","page","idx","key","v","step","i","cat","type"].forEach(k=>{if(el.dataset[k]!==undefined)p[k]=el.dataset[k];});
+  if(p.i!==undefined)p.i=Number(p.i);
+  if(p.idx!==undefined)p.idx=Number(p.idx);
+  act(el.dataset.act,p);
+});
+document.getElementById("frameSel").addEventListener("change",e=>act("frame",{key:e.target.value}));
+/* 名称输入：change（失焦/回车）时写入状态源 */
+document.addEventListener("change",e=>{
+  if(e.target&&e.target.dataset&&e.target.dataset.set==="name")act("set-name",{v:e.target.value});
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")act("close",{});});
+
+/* 页面初始化时，把历史互动数据同步为已获得勋章；不弹出提示。 */
+syncCatBadges();
+render();
+</script>
+</body>
+</html>
