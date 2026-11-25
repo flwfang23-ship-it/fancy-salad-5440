@@ -1208,21 +1208,17 @@
         <p class="side-label">风控订单口径</p>
         <div class="side-card">
           <p class="side-title"><span class="marker" aria-hidden="true">!</span>所有退款订单都是风控订单</p>
-          <p class="side-text">只要订单发生退款或售后，该订单即计入风控订单数，与是否已发积分无关。</p>
+          <p class="side-text">退款、售后或平台判定风控的订单计入风控订单数，与是否已发积分无关。</p>
           <dl class="def">
-            <dt>外卖 · 美团</dt>
-            <dd>已付款 → 用户退款 → 已失效</dd>
-            <dt>外卖 · 饿了么</dt>
-            <dd>已付款，售中退款 / 已收货，售后退款</dd>
-            <dt>到店 · 美团</dt>
-            <dd>couponStatus=4 失效（券过期、核销后退款、联盟风控）</dd>
-            <dt>电商 · 淘宝</dt>
-            <dd>维权中 → 维权完成</dd>
+            <dt>美团 · 外卖</dt>
+            <dd>已失效</dd>
+            <dt>饿了么 · 外卖</dt>
+            <dd>已付款，售中退款；已收货，售后退款</dd>
+            <dt>美团 · 到店</dt>
+            <dd>核销后退款；联盟判定风控单</dd>
+            <dt>淘宝 · 电商</dt>
+            <dd>维权中、维权完成</dd>
           </dl>
-        </div>
-        <div class="side-card">
-          <p class="side-title">不计入风控</p>
-          <p class="side-text">饿了么「已下单 → 超时不付款 → 已失效」未产生付款与佣金，不计入风控；美团未支付不生成联盟订单。</p>
         </div>
         <div class="side-card">
           <p class="side-title">已发分后退款</p>
