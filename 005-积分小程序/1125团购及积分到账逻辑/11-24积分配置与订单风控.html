@@ -27,7 +27,8 @@
     --dot-eleme:#1ba3ff;
     --dot-taobao:#f0632a;
     --dot-groupbuy:#00B651;
-    --rail-w:232px;
+    --flow-w:400px;
+    --rail-w:236px;
     --radius:12px;
   }
   *{box-sizing:border-box}
@@ -49,7 +50,7 @@
   .app{display:flex;min-height:100vh;align-items:flex-start}
   .rail{
     position:sticky;top:0;flex:0 0 var(--rail-w);width:var(--rail-w);height:100vh;
-    background:#fbfbfc;border-right:1px solid var(--line);
+    background:#fff;border-right:1px solid var(--line);
     display:flex;flex-direction:column;padding:18px 14px 16px;
   }
   .brand{display:flex;gap:10px;align-items:center;padding:4px 8px 18px}
@@ -79,6 +80,49 @@
     border-top:1px dashed var(--line-strong);padding:12px 10px 0;
   }
   .rail-note b{color:var(--sub);font-weight:600}
+
+  /* ---------- 左：常驻泳道栏 ---------- */
+  .flowrail{
+    position:sticky;top:0;flex:0 0 var(--flow-w);width:var(--flow-w);height:100vh;
+    background:#fbfbfc;border-right:1px solid var(--line);
+    display:flex;flex-direction:column;min-width:0;
+  }
+  .flowrail-head{
+    flex:0 0 auto;padding:18px 18px 14px 20px;border-bottom:1px solid var(--line);
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  }
+  .flowrail-kicker{margin:0;font-size:11px;letter-spacing:.07em;color:#8a93a3}
+  .flowrail-title{margin:3px 0 0;font-size:14px;font-weight:650;color:var(--ink);line-height:1.45}
+  .collapse-btn{
+    flex:0 0 24px;width:24px;height:24px;border:1px solid var(--line-strong);background:#fff;
+    border-radius:6px;display:grid;place-items:center;color:var(--sub);margin-top:2px;
+  }
+  .collapse-btn:hover{border-color:#bfc8d8;color:var(--ink)}
+  .collapse-btn svg{transition:transform .16s ease}
+  .flowrail-body{
+    flex:1 1 auto;overflow-y:auto;padding:14px 18px 28px;
+    display:grid;gap:12px;align-content:start;
+  }
+  .swim-intro{
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;font-size:12px;line-height:1.75;color:var(--sub);
+  }
+  .swim-intro b{color:var(--ink);font-weight:600}
+  .swim{
+    margin:0;background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;overflow-x:auto;white-space:pre;color:var(--text);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+    font-size:11.5px;line-height:1.95;
+  }
+  .swim b{color:var(--ink);font-weight:650}
+  .swim-note{margin:0;font-size:11.5px;line-height:1.7;color:var(--faint);padding:0 2px}
+  .app.is-flow-collapsed .flowrail{flex-basis:44px;width:44px}
+  .app.is-flow-collapsed .flowrail-head{padding:14px 10px}
+  .app.is-flow-collapsed .flowrail-kicker,
+  .app.is-flow-collapsed .flowrail-title,
+  .app.is-flow-collapsed .flowrail-body{display:none}
+  .app.is-flow-collapsed .savebar{left:calc(44px + var(--rail-w))}
+  .app.is-flow-collapsed .collapse-btn svg{transform:rotate(180deg)}
 
   .main{flex:1 1 auto;min-width:0;padding-bottom:96px}
   .topbar{
@@ -317,7 +361,7 @@
 
   /* ---------- 底部保存条 ---------- */
   .savebar{
-    position:fixed;left:var(--rail-w);right:0;bottom:0;z-index:30;
+    position:fixed;left:calc(var(--flow-w) + var(--rail-w));right:0;bottom:0;z-index:30;
     display:flex;align-items:center;justify-content:space-between;gap:16px;
     padding:11px 40px;background:#fff;border-top:1px solid var(--line);
     box-shadow:0 -8px 20px -18px rgba(15,23,42,.35);
@@ -458,17 +502,21 @@
   .about-table tr:last-child td{border-bottom:0}
   .about-table td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
 
+  @media (max-width:1500px){
+    .order-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"a" "b" "side";gap:16px}
+    .risk-grid{grid-template-columns:minmax(0,1fr)}
+    .risk-side{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
   @media (max-width:1200px){
     .topbar{padding-left:28px;padding-right:28px}
     .page{padding-left:28px;padding-right:28px}
-    .order-grid{grid-template-columns:minmax(0,1fr) 292px;gap:16px}
-  }
-  @media (max-width:1000px){
-    .order-grid{grid-template-columns:minmax(0,1fr)}
+    .flowrail{display:none}
+    .savebar{left:var(--rail-w)}
   }
   @media (max-width:900px){
     .app{display:block}
     .rail{position:static;width:auto;height:auto;flex-direction:column;padding:12px 16px;border-right:0;border-bottom:1px solid var(--line)}
+    .flowrail{display:none}
     .brand{padding:2px 0 10px}
     .nav-group,.rail-note{display:none}
     .nav{display:flex;gap:8px}
@@ -488,6 +536,45 @@
 </head>
 <body>
 <div class="app">
+  <aside class="flowrail" aria-label="业务流程泳道">
+    <div class="flowrail-head">
+      <div>
+        <p class="flowrail-kicker">业务流程</p>
+        <h2 class="flowrail-title">订单积分到账主流程</h2>
+      </div>
+      <button class="collapse-btn" id="flowToggle" type="button" aria-label="收起泳道栏" aria-expanded="true">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      </button>
+    </div>
+    <div class="flowrail-body">
+      <div class="swim-intro">
+        <b>本期范围：</b>外卖（美团 / 饿了么）、到店（美团）、电商（淘宝）三条业务线的积分配置与订单风控。积分配置只实现「订单积分」Tab，其余 Tab 为占位。
+      </div>
+<pre class="swim"><b>【用户】</b>
+  ① 下单 / 付款
+  ② 收货（外卖）· 到店核销（团购）· 确认收货（电商）
+        │
+        ▼
+<b>【平台】</b>美团 / 饿了么 / 淘宝
+  ③ 回传订单状态：已付款 / 已收货 / 券已核销
+  ④ 回传佣金；发生退款时回传失效
+        │
+        ▼
+<b>【积分后台】</b>
+  ⑤ 校验积分项开关：关闭则不发分
+  ⑥ 判断是否命中风控（历史退款累计）
+        ├─ 未命中 → max(佣金 × 比例 × 2,000, 兜底)
+        └─ 命中   → 固定风控积分
+  ⑦ 写入流水：订单到账-外卖 / -到店 / -电商
+        │
+        ▼
+<b>【运营】</b>
+  ⑧ 维护积分项开关、比例、兜底、
+     风控阈值、预告 / 到账节点</pre>
+      <p class="swim-note">泳道与「订单流转图」页对应；②③ 的具体状态名以平台官方枚举为准。</p>
+    </div>
+  </aside>
+
   <aside class="rail">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
@@ -1543,6 +1630,17 @@
 
   /* ---------- 视图切换 ---------- */
   var viewTitles = { items: '积分项配置', config: '积分配置', risk: '订单风控', nodes: '业务节点定义', flows: '订单流转图', about: '页面说明' };
+
+  (function initFlowToggle() {
+    var btn = document.getElementById('flowToggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var app = document.querySelector('.app');
+      var collapsed = app.classList.toggle('is-flow-collapsed');
+      btn.setAttribute('aria-expanded', String(!collapsed));
+      btn.setAttribute('aria-label', collapsed ? '展开泳道栏' : '收起泳道栏');
+    });
+  })();
   $$('.nav-item').forEach(function (item) {
     item.addEventListener('click', function () {
       var view = item.dataset.view;
