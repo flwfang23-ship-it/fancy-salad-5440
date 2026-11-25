@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>积分配置与订单风控 · B 端原型</title>
+<style>
+  :root{
+    --bg:#f5f6f8;
+    --surface:#ffffff;
+    --line:#e3e7ee;
+    --line-strong:#d4dae5;
+    --ink:#0f172a;
+    --text:#3b4657;
+    --sub:#5a6474;
+    --faint:#667085;
+    --primary:#2563eb;
+    --primary-dark:#1d4ed8;
+    --primary-soft:#eff4ff;
+    --warn:#a15c07;
+    --warn-bg:#fffaef;
+    --warn-line:#efdcb6;
+    --ok:#0b7a53;
+    --ok-bg:#effaf4;
+    --ok-line:#c9ecd9;
+    --dot-meituan:#f2b705;
+    --dot-eleme:#1ba3ff;
+    --dot-taobao:#f0632a;
+    --dot-groupbuy:#00B651;
+    --rail-w:232px;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:rgba(37,99,235,.18)}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#d2d8e3;border-radius:8px;border:2px solid var(--bg)}
+  ::-webkit-scrollbar-track{background:transparent}
+  button{font:inherit;color:inherit;cursor:pointer}
+  :focus-visible{outline:2px solid rgba(37,99,235,.5);outline-offset:2px;border-radius:6px}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- 布局骨架 ---------- */
+  .app{display:flex;min-height:100vh;align-items:flex-start}
+  .rail{
+    position:sticky;top:0;flex:0 0 var(--rail-w);width:var(--rail-w);height:100vh;
+    background:#fbfbfc;border-right:1px solid var(--line);
+    display:flex;flex-direction:column;padding:18px 14px 16px;
+  }
+  .brand{display:flex;gap:10px;align-items:center;padding:4px 8px 18px}
+  .brand-mark{
+    width:30px;height:30px;border-radius:9px;background:var(--primary);color:#fff;
+    display:grid;place-items:center;flex:0 0 30px;
+    box-shadow:0 1px 2px rgba(37,99,235,.28), 0 6px 14px -6px rgba(37,99,235,.5);
+  }
+  .brand-name{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:.01em;line-height:1.25}
+  .brand-sub{font-size:11.5px;color:var(--faint);line-height:1.3}
+  .nav-group{font-size:11.5px;color:#8a93a3;letter-spacing:.06em;margin:14px 10px 6px}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    border:1px solid transparent;background:transparent;border-radius:8px;
+    padding:8px 10px;color:var(--text);font-size:13.5px;
+    transition:background .15s ease,color .15s ease,border-color .15s ease;
+  }
+  .nav-item:hover{background:#f1f3f7}
+  .nav-item.is-active{
+    background:#fff;border-color:var(--line);color:var(--primary);font-weight:600;
+    box-shadow:0 1px 2px rgba(15,23,42,.04);
+  }
+  .nav-item svg{flex:0 0 16px;opacity:.85}
+  .nav-item.is-active svg{opacity:1}
+  .rail-note{
+    margin-top:auto;font-size:11.5px;line-height:1.7;color:var(--faint);
+    border-top:1px dashed var(--line-strong);padding:12px 10px 0;
+  }
+  .rail-note b{color:var(--sub);font-weight:600}
+
+  .main{flex:1 1 auto;min-width:0;padding-bottom:96px}
+  .topbar{
+    display:flex;align-items:center;gap:8px;
+    padding:16px 40px;font-size:12.5px;color:var(--faint);
+    border-bottom:1px solid var(--line);background:var(--bg);
+    position:sticky;top:0;z-index:20;
+  }
+  .topbar .crumb-current{color:var(--sub);font-weight:600}
+  .page{max-width:1120px;margin:0 auto;padding:26px 40px 8px}
+  #view-risk{max-width:1000px}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:6px}
+  h1{font-size:22px;line-height:1.35;font-weight:650;color:var(--ink);margin:0 0 6px;letter-spacing:-.01em}
+  .lede{margin:0;font-size:13px;color:var(--sub);max-width:62ch;line-height:1.7}
+  .stamp{
+    flex:0 0 auto;font-size:11.5px;color:var(--faint);background:#fff;border:1px solid var(--line);
+    border-radius:999px;padding:4px 11px;white-space:nowrap;margin-top:3px;
+  }
+  .scope-note{
+    margin:16px 0 0;font-size:12.5px;color:var(--sub);line-height:1.7;
+    background:transparent;border:1px dashed var(--line-strong);border-radius:8px;padding:8px 14px;
+  }
+  .scope-note b{color:var(--ink);font-weight:600}
+
+  /* ---------- Tabs ---------- */
+  .tabs{
+    display:flex;gap:28px;margin-top:20px;border-bottom:1px solid var(--line);
+    overflow-x:auto;scrollbar-width:none;
+  }
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    position:relative;border:0;background:none;padding:10px 0 11px;white-space:nowrap;
+    font-size:13.5px;color:var(--sub);transition:color .15s ease;
+  }
+  .tab:hover{color:var(--ink)}
+  .tab.is-active{color:var(--primary);font-weight:600}
+  .tab.is-active::after{
+    content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+    background:var(--primary);border-radius:2px 2px 0 0;
+  }
+  .panel{padding-top:20px;animation:panelIn .18s cubic-bezier(.22,.61,.36,1)}
+  .panel[hidden]{display:none}
+  @keyframes panelIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+  /* ---------- 模块卡 ---------- */
+  .module{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px 22px 18px;margin-top:16px;
+    box-shadow:0 1px 2px rgba(15,23,42,.03);
+  }
+  .module-head{display:flex;align-items:flex-start;gap:12px;padding-bottom:16px;border-bottom:1px solid #eef1f6}
+  .marker{
+    flex:0 0 24px;width:24px;height:24px;border-radius:7px;background:#f1f3f7;color:var(--sub);
+    display:grid;place-items:center;font-size:12px;font-weight:650;margin-top:1px;
+  }
+  .module-title{flex:1 1 auto;min-width:0}
+  .module-title h2{margin:0;font-size:15px;font-weight:650;color:var(--ink);line-height:1.5}
+  .module-title p{margin:2px 0 0;font-size:12.5px;color:var(--faint);line-height:1.6}
+  .platforms{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:2px}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:6px;
+    background:#f5f7fa;border:1px solid #e8ecf3;font-size:11.5px;color:var(--sub);
+  }
+  .dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex:0 0 6px}
+  .dot-meituan{background:var(--dot-meituan)}
+  .dot-eleme{background:var(--dot-eleme)}
+  .dot-taobao{background:var(--dot-taobao)}
+  .dot-groupbuy{background:var(--dot-groupbuy)}
+
+  .field-help{margin:6px 0 0;font-size:11.5px;line-height:1.6;color:var(--faint)}
+
+  .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 28px;padding-top:18px}
+  .fields.one-col{grid-template-columns:minmax(0,1fr)}
+  .field-label{display:block;font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:6px;letter-spacing:.01em}
+  .control{
+    display:flex;align-items:stretch;height:38px;background:#fff;
+    border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;
+    transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;
+  }
+  .control:hover{border-color:#bfc8d8}
+  .control:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
+  .control input{
+    flex:1 1 auto;min-width:0;border:0;outline:0;background:transparent;
+    padding:0 12px;font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .control input::-webkit-outer-spin-button,
+  .control input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .control input[type=number]{-moz-appearance:textfield;appearance:textfield}
+  .unit{
+    flex:0 0 auto;display:flex;align-items:center;padding:0 12px;
+    font-size:12px;color:var(--faint);background:#fafbfc;border-left:1px solid #eef1f6;
+  }
+  .is-off .fields{opacity:.55}
+  .is-off .control{background:#fafbfc}
+
+  /* ---------- 公式预览 ---------- */
+  .formula{
+    display:flex;gap:9px;align-items:flex-start;margin-top:16px;
+    background:#f7f9fc;border:1px solid #eaeef5;border-radius:9px;padding:10px 13px;
+    font-size:12.5px;line-height:1.75;color:var(--sub);
+  }
+  .formula svg{flex:0 0 15px;margin-top:3px;color:#7c8798}
+  .formula b{font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums}
+  .formula .muted{color:var(--faint)}
+
+  /* ---------- 说明列表 ---------- */
+  .notes{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:5px}
+  .notes li{position:relative;padding-left:14px;font-size:12.5px;line-height:1.7;color:var(--sub)}
+  .notes li::before{
+    content:"";position:absolute;left:2px;top:.68em;width:4px;height:4px;border-radius:50%;background:#c3cad8;
+  }
+  .notes b{color:var(--ink);font-weight:600}
+
+  /* ---------- 订单积分：表单 + 说明双列 ---------- */
+  .order-grid{
+    display:grid;grid-template-columns:minmax(0,1fr) 316px;
+    gap:18px 20px;align-items:start;
+  }
+  .order-col{display:grid;gap:16px;align-content:start;min-width:0}
+  .order-grid .module{margin-top:0}
+  .order-side{display:grid;gap:12px;align-content:start;min-width:0}
+  .side-label{margin:0 0 -2px 2px;font-size:11.5px;letter-spacing:.05em;color:#8a93a3}
+  .side-card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;box-shadow:0 1px 2px rgba(15,23,42,.03);
+  }
+  .side-title{
+    display:flex;align-items:center;gap:8px;margin:0 0 10px;
+    font-size:13px;font-weight:650;color:var(--ink);line-height:1.5;
+  }
+  .side-title .marker{width:20px;height:20px;flex:0 0 20px;border-radius:6px;font-size:11px;margin-top:0}
+  .side-text{margin:0;font-size:12px;line-height:1.75;color:var(--sub)}
+  .def{margin:0;display:grid;gap:9px}
+  .def dt{font-size:12px;font-weight:600;color:var(--ink);line-height:1.5}
+  .def dd{margin:1px 0 0;font-size:12px;line-height:1.65;color:var(--faint)}
+  .side-card .formula{margin-top:11px;padding:9px 11px;font-size:12px}
+  .side-card .notes{margin-top:11px;gap:4px}
+  .side-card .notes li{font-size:12px}
+
+  /* ---------- 状态折叠 ---------- */
+  .states{margin-top:14px;border-top:1px dashed var(--line);padding-top:10px}
+  .states summary{
+    list-style:none;display:flex;align-items:center;gap:6px;cursor:pointer;
+    font-size:12.5px;color:var(--sub);width:fit-content;padding:2px 0;
+  }
+  .states summary::-webkit-details-marker{display:none}
+  .states summary:hover{color:var(--ink)}
+  .states .chev{transition:transform .18s ease;display:inline-flex;color:var(--faint)}
+  .states[open] .chev{transform:rotate(180deg)}
+  .state-rows{display:grid;gap:12px;margin-top:12px}
+  .state-row{display:grid;grid-template-columns:76px minmax(0,1fr);gap:4px 12px;align-items:start}
+  .state-platform{font-size:12px;font-weight:600;color:var(--ink);padding-top:2px}
+  .chain{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+  .st{
+    display:inline-flex;align-items:center;padding:1px 7px;border-radius:5px;font-size:11.5px;
+    background:#f3f6fa;border:1px solid #e6ebf2;color:var(--sub);white-space:nowrap;
+  }
+  .st.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
+  .st.risk{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+  .ar{color:#c0c8d6;font-size:11px}
+  .state-note{grid-column:2;margin:4px 0 0;font-size:11.5px;line-height:1.65;color:var(--faint)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:11.5px;color:var(--faint)}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend .sw{width:8px;height:8px;border-radius:2px;display:inline-block}
+
+  /* ---------- 风控逻辑块 ---------- */
+  .logic{
+    margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 18px;display:grid;gap:10px;
+  }
+  .logic-row{display:flex;gap:10px;align-items:baseline;font-size:12.5px;line-height:1.7;color:var(--sub)}
+  .logic-tag{
+    flex:0 0 auto;font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:5px;
+    border:1px solid transparent;transform:translateY(-1px);
+  }
+  .logic-tag.hit{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+  .logic-tag.pass{background:var(--primary-soft);border-color:#dbe6ff;color:#1e40af}
+  .logic code{
+    font-family:inherit;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;
+    background:#f5f7fa;border:1px solid #e8ecf3;border-radius:4px;padding:0 5px;font-size:12px;
+  }
+
+  /* ---------- 开关 ---------- */
+  .switch-wrap{display:flex;align-items:center;gap:9px;margin-top:1px;flex:0 0 auto}
+  .switch-label{font-size:12.5px;color:var(--sub)}
+  .switch{
+    position:relative;width:40px;height:22px;border-radius:999px;border:1px solid #d5dbe6;
+    background:#e9edf4;padding:0;transition:background .18s ease,border-color .18s ease;
+  }
+  .switch .knob{
+    position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;
+    box-shadow:0 1px 2px rgba(15,23,42,.22);transition:transform .18s cubic-bezier(.22,.61,.36,1);
+  }
+  .switch[aria-checked="true"]{background:var(--primary);border-color:var(--primary)}
+  .switch[aria-checked="true"] .knob{transform:translateX(18px)}
+  .switch-state{font-size:12px;color:var(--faint);min-width:3em}
+  .switch[aria-checked="true"] ~ .switch-state{color:var(--ok)}
+
+  /* ---------- 口径表 ---------- */
+  .rule-list{margin:0;padding:0;display:grid;gap:0}
+  .rule-row{
+    display:grid;grid-template-columns:132px minmax(0,1fr);gap:16px;
+    padding:11px 0;border-bottom:1px dashed #edf0f5;font-size:12.5px;line-height:1.7;
+  }
+  .rule-row:last-child{border-bottom:0;padding-bottom:2px}
+  .rule-row dt{color:var(--faint)}
+  .rule-row dd{margin:0;color:var(--sub)}
+  .rule-row dd b{color:var(--ink);font-weight:600}
+
+  /* ---------- 占位面板 ---------- */
+  .placeholder{
+    background:#fff;border:1px dashed var(--line-strong);border-radius:var(--radius);
+    padding:48px 24px;text-align:center;margin-top:4px;
+  }
+  .placeholder-icon{
+    width:38px;height:38px;border-radius:10px;background:#f4f6fa;color:#98a2b3;
+    display:grid;place-items:center;margin:0 auto 12px;
+  }
+  .placeholder h3{margin:0 0 6px;font-size:14.5px;font-weight:650;color:var(--ink)}
+  .placeholder p{margin:0 auto;font-size:12.5px;color:var(--faint);line-height:1.7;max-width:46ch}
+  .placeholder .btn{margin-top:16px}
+
+  /* ---------- 底部保存条 ---------- */
+  .savebar{
+    position:fixed;left:var(--rail-w);right:0;bottom:0;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:11px 40px;background:#fff;border-top:1px solid var(--line);
+    box-shadow:0 -8px 20px -18px rgba(15,23,42,.35);
+  }
+  .save-status{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--faint);min-width:0}
+  .save-status .bullet{width:7px;height:7px;border-radius:50%;background:#13a066;flex:0 0 7px}
+  .save-status.is-dirty{color:var(--warn)}
+  .save-status.is-dirty .bullet{background:#d99418}
+  .save-actions{display:flex;gap:10px;flex:0 0 auto}
+  .btn{
+    height:34px;padding:0 15px;border-radius:8px;font-size:13px;font-weight:600;
+    border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;
+    transition:background .15s ease,border-color .15s ease,color .15s ease,opacity .15s ease;
+  }
+  .btn.primary{background:var(--primary);color:#fff;box-shadow:0 1px 2px rgba(37,99,235,.25)}
+  .btn.primary:hover{background:var(--primary-dark)}
+  .btn.ghost{background:#fff;border-color:var(--line-strong);color:var(--sub)}
+  .btn.ghost:hover{border-color:#bfc8d8;color:var(--ink)}
+  .btn:disabled{pointer-events:none;cursor:default}
+  .btn.primary:disabled{background:#dfe5ef;color:#8b96a9;box-shadow:none}
+  .btn.ghost:disabled{background:#f7f8fb;color:#a6b0c0;border-color:#e6eaf1}
+
+  .toast{
+    position:fixed;left:50%;bottom:76px;transform:translate(-50%,8px);
+    background:#0f172a;color:#fff;font-size:12.5px;padding:8px 15px;border-radius:8px;
+    box-shadow:0 8px 24px -12px rgba(15,23,42,.6);opacity:0;pointer-events:none;
+    transition:opacity .2s ease,transform .2s cubic-bezier(.22,.61,.36,1);z-index:40;
+  }
+  .toast.is-show{opacity:1;transform:translate(-50%,0)}
+
+  /* ---------- 业务节点定义 ---------- */
+  #view-nodes{max-width:1240px}
+  .node-wrap{
+    margin-top:16px;background:#fff;border:1px solid var(--line);
+    border-radius:var(--radius);overflow-x:auto;
+  }
+  .node-table{
+    width:100%;min-width:980px;border-collapse:separate;border-spacing:0;font-size:13px;
+  }
+  .node-table th{
+    text-align:left;font-weight:600;color:var(--ink);font-size:12px;
+    background:#f7f9fc;border-bottom:1px solid var(--line);padding:10px 14px;
+    letter-spacing:.01em;white-space:nowrap;
+  }
+  .node-table td{
+    padding:12px 14px;border-bottom:1px solid #eef1f6;vertical-align:top;
+  }
+  .node-table tr:last-child td{border-bottom:0}
+  .node-table tr:hover td{background:#fafbfd}
+  .node-col-business{width:70px;font-weight:600;color:var(--ink);white-space:nowrap}
+  .node-col-platform{width:96px}
+  .node-col-platform .chip{white-space:nowrap}
+  .node-col-preview{width:250px}
+  .node-col-settle{width:250px}
+  .node-col-others{min-width:240px}
+
+  .node-chips{display:flex;flex-wrap:wrap;gap:5px}
+  .node-chip{
+    border:1px solid var(--line-strong);background:#fff;border-radius:6px;
+    padding:3px 9px;font-size:11.5px;line-height:1.5;color:var(--sub);
+    white-space:nowrap;transition:background .15s,border-color .15s,color .15s;
+  }
+  .node-chip:hover{border-color:#bfc8d8;background:#fafbfd}
+  .node-chip.is-on{
+    background:var(--primary-soft);border-color:#b9cdfa;color:#1d4ed8;font-weight:600;
+  }
+  .node-chip.is-on.settle{
+    background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok);
+  }
+  .node-chip.is-on::before{content:"✓ ";font-size:10px}
+  .node-chips .node-empty,
+  .node-col-others .node-empty{
+    font-size:11.5px;color:var(--faint);
+    border:1px dashed var(--line-strong);border-radius:5px;padding:2px 8px;
+  }
+
+  .node-others-list{display:flex;flex-wrap:wrap;gap:4px}
+  .node-tag{
+    display:inline-flex;align-items:center;gap:4px;font-size:11.5px;
+    background:#f5f7fa;border:1px solid #e6ebf2;border-radius:5px;
+    padding:2px 8px;color:var(--sub);white-space:nowrap;
+  }
+  .node-tag.risk{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+  .node-tag.settle{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
+
+  /* ---------- 页面说明 ---------- */
+  #view-about{max-width:1000px}
+  .about-text{margin:14px 0 0;font-size:12.5px;line-height:1.75;color:var(--sub)}
+  .about-text b{color:var(--ink);font-weight:600}
+  .about-wrap{
+    margin-top:14px;background:#fff;border:1px solid var(--line);
+    border-radius:var(--radius);overflow-x:auto;
+  }
+  .about-table{width:100%;min-width:700px;border-collapse:separate;border-spacing:0;font-size:12.5px}
+  .about-table th{
+    text-align:left;font-weight:600;font-size:11.5px;color:var(--sub);
+    background:#f7f9fc;border-bottom:1px solid var(--line);
+    padding:9px 14px;letter-spacing:.02em;white-space:nowrap;
+  }
+  .about-table td{
+    padding:11px 14px;border-bottom:1px solid #eef1f6;
+    vertical-align:top;line-height:1.7;color:var(--sub);
+  }
+  .about-table tr:last-child td{border-bottom:0}
+  .about-table td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
+
+  @media (max-width:1200px){
+    .topbar{padding-left:28px;padding-right:28px}
+    .page{padding-left:28px;padding-right:28px}
+    .order-grid{grid-template-columns:minmax(0,1fr) 292px;gap:16px}
+  }
+  @media (max-width:1000px){
+    .order-grid{grid-template-columns:minmax(0,1fr)}
+  }
+  @media (max-width:900px){
+    .app{display:block}
+    .rail{position:static;width:auto;height:auto;flex-direction:column;padding:12px 16px;border-right:0;border-bottom:1px solid var(--line)}
+    .brand{padding:2px 0 10px}
+    .nav-group,.rail-note{display:none}
+    .nav{display:flex;gap:8px}
+    .nav-item{width:auto;padding:7px 12px}
+    .main{padding-bottom:88px}
+    .topbar{padding:10px 18px;position:static}
+    .page{padding:20px 18px 8px}
+    .fields{grid-template-columns:minmax(0,1fr)}
+    .savebar{left:0;padding:10px 18px}
+    .module{padding:16px}
+    .state-row{grid-template-columns:minmax(0,1fr)}
+    .state-note{grid-column:1}
+    .page-head{flex-direction:column;gap:8px}
+    .stamp{align-self:flex-start}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="8.2"></circle><path d="M12 7.6v8.8M9.6 10.2h4.2a1.9 1.9 0 0 1 0 3.8H9.6"></path>
+        </svg>
+      </span>
+      <div>
+        <div class="brand-name">积分运营后台</div>
+        <div class="brand-sub">B 端 · 订单积分迭代</div>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="主导航">
+      <p class="nav-group">积分管理</p>
+      <button class="nav-item is-active" data-view="config" aria-current="page">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle>
+        </svg>
+        积分配置
+      </button>
+      <button class="nav-item" data-view="risk">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3.4 19 6v5.3c0 4.3-2.9 7.6-7 9.3-4.1-1.7-7-5-7-9.3V6l7-2.6Z"></path><path d="m9.2 11.9 2 2 3.6-3.8"></path>
+        </svg>
+        订单风控
+      </button>
+      <button class="nav-item" data-view="nodes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M3 9h18M9 3v18"></path>
+        </svg>
+        业务节点定义
+      </button>
+      <button class="nav-item" data-view="about">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path><path d="M14 3v6h6M8.5 13h7M8.5 16.5h4.5"></path>
+        </svg>
+        页面说明
+      </button>
+    </nav>
+
+    <div class="rail-note">
+      <b>本期范围</b><br>
+      积分配置 · 订单积分（3 条业务线）<br>
+      订单风控（3 条业务线）<br>
+      业务节点定义（预告 / 到账节点）<br>
+      页面说明（流水类型拆分）
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <span>积分管理</span><span aria-hidden="true">/</span>
+      <span class="crumb-current" id="crumbCurrent">积分配置</span>
+    </div>
+
+    <!-- ================= 页面一：积分配置 ================= -->
+    <section class="page" id="view-config">
+      <div class="page-head">
+        <div>
+          <h1>积分配置</h1>
+          <p class="lede">配置各业务线的订单积分规则。保存后仅对新订单生效，已到账积分不重算、不扣回。</p>
+        </div>
+        <span class="stamp">规则版本 v2.4 · 2026-11-24</span>
+      </div>
+
+      <p class="scope-note">
+        <b>本期改造范围：</b>仅「订单积分」Tab。其余 Tab 沿用线上现有配置，原型中为占位页，便于确认导航结构。
+      </p>
+
+      <div class="tabs" role="tablist" aria-label="积分配置分类">
+        <button class="tab" role="tab" id="tab-basic" aria-selected="false" aria-controls="panel-placeholder" data-tab="积分参数">积分参数</button>
+        <button class="tab is-active" role="tab" id="tab-order" aria-selected="true" aria-controls="panel-order" data-tab="订单积分">订单积分</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="panel-placeholder" data-tab="时段活动积分">时段活动积分</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="panel-placeholder" data-tab="签到规则">签到规则</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="panel-placeholder" data-tab="订阅积分配置">订阅积分配置</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="panel-placeholder" data-tab="订阅积分规则">订阅积分规则</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="panel-placeholder" data-tab="小票积分">小票积分</button>
+      </div>
+
+      <div class="panel order-grid" id="panel-order" role="tabpanel" aria-labelledby="tab-order">
+        <div class="order-col">
+        <!-- A 外卖订单 -->
+        <section class="module">
+          <div class="module-head">
+            <span class="marker" aria-hidden="true">A</span>
+            <div class="module-title">
+              <h2>外卖订单</h2>
+              <p>美团联盟、饿了么共用同一套积分参数</p>
+            </div>
+            <div class="platforms">
+              <span class="chip"><i class="dot dot-meituan"></i>美团联盟</span>
+              <span class="chip"><i class="dot dot-eleme"></i>饿了么</span>
+            </div>
+          </div>
+
+          <div class="fields">
+            <div class="field">
+              <label class="field-label" for="wmRatio">A1 · 佣金返积分比例</label>
+              <div class="control">
+                <input class="num" id="wmRatio" type="number" min="0" max="100" step="0.01" value="50" data-track>
+                <span class="unit">%</span>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label" for="wmFloor">A2 · 兜底积分</label>
+              <div class="control">
+                <input class="num" id="wmFloor" type="number" min="0" step="1" value="100" data-track>
+                <span class="unit">积分</span>
+              </div>
+            </div>
+          </div>
+
+          <details class="states">
+            <summary>
+              两平台订单状态口径
+              <span class="chev" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+              </span>
+            </summary>
+            <div class="state-rows">
+              <div class="state-row">
+                <span class="state-platform">美团联盟</span>
+                <div class="chain">
+                  <span class="st ok">已付款 · 发分</span><span class="ar">→</span>
+                  <span class="st">已收货</span><span class="ar">→</span>
+                  <span class="st">已结算</span><span class="ar">→</span>
+                  <span class="st">结束</span>
+                </div>
+                <p class="state-note">
+                  退款支线：已付款 → 用户退款 → <span class="st risk">已失效（退款）</span>，计入风控订单数；已付款时已发积分，不扣回。未支付不生成订单，所以美团没有「超时未付款」失效单。
+                </p>
+              </div>
+              <div class="state-row">
+                <span class="state-platform">饿了么</span>
+                <div class="chain">
+                  <span class="st">已下单</span><span class="ar">→</span>
+                  <span class="st ok">已付款 · 发分</span><span class="ar">→</span>
+                  <span class="st">已收货</span><span class="ar">→</span>
+                  <span class="st">结束</span>
+                </div>
+                <p class="state-note">
+                  退款支线：已付款 → <span class="st risk">售中退款</span>；已收货 → <span class="st risk">售后退款</span>，两者均计入风控订单数，已发积分不扣回。已下单 → <span class="st">超时不付款 · 已失效</span>，无佣金，不计入风控。
+                </p>
+              </div>
+            </div>
+            <div class="legend">
+              <span><i class="sw" style="background:var(--ok-bg);border:1px solid var(--ok-line)"></i>正常发分节点</span>
+              <span><i class="sw" style="background:var(--warn-bg);border:1px solid var(--warn-line)"></i>退款 / 售后，计入风控</span>
+              <span><i class="sw" style="background:#f3f6fa;border:1px solid #e6ebf2"></i>不发分（无佣金或已结束）</span>
+            </div>
+          </details>
+        </section>
+
+        <!-- B 到店团购 -->
+        <section class="module">
+          <div class="module-head">
+            <span class="marker" aria-hidden="true">B</span>
+            <div class="module-title">
+              <h2>到店团购</h2>
+              <p>美团联盟到店业务：到餐、到综、酒店、门票、民宿、度假共用一套参数</p>
+            </div>
+            <div class="platforms">
+              <span class="chip"><i class="dot dot-groupbuy"></i>到餐</span>
+              <span class="chip"><i class="dot dot-groupbuy"></i>到综</span>
+              <span class="chip"><i class="dot dot-groupbuy"></i>酒店</span>
+              <span class="chip"><i class="dot dot-groupbuy"></i>门票</span>
+            </div>
+          </div>
+
+          <div class="fields">
+            <div class="field">
+              <label class="field-label" for="tgRatio">B1 · 佣金返积分比例</label>
+              <div class="control">
+                <input class="num" id="tgRatio" type="number" min="0" max="100" step="0.01" value="30" data-track>
+                <span class="unit">%</span>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label" for="tgFloor">B2 · 兜底积分</label>
+              <div class="control">
+                <input class="num" id="tgFloor" type="number" min="0" step="1" value="50" data-track>
+                <span class="unit">积分</span>
+              </div>
+            </div>
+          </div>
+
+          <details class="states">
+            <summary>
+              到店团购订单状态口径（父订单 + 券明细）
+              <span class="chev" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+              </span>
+            </summary>
+            <div class="state-rows">
+              <div class="state-row">
+                <span class="state-platform">券明细 (子订单)</span>
+                <div class="chain">
+                  <span class="st">couponStatus=1 付款</span><span class="ar">→</span>
+                  <span class="st ok">couponStatus=2 已核销 · 发分</span><span class="ar">→</span>
+                  <span class="st">couponStatus=3 结算</span>
+                </div>
+                <p class="state-note">
+                  每张券独立发分。用户付款后每张券进入 couponStatus=1；到店出示券核销后进入 couponStatus=2，此时佣金确定、发放积分；后续进入结算账期变为 couponStatus=3。
+                </p>
+              </div>
+              <div class="state-row">
+                <span class="state-platform">取消 / 风控</span>
+                <div class="chain">
+                  <span class="st risk">couponStatus=4 失效</span><span class="ar">（含取消或风控）</span>
+                </div>
+                <p class="state-note">
+                  含 3 种场景：① 用户已付款但券过期未使用 → 取消；② 券核销后用户发起退款 → 退款，佣金被回退；③ 联盟标记为风控单。三者均计入风控订单数、不发分（核销后退款的券已发积分不扣回）。
+                </p>
+              </div>
+              <div class="state-row">
+                <span class="state-platform">父订单 (参考)</span>
+                <div class="chain">
+                  <span class="st">status=2 付款</span><span class="ar">→</span>
+                  <span class="st">status=3 完成</span><span class="ar">→</span>
+                  <span class="st">status=4 取消</span><span class="ar">/</span>
+                  <span class="st risk">status=5 风控</span><span class="ar">/</span>
+                  <span class="st">status=6 结算</span>
+                </div>
+                <p class="state-note">
+                  父订单状态由其子券状态聚合而来，但含多张券的订单父订单 status 会随机取某张子券状态——<b>实际发分与风控判断必须以 orderDetail 中每张券的 couponStatus 为准</b>，不依赖父订单 status。
+                </p>
+              </div>
+            </div>
+            <div class="legend">
+              <span><i class="sw" style="background:var(--ok-bg);border:1px solid var(--ok-line)"></i>发分节点</span>
+              <span><i class="sw" style="background:var(--warn-bg);border:1px solid var(--warn-line)"></i>风控 / 退款 / 取消</span>
+              <span><i class="sw" style="background:#f3f6fa;border:1px solid #e6ebf2"></i>不发分（正常流转）</span>
+            </div>
+          </details>
+        </section>
+
+        <!-- C 电商转链积分 -->
+        <section class="module">
+          <div class="module-head">
+            <span class="marker" aria-hidden="true">C</span>
+            <div class="module-title">
+              <h2>电商转链积分</h2>
+              <p>淘宝淘客转链订单的积分参数</p>
+            </div>
+            <div class="platforms">
+              <span class="chip"><i class="dot dot-taobao"></i>淘宝淘客</span>
+            </div>
+          </div>
+
+          <div class="fields">
+            <div class="field">
+              <label class="field-label" for="ecRatio">C1 · 佣金返积分比例</label>
+              <div class="control">
+                <input class="num" id="ecRatio" type="number" min="0" max="100" step="0.01" value="50" data-track>
+                <span class="unit">%</span>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label" for="ecFloor">C2 · 兜底积分</label>
+              <div class="control">
+                <input class="num" id="ecFloor" type="number" min="0" step="1" value="50" data-track>
+                <span class="unit">积分</span>
+              </div>
+            </div>
+          </div>
+        </section>
+        </div>
+
+        <aside class="order-side" aria-label="字段与规则说明">
+          <p class="side-label">字段与规则说明</p>
+
+          <section class="side-card">
+            <h3 class="side-title">计算口径</h3>
+            <p class="side-text">订单积分 = 平台回传佣金 × 佣金返积分比例 × 2,000 积分/元，向下取整；低于兜底积分时按兜底发放。命中风控的用户改按「订单风控」页的固定积分发放。</p>
+          </section>
+
+          <section class="side-card">
+            <h3 class="side-title"><span class="marker" aria-hidden="true">A</span>外卖订单</h3>
+            <dl class="def">
+              <div><dt>A1 · 佣金返积分比例</dt><dd>平台回传佣金中返还给用户的比例，取值 0～100。</dd></div>
+              <div><dt>A2 · 兜底积分</dt><dd>折算积分不足此值时补足；填 0 关闭兜底。</dd></div>
+            </dl>
+            <div class="formula" id="previewWm"></div>
+            <ul class="notes">
+              <li><b>发分节点：</b>订单「已付款」入账，同一订单仅发放一次；已收货、已结算不再重复发放。</li>
+              <li><b>佣金口径：</b>按「已付款」时点平台回传佣金计算；美团「已结算」后佣金才最终确定，不做差额补发。</li>
+              <li><b>已发不扣回：</b>已付款发分后发生退款 / 售后，计入风控订单数，积分不扣回、不重算。</li>
+              <li><b>平台差异：</b>美团高佣不接入积分体系；美团联盟沿用现有推广位配置，饿了么沿用现有 CPS 红包链路。</li>
+            </ul>
+          </section>
+
+          <section class="side-card">
+            <h3 class="side-title"><span class="marker" aria-hidden="true">B</span>到店团购</h3>
+            <dl class="def">
+              <div><dt>B1 · 佣金返积分比例</dt><dd>按券核销后结算佣金返还积分，取值 0～100。</dd></div>
+              <div><dt>B2 · 兜底积分</dt><dd>折算积分不足此值时补足；填 0 关闭兜底。</dd></div>
+            </dl>
+            <div class="formula" id="previewTg"></div>
+
+            <div style="margin-top:11px">
+              <div style="font-size:11px;color:#8a93a3;letter-spacing:.05em;margin-bottom:5px">到店券 3 个关键状态</div>
+              <div class="chain" style="gap:3px">
+                <span class="st">① 券付款</span><span class="ar">→</span>
+                <span class="st ok">② 券已核销 · 发分</span><span class="ar">→</span>
+                <span class="st">③ 券已结算</span>
+              </div>
+              <div style="margin-top:6px;font-size:11.5px;color:var(--faint);line-height:1.65">
+                发分绑定 <b>couponStatus=2 已核销</b>，而非付款；此时佣金确定。券过期 / 退款 / 风控进入 couponStatus=4 失效，不发分。
+              </div>
+            </div>
+
+            <ul class="notes">
+              <li><b>发分节点：</b>券核销（couponStatus=2）入账，每张券独立发分，同一用户同一团购券仅发一次。</li>
+              <li><b>佣金口径：</b>取券核销后平台回传的结算佣金，核销前佣金为预估值、有退款风险。</li>
+              <li><b>退款处理：</b>券核销后用户退款，联盟会回退佣金、该券计入风控订单数；已发积分不扣回。</li>
+              <li><b>父订单不可靠：</b>到店含多张券时，父订单 status 会随机取某张子券状态，发分与风控<b>必须以 orderDetail 中每张券的 couponStatus 为准</b>。</li>
+              <li><b>业务线覆盖：</b>到餐、到综、酒店、门票、民宿、度假（platform=2）共用此模块。</li>
+            </ul>
+          </section>
+
+          <section class="side-card">
+            <h3 class="side-title"><span class="marker" aria-hidden="true">C</span>电商转链积分</h3>
+            <dl class="def">
+              <div><dt>C1 · 佣金返积分比例</dt><dd>按淘客订单佣金返还积分，取值 0～100。</dd></div>
+              <div><dt>C2 · 兜底积分</dt><dd>折算积分不足此值时补足；填 0 关闭兜底。</dd></div>
+            </dl>
+            <div class="formula" id="previewEc"></div>
+            <ul class="notes">
+              <li><b>发分节点：</b>「已付款」「已收货」各触发一次判断，同一订单仅发放一次，状态由已付款推进到已收货时不二次发放。</li>
+              <li><b>不发分状态：</b>已失效 / 关闭、维权中、维权完成；后两者计入风控订单数，且不参与兜底。</li>
+              <li><b>已发不扣回：</b>已发分订单后续进入维权流程，不扣回、不重算。</li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+
+      <div class="panel" id="panel-placeholder" role="tabpanel" hidden>
+        <div class="placeholder">
+          <div class="placeholder-icon" aria-hidden="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4.5" y="4.5" width="15" height="15" rx="3"></rect><path d="M8.6 12h6.8M8.6 8.8h6.8M8.6 15.2h4.2"></path>
+            </svg>
+          </div>
+          <h3 id="placeholderTitle">「积分参数」本期不涉及改造</h3>
+          <p>沿用线上已上线配置。本期只评审「订单积分」与「订单风控」，避免评审范围扩散。</p>
+          <button class="btn ghost" id="backToOrder">回到订单积分</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 页面二：订单风控 ================= -->
+    <section class="page" id="view-risk" hidden>
+      <div class="page-head">
+        <div>
+          <h1>订单风控</h1>
+          <p class="lede">按用户历史累计的售后订单数判定。命中后，该用户在本业务线的后续订单固定发放风控积分，不再按佣金比例折算。</p>
+        </div>
+        <span class="stamp">统计口径：历史累计 · 不清零</span>
+      </div>
+
+      <div class="logic">
+        <div class="logic-row">
+          <span class="logic-tag hit">命中风控</span>
+          <span>发放 <code>风控积分</code> 固定值，不参与佣金折算、不参与兜底补足。</span>
+        </div>
+        <div class="logic-row">
+          <span class="logic-tag pass">未命中</span>
+          <span><code>max( floor(佣金 × 佣金返积分比例 × 2,000), 兜底积分 )</code>，比例与兜底取自「积分配置 · 订单积分」。</span>
+        </div>
+      </div>
+
+      <!-- A 外卖订单 -->
+      <section class="module" data-risk="wm">
+        <div class="module-head">
+          <span class="marker" aria-hidden="true">A</span>
+          <div class="module-title">
+            <h2>外卖订单</h2>
+            <p>美团联盟、饿了么共用同一套风控参数</p>
+          </div>
+          <div class="switch-wrap">
+            <span class="switch-label" id="wmSwitchLabel">风控开关</span>
+            <button class="switch" role="switch" aria-checked="true" aria-labelledby="wmSwitchLabel" data-switch="wm">
+              <span class="knob"></span>
+            </button>
+            <span class="switch-state" data-switch-state="wm">已开启</span>
+          </div>
+        </div>
+
+        <div class="fields">
+          <div class="field">
+            <label class="field-label" for="wmRiskCount">A1 · 风控订单数</label>
+            <div class="control">
+              <input class="num" id="wmRiskCount" type="number" min="0" step="1" value="8" data-track>
+              <span class="unit">笔</span>
+            </div>
+            <p class="field-help">用户累计售后订单数「超过」此值即触发。</p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="wmRiskPoints">A2 · 风控积分</label>
+            <div class="control">
+              <input class="num" id="wmRiskPoints" type="number" min="0" step="1" value="50" data-track>
+              <span class="unit">积分 / 单</span>
+            </div>
+            <p class="field-help">命中后每笔订单固定发放的积分，与佣金无关。</p>
+          </div>
+        </div>
+
+        <div class="formula" id="previewWmRisk"></div>
+      </section>
+
+      <!-- B 到店团购 -->
+      <section class="module" data-risk="tg">
+        <div class="module-head">
+          <span class="marker" aria-hidden="true">B</span>
+          <div class="module-title">
+            <h2>到店团购</h2>
+            <p>到餐 / 到综 / 酒店 / 门票 / 民宿 / 度假的风控参数</p>
+          </div>
+          <div class="switch-wrap">
+            <span class="switch-label" id="tgSwitchLabel">风控开关</span>
+            <button class="switch" role="switch" aria-checked="true" aria-labelledby="tgSwitchLabel" data-switch="tg">
+              <span class="knob"></span>
+            </button>
+            <span class="switch-state" data-switch-state="tg">已开启</span>
+          </div>
+        </div>
+
+        <div class="fields">
+          <div class="field">
+            <label class="field-label" for="tgRiskCount">B1 · 风控订单数</label>
+            <div class="control">
+              <input class="num" id="tgRiskCount" type="number" min="0" step="1" value="8" data-track>
+              <span class="unit">笔</span>
+            </div>
+            <p class="field-help">按用户累计券「couponStatus=4 失效」订单数统计（含退款、过期、风控）。</p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="tgRiskPoints">B2 · 风控积分</label>
+            <div class="control">
+              <input class="num" id="tgRiskPoints" type="number" min="0" step="1" value="30" data-track>
+              <span class="unit">积分 / 单</span>
+            </div>
+            <p class="field-help">命中后每笔核销券固定发放的积分，与佣金无关。</p>
+          </div>
+        </div>
+
+        <div class="formula" id="previewTgRisk"></div>
+      </section>
+
+      <!-- C 电商转链积分 -->
+      <section class="module" data-risk="ec">
+        <div class="module-head">
+          <span class="marker" aria-hidden="true">C</span>
+          <div class="module-title">
+            <h2>电商转链积分</h2>
+            <p>淘宝淘客转链订单的风控参数</p>
+          </div>
+          <div class="switch-wrap">
+            <span class="switch-label" id="ecSwitchLabel">风控开关</span>
+            <button class="switch" role="switch" aria-checked="true" aria-labelledby="ecSwitchLabel" data-switch="ec">
+              <span class="knob"></span>
+            </button>
+            <span class="switch-state" data-switch-state="ec">已开启</span>
+          </div>
+        </div>
+
+        <div class="fields">
+          <div class="field">
+            <label class="field-label" for="ecRiskCount">C1 · 风控订单数</label>
+            <div class="control">
+              <input class="num" id="ecRiskCount" type="number" min="0" step="1" value="8" data-track>
+              <span class="unit">笔</span>
+            </div>
+            <p class="field-help">按用户累计「维权中 / 维权完成」订单数统计。</p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="ecRiskPoints">C2 · 风控积分</label>
+            <div class="control">
+              <input class="num" id="ecRiskPoints" type="number" min="0" step="1" value="50" data-track>
+              <span class="unit">积分 / 单</span>
+            </div>
+            <p class="field-help">命中后每笔订单固定发放的积分，与佣金无关。</p>
+          </div>
+        </div>
+
+        <div class="formula" id="previewEcRisk"></div>
+      </section>
+
+      <!-- 统计口径 -->
+      <section class="module">
+        <div class="module-head" style="border-bottom:0;padding-bottom:4px">
+          <span class="marker" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M5 12h14M5 18h9"></path></svg>
+          </span>
+          <div class="module-title">
+            <h2>统计与处理口径</h2>
+            <p>外卖、电商转链、到店团购三条业务线各自独立计数、独立阈值</p>
+          </div>
+        </div>
+        <dl class="rule-list">
+          <div class="rule-row">
+            <dt>统计口径</dt>
+            <dd>同一小程序、同一用户，按业务线分别累计历史售后订单数，不按时间周期清零。</dd>
+          </div>
+          <div class="rule-row">
+            <dt>触发条件</dt>
+            <dd>累计售后订单数 <b>超过</b> 风控订单数即命中。示例值 8 笔，表示第 9 笔起命中。</dd>
+          </div>
+          <div class="rule-row">
+            <dt>生效范围</dt>
+            <dd>命中后该用户后续所有符合发分条件的订单按风控积分发放；已入账订单不重算、不追溯。</dd>
+          </div>
+          <div class="rule-row">
+            <dt>已发分后维权</dt>
+            <dd>不扣回已发积分，仅把该订单计入风控订单数。</dd>
+          </div>
+          <div class="rule-row">
+            <dt>开关关闭</dt>
+            <dd>本业务线全部按正常规则发放（含兜底）；历史命中记录保留，重新开启后继续生效。</dd>
+          </div>
+        </dl>
+      </section>
+    </section>
+
+    <!-- ================= 页面三：业务节点定义 ================= -->
+    <section class="page" id="view-nodes" hidden>
+      <div class="page-head">
+        <div>
+          <h1>业务节点定义</h1>
+          <p class="lede">配置各业务线的积分预告节点（弹窗提示）和到账节点（实际入账），完整罗列所有订单状态。预告节点留空则不弹窗。</p>
+        </div>
+        <span class="stamp">节点版本 v1.0 · 2026-11-25</span>
+      </div>
+
+      <div class="node-wrap">
+        <table class="node-table" id="nodeTable">
+          <thead>
+            <tr>
+              <th class="node-col-business">业务</th>
+              <th class="node-col-platform">平台</th>
+              <th class="node-col-preview">预告节点（单选，留空不弹窗）</th>
+              <th class="node-col-settle">到账节点（可多选）</th>
+              <th class="node-col-others">其他订单节点</th>
+            </tr>
+          </thead>
+          <tbody id="nodeTbody">
+            <!-- JS 渲染 -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="scope-note" style="margin-top:12px">
+        <b>规则说明：</b>预告节点 = 订单流转到此节点时，首页弹出积分到账预告弹窗（告知用户后续某节点有积分到账）；到账节点 = 订单流转到此节点时，积分实际入账。预告节点留空则不弹窗。到账节点为多值时（如淘宝已付款 + 已收货），订单命中任一节点即触发发分，同一订单只发一次。
+      </div>
+    </section>
+
+    <!-- ================= 页面四：页面说明 ================= -->
+    <section class="page" id="view-about" hidden>
+      <div class="page-head">
+        <div>
+          <h1>页面说明</h1>
+          <p class="lede">C 端积分明细的流水类型枚举中，原「订单到账」一项拆分为外卖、电商、团购三个枚举值。</p>
+        </div>
+        <span class="stamp">说明版本 v1.0 · 2026-11-25</span>
+      </div>
+
+      <section class="module">
+        <div class="module-head">
+          <span class="marker" aria-hidden="true">1</span>
+          <div class="module-title">
+            <h2>流水类型：订单到账拆为三个枚举</h2>
+            <p>原有枚举值「订单到账」按业务线拆分</p>
+          </div>
+        </div>
+        <div class="about-wrap">
+          <table class="about-table">
+            <thead>
+              <tr><th>枚举值</th><th>覆盖业务</th><th>触发节点</th><th>变更</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>订单到账</td>
+                <td>外卖 + 电商（原共用）</td>
+                <td>—</td>
+                <td>废弃，不再产生新流水</td>
+              </tr>
+              <tr>
+                <td>订单到账-外卖</td>
+                <td>美团外卖、饿了么</td>
+                <td>已付款</td>
+                <td>新增：由「订单到账」拆出</td>
+              </tr>
+              <tr>
+                <td>订单到账-电商</td>
+                <td>淘宝淘客</td>
+                <td>已付款 / 已收货</td>
+                <td>新增：由「订单到账」拆出</td>
+              </tr>
+              <tr>
+                <td>订单到账-团购</td>
+                <td>美团到店</td>
+                <td>couponStatus=2 券已核销</td>
+                <td>新增：由「订单到账」拆出</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scope-note" style="margin-top:12px">
+          <b>其他流水类型不变：</b>签到积分、红包领取、小票积分、新人积分、主动兑换、自动兑换等保持原枚举，不受本次调整影响；历史流水继续按原「订单到账」展示。
+        </div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<div class="savebar">
+  <div class="save-status" id="saveStatus">
+    <span class="bullet"></span>
+    <span id="saveText">所有配置已保存</span>
+  </div>
+  <div class="save-actions">
+    <button class="btn ghost" id="resetBtn" disabled>放弃修改</button>
+    <button class="btn primary" id="saveBtn" disabled>保存配置</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  var RATE = 2000; // 积分汇率：1 元 = 2,000 积分（取自「积分参数」）
+  var fmt = new Intl.NumberFormat('zh-CN');
+
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+
+  function numOf(id) {
+    var el = document.getElementById(id);
+    var v = parseFloat(el.value);
+    return isNaN(v) ? 0 : v;
+  }
+
+  function clampInput(el, min, max) {
+    var v = parseFloat(el.value);
+    if (isNaN(v)) { v = min; }
+    if (typeof min === 'number' && v < min) v = min;
+    if (typeof max === 'number' && v > max) v = max;
+    el.value = String(v);
+  }
+
+  /* ---------- 订单积分：实时口径预览 ---------- */
+  function renderOrderPreview(key, ratioId, floorId, mountId, label) {
+    var ratio = numOf(ratioId);
+    var floor = Math.round(numOf(floorId));
+    var commission = 1; // 示例佣金 ¥1.00
+    var calc = Math.floor(commission * (ratio / 100) * RATE);
+    var finalPts = floor > 0 ? Math.max(calc, floor) : calc;
+    var floorText = floor > 0
+      ? '兜底 <b>' + fmt.format(floor) + '</b> 积分'
+      : '<span class="muted">兜底已关闭</span>';
+    var resultText = floor > 0 && calc < floor
+      ? '折算低于兜底，实发 <b>' + fmt.format(finalPts) + '</b> 积分'
+      : '实发 <b>' + fmt.format(finalPts) + '</b> 积分';
+
+    document.getElementById(mountId).innerHTML =
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M4 17.5 9.2 12l3.6 3.4L20 7.6"></path><path d="M15.4 7.6H20V12"></path>' +
+      '</svg>' +
+      '<span>' + label + '示例，佣金 <b>¥1.00</b> × <b>' + ratio + '%</b> × <b>2,000</b> 积分/元 = <b>' +
+      fmt.format(calc) + '</b> 积分；' + floorText + ' → ' + resultText + '。</span>';
+  }
+
+  /* ---------- 风控：实时口径预览 ---------- */
+  function renderRiskPreview(key, countId, pointsId, mountId, note) {
+    var count = Math.round(numOf(countId));
+    var points = Math.round(numOf(pointsId));
+    var on = $('[data-switch="' + key + '"]').getAttribute('aria-checked') === 'true';
+
+    var html = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M12 3.4 19 6v5.3c0 4.3-2.9 7.6-7 9.3-4.1-1.7-7-5-7-9.3V6l7-2.6Z"></path><path d="m9.2 11.9 2 2 3.6-3.8"></path></svg>';
+
+    if (on) {
+      html += '<span>当前生效：用户累计售后订单 <b>超过 ' + fmt.format(count) + ' 笔</b> 后，后续符合发分条件的订单每单固定发 <b>' +
+        fmt.format(points) + '</b> 积分，不参与佣金折算与兜底。' + (note ? '<span class="muted">' + note + '</span>' : '') + '</span>';
+    } else {
+      html += '<span>风控已关闭：本业务线订单全部按正常规则发放，含兜底补足；历史命中记录保留，重新开启后继续生效。</span>';
+    }
+    document.getElementById(mountId).innerHTML = html;
+  }
+
+  function refreshAll() {
+    renderOrderPreview('wm', 'wmRatio', 'wmFloor', 'previewWm', '外卖订单');
+    renderOrderPreview('ec', 'ecRatio', 'ecFloor', 'previewEc', '电商转链');
+    renderOrderPreview('tg', 'tgRatio', 'tgFloor', 'previewTg', '到店团购');
+    renderRiskPreview('wm', 'wmRiskCount', 'wmRiskPoints', 'previewWmRisk', '');
+    renderRiskPreview('ec', 'ecRiskCount', 'ecRiskPoints', 'previewEcRisk', '');
+    renderRiskPreview('tg', 'tgRiskCount', 'tgRiskPoints', 'previewTgRisk', '');
+  }
+
+  /* ---------- 业务节点定义 ---------- */
+  var NODE_STATUS = {
+    wm: ['已付款', '已收货', '已结算', '已失效（退款）'],
+    eleme: ['已下单', '已付款', '已收货', '已失效（超时不付款）', '已付款，售中退款', '已收货，售后退款'],
+    tg: ['couponStatus=1 券付款', 'couponStatus=2 券已核销', 'couponStatus=3 券已结算', 'couponStatus=4 券已失效'],
+    ec: ['已付款', '已收货', '已失效/关闭', '维权中', '维权完成']
+  };
+  var NODE_DOT = { '美团': 'meituan', '饿了么': 'eleme', '淘宝': 'taobao' };
+  var NODE_ROW_META = [
+    { business: '外卖', platform: '美团',   key: 'wm' },
+    { business: '外卖', platform: '饿了么', key: 'eleme' },
+    { business: '到店', platform: '美团',   key: 'tg' },
+    { business: '电商', platform: '淘宝',   key: 'ec' }
+  ];
+  var NODE_DEFAULTS = [
+    { preview: '', settle: ['已付款'] },
+    { preview: '', settle: ['已付款'] },
+    { preview: '', settle: ['couponStatus=2 券已核销'] },
+    { preview: '', settle: ['已付款', '已收货'] }
+  ];
+  var nodeRows = [];
+
+  function initNodeRows() {
+    nodeRows = NODE_ROW_META.map(function (meta, i) {
+      return {
+        business: meta.business,
+        platform: meta.platform,
+        key: meta.key,
+        preview: NODE_DEFAULTS[i].preview,
+        settle: NODE_DEFAULTS[i].settle.slice()
+      };
+    });
+  }
+  initNodeRows();
+
+  function nodeOthers(row) {
+    return (NODE_STATUS[row.key] || []).filter(function (s) {
+      return row.settle.indexOf(s) < 0 && s !== row.preview;
+    });
+  }
+
+  function renderNodeTable() {
+    var tbody = document.getElementById('nodeTbody');
+    if (!tbody) return;
+    var html = '';
+    nodeRows.forEach(function (row, idx) {
+      var statusList = NODE_STATUS[row.key] || [];
+
+      // 预告节点：单选 chip（含“不弹窗”）
+      var previewHtml = '<div class="node-chips">' +
+        '<button type="button" class="node-chip' + (row.preview === '' ? ' is-on' : '') +
+          '" data-node-idx="' + idx + '" data-node-field="preview" data-node-value="">不弹窗</button>' +
+        statusList.map(function (s) {
+          return '<button type="button" class="node-chip' + (row.preview === s ? ' is-on' : '') +
+            '" data-node-idx="' + idx + '" data-node-field="preview" data-node-value="' + s + '">' + s + '</button>';
+        }).join('') + '</div>';
+
+      // 到账节点：多选 chip，罗列全部枚举
+      var settleHtml = '<div class="node-chips">' +
+        statusList.map(function (s) {
+          return '<button type="button" class="node-chip settle' + (row.settle.indexOf(s) >= 0 ? ' is-on' : '') +
+            '" data-node-idx="' + idx + '" data-node-field="settle" data-node-value="' + s + '">' + s + '</button>';
+        }).join('') + '</div>';
+
+      // 其他节点：全量枚举中既非预告、也非到账的剩余状态
+      var others = nodeOthers(row);
+      var othersHtml = others.length
+        ? '<div class="node-others-list">' + others.map(function (s) {
+            var cls = '';
+            if (/风控|退款|失效|维权|取消/.test(s)) cls = 'risk';
+            else if (/收货|结算|核销/.test(s)) cls = 'settle';
+            return '<span class="node-tag ' + cls + '">' + s + '</span>';
+          }).join('') + '</div>'
+        : '<span class="node-empty">无</span>';
+
+      html += '<tr>' +
+        '<td class="node-col-business">' + row.business + '</td>' +
+        '<td class="node-col-platform"><span class="chip"><i class="dot dot-' + (NODE_DOT[row.platform] || 'groupbuy') + '"></i>' + row.platform + '</span></td>' +
+        '<td class="node-col-preview">' + previewHtml + '</td>' +
+        '<td class="node-col-settle">' + settleHtml + '</td>' +
+        '<td class="node-col-others">' + othersHtml + '</td>' +
+      '</tr>';
+    });
+    tbody.innerHTML = html;
+  }
+
+  document.getElementById('nodeTbody').addEventListener('click', function (e) {
+    var chip = e.target.closest('.node-chip');
+    if (!chip) return;
+    var idx = parseInt(chip.dataset.nodeIdx, 10);
+    var field = chip.dataset.nodeField;
+    var value = chip.dataset.nodeValue;
+    var row = nodeRows[idx];
+    if (!row) return;
+
+    if (field === 'preview') {
+      row.preview = (row.preview === value) ? '' : value;
+    } else {
+      var pos = row.settle.indexOf(value);
+      if (pos >= 0) row.settle.splice(pos, 1);
+      else row.settle.push(value);
+    }
+    renderNodeTable();
+    markDirty();
+  });
+  renderNodeTable();
+
+  /* ---------- 开关 ---------- */
+  $$('[data-switch]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var next = btn.getAttribute('aria-checked') !== 'true';
+      btn.setAttribute('aria-checked', String(next));
+      var key = btn.dataset.switch;
+      var state = $('[data-switch-state="' + key + '"]');
+      if (state) state.textContent = next ? '已开启' : '已关闭';
+      var module = $('[data-risk="' + key + '"]');
+      if (module) {
+        module.classList.toggle('is-off', !next);
+        $$('input', module).forEach(function (input) { input.disabled = !next; });
+      }
+      refreshAll();
+      markDirty();
+    });
+  });
+
+  /* ---------- 视图切换 ---------- */
+  var viewTitles = { config: '积分配置', risk: '订单风控', nodes: '业务节点定义', about: '页面说明' };
+  $$('.nav-item').forEach(function (item) {
+    item.addEventListener('click', function () {
+      var view = item.dataset.view;
+      $$('.nav-item').forEach(function (n) {
+        var active = n === item;
+        n.classList.toggle('is-active', active);
+        if (active) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current');
+      });
+      $('#view-config').hidden = view !== 'config';
+      $('#view-risk').hidden = view !== 'risk';
+      $('#view-nodes').hidden = view !== 'nodes';
+      $('#view-about').hidden = view !== 'about';
+      $('#crumbCurrent').textContent = viewTitles[view];
+      window.scrollTo(0, 0);
+    });
+  });
+
+  /* ---------- Tabs ---------- */
+  var tabs = $$('.tab');
+  var panelOrder = $('#panel-order');
+  var panelPlaceholder = $('#panel-placeholder');
+
+  function selectTab(tab) {
+    tabs.forEach(function (t) {
+      var active = t === tab;
+      t.classList.toggle('is-active', active);
+      t.setAttribute('aria-selected', String(active));
+    });
+    var isOrder = tab.id === 'tab-order';
+    panelOrder.hidden = !isOrder;
+    panelPlaceholder.hidden = isOrder;
+    if (!isOrder) {
+      $('#placeholderTitle').textContent = '「' + tab.dataset.tab + '」本期不涉及改造';
+    }
+  }
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () { selectTab(tab); });
+  });
+  $('#backToOrder').addEventListener('click', function () {
+    selectTab($('#tab-order'));
+  });
+
+  /* ---------- 输入 & 脏检查 ---------- */
+  var tracked = $$('input[data-track], select[data-track]');
+
+  function snapshot() {
+    return JSON.stringify({
+      values: tracked.map(function (i) { return i.value; }),
+      switches: $$('[data-switch]').map(function (s) { return s.getAttribute('aria-checked'); }),
+      nodes: nodeRows
+    });
+  }
+  var savedSnap = snapshot();
+
+  var saveStatus = $('#saveStatus');
+  var saveText = $('#saveText');
+  var saveBtn = $('#saveBtn');
+  var resetBtn = $('#resetBtn');
+
+  function markDirty() {
+    var dirty = snapshot() !== savedSnap;
+    saveStatus.classList.toggle('is-dirty', dirty);
+    saveText.textContent = dirty ? '有未保存的修改' : '所有配置已保存';
+    saveBtn.disabled = !dirty;
+    resetBtn.disabled = !dirty;
+    return dirty;
+  }
+
+  tracked.forEach(function (input) {
+    input.addEventListener('input', function () { refreshAll(); markDirty(); });
+    input.addEventListener('blur', function () {
+      var min = input.min === '' ? null : Number(input.min);
+      var max = input.max === '' ? null : Number(input.max);
+      clampInput(input, min, max);
+      refreshAll();
+      markDirty();
+    });
+  });
+
+  /* ---------- 保存 / 重置 ---------- */
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('is-show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('is-show'); }, 1800);
+  }
+
+  saveBtn.addEventListener('click', function () {
+    savedSnap = snapshot();
+    markDirty();
+    var now = new Date();
+    var hh = String(now.getHours()).padStart(2, '0');
+    var mm = String(now.getMinutes()).padStart(2, '0');
+    saveText.textContent = '所有配置已保存 · ' + hh + ':' + mm;
+    toast('已保存（原型演示，不写入后端）');
+  });
+
+  resetBtn.addEventListener('click', function () {
+    var saved = JSON.parse(savedSnap);
+    tracked.forEach(function (input, i) { input.value = saved.values[i]; });
+    $$('[data-switch]').forEach(function (btn, i) {
+      var on = saved.switches[i] === 'true';
+      btn.setAttribute('aria-checked', String(on));
+      var key = btn.dataset.switch;
+      var state = $('[data-switch-state="' + key + '"]');
+      if (state) state.textContent = on ? '已开启' : '已关闭';
+      var module = $('[data-risk="' + key + '"]');
+      if (module) {
+        module.classList.toggle('is-off', !on);
+        $$('input', module).forEach(function (input) { input.disabled = !on; });
+      }
+    });
+    nodeRows = saved.nodes;
+    renderNodeTable();
+    refreshAll();
+    markDirty();
+    toast('已放弃修改');
+  });
+
+  refreshAll();
+  markDirty();
+})();
+</script>
+</body>
+</html>
