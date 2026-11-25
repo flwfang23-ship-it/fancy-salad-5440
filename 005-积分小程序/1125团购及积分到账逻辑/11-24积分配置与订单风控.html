@@ -89,7 +89,21 @@
   }
   .topbar .crumb-current{color:var(--sub);font-weight:600}
   .page{max-width:1120px;margin:0 auto;padding:26px 40px 8px}
-  #view-risk{max-width:1000px}
+  #view-risk{max-width:1120px}
+  .risk-grid{
+    display:grid;grid-template-columns:minmax(0,1fr) 300px;
+    gap:16px 20px;align-items:start;
+  }
+  .risk-grid .risk-main{min-width:0}
+  .risk-side{display:grid;gap:12px;align-content:start;min-width:0}
+  .risk-side .side-card{padding:16px 18px}
+  @media (max-width:1120px){
+    .risk-grid{grid-template-columns:minmax(0,1fr)}
+    .risk-side{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:760px){
+    .risk-side{grid-template-columns:minmax(0,1fr)}
+  }
   .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:6px}
   h1{font-size:22px;line-height:1.35;font-weight:650;color:var(--ink);margin:0 0 6px;letter-spacing:-.01em}
   .lede{margin:0;font-size:13px;color:var(--sub);max-width:62ch;line-height:1.7}
@@ -925,6 +939,8 @@
         <span class="stamp">统计口径：历史累计 · 不清零</span>
       </div>
 
+      <div class="risk-grid">
+      <div class="risk-main">
       <div class="logic">
         <div class="logic-row">
           <span class="logic-tag hit">命中风控</span>
@@ -1087,6 +1103,34 @@
           </div>
         </dl>
       </section>
+      </div>
+
+      <aside class="risk-side" aria-label="风控订单说明">
+        <p class="side-label">风控订单口径</p>
+        <div class="side-card">
+          <p class="side-title"><span class="marker" aria-hidden="true">!</span>所有退款订单都是风控订单</p>
+          <p class="side-text">只要订单发生退款或售后，该订单即计入风控订单数，与是否已发积分无关。</p>
+          <dl class="def">
+            <dt>外卖 · 美团</dt>
+            <dd>已付款 → 用户退款 → 已失效</dd>
+            <dt>外卖 · 饿了么</dt>
+            <dd>已付款，售中退款 / 已收货，售后退款</dd>
+            <dt>到店 · 美团</dt>
+            <dd>couponStatus=4 失效（券过期、核销后退款、联盟风控）</dd>
+            <dt>电商 · 淘宝</dt>
+            <dd>维权中 → 维权完成</dd>
+          </dl>
+        </div>
+        <div class="side-card">
+          <p class="side-title">不计入风控</p>
+          <p class="side-text">饿了么「已下单 → 超时不付款 → 已失效」未产生付款与佣金，不计入风控；美团未支付不生成联盟订单。</p>
+        </div>
+        <div class="side-card">
+          <p class="side-title">已发分后退款</p>
+          <p class="side-text">不扣回已发积分，仅把该订单计入风控订单数；同一订单只计一次。</p>
+        </div>
+      </aside>
+      </div>
     </section>
 
     <!-- ================= 页面三：业务节点定义 ================= -->
