@@ -389,6 +389,27 @@
   .node-tag.risk{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
   .node-tag.settle{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
 
+  /* ---------- 订单流转图 ---------- */
+  #view-flows{max-width:1000px}
+  .flow-card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px 20px;margin-top:16px;box-shadow:0 1px 2px rgba(15,23,42,.03);
+  }
+  .flow-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .flow-head h2{margin:0;font-size:14.5px;font-weight:650;color:var(--ink)}
+  .flow-sub{margin:0 0 14px;font-size:12px;color:var(--faint);line-height:1.7}
+  .ascii{
+    margin:0;padding:16px 18px;background:#fbfcfd;border:1px solid #eef1f6;
+    border-radius:9px;overflow-x:auto;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+    font-size:12.5px;line-height:1.95;color:var(--text);white-space:pre;
+  }
+  .flow-note{
+    margin:12px 0 0;font-size:12px;line-height:1.7;color:var(--sub);
+    border-left:2px solid var(--line-strong);padding-left:10px;
+  }
+  .flow-note b{color:var(--ink);font-weight:600}
+
   /* ---------- 页面说明 ---------- */
   #view-about{max-width:1000px}
   .about-text{margin:14px 0 0;font-size:12.5px;line-height:1.75;color:var(--sub)}
@@ -473,6 +494,12 @@
         </svg>
         业务节点定义
       </button>
+      <button class="nav-item" data-view="flows">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="6" height="6" rx="1.5"></rect><rect x="15" y="15" width="6" height="6" rx="1.5"></rect><path d="M9 6h6a3 3 0 0 1 3 3v6"></path>
+        </svg>
+        订单流转图
+      </button>
       <button class="nav-item" data-view="about">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path><path d="M14 3v6h6M8.5 13h7M8.5 16.5h4.5"></path>
@@ -486,6 +513,7 @@
       积分配置 · 订单积分（3 条业务线）<br>
       订单风控（3 条业务线）<br>
       业务节点定义（预告 / 到账节点）<br>
+      订单流转图（4 条业务线状态机）<br>
       页面说明（流水类型拆分）
     </div>
   </aside>
@@ -570,7 +598,7 @@
                   <span class="st">结束</span>
                 </div>
                 <p class="state-note">
-                  退款支线：已付款 → 用户退款 → <span class="st risk">已失效（退款）</span>，计入风控订单数；已付款时已发积分，不扣回。未支付不生成订单，所以美团没有「超时未付款」失效单。
+                  退款支线：已付款 → 用户退款 → <span class="st risk">已失效</span>，计入风控订单数；已付款时已发积分，不扣回。未支付不生成订单，所以美团没有「超时未付款」失效单。
                 </p>
               </div>
               <div class="state-row">
@@ -582,7 +610,7 @@
                   <span class="st">结束</span>
                 </div>
                 <p class="state-note">
-                  退款支线：已付款 → <span class="st risk">售中退款</span>；已收货 → <span class="st risk">售后退款</span>，两者均计入风控订单数，已发积分不扣回。已下单 → <span class="st">超时不付款 · 已失效</span>，无佣金，不计入风控。
+                  退款支线：已付款 → <span class="st risk">已付款，售中退款</span>；已收货 → <span class="st risk">已收货，售后退款</span>，两者均计入风控订单数，已发积分不扣回。已下单 → <span class="st">超时不付款 · 已失效</span>，无佣金，不计入风控。
                 </p>
               </div>
             </div>
@@ -639,11 +667,11 @@
                 <span class="state-platform">券明细 (子订单)</span>
                 <div class="chain">
                   <span class="st">couponStatus=1 付款</span><span class="ar">→</span>
-                  <span class="st ok">couponStatus=2 已核销 · 发分</span><span class="ar">→</span>
+                  <span class="st ok">couponStatus=2 完成 · 发分</span><span class="ar">→</span>
                   <span class="st">couponStatus=3 结算</span>
                 </div>
                 <p class="state-note">
-                  每张券独立发分。用户付款后每张券进入 couponStatus=1；到店出示券核销后进入 couponStatus=2，此时佣金确定、发放积分；后续进入结算账期变为 couponStatus=3。
+                  每张券独立发分。用户付款后每张券进入 couponStatus=1 付款；到店出示券核销后进入 couponStatus=2 完成（或券已核销），此时佣金确定、发放积分；后续进入结算账期变为 couponStatus=3 结算。
                 </p>
               </div>
               <div class="state-row">
@@ -748,12 +776,12 @@
                 <span class="st">③ 券已结算</span>
               </div>
               <div style="margin-top:6px;font-size:11.5px;color:var(--faint);line-height:1.65">
-                发分绑定 <b>couponStatus=2 已核销</b>，而非付款；此时佣金确定。券过期 / 退款 / 风控进入 couponStatus=4 失效，不发分。
+                发分绑定 <b>couponStatus=2 完成（或券已核销）</b>，而非付款；此时佣金确定。券过期 / 退款 / 风控进入 couponStatus=4 失效，不发分。
               </div>
             </div>
 
             <ul class="notes">
-              <li><b>发分节点：</b>券核销（couponStatus=2）入账，每张券独立发分，同一用户同一团购券仅发一次。</li>
+              <li><b>发分节点：</b>couponStatus=2 完成（或券已核销）时入账，每张券独立发分，同一用户同一团购券仅发一次。</li>
               <li><b>佣金口径：</b>取券核销后平台回传的结算佣金，核销前佣金为预估值、有退款风险。</li>
               <li><b>退款处理：</b>券核销后用户退款，联盟会回退佣金、该券计入风控订单数；已发积分不扣回。</li>
               <li><b>父订单不可靠：</b>到店含多张券时，父订单 status 会随机取某张子券状态，发分与风控<b>必须以 orderDetail 中每张券的 couponStatus 为准</b>。</li>
@@ -997,7 +1025,115 @@
       </div>
     </section>
 
-    <!-- ================= 页面四：页面说明 ================= -->
+    <!-- ================= 页面四：订单流转图 ================= -->
+    <section class="page" id="view-flows" hidden>
+      <div class="page-head">
+        <div>
+          <h1>订单流转图</h1>
+          <p class="lede">四条业务线的订单状态流转。状态名与平台回传口径一致，标注了发分节点与计风控的分支。</p>
+        </div>
+        <span class="stamp">状态口径 v1.0 · 2026-11-25</span>
+      </div>
+
+      <section class="flow-card">
+        <div class="flow-head">
+          <span class="chip"><i class="dot dot-meituan"></i>美团</span>
+          <h2>美团 · 外卖</h2>
+        </div>
+        <p class="flow-sub">订单链路：领取 CPS 红包 → 用户下单 → 已付款 → 已收货 → 已结算</p>
+<pre class="ascii">领取 CPS 红包
+      │  用户下单
+      ▼
+[ 已付款 ]   ← 发分节点
+      │
+      ├── 用户退款 ──▶ [ 已失效 ] ──▶ 结束
+      │
+      ▼
+[ 已收货 ]
+      │
+      ▼
+[ 已结算 ]
+      │
+      ▼
+    结束</pre>
+        <p class="flow-note"><b>口径说明：</b>美团未支付时，美团联盟后台不会生成订单；已失效为退款后的终态，不发分。</p>
+      </section>
+
+      <section class="flow-card">
+        <div class="flow-head">
+          <span class="chip"><i class="dot dot-eleme"></i>饿了么</span>
+          <h2>饿了么 · 外卖</h2>
+        </div>
+        <p class="flow-sub">订单链路：领取 CPS 红包 → 已下单 → 已付款 → 已收货；含售中 / 售后退款与超时失效支线</p>
+<pre class="ascii">领取 CPS 红包
+      │  去饿了么下单（此时生成饿了么订单）
+      ▼
+[ 已下单 ]
+      │
+      ├── 超时不付款 ──▶ [ 已失效 ] ──▶ 结束
+      │
+      ▼
+[ 已付款 ]   ← 发分节点
+      │
+      ├── 用户在未送达前退款 ──▶ [ 已付款，售中退款 ] ──▶ 结束
+      │
+      ▼
+[ 已收货 ]
+      │
+      ├── 用户在送达后申请退款 ──▶ [ 已收货，售后退款 ] ──▶ 结束
+      │
+      ▼
+    结束</pre>
+        <p class="flow-note"><b>口径说明：</b>「已下单」即生成饿了么订单，超时不付款进入「已失效」且无佣金；两种退款均计入风控订单数。</p>
+      </section>
+
+      <section class="flow-card">
+        <div class="flow-head">
+          <span class="chip"><i class="dot dot-groupbuy"></i>美团</span>
+          <h2>美团 · 到店</h2>
+        </div>
+        <p class="flow-sub">券维度（couponStatus）：1 付款 → 2 完成（或券已核销）→ 3 结算；4 失效含取消或风控</p>
+<pre class="ascii">[ couponStatus=1 付款 ]   ← 用户买券付款
+      │
+      ├── 券过期未使用 / 联盟风控 ──▶ [ couponStatus=4 失效（含取消或风控） ] ──▶ 结束
+      │
+      ▼
+[ couponStatus=2 完成（或券已核销） ]   ← 发分节点
+      │
+      ├── 核销后用户退款 ──▶ [ couponStatus=4 失效（含取消或风控） ] ──▶ 结束
+      │
+      ▼
+[ couponStatus=3 结算 ]
+      │
+      ▼
+    结束</pre>
+        <p class="flow-note"><b>父订单 status（仅参考）：</b>2 付款 / 3 完成 / 4 取消 / 5 风控 / 6 结算。含多张券的订单父订单状态会随机取某张子券状态，发分与风控必须以 orderDetail 中每张券的 couponStatus 为准。</p>
+      </section>
+
+      <section class="flow-card">
+        <div class="flow-head">
+          <span class="chip"><i class="dot dot-taobao"></i>淘宝</span>
+          <h2>淘宝 · 电商转链</h2>
+        </div>
+        <p class="flow-sub">订单状态：已付款 → 已收货；含已失效/关闭、维权中、维权完成</p>
+<pre class="ascii">[ 已付款 ]   ← 发分节点①
+      │
+      ├── 已失效/关闭 ──▶ 结束（不发分）
+      │
+      ├── 维权中 ──▶ [ 维权完成 ] ──▶ 结束（计入风控，不发分）
+      │
+      ▼
+[ 已收货 ]   ← 发分节点②（幂等，已发不重复）
+      │
+      ├── 维权中 ──▶ [ 维权完成 ] ──▶ 结束（计入风控，已发不扣回）
+      │
+      ▼
+    结束</pre>
+        <p class="flow-note"><b>口径说明：</b>「已付款」「已收货」各触发一次判断，同一订单仅发放一次；已发积分在进入维权后不扣回。</p>
+      </section>
+    </section>
+
+    <!-- ================= 页面五：页面说明 ================= -->
     <section class="page" id="view-about" hidden>
       <div class="page-head">
         <div>
@@ -1042,7 +1178,7 @@
               <tr>
                 <td>订单到账-团购</td>
                 <td>美团到店</td>
-                <td>couponStatus=2 券已核销</td>
+                <td>couponStatus=2 完成（或券已核销）</td>
                 <td>新增：由「订单到账」拆出</td>
               </tr>
             </tbody>
@@ -1142,9 +1278,9 @@
 
   /* ---------- 业务节点定义 ---------- */
   var NODE_STATUS = {
-    wm: ['已付款', '已收货', '已结算', '已失效（退款）'],
-    eleme: ['已下单', '已付款', '已收货', '已失效（超时不付款）', '已付款，售中退款', '已收货，售后退款'],
-    tg: ['couponStatus=1 券付款', 'couponStatus=2 券已核销', 'couponStatus=3 券已结算', 'couponStatus=4 券已失效'],
+    wm: ['已付款', '已收货', '已结算', '已失效'],
+    eleme: ['已下单', '已付款', '已收货', '已失效', '已付款，售中退款', '已收货，售后退款'],
+    tg: ['couponStatus=1 付款', 'couponStatus=2 完成（或券已核销）', 'couponStatus=3 结算', 'couponStatus=4 失效（含取消或风控）'],
     ec: ['已付款', '已收货', '已失效/关闭', '维权中', '维权完成']
   };
   var NODE_DOT = { '美团': 'meituan', '饿了么': 'eleme', '淘宝': 'taobao' };
@@ -1157,7 +1293,7 @@
   var NODE_DEFAULTS = [
     { preview: '', settle: ['已付款'] },
     { preview: '', settle: ['已付款'] },
-    { preview: '', settle: ['couponStatus=2 券已核销'] },
+    { preview: '', settle: ['couponStatus=2 完成（或券已核销）'] },
     { preview: '', settle: ['已付款', '已收货'] }
   ];
   var nodeRows = [];
@@ -1266,7 +1402,7 @@
   });
 
   /* ---------- 视图切换 ---------- */
-  var viewTitles = { config: '积分配置', risk: '订单风控', nodes: '业务节点定义', about: '页面说明' };
+  var viewTitles = { config: '积分配置', risk: '订单风控', nodes: '业务节点定义', flows: '订单流转图', about: '页面说明' };
   $$('.nav-item').forEach(function (item) {
     item.addEventListener('click', function () {
       var view = item.dataset.view;
@@ -1278,6 +1414,7 @@
       $('#view-config').hidden = view !== 'config';
       $('#view-risk').hidden = view !== 'risk';
       $('#view-nodes').hidden = view !== 'nodes';
+      $('#view-flows').hidden = view !== 'flows';
       $('#view-about').hidden = view !== 'about';
       $('#crumbCurrent').textContent = viewTitles[view];
       window.scrollTo(0, 0);
