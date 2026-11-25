@@ -389,6 +389,19 @@
   .node-tag.risk{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
   .node-tag.settle{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
 
+  /* ---------- 积分项配置 ---------- */
+  #view-items{max-width:880px}
+  .item-list{list-style:none;margin:0;padding:0}
+  .item-row{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:15px 2px;border-bottom:1px solid #eef1f6;
+  }
+  .item-row:last-child{border-bottom:0}
+  .item-name{font-size:13.5px;color:var(--ink);font-weight:500;line-height:1.5}
+  .item-row.is-off .item-name{color:var(--faint)}
+  .item-row .switch-wrap{display:flex;align-items:center;gap:10px}
+  .item-row .switch-state{font-size:12px;color:var(--faint);min-width:42px;text-align:right}
+
   /* ---------- 订单流转图 ---------- */
   #view-flows{max-width:1000px}
   .flow-card{
@@ -476,6 +489,12 @@
 
     <nav class="nav" aria-label="主导航">
       <p class="nav-group">积分管理</p>
+      <button class="nav-item" data-view="items">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.5" y="7" width="19" height="10" rx="5"></rect><circle cx="16" cy="12" r="3"></circle>
+        </svg>
+        积分项配置
+      </button>
       <button class="nav-item is-active" data-view="config" aria-current="page">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle>
@@ -510,6 +529,7 @@
 
     <div class="rail-note">
       <b>本期范围</b><br>
+      积分项配置（总开关）<br>
       积分配置 · 订单积分（3 条业务线）<br>
       订单风控（3 条业务线）<br>
       业务节点定义（预告 / 到账节点）<br>
@@ -525,6 +545,82 @@
     </div>
 
     <!-- ================= 页面一：积分配置 ================= -->
+    <!-- ================= 页面零：积分项配置 ================= -->
+    <section class="page" id="view-items" hidden>
+      <div class="page-head">
+        <div>
+          <h1>积分项配置</h1>
+          <p class="lede">控制各积分项的总开关。关闭后该项不再触发任何积分赠送逻辑，已到账积分不受影响。</p>
+        </div>
+        <span class="stamp">配置版本 v2.4 · 2026-11-25</span>
+      </div>
+
+      <section class="module">
+        <div class="module-head">
+          <span class="marker" aria-hidden="true">1</span>
+          <div class="module-title">
+            <h2>积分项开关</h2>
+            <p>仅控制是否发放；比例、兜底与风控参数在对应的配置页维护</p>
+          </div>
+        </div>
+        <ul class="item-list">
+          <li class="item-row" data-risk="item-wm">
+            <span class="item-name">订单积分-外卖</span>
+            <span class="switch-wrap">
+              <button class="switch" role="switch" aria-checked="true" aria-label="订单积分-外卖" data-switch="item-wm"><span class="knob"></span></button>
+              <span class="switch-state" data-switch-state="item-wm">已开启</span>
+            </span>
+          </li>
+          <li class="item-row" data-risk="item-tg">
+            <span class="item-name">订单积分-到店</span>
+            <span class="switch-wrap">
+              <button class="switch" role="switch" aria-checked="true" aria-label="订单积分-到店" data-switch="item-tg"><span class="knob"></span></button>
+              <span class="switch-state" data-switch-state="item-tg">已开启</span>
+            </span>
+          </li>
+          <li class="item-row" data-risk="item-ec">
+            <span class="item-name">订单积分-电商</span>
+            <span class="switch-wrap">
+              <button class="switch" role="switch" aria-checked="true" aria-label="订单积分-电商" data-switch="item-ec"><span class="knob"></span></button>
+              <span class="switch-state" data-switch-state="item-ec">已开启</span>
+            </span>
+          </li>
+          <li class="item-row" data-risk="item-time">
+            <span class="item-name">时段活动积分</span>
+            <span class="switch-wrap">
+              <button class="switch" role="switch" aria-checked="true" aria-label="时段活动积分" data-switch="item-time"><span class="knob"></span></button>
+              <span class="switch-state" data-switch-state="item-time">已开启</span>
+            </span>
+          </li>
+          <li class="item-row" data-risk="item-sign">
+            <span class="item-name">签到积分</span>
+            <span class="switch-wrap">
+              <button class="switch" role="switch" aria-checked="true" aria-label="签到积分" data-switch="item-sign"><span class="knob"></span></button>
+              <span class="switch-state" data-switch-state="item-sign">已开启</span>
+            </span>
+          </li>
+          <li class="item-row" data-risk="item-sub">
+            <span class="item-name">订阅积分</span>
+            <span class="switch-wrap">
+              <button class="switch" role="switch" aria-checked="true" aria-label="订阅积分" data-switch="item-sub"><span class="knob"></span></button>
+              <span class="switch-state" data-switch-state="item-sub">已开启</span>
+            </span>
+          </li>
+          <li class="item-row" data-risk="item-ticket">
+            <span class="item-name">小票积分</span>
+            <span class="switch-wrap">
+              <button class="switch" role="switch" aria-checked="true" aria-label="小票积分" data-switch="item-ticket"><span class="knob"></span></button>
+              <span class="switch-state" data-switch-state="item-ticket">已开启</span>
+            </span>
+          </li>
+        </ul>
+      </section>
+
+      <div class="scope-note">
+        <b>生效口径：</b>开关关闭后，该项即时停止发放，已产生的订单不再触发积分赠送；重新开启后仅对之后的新订单生效，不补发关闭期间的历史订单。已到账积分不回收。
+      </div>
+    </section>
+
     <section class="page" id="view-config">
       <div class="page-head">
         <div>
@@ -1402,7 +1498,7 @@
   });
 
   /* ---------- 视图切换 ---------- */
-  var viewTitles = { config: '积分配置', risk: '订单风控', nodes: '业务节点定义', flows: '订单流转图', about: '页面说明' };
+  var viewTitles = { items: '积分项配置', config: '积分配置', risk: '订单风控', nodes: '业务节点定义', flows: '订单流转图', about: '页面说明' };
   $$('.nav-item').forEach(function (item) {
     item.addEventListener('click', function () {
       var view = item.dataset.view;
@@ -1411,6 +1507,7 @@
         n.classList.toggle('is-active', active);
         if (active) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current');
       });
+      $('#view-items').hidden = view !== 'items';
       $('#view-config').hidden = view !== 'config';
       $('#view-risk').hidden = view !== 'risk';
       $('#view-nodes').hidden = view !== 'nodes';
