@@ -344,10 +344,10 @@ const FRAMES = {
   "c2-sheet":  {id:"A4", frame:"切换位置", kind:"groupbuy-home", name:"附近团购 · 切换位置", flow:"F-MAIN", stepIndex:3},
   "c-home-city":{id:"A5", frame:"切换后 · 同城热销", kind:"groupbuy-home", name:"附近团购 · 同城热销", flow:"F-MAIN", stepIndex:4},
 
-  "b-subscribe-drawer":{id:"A6", frame:"首次取链 · 订阅抽屉", kind:"order", name:"取链 · 订阅抽屉", flow:"F-MAIN2", stepIndex:0},
-  "x-subscribe-rejected":{id:"A7", frame:"订阅被拒绝", kind:"order", name:"订阅被拒绝", flow:"F-MAIN2", stepIndex:1},
-  "b-points-arrived":{id:"A8", frame:"积分到账弹窗", kind:"order", name:"积分到账 · 弹窗", flow:"F-MAIN2", stepIndex:2},
-  "c-order-list":{id:"A9", frame:"订单明细 · 分类列表", kind:"order", name:"订单明细 · 分类列表", flow:"F-MAIN2", stepIndex:3},
+  "b-subscribe-drawer":{id:"A6", frame:"首次取链 · 订阅抽屉", kind:"order", name:"取链 · 订阅抽屉", flow:"", stepIndex:0},
+  "x-subscribe-rejected":{id:"A7", frame:"订阅被拒绝", kind:"order", name:"订阅被拒绝", flow:"", stepIndex:1},
+  "b-points-arrived":{id:"A8", frame:"积分到账弹窗", kind:"order", name:"积分到账 · 弹窗", flow:"", stepIndex:2},
+  "c-order-list":{id:"A9", frame:"订单明细 · 分类列表", kind:"order", name:"订单明细 · 分类列表", flow:"", stepIndex:3},
 
   "x-denied":  {id:"B1", frame:"拒绝授权", kind:"groupbuy-home", name:"附近团购 · 拒绝授权", flow:"F-ERR-AUTH", stepIndex:0},
   "x-failed":  {id:"B2", frame:"定位失败", kind:"groupbuy-home", name:"附近团购 · 定位失败", flow:"F-ERR-AUTH", stepIndex:1},
@@ -361,7 +361,7 @@ function routeOf(key){return FRAMES[key]||{id:"",frame:key,name:key,flow:"main",
  * ② 流程数据 —— 面向用户任务，不在流程目录暴露接口字段
  * ============================================================ */
 const FLOWS=[
-  { group:"主链路（10帧）", flows:[
+  { group:"主链路（5帧）", flows:[
     { id:"F-MAIN", summary:"位置团购", goal:"让用户按当前位置找到附近的团购单品",
       steps:[
         { title:"说明位置用途", sub:"用户可允许定位，也可选择手动选城市" },
@@ -369,13 +369,6 @@ const FLOWS=[
         { title:"浏览附近团购", sub:"先看今日推荐，再按需切换榜单" },
         { title:"切换位置", sub:"选择城市与商圈后刷新商品" },
         { title:"查看同城热销", sub:"切换榜单后保留当前城市与商圈" }
-      ]},
-    { id:"F-MAIN2", summary:"订单与积分", goal:"用户能理解积分结果，并按业务类型查看订单明细",
-      steps:[
-        { title:"开启到账提醒", sub:"用户选择是否接收积分到账消息；选择后继续前往平台" },
-        { title:"暂不接收提醒", sub:"不影响继续下单，并说明仍可在订单明细中查看" },
-        { title:"查看到账结果", sub:"到账提示只说明结果，不模拟第三方订单完成过程" },
-        { title:"按类型查看订单", sub:"一级分类：外卖 / 团购 / 电商；外卖可再筛美团 / 饿了么" }
       ]}
   ]},
   { group:"关键异常（4帧）", flows:[
@@ -1078,7 +1071,6 @@ document.addEventListener("click",e=>{
     let frameKey=null, openSheetKey=null;
     const map={
       "F-MAIN":     [ ["a-auth",null], ["b-locating",null], ["c-home-today",null], ["c-home-today","c2-sheet"], ["c-home-city",null] ],
-      "F-MAIN2":    [ ["b-subscribe-drawer",null], ["x-subscribe-rejected",null], ["b-points-arrived",null], ["c-order-list",null] ],
       "F-ERR-AUTH": [ ["x-denied",null], ["x-failed",null] ],
       "F-ERR-API":  [ ["x-empty",null], ["x-error",null] ]
     };
@@ -1144,7 +1136,6 @@ document.addEventListener("click",e=>{
   if(act==="tab"){state.tab=actEl.dataset.tab;state.currentRoute=state.tab==="city"?"c-home-city":"c-home-today";state.activeFlowId="F-MAIN";renderAll();return;}
   if(act==="product"){
     state.pendingProductName=actEl.dataset.name||null;
-    state.activeFlowId="F-MAIN2";
     go("b-subscribe-drawer");
     return;
   }
@@ -1156,14 +1147,13 @@ document.addEventListener("click",e=>{
     return;
   }
 
-  // —— F-MAIN2 订阅链路 ——
+  // —— 订阅提醒链路 ——
   if(act==="subscribe-allow"){
     go("c-home-today");
     toast("到账提醒已开启 · 继续前往美团");
     return;
   }
   if(act==="subscribe-deny"){
-    state.activeFlowId="F-MAIN2";
     go("x-subscribe-rejected");
     return;
   }
