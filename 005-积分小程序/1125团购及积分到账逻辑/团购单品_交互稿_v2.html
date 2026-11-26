@@ -235,19 +235,12 @@ body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans
 .order-subnav button.on{border-color:var(--green);background:#edf8f2;color:var(--green)}
 .order-list{padding:2px 0 14px}
 .order-summary{padding:10px 16px 2px;font-size:9px;line-height:1.5;color:#87978e}
-.ob-card{margin:10px 16px;border-radius:15px;background:#fff;border:1px solid #e8efeb;box-shadow:0 4px 14px rgba(23,64,42,.05);padding:12px;display:flex;flex-direction:row;gap:11px;align-items:flex-start;cursor:pointer;outline:none}
+.ob-card{margin:10px 16px;border-radius:15px;background:#fff;border:1px solid #e8efeb;box-shadow:0 4px 14px rgba(23,64,42,.05);padding:12px;display:flex;flex-direction:row;gap:11px;align-items:flex-start}
 .ob-thumb{position:relative;width:72px;height:72px;flex:none;border-radius:11px;overflow:hidden;background:linear-gradient(135deg,#e8f2ee,#d8e7e1)}
 .ob-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .ob-thumb.img-fail img{display:none}
 .ob-thumb.img-fail::after{content:attr(data-brand);position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-weight:900;color:var(--green)}
 .ob-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
-/* 单笔订单详情页 */
-.od-page{padding:0 16px 20px}
-.od-hero{position:relative;margin:12px 0;height:150px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#e8f2ee,#d8e7e1)}
-.od-hero img{width:100%;height:100%;object-fit:cover;display:block}
-.od-hero.img-fail img{display:none}
-.od-hero.img-fail::after{content:attr(data-brand);position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:900;color:var(--green)}
-.od-name{font-size:15px;font-weight:900;color:var(--stamp-ink);line-height:1.4;margin:0 0 8px}
 .ob-card:hover,.ob-card:focus-visible{border-color:#b9d9c8;box-shadow:0 7px 18px rgba(23,64,42,.09)}
 .ob-head{display:flex;justify-content:space-between;align-items:center}
 .ob-badges{display:flex;align-items:center;gap:5px}
@@ -355,7 +348,6 @@ const FRAMES = {
   "x-subscribe-rejected":{id:"A7", frame:"订阅被拒绝", kind:"order", name:"订阅被拒绝", flow:"F-MAIN2", stepIndex:1},
   "b-points-arrived":{id:"A8", frame:"积分到账弹窗", kind:"order", name:"积分到账 · 弹窗", flow:"F-MAIN2", stepIndex:2},
   "c-order-list":{id:"A9", frame:"订单明细 · 分类列表", kind:"order", name:"订单明细 · 分类列表", flow:"F-MAIN2", stepIndex:3},
-  "c-order-detail":{id:"A10", frame:"单笔订单详情", kind:"order", name:"订单明细 · 单笔详情", flow:"F-MAIN2", stepIndex:4},
 
   "x-denied":  {id:"B1", frame:"拒绝授权", kind:"groupbuy-home", name:"附近团购 · 拒绝授权", flow:"F-ERR-AUTH", stepIndex:0},
   "x-failed":  {id:"B2", frame:"定位失败", kind:"groupbuy-home", name:"附近团购 · 定位失败", flow:"F-ERR-AUTH", stepIndex:1},
@@ -383,8 +375,7 @@ const FLOWS=[
         { title:"开启到账提醒", sub:"用户选择是否接收积分到账消息；选择后继续前往平台" },
         { title:"暂不接收提醒", sub:"不影响继续下单，并说明仍可在订单明细中查看" },
         { title:"查看到账结果", sub:"到账提示只说明结果，不模拟第三方订单完成过程" },
-        { title:"按类型查看订单", sub:"一级分类：外卖 / 团购 / 电商；外卖可再筛美团 / 饿了么" },
-        { title:"查看单笔详情", sub:"展示平台、用户状态、积分结果与必要订单信息" }
+        { title:"按类型查看订单", sub:"一级分类：外卖 / 团购 / 电商；外卖可再筛美团 / 饿了么" }
       ]}
   ]},
   { group:"关键异常（4帧）", flows:[
@@ -425,13 +416,12 @@ const PAGE_TREE=[
         "x-error": {name:"接口加载失败"}
       },
       sheets:[], sheetMeta:{}},
-    { code:"ORDER", name:"积分到账与订单明细", frames:["b-subscribe-drawer","x-subscribe-rejected","b-points-arrived","c-order-list","c-order-detail"],
+    { code:"ORDER", name:"积分到账与订单明细", frames:["b-subscribe-drawer","x-subscribe-rejected","b-points-arrived","c-order-list"],
       frameMeta:{
         "b-subscribe-drawer":{name:"开启到账提醒"},
         "x-subscribe-rejected":{name:"暂不接收提醒"},
         "b-points-arrived":{name:"积分到账弹窗"},
-        "c-order-list":{name:"订单明细 · 分类列表"},
-        "c-order-detail":{name:"订单明细 · 单笔详情"}
+        "c-order-list":{name:"订单明细 · 分类列表"}
       },
       sheets:[], sheetMeta:{}}
   ]}
@@ -501,20 +491,6 @@ const NOTES={
     ]},
     {h:"状态口径",rows:["外卖付款后到账；团购券核销后到账；电商付款或收货后到账","未发放时显示「待到账」或「未获得」，不再写成确定到账积分"]},
     {h:"待确认",rows:["订单保留期限、跨平台缺省字段与多券团购的聚合方式","时间字段的口径：优先支付时间，若平台只返回下单时间则以平台时间为准"]}
-  ]},
-  "c-order-detail":{status:"新增",sections:[
-    {h:"页面定位",rows:["从订单明细列表点任意一笔进入，整页展示单笔订单，不再用弹层","左上角返回回到分类列表，并保留原筛选条件"]},
-    {h:"字段来源与枚举",rows:[
-      "主图：平台返回的商品主图，缺失时显示平台名色块",
-      "业务类型：平台类目映射 → 外卖 / 团购 / 电商 / 缺省",
-      "平台：本系统记录的下单渠道 → 美团 / 饿了么 / 淘宝",
-      "订单状态：平台状态映射为用户文案，口径同列表",
-      "实付金额：平台返回的实付金额，缺失时整行隐藏",
-      "支付时间：订单支付时间（非下单时间、非完成时间）",
-      "订单编号：平台返回的订单号，用于客服核对与积分关联",
-      "积分到账：本系统积分流水 → 已到账 +积分 / 待到账（核销后到账）/ 未获得"
-    ]},
-    {h:"类型差异",rows:["外卖区分美团与饿了么状态","团购使用「待使用 / 已核销 / 已失效」，不展示券状态码","电商使用「已付款 / 已收货 / 维权中」"]}
   ]}
 };
 
@@ -597,8 +573,7 @@ const state={
   globalTab:"group",
   railMode:"flow",
   orderFilter:"all",
-  orderPlatformFilter:"all",
-  selectedOrderId:"MT-GB-20261107-2045"
+  orderPlatformFilter:"all"
 };
 let timer=null;let toastTimer=null;
 
@@ -724,12 +699,6 @@ function pointsView(o){
   if(o.pointsState==="pending")return {label:"积分",value:"待到账",cls:"pending"};
   return {label:"积分",value:"未获得",cls:"none"};
 }
-function pointsDetailView(o){
-  if(o.pointsState==="arrived")return {label:"积分到账",value:"已到账 "+o.pointsText,cls:""};
-  if(o.pointsState==="pending")return {label:"积分到账",value:"待到账 · 核销后到账",cls:"pending"};
-  return {label:"积分到账",value:"未获得",cls:"none"};
-}
-function selectedOrder(){return ORDERS.find(o=>o.id===state.selectedOrderId)||ORDERS[3];}
 function orderHeaderView(){
   return '<div class="order-head">'
     +'<button class="order-back" data-act="back-home">‹ 返回</button>'
@@ -746,7 +715,7 @@ function orderListBody(){
     const t=BUSINESS_TYPES[o.type];
     const pv=pointsView(o);
     const statusColor=o.pointsState==="arrived"?"#21845b":o.pointsState==="pending"?"#a66b24":"#858f89";
-    return '<article class="ob-card" role="button" tabindex="0" data-field-id="FD-ORDER-CARD-'+o.id+'" data-act="order-detail" data-order-id="'+o.id+'">'
+    return '<article class="ob-card" data-field-id="FD-ORDER-CARD-'+o.id+'">'
       +'<div class="ob-thumb" data-brand="'+esc(p.name)+'"><img src="'+imgUrl(o.img)+'" alt="'+esc(o.title)+'" loading="lazy" onerror="this.parentNode.classList.add(\'img-fail\')"></div>'
       +'<div class="ob-main">'
       +'<div class="ob-head"><div class="ob-badges">'
@@ -773,36 +742,6 @@ function orderListBody(){
     +subnav
     +'<div class="order-summary">'+(filter==="all"?'按业务类型归类，共 '+list.length+' 笔订单':BUSINESS_TYPES[filter].label+'订单 · '+list.length+' 笔')+'</div>'
     +'<div class="page-scroll order-list">'+(items||empty)+'</div></div>';
-}
-function orderDetailPage(){
-  const o=selectedOrder();
-  const p=PLATFORMS[o.platform];
-  const t=BUSINESS_TYPES[o.type];
-  const pv=pointsDetailView(o);
-  const rows=[
-    ["业务类型",t.label],
-    ["平台",p.name],
-    ["订单状态",o.orderStatus],
-    ...(o.amount?[["实付金额",o.amount]]:[]),
-    ["支付时间",o.time],
-    ["订单编号",o.id]
-  ];
-  return '<div class="mobile-page">'
-    +'<div class="order-head">'
-    +'<button class="order-back" data-act="order-detail-close">‹ 返回</button>'
-    +'<h1 class="order-title">订单详情</h1>'
-    +'<span class="order-meta">单笔</span>'
-    +'</div>'
-    +'<div class="order-page od-page">'
-    +'<div class="od-hero" data-brand="'+esc(p.name)+'"><img src="'+imgUrl(o.img)+'" alt="'+esc(o.title)+'" onerror="this.parentNode.classList.add(\'img-fail\')"></div>'
-    +'<h2 class="od-name">'+esc(o.title)+'</h2>'
-    +'<div class="detail-badges"><span class="ob-type" style="background:'+t.bg+';color:'+t.color+'">'+t.label+'</span><span class="ob-plat" style="background:'+p.color+';color:'+p.text+'">'+p.name+'</span></div>'
-    +'<dl class="detail-grid">'+rows.map(r=>'<div class="detail-row"><dt>'+r[0]+'</dt><dd>'+esc(r[1])+'</dd></div>').join("")+'</dl>'
-    +'<div class="detail-points '+pv.cls+'"><span>'+pv.label+'</span><b>'+pv.value+'</b></div>'
-    +'<div class="detail-note">'+esc(o.note)+'</div>'
-    +'<div class="detail-actions"><button class="btn-primary" data-act="order-detail-close">返回订单列表</button></div>'
-    +'</div>'
-    +'</div>';
 }
 function subscribeDrawerView(){
   return '<div class="mask" data-act="subscribe-deny"></div>'
@@ -901,7 +840,6 @@ function frameView(){
   if(k==="x-error"){ return '<div class="mobile-page">'+headerView()+errorBody()+'</div>'; }
 
   if(k==="c-order-list"){ return '<div class="mobile-page">'+orderHeaderView()+orderListBody()+'</div>'; }
-  if(k==="c-order-detail"){ return orderDetailPage(); }
   if(k==="b-subscribe-drawer"){
     return '<div class="mobile-page">'+headerView()+listBody()+'</div>'
       +subscribeDrawerView();
@@ -963,7 +901,7 @@ function go(key, opts){
   state.pendingCity=null;
   if(key==="c-home-city")state.tab="city";
   if(key==="c-home-today"||key==="a-auth"||key==="b-locating")state.tab="today";
-  state.globalTab=(key==="c-order-list"||key==="c-order-detail"||key==="b-points-arrived")?"mine":"group";
+  state.globalTab=(key==="c-order-list"||key==="b-points-arrived")?"mine":"group";
   const frameFlow=FRAMES[key]&&FRAMES[key].flow;
   if(frameFlow)state.activeFlowId=frameFlow;  // frame 切换时同步 rail 高亮
   renderAll();
@@ -1140,7 +1078,7 @@ document.addEventListener("click",e=>{
     let frameKey=null, openSheetKey=null;
     const map={
       "F-MAIN":     [ ["a-auth",null], ["b-locating",null], ["c-home-today",null], ["c-home-today","c2-sheet"], ["c-home-city",null] ],
-      "F-MAIN2":    [ ["b-subscribe-drawer",null], ["x-subscribe-rejected",null], ["b-points-arrived",null], ["c-order-list",null], ["c-order-detail",null] ],
+      "F-MAIN2":    [ ["b-subscribe-drawer",null], ["x-subscribe-rejected",null], ["b-points-arrived",null], ["c-order-list",null] ],
       "F-ERR-AUTH": [ ["x-denied",null], ["x-failed",null] ],
       "F-ERR-API":  [ ["x-empty",null], ["x-error",null] ]
     };
@@ -1232,11 +1170,7 @@ document.addEventListener("click",e=>{
   if(act==="subscribe-back"){go("c-home-today");return;}
   if(act==="continue-external"){go("c-home-today");toast("继续前往美团");return;}
   if(act==="points-dismiss"){go("c-order-list");return;}
-  if(act==="points-open-order"){
-    state.selectedOrderId="MT-GB-20261105-1830";
-    go("c-order-detail");
-    return;
-  }
+  if(act==="points-open-order"){go("c-order-list");return;}
 
   // —— 订单明细：业务类型与外卖平台筛选 ——
   if(act==="order-filter"){
@@ -1246,12 +1180,6 @@ document.addEventListener("click",e=>{
     return;
   }
   if(act==="order-platform-filter"){state.orderPlatformFilter=actEl.dataset.p;renderAll();return;}
-  if(act==="order-detail"){
-    state.selectedOrderId=actEl.dataset.orderId;
-    go("c-order-detail");
-    return;
-  }
-  if(act==="order-detail-close"){go("c-order-list");return;}
 
   if(act==="noop")return;
 });
@@ -1266,10 +1194,9 @@ document.addEventListener("change",e=>{
 
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){
-    if(state.currentRoute==="c-order-detail")go("c-order-list");
-    else if(state.sheet)closeSheet();
+    if(state.sheet)closeSheet();
   }
-  if((e.key==="Enter"||e.key===" ")&&e.target.matches('[data-act="order-detail"],[data-act="product"]'))e.target.click();
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches('[data-act="product"]'))e.target.click();
 });
 
 // 初始化 activeFlowId 到主链路
