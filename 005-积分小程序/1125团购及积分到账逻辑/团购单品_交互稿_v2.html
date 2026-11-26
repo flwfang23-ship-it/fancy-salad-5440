@@ -341,8 +341,7 @@ const FRAMES = {
   "a-auth":    {id:"A1", frame:"首次进入 · 定位授权", kind:"groupbuy-home", name:"附近团购 · 首次进入", flow:"F-MAIN", stepIndex:0},
   "b-locating":{id:"A2", frame:"定位中", kind:"groupbuy-home", name:"附近团购 · 定位中", flow:"F-MAIN", stepIndex:1},
   "c-home-today":{id:"A3", frame:"团购首页 · 今日必推", kind:"groupbuy-home", name:"附近团购 · 今日必推", flow:"F-MAIN", stepIndex:2},
-  "c2-sheet":  {id:"A4", frame:"切换位置", kind:"groupbuy-home", name:"附近团购 · 切换位置", flow:"F-MAIN", stepIndex:3},
-  "c-home-city":{id:"A5", frame:"切换后 · 同城热销", kind:"groupbuy-home", name:"附近团购 · 同城热销", flow:"F-MAIN", stepIndex:4},
+  "c-home-city":{id:"A4", frame:"同城热销", kind:"groupbuy-home", name:"附近团购 · 同城热销", flow:"F-MAIN", stepIndex:3},
 
   "b-subscribe-drawer":{id:"A6", frame:"首次取链 · 订阅抽屉", kind:"order", name:"取链 · 订阅抽屉", flow:"", stepIndex:0},
   "x-subscribe-rejected":{id:"A7", frame:"订阅被拒绝", kind:"order", name:"订阅被拒绝", flow:"", stepIndex:1},
@@ -361,20 +360,19 @@ function routeOf(key){return FRAMES[key]||{id:"",frame:key,name:key,flow:"main",
  * ② 流程数据 —— 面向用户任务，不在流程目录暴露接口字段
  * ============================================================ */
 const FLOWS=[
-  { group:"主链路（5帧）", flows:[
-    { id:"F-MAIN", summary:"位置团购", goal:"让用户按当前位置找到附近的团购单品",
+  { group:"主链路（4帧）", flows:[
+    { id:"F-MAIN", summary:"位置团购", goal:"按用户当前位置（经纬度）召回附近团购单品",
       steps:[
-        { title:"说明位置用途", sub:"用户可允许定位，也可选择手动选城市" },
-        { title:"定位中", sub:"展示加载状态，避免误以为页面卡住" },
-        { title:"浏览附近团购", sub:"先看今日推荐，再按需切换榜单" },
-        { title:"切换位置", sub:"选择城市与商圈后刷新商品" },
-        { title:"查看同城热销", sub:"切换榜单后保留当前城市与商圈" }
+        { title:"说明位置用途", sub:"向用户说明定位用途，请求授权" },
+        { title:"定位中", sub:"wx.getLocation 拿经纬度，展示加载状态" },
+        { title:"浏览附近团购", sub:"按经纬度召回附近商品，默认展示今日推荐" },
+        { title:"查看同城热销", sub:"切换榜单后保留当前定位结果" }
       ]}
   ]},
   { group:"关键异常（4帧）", flows:[
     { id:"F-ERR-AUTH", summary:"授权兜底", goal:"授权失败时给用户两个明确出口",
       start:"用户拒绝 / 系统定位关闭", steps:[
-        { title:"拒绝授权", sub:"主按钮手动选城市；次按钮重新授权" },
+        { title:"拒绝授权", sub:"主按钮重新授权定位；次按钮看全城兜底" },
         { title:"定位失败", sub:"检查定位开关 / 权限 / 网络" }
       ]},
     { id:"F-ERR-API", summary:"接口兜底", goal:"接口失败或商圈空时给明确状态与重试出口",
@@ -399,8 +397,7 @@ const PAGE_TREE=[
         "c-home-today":{name:"团购首页 · 今日必推"},
         "c-home-city":{name:"团购首页 · 同城热销"}
       },
-      sheets:["c2-sheet"],
-      sheetMeta:{ "c2-sheet":{name:"切换位置弹层"} }},
+      sheets:[], sheetMeta:{}},
     { code:"GB-ERR", name:"异常兜底", frames:["x-denied","x-failed","x-empty","x-error"],
       frameMeta:{
         "x-denied":{name:"拒绝授权"},
@@ -425,8 +422,8 @@ const PAGE_TREE=[
  * ============================================================ */
 const NOTES={
   "a-auth":{status:"已改待审",sections:[
-    {h:"用户可见",rows:["说明位置仅用于推荐附近团购","允许定位与手动选城市都有明确出口"]},
-    {h:"验收",rows:["点击弹窗正文不会误触拒绝","拒绝后仍可手动选择城市"]},
+    {h:"用户可见",rows:["说明位置仅用于推荐附近团购","允许定位是主路径，拒绝后仍可使用全城兜底"]},
+    {h:"验收",rows:["点击弹窗正文不会误触拒绝","拒绝后进入拒绝授权页"]},
     {h:"待确认",rows:["首次进入是否立即申请位置，还是由用户主动触发"]}
   ]},
   "b-locating":{status:"已改待审",sections:[
@@ -434,23 +431,19 @@ const NOTES={
     {h:"验收",rows:["加载期间不显示上一位置的商品","重试后流程目录只高亮位置团购"]}
   ]},
   "c-home-today":{status:"已改待审",sections:[
-    {h:"用户可见字段",rows:["位置、榜单、商品名、售价、可选标签、销量、可用门店数","不展示佣金、转链参数、接口字段或内部口径"]},
-    {h:"交互",rows:["点击位置切换城市与商圈","点击商品先选择是否接收到账提醒，再继续前往平台"]},
+    {h:"用户可见字段",rows:["位置（经纬度反查商圈）、榜单、商品名、售价、可选标签、销量、可用门店数","不展示佣金、转链参数、接口字段或内部口径"]},
+    {h:"交互",rows:["位置 pill 纯展示当前定位结果，不可点","点击商品先选择是否接收到账提醒，再继续前往平台"]},
     {h:"待确认",rows:["首页默认使用“今日必推”还是“同城热销”"]}
   ]},
-  "c2-sheet":{status:"已改待审",sections:[
-    {h:"用户可见",rows:["当前定位、城市、商圈与全城选项","只说明选择后会刷新商品，不展示编码或接口说明"]},
-    {h:"验收",rows:["关闭回到原榜单","切换位置后榜单选中态与页面标题一致"]}
-  ]},
   "c-home-city":{status:"已改待审",sections:[
-    {h:"用户可见",rows:["同城热销榜单与当前城市/商圈","门店数表示可用范围，不表达距离"]}
+    {h:"用户可见",rows:["同城热销榜单与当前定位商圈","门店数表示可用范围，不表达距离"]}
   ]},
   "x-denied":{status:"异常",sections:[
-    {h:"用户可见",rows:["说明未获得位置","主操作手动选城市，次操作重新授权"]},
-    {h:"验收",rows:["不静默使用默认城市冒充当前位置"]}
+    {h:"用户可见",rows:["说明未获得位置","主操作重新授权定位，次操作看全城兜底"]},
+    {h:"验收",rows:["不静默使用默认位置冒充当前定位"]}
   ]},
   "x-failed":{status:"异常",sections:[
-    {h:"用户可见",rows:["定位失败原因使用通俗描述","重新定位与手动选城市两个出口"]}
+    {h:"用户可见",rows:["定位失败原因使用通俗描述","重新定位与看全城兜底两个出口"]}
   ]},
   "x-empty":{status:"异常",sections:[
     {h:"用户可见",rows:["明确是当前商圈暂无商品","可以看全城或换商圈"]}
@@ -490,14 +483,7 @@ const NOTES={
 /* ============================================================
  * ⑤ 商品数据（mock）
  * ============================================================ */
-const CITIES={
-  "北京":{areas:["国贸","三里屯","望京","中关村","西单"]},
-  "上海":{areas:["陆家嘴","静安寺","徐家汇","南京西路"]},
-  "广州":{areas:["天河城","珠江新城","北京路","上下九"]},
-  "深圳":{areas:["福田CBD","南山科技园","海岸城","东门"]},
-  "成都":{areas:["春熙路","太古里","天府三街","宽窄巷子"]},
-  "杭州":{areas:["武林广场","西湖","滨江","钱江新城"]}
-};
+// 经纬度定位模式下不再需要城市列表
 const EMPTY_AREAS={"西单":1};
 
 const SHARED=[
@@ -558,7 +544,6 @@ const fmt = n => Number(n).toLocaleString("en-US");
 const state={
   currentRoute:"a-auth",  // frame key
   sheet:null,              // sheet key 或 null
-  pendingCity:null,
   pendingProductName:null,
   city:"北京",
   area:"国贸",
@@ -582,17 +567,16 @@ function productsFor(){
 function headerView(opts){
   const locating=!!(opts&&opts.locating);
   const locText=locating?"定位中…":esc(state.city+"·"+state.area);
-  const sub=locating?"正在获取你的位置…"
+  const sub=locating?"正在通过经纬度获取你的位置…"
     :state.tab==="city"
-      ?"看看本城正在热卖的团购"
-      :"为你精选附近可用的团购";
+      ?"本城正在热卖的团购"
+      :"已按当前位置（经纬度）为你筛选";
   // 用 table-row 模式 + inline-block 从根上防止 flex 换行
   return '<div style="flex:none;padding:8px 16px 12px;background:linear-gradient(180deg,#e3f1e9 0%,#f4faf6 58%,#fff 100%)">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:0">'
-    +'<div style="display:inline-flex;align-items:center;flex-wrap:nowrap;height:28px;padding:0 10px;border-radius:99px;background:#fff;border:1px solid #dfeeee;font-size:11.5px;font-weight:800;color:var(--stamp-ink);box-shadow:0 2px 7px rgba(23,61,42,.06);white-space:nowrap;overflow:hidden;cursor:'+(locating?"default":"pointer")+'" data-act="'+(locating?"noop":"open-loc")+'">'
+    +'<div style="display:inline-flex;align-items:center;flex-wrap:nowrap;height:28px;padding:0 10px;border-radius:99px;background:#fff;border:1px solid #dfeeee;font-size:11.5px;font-weight:800;color:var(--stamp-ink);box-shadow:0 2px 7px rgba(23,61,42,.06);white-space:nowrap;overflow:hidden;cursor:default">'
     +'<span style="display:inline-flex;width:11px;height:11px;flex:none">'+SVG.pin+'</span>'
     +'<span style="white-space:nowrap">'+locText+'</span>'
-    +'<span style="display:inline-flex;width:8px;height:8px;margin-left:1px;flex:none">'+SVG.chev+'</span>'
     +'</div>'
     +'<div style="height:28px;display:inline-flex;align-items:center;padding:0 10px;border-radius:99px;background:rgba(255,255,255,.72);border:1px solid #dfeeee;font-size:10px;color:var(--green);font-weight:700;white-space:nowrap;cursor:'+(locating?"default":"pointer")+'" data-act="'+(locating?"noop":"relocate")+'">'+(locating?"请稍候":"重新定位")+'</div>'
     +'</div>'
@@ -637,10 +621,10 @@ function emptyBody(){
   return '<div class="page-scroll"><div class="ex-body">'
     +'<div class="ex-icon">'+SVG.empty+'</div>'
     +'<h2 class="ex-title">'+esc(state.city+"·"+state.area)+' 暂无团购</h2>'
-    +'<p class="ex-desc">这个商圈暂时没有可用的团购单品，可以看看全城，或换一个商圈。</p>'
+    +'<p class="ex-desc">当前位置附近暂时没有可用的团购单品，可以看看全城热门。</p>'
     +'<div class="ex-actions">'
     +'<button class="btn-primary" data-act="all-city">看看全城团购</button>'
-    +'<button class="btn-ghost" data-act="open-loc">换个商圈</button>'
+    +'<button class="btn-ghost" data-act="relocate">重新定位</button>'
     +'</div>'
     +'</div></div>';
 }
@@ -651,7 +635,7 @@ function errorBody(){
     +'<p class="ex-desc">团购商品暂时没能加载出来，可能是网络波动或服务繁忙。你的位置已保留为 '+esc(state.city+"·"+state.area)+'。</p>'
     +'<div class="ex-actions">'
     +'<button class="btn-primary" data-act="retry-api">重新加载</button>'
-    +'<button class="btn-ghost" data-act="open-loc">换个位置试试</button>'
+    +'<button class="btn-ghost" data-act="relocate">重新定位</button>'
     +'</div>'
     +'</div></div>';
 }
@@ -792,7 +776,7 @@ function frameView(){
       +'<div class="modal-mask">'
         +'<div class="modal" style="cursor:auto"><div class="wx-icon">团</div>'
         +'<h2>获取你的位置信息</h2>'
-        +'<p>用于为你推荐附近的团购单品，不会用于其他用途。拒绝后仍可手动选择城市。</p>'
+        +'<p>用于按你的经纬度推荐附近团购单品，不会用于其他用途。</p>'
         +'<div class="modal-actions"><button class="secondary" data-act="deny">拒绝</button><button class="primary" data-act="allow">允许</button></div>'
         +'</div></div>';
   }
@@ -813,9 +797,9 @@ function frameView(){
     return '<div class="mobile-page">'
       +exceptionHomeView(
         "未获取到你的位置",
-        "你还没有允许小程序获取位置。手动选择城市后，同样可以查看该城市的团购单品。",
-        ["手动选择城市与商圈","页面会明确展示当前选择","之后仍可重新定位"],
-        '<button class="btn-primary" data-act="open-loc">手动选择城市</button><button class="btn-ghost" data-act="relocate">重新授权定位</button>',
+        "你还没有允许小程序获取位置。开启定位后，会按你的经纬度推荐附近团购。",
+        ["重新授权后可正常查看附近团购","也可先看全城热门团购","之后可随时重新定位"],
+        '<button class="btn-primary" data-act="relocate">重新授权定位</button><button class="btn-ghost" data-act="all-city">看看全城团购</button>',
         "", true)
       +'</div>';
   }
@@ -824,8 +808,8 @@ function frameView(){
       +exceptionHomeView(
         "定位失败，请重试",
         "没能获取到你的位置，可能是系统定位关闭、信号弱或请求超时。",
-        ["检查手机定位开关与微信定位权限","换到信号更好的位置后重试","也可以直接手动选择城市"],
-        '<button class="btn-primary" data-act="relocate">重新定位</button><button class="btn-ghost" data-act="open-loc">手动选择城市</button>',
+        ["检查手机定位开关与微信定位权限","换到信号更好的位置后重试","也可先看全城热门团购"],
+        '<button class="btn-primary" data-act="relocate">重新定位</button><button class="btn-ghost" data-act="all-city">看看全城团购</button>',
         "", true)
       +'</div>';
   }
@@ -858,31 +842,10 @@ function tabbarView(){
 }
 
 /* ============================================================
- * ⑩ sheet / modal
+ * ⑩ sheet / modal —— 经纬度定位模式下不再提供切换位置弹层
  * ============================================================ */
 function sheetView(){
-  if(state.sheet!=="c2-sheet")return "";
-  const sc=state.pendingCity||state.city;
-  const c=CITIES[sc];
-  return '<div class="mask" data-act="close-sheet"></div>'
-    +'<section class="sheet" role="dialog" aria-label="切换位置">'
-    +'<div class="sheet-handle"></div>'
-    +'<div class="sheet-head"><div class="sheet-title"><h2>切换位置</h2><p>选择要查看的城市与商圈</p></div>'
-    +'<button class="sheet-close" data-act="close-sheet" aria-label="关闭">✕</button></div>'
-    +'<button class="loc-now" data-act="relocate">'+SVG.pin+'<b>使用当前定位</b><span>'+esc(state.city+"·"+state.area)+'</span></button>'
-    +'<div class="sheet-label">城市</div>'
-    +'<div class="city-row">'+Object.keys(CITIES).map(city=>
-      '<button class="city-chip '+(city===sc?"on":"")+'" data-act="city" data-city="'+city+'">'+city+'</button>'
-    ).join("")+'</div>'
-    +'<div class="sheet-label">商圈 · '+sc+'</div>'
-    +c.areas.map(area=>
-      '<button class="area-row '+(sc===state.city&&area===state.area?"on":"")+'" data-act="area" data-area="'+area+'">'
-      +'<span>'+area+'</span><em>'+(EMPTY_AREAS[area]?"暂无团购":(sc===state.city&&area===state.area?"当前":""))+'</em></button>'
-    ).join("")
-    +'<button class="area-row '+(sc===state.city&&state.area==="全城"?"on":"")+'" data-act="area" data-area="全城">'
-    +'<span>全城</span><em>不限商圈</em></button>'
-    +'<div class="sheet-tip">选择后会按新位置刷新团购商品。</div>'
-    +'</section>';
+  return "";
 }
 
 /* ============================================================
@@ -890,8 +853,7 @@ function sheetView(){
  * ============================================================ */
 function go(key, opts){
   state.currentRoute=key;
-  state.sheet=(opts&&opts.sheet)||null;
-  state.pendingCity=null;
+  state.sheet=null;
   if(key==="c-home-city")state.tab="city";
   if(key==="c-home-today"||key==="a-auth"||key==="b-locating")state.tab="today";
   state.globalTab=(key==="c-order-list"||key==="b-points-arrived")?"mine":"group";
@@ -900,7 +862,7 @@ function go(key, opts){
   renderAll();
 }
 function openSheet(key){state.sheet=key;renderAll();}
-function closeSheet(){state.sheet=null;state.pendingCity=null;renderAll();}
+function closeSheet(){state.sheet=null;renderAll();}
 
 function renderScreen(){
   document.getElementById("screen").innerHTML=frameView();
@@ -1013,7 +975,7 @@ function renderNotes(){
   if(state.sheet)n=NOTES[state.sheet]||n;
   document.getElementById("noteStatus").textContent=n.status;
   document.getElementById("noteStatus").className="inspector-status"+(n.status==="异常"?" warn":"");
-  document.getElementById("noteSub").textContent=state.sheet?"切换位置 · 弹层":routeOf(state.currentRoute).name;
+  document.getElementById("noteSub").textContent=routeOf(state.currentRoute).name;
   document.getElementById("noteBody").innerHTML=n.sections.map(s=>
     '<section class="note-section"><h4>'+s.h+'</h4>'
     +s.rows.map(r=>'<div class="note-row"><i>'+PAD2((s.rows.indexOf(r))+1)+'</i><span>'+r+'</span></div>').join("")
@@ -1038,7 +1000,6 @@ function startLocating(){
   clearTimeout(timer);
   state.currentRoute="b-locating";
   state.sheet=null;
-  state.pendingCity=null;
   state.activeFlowId="F-MAIN";
   state.globalTab="group";
   renderAll();
@@ -1070,7 +1031,7 @@ document.addEventListener("click",e=>{
     const idx=Number(stepEl.dataset.step);
     let frameKey=null, openSheetKey=null;
     const map={
-      "F-MAIN":     [ ["a-auth",null], ["b-locating",null], ["c-home-today",null], ["c-home-today","c2-sheet"], ["c-home-city",null] ],
+      "F-MAIN":     [ ["a-auth",null], ["b-locating",null], ["c-home-today",null], ["c-home-city",null] ],
       "F-ERR-AUTH": [ ["x-denied",null], ["x-failed",null] ],
       "F-ERR-API":  [ ["x-empty",null], ["x-error",null] ]
     };
@@ -1114,23 +1075,10 @@ document.addEventListener("click",e=>{
   if(act==="deny"){clearTimeout(timer);state.activeFlowId="F-ERR-AUTH";go("x-denied");return;}
   if(act==="relocate"){startLocating();return;}
   if(act==="retry-api"){startLocating();return;}
-  if(act==="open-loc"){state.sheet="c2-sheet";state.pendingCity=state.city;renderAll();return;}
   if(act==="close-sheet"){closeSheet();return;}
   if(act==="back-home"){state.activeFlowId="F-MAIN";go("c-home-today");return;}
-  if(act==="city"){state.pendingCity=actEl.dataset.city;renderSheet();renderRail();renderFlowCol();return;}
-  if(act==="area"){
-    state.city=state.pendingCity||state.city;
-    state.pendingCity=null;
-    state.area=actEl.dataset.area;
-    state.sheet=null;
-    state.currentRoute=EMPTY_AREAS[state.area]?"x-empty":(state.tab==="city"?"c-home-city":"c-home-today");
-    state.activeFlowId=EMPTY_AREAS[state.area]?"F-ERR-API":"F-MAIN";
-    renderAll();
-    toast(EMPTY_AREAS[state.area]?"该商圈暂无团购":"已切换到 "+state.city+"·"+state.area);
-    return;
-  }
   if(act==="all-city"){
-    state.pendingCity=null;state.area="全城";state.currentRoute=state.tab==="city"?"c-home-city":"c-home-today";state.activeFlowId="F-MAIN";
+    state.area="全城";state.currentRoute=state.tab==="city"?"c-home-city":"c-home-today";state.activeFlowId="F-MAIN";
     renderAll();toast("已切换到 "+state.city+"·全城");return;
   }
   if(act==="tab"){state.tab=actEl.dataset.tab;state.currentRoute=state.tab==="city"?"c-home-city":"c-home-today";state.activeFlowId="F-MAIN";renderAll();return;}
