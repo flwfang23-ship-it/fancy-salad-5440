@@ -241,6 +241,13 @@ body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans
 .ob-thumb.img-fail img{display:none}
 .ob-thumb.img-fail::after{content:attr(data-brand);position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-weight:900;color:var(--green)}
 .ob-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+/* 单笔订单详情页 */
+.od-page{padding:0 16px 20px}
+.od-hero{position:relative;margin:12px 0;height:150px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#e8f2ee,#d8e7e1)}
+.od-hero img{width:100%;height:100%;object-fit:cover;display:block}
+.od-hero.img-fail img{display:none}
+.od-hero.img-fail::after{content:attr(data-brand);position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:900;color:var(--green)}
+.od-name{font-size:15px;font-weight:900;color:var(--stamp-ink);line-height:1.4;margin:0 0 8px}
 .ob-card:hover,.ob-card:focus-visible{border-color:#b9d9c8;box-shadow:0 7px 18px rgba(23,64,42,.09)}
 .ob-head{display:flex;justify-content:space-between;align-items:center}
 .ob-badges{display:flex;align-items:center;gap:5px}
@@ -482,13 +489,32 @@ const NOTES={
   ]},
   "c-order-list":{status:"已改待审",sections:[
     {h:"分类结构",rows:["一级：全部 / 外卖 / 团购 / 电商","外卖二级：全部平台 / 美团 / 饿了么；团购为美团到店，电商当前为淘宝"]},
-    {h:"列表字段",rows:["业务类型、平台、标题或兜底名称、用户状态、时间、积分结果","不在列表堆叠原始订单号、内部状态码、必填商品图"]},
-    {h:"状态口径",rows:["外卖付款后到账；团购券核销后到账；电商付款或收货后到账","未发放时显示“核销后到账”或“未获得积分”，不再写成确定到账积分"]},
-    {h:"待确认",rows:["订单保留期限、跨平台缺省字段与多券团购的聚合方式"]}
+    {h:"字段来源与枚举",rows:[
+      "主图：来自下单平台返回的商品主图（美团 / 饿了么 / 淘宝），缺失时显示平台名色块兜底",
+      "业务类型：由平台商品类目映射而来 → 外卖 / 团购 / 电商 / 缺省（平台未返回类型时显示缺省）",
+      "平台：本系统记录的下单渠道 → 美团 / 饿了么 / 淘宝",
+      "标题：平台返回的商品名称，缺失时用「平台 + 订单」兜底",
+      "订单状态：平台订单状态映射成用户文案 → 外卖：已付款 / 已收货 / 已完成 / 已失效；团购：待使用 / 已核销 / 已失效；电商：已付款 / 已发货 / 已收货 / 维权中",
+      "时间：取订单的支付时间；不是下单时间，也不是完成或核销时间",
+      "金额：平台返回的实付金额，缺失时整行隐藏",
+      "积分：来自本系统积分流水，按订单号关联 → 已到账（显示到账积分）/ 待到账 / 未获得"
+    ]},
+    {h:"状态口径",rows:["外卖付款后到账；团购券核销后到账；电商付款或收货后到账","未发放时显示「待到账」或「未获得」，不再写成确定到账积分"]},
+    {h:"待确认",rows:["订单保留期限、跨平台缺省字段与多券团购的聚合方式","时间字段的口径：优先支付时间，若平台只返回下单时间则以平台时间为准"]}
   ]},
-  "c-order-detail":{status:"已改待审",sections:[
-    {h:"详情字段",rows:["业务类型、平台、用户化订单状态、积分结果","订单编号、时间与金额放在详情内；缺失时整行隐藏"]},
-    {h:"类型差异",rows:["外卖区分美团与饿了么状态","团购使用“待使用 / 已核销 / 已失效”等用户文案，不展示券状态码","电商使用“已付款 / 已收货 / 维权中”等用户文案"]}
+  "c-order-detail":{status:"新增",sections:[
+    {h:"页面定位",rows:["从订单明细列表点任意一笔进入，整页展示单笔订单，不再用弹层","左上角返回回到分类列表，并保留原筛选条件"]},
+    {h:"字段来源与枚举",rows:[
+      "主图：平台返回的商品主图，缺失时显示平台名色块",
+      "业务类型：平台类目映射 → 外卖 / 团购 / 电商 / 缺省",
+      "平台：本系统记录的下单渠道 → 美团 / 饿了么 / 淘宝",
+      "订单状态：平台状态映射为用户文案，口径同列表",
+      "实付金额：平台返回的实付金额，缺失时整行隐藏",
+      "支付时间：订单支付时间（非下单时间、非完成时间）",
+      "订单编号：平台返回的订单号，用于客服核对与积分关联",
+      "积分到账：本系统积分流水 → 已到账 +积分 / 待到账（核销后到账）/ 未获得"
+    ]},
+    {h:"类型差异",rows:["外卖区分美团与饿了么状态","团购使用「待使用 / 已核销 / 已失效」，不展示券状态码","电商使用「已付款 / 已收货 / 维权中」"]}
   ]}
 };
 
@@ -694,9 +720,14 @@ const ORDERS=[
   {id:"TB-EC-20261103-0912",platform:"taobao",type:"ecommerce",title:"三只松鼠坚果大礼包 1328g",amount:"¥89.00",pointsText:"+25 积分",pointsState:"arrived",orderStatus:"已付款",time:"11月3日 09:12",note:"电商订单已满足积分到账条件。",img:"mixed nuts and dried fruit snack gift pack, product photography, white background"}
 ];
 function pointsView(o){
-  if(o.pointsState==="arrived")return {label:"积分已到账",value:o.pointsText,cls:""};
-  if(o.pointsState==="pending")return {label:"积分待到账",value:o.pointsText,cls:"pending"};
-  return {label:"积分结果",value:o.pointsText,cls:"none"};
+  if(o.pointsState==="arrived")return {label:"积分",value:o.pointsText,cls:""};
+  if(o.pointsState==="pending")return {label:"积分",value:"待到账",cls:"pending"};
+  return {label:"积分",value:"未获得",cls:"none"};
+}
+function pointsDetailView(o){
+  if(o.pointsState==="arrived")return {label:"积分到账",value:"已到账 "+o.pointsText,cls:""};
+  if(o.pointsState==="pending")return {label:"积分到账",value:"待到账 · 核销后到账",cls:"pending"};
+  return {label:"积分到账",value:"未获得",cls:"none"};
 }
 function selectedOrder(){return ORDERS.find(o=>o.id===state.selectedOrderId)||ORDERS[3];}
 function orderHeaderView(){
@@ -743,31 +774,35 @@ function orderListBody(){
     +'<div class="order-summary">'+(filter==="all"?'按业务类型归类，共 '+list.length+' 笔订单':BUSINESS_TYPES[filter].label+'订单 · '+list.length+' 笔')+'</div>'
     +'<div class="page-scroll order-list">'+(items||empty)+'</div></div>';
 }
-function orderDetailSheetView(){
+function orderDetailPage(){
   const o=selectedOrder();
   const p=PLATFORMS[o.platform];
   const t=BUSINESS_TYPES[o.type];
-  const pv=pointsView(o);
+  const pv=pointsDetailView(o);
   const rows=[
     ["业务类型",t.label],
     ["平台",p.name],
     ["订单状态",o.orderStatus],
     ...(o.amount?[["实付金额",o.amount]]:[]),
-    ["订单时间",o.time],
+    ["支付时间",o.time],
     ["订单编号",o.id]
   ];
-  return '<div class="mask" data-act="order-detail-close"></div>'
-    +'<section class="sheet" role="dialog" aria-label="订单详情" data-field-id="FD-ORDER-DETAIL">'
-    +'<div class="sheet-handle"></div>'
-    +'<div class="sheet-head"><div class="sheet-title"><h2>订单详情</h2><p>'+t.label+' · '+p.name+'</p></div>'
-    +'<button class="sheet-close" data-act="order-detail-close" aria-label="关闭">✕</button></div>'
-    +'<h3 class="detail-title">'+esc(o.title)+'</h3>'
+  return '<div class="mobile-page">'
+    +'<div class="order-head">'
+    +'<button class="order-back" data-act="order-detail-close">‹ 返回</button>'
+    +'<h1 class="order-title">订单详情</h1>'
+    +'<span class="order-meta">单笔</span>'
+    +'</div>'
+    +'<div class="order-page od-page">'
+    +'<div class="od-hero" data-brand="'+esc(p.name)+'"><img src="'+imgUrl(o.img)+'" alt="'+esc(o.title)+'" onerror="this.parentNode.classList.add(\'img-fail\')"></div>'
+    +'<h2 class="od-name">'+esc(o.title)+'</h2>'
     +'<div class="detail-badges"><span class="ob-type" style="background:'+t.bg+';color:'+t.color+'">'+t.label+'</span><span class="ob-plat" style="background:'+p.color+';color:'+p.text+'">'+p.name+'</span></div>'
     +'<dl class="detail-grid">'+rows.map(r=>'<div class="detail-row"><dt>'+r[0]+'</dt><dd>'+esc(r[1])+'</dd></div>').join("")+'</dl>'
     +'<div class="detail-points '+pv.cls+'"><span>'+pv.label+'</span><b>'+pv.value+'</b></div>'
     +'<div class="detail-note">'+esc(o.note)+'</div>'
     +'<div class="detail-actions"><button class="btn-primary" data-act="order-detail-close">返回订单列表</button></div>'
-    +'</section>';
+    +'</div>'
+    +'</div>';
 }
 function subscribeDrawerView(){
   return '<div class="mask" data-act="subscribe-deny"></div>'
@@ -866,9 +901,7 @@ function frameView(){
   if(k==="x-error"){ return '<div class="mobile-page">'+headerView()+errorBody()+'</div>'; }
 
   if(k==="c-order-list"){ return '<div class="mobile-page">'+orderHeaderView()+orderListBody()+'</div>'; }
-  if(k==="c-order-detail"){
-    return '<div class="mobile-page">'+orderHeaderView()+orderListBody()+'</div>'+orderDetailSheetView();
-  }
+  if(k==="c-order-detail"){ return orderDetailPage(); }
   if(k==="b-subscribe-drawer"){
     return '<div class="mobile-page">'+headerView()+listBody()+'</div>'
       +subscribeDrawerView();
