@@ -1,0 +1,1256 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>附近团购 · C 端交互稿 v3（交付优化版）</title>
+<style>
+/* ============================================================
+ * ① 设计 token —— 直接复用积分小程序调色板
+ * ============================================================ */
+:root{
+  --ink:#171615;--ink2:#625e59;--ink3:#9c9690;--line:#ece9e5;--panel:#fff;--stage:#f1f1f2;
+  --green:#21845b;--red:#d85a42;--orange:#d78b38;--blue:#1686b8;
+  --stamp-bg:#f7f3ea;--stamp-paper:#fffdf8;--stamp-ink:#3c2622;--stamp-muted:#958d89;
+  --stamp-accent:#d9903d;--stamp-line:#e7e0d6;
+  --sans:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+button,select{font:inherit}
+button{color:inherit}
+body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans);color:var(--ink)}
+.app{display:grid;grid-template-columns:232px 300px minmax(560px,1fr);height:100vh}
+
+/* ---------- rail 左栏 ---------- */
+.rail{min-height:0;display:flex;flex-direction:column;border-right:1px solid #dfdfe1;background:#fff}
+.rail-head{padding:18px 16px 13px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.92)}
+.eyebrow{font:700 9px/1 var(--mono);letter-spacing:.18em;color:var(--ink3);text-transform:uppercase}
+.rail-title{margin-top:8px;font-size:16px;font-weight:800;letter-spacing:.04em}
+.rail-sub{margin-top:5px;font-size:10.5px;color:var(--ink3);line-height:1.45}
+.rail-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.rail-meta span{padding:3px 6px;border-radius:5px;background:#f3f3f4;font:700 8px/1.2 var(--mono);color:#777}
+.rail-meta .review{background:#fff1dc;color:#a65e10}
+.rail-body{flex:1;min-height:0;overflow:auto;padding:10px 10px 24px;scrollbar-width:thin}
+.mode-switch{display:flex;gap:3px;padding:3px;background:#f3f3f4;border-radius:8px;margin-bottom:8px}
+.mode-btn{flex:1;padding:6px 0;border:0;border-radius:6px;background:transparent;font-size:11px;color:#888;cursor:pointer}
+.mode-btn.on{background:#fff;color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.group-head{display:flex;align-items:center;gap:7px;padding:14px 8px 7px;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#4a4744}
+.group-head::before{content:"";width:5px;height:5px;border-radius:50%;background:#c8c4c0}
+.group-head em{margin-left:auto;font:400 9px var(--mono);color:#aaa;font-style:normal}
+.rail-item,.page-item{width:100%;border:0;background:transparent;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;text-align:left;cursor:pointer;font-size:12px;color:#555}
+.rail-item:hover,.page-item:hover,.step:hover{background:#f3f3f4}
+.rail-item.on,.page-item.on{background:#eeeef0;color:#151515;font-weight:750}
+.rail-dot{width:5px;height:5px;border-radius:50%;background:#ccc;flex:none}.on .rail-dot{background:#191919}
+.rail-name{min-width:0;flex:1;line-height:1.38;word-break:break-word}
+.rail-sub{display:block;font-style:normal;font-size:9px;font-weight:400;color:#999;margin-top:1px;letter-spacing:.02em}
+.rail-count,.page-code{font:9px var(--mono);color:#aaa}
+
+/* ---------- flowcol 流程栏 ---------- */
+.flowcol{min-height:0;display:flex;flex-direction:column;border-right:1px solid #dfdfe1;background:#fafafa}
+.flow-head{padding:18px 16px 13px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.92)}
+.flow-title{font-size:12.5px;font-weight:800;letter-spacing:.05em}
+.flow-sub{margin-top:5px;font-size:10px;color:#aaa;line-height:1.5}
+.flow-body{flex:1;min-height:0;overflow:auto;padding:10px 10px 24px;scrollbar-width:thin}
+.section-label{margin:16px 8px 7px;font:700 9px var(--mono);letter-spacing:.16em;color:#aaa}
+.step{display:flex;gap:9px;padding:8px;border-radius:8px;cursor:pointer}
+.step.on{background:#fff;box-shadow:0 0 0 1px #e4e2df}
+.step-index{width:22px;height:22px;border:1px solid #bdb8b3;border-radius:50%;display:grid;place-items:center;flex:none;font:700 9px var(--mono);color:#777}
+.step.on .step-index{background:#191919;color:#fff;border-color:#191919}
+.step.ext .step-index{border-style:dashed}
+.step-title{font-size:11.5px;font-weight:700;line-height:1.35}
+.step-sub{font-size:9.5px;color:#aaa;margin-top:2px;line-height:1.45}
+.flow-arrow{height:12px;border-left:1px dashed #ddd;margin-left:19px}
+
+/* ---------- stage 舞台 ---------- */
+.stage{min-width:0;overflow:auto;display:flex;justify-content:center;align-items:center;gap:18px;padding:18px 22px}
+.stage-main{display:flex;flex-direction:column;align-items:center;gap:10px;flex:none}
+.stage-meta{width:392px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:#888;font-size:10.5px}
+.stage-name{display:flex;align-items:center;gap:7px;min-width:0}
+.stage-name i{width:5px;height:5px;border-radius:50%;background:#171615}
+.frame-select{max-width:222px;border:1px solid #ddd9d5;border-radius:7px;background:#fff;padding:6px 7px;font-size:10px;color:#34312e;outline:none}
+
+/* ---------- phone 手机 ---------- */
+.phone{width:392px;height:min(820px,calc(100vh - 88px));min-height:650px;border-radius:44px;background:var(--stamp-bg);box-shadow:0 0 0 1px rgba(0,0,0,.06),0 18px 45px rgba(0,0,0,.13);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.statusbar{height:39px;padding:14px 25px 0;display:flex;align-items:center;justify-content:space-between;flex:none;font:700 10px var(--mono);color:var(--stamp-ink);z-index:8}
+.status-icons{display:flex;gap:4px;align-items:center}
+.status-icons i{display:block;width:4px;height:4px;border-radius:50%;background:#1f1e1c}
+.status-icons b{width:18px;height:9px;border:1.5px solid #1f1e1c;border-radius:3px;display:block;margin-left:4px;position:relative}
+.status-icons b::after{content:"";position:absolute;inset:1px;background:#1f1e1c;border-radius:1px}
+#screen{flex:1;min-height:0;display:flex;position:relative}
+.mobile-page{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;color:var(--stamp-ink);background:#fff}
+.page-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none}
+.page-scroll::-webkit-scrollbar,.sheet::-webkit-scrollbar{display:none}
+#tabbar{flex:none}
+#sheetRoot{position:absolute;inset:0;z-index:30;pointer-events:none}
+.global-tabs{height:62px;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,253,248,.96);border-top:1px solid var(--stamp-line);padding:6px 8px 8px;z-index:10}
+.global-tabs button{border:0;background:transparent;border-radius:13px;color:#9d958f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:8.5px;cursor:pointer}
+.global-tabs button.on{color:var(--stamp-accent);background:#f4ede3;font-weight:800}
+.global-tabs .ico{font-size:17px;line-height:1}
+
+/* ---------- sheet / modal ---------- */
+.mask{position:absolute;inset:0;background:rgba(29,22,17,.35);pointer-events:auto;animation:fade .18s ease both}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:88%;overflow-y:auto;background:var(--stamp-paper);border-radius:26px 26px 0 0;padding:10px 16px 22px;pointer-events:auto;animation:rise .24s cubic-bezier(.2,.8,.25,1) both}
+.sheet-handle{width:34px;height:4px;border-radius:4px;background:#d7d0c8;margin:2px auto 16px}
+.sheet-head{display:flex;align-items:flex-start;gap:10px;padding:0 2px 14px}
+.sheet-title{flex:1;text-align:center}
+.sheet-title h2{font-size:20px}
+.sheet-title p{font-size:11px;color:var(--stamp-muted);margin-top:7px}
+.sheet-close{width:30px;height:30px;border:0;border-radius:11px;background:#f1ede7;color:#8f8780;cursor:pointer}
+.sheet-spacer{width:30px}
+.modal-mask{position:absolute;inset:0;background:rgba(20,15,11,.5);pointer-events:auto;animation:fade .18s ease both}
+.modal{position:absolute;left:34px;right:34px;top:50%;transform:translateY(-50%);background:var(--stamp-paper);border-radius:25px;padding:20px 18px 22px;text-align:center;pointer-events:auto;box-shadow:0 18px 50px rgba(0,0,0,.22);animation:pop .25s cubic-bezier(.2,.8,.25,1) both}
+.modal h2{font-size:19px;margin-top:12px;color:var(--stamp-ink)}
+.modal p{font-size:11px;color:#8f8780;line-height:1.65;margin-top:8px}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-actions button{flex:1;border:0;height:42px;border-radius:13px;font-size:11px;font-weight:800;cursor:pointer}
+.modal-actions .secondary{background:#f0ece6;color:#776f68}
+.modal-actions .primary{background:var(--green);color:#fff}
+#toast{position:absolute;left:50%;bottom:78px;transform:translate(-50%,8px);background:rgba(35,29,25,.92);color:#fff;padding:9px 13px;border-radius:9px;font-size:10.5px;opacity:0;pointer-events:none;transition:.2s;white-space:nowrap;z-index:50;max-width:84%;overflow:hidden;text-overflow:ellipsis}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- inspector 右栏 ---------- */
+.inspector{width:280px;height:min(820px,calc(100vh - 88px));margin-top:38px;background:#fafafa;border:1px solid #dfdcd8;border-radius:15px;overflow:hidden;display:flex;flex-direction:column;flex:none}
+.inspector-head{padding:14px 15px;border-bottom:1px solid #e6e3df;background:#fff}
+.inspector-top{display:flex;align-items:center;gap:8px}
+.inspector-title{font-size:13px;font-weight:800}
+.inspector-status{margin-left:auto;padding:2px 6px;border-radius:4px;background:#e8f6ef;color:#19714b;font-size:8px;font-weight:800}
+.inspector-status.warn{background:#fff0ec;color:#c6503c}
+.inspector-sub{margin-top:4px;font-size:9.5px;color:#aaa}
+.inspector-body{flex:1;overflow:auto;padding:14px 15px}
+.note-section{padding:11px 0;border-bottom:1px solid #e8e5e1}
+.note-section:first-child{padding-top:0}
+.note-section h4{font-size:9px;letter-spacing:.14em;color:#999;margin-bottom:8px}
+.note-row{display:flex;gap:7px;font-size:10.5px;line-height:1.6;color:#666;margin-top:5px}
+.note-row i{font:9px var(--mono);font-style:normal;color:#bbb;flex:none;margin-top:2px}
+.note-row.warn{color:#c6503c;font-weight:650}
+
+/* ---------- 团购业务样式 ---------- */
+.gb-head{padding:2px 16px 10px;background:linear-gradient(180deg,#e3f1e9 0%,#f4faf6 58%,#fff 100%);flex:none}
+.gb-nav{display:flex;align-items:center;justify-content:space-between;height:34px}
+.loc-pill{display:flex !important;align-items:center;flex-wrap:nowrap !important;gap:4px;height:28px;padding:0 10px;border-radius:99px;background:#fff;border:1px solid #dfeeee;font-size:11.5px;font-weight:800;color:var(--stamp-ink);box-shadow:0 2px 7px rgba(23,61,42,.06);white-space:nowrap !important;overflow:hidden}
+.loc-pill svg{width:11px;height:11px;fill:var(--green);flex:none}
+.loc-pill .chev{width:8px;height:8px;fill:#8a9a91;margin-left:1px}
+.ghost-btn{height:26px;padding:0 9px;border-radius:99px;background:rgba(255,255,255,.72);border:1px solid #dfeeee;font-size:10px;color:var(--green);font-weight:700;white-space:nowrap !important;flex:none}
+.gb-title{margin-top:8px;font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1.28;color:var(--stamp-ink)}
+.gb-sub{margin-top:5px;font-size:10px;color:#8a9790;letter-spacing:.01em}
+.gb-tabs{display:flex;gap:6px;margin-top:13px}
+.tabbtn{height:30px;padding:0 14px;border-radius:99px;background:#fff;border:1px solid #e2efe7;font-size:11.5px;font-weight:800;color:var(--ink2);display:flex;align-items:center;gap:4px}
+.tabbtn.on{background:var(--green);border-color:var(--green);color:#fff}
+.gb-strip{margin:10px 2px 0;display:flex;align-items:center;gap:6px;font-size:9.5px;color:#8a9790}
+.gb-strip i{width:5px;height:5px;border-radius:50%;background:var(--green);flex:none}
+.gb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 16px 20px}
+.gb-card{border-radius:14px;background:#fff;border:1px solid #edf3ef;box-shadow:0 5px 14px rgba(23,64,42,.05);overflow:hidden;text-align:left;display:flex;flex-direction:column;min-width:0;cursor:pointer}
+.gb-card:active{transform:scale(.985)}
+.gb-thumb{position:relative;aspect-ratio:1/1;background:linear-gradient(135deg,#e8f2ee,#d8e7e1);overflow:hidden}
+.gb-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.gb-thumb.img-fail img{display:none}
+.gb-thumb.img-fail::after{content:attr(data-brand);position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:900;color:var(--green);letter-spacing:.04em}
+.mt-badge{position:absolute;left:6px;top:6px;height:16px;padding:0 5px;border-radius:4px;background:#ffd100;color:#2b2100;font-size:8.5px;font-weight:900;display:grid;place-items:center;letter-spacing:.02em}
+.sold-badge{position:absolute;right:0;bottom:0;padding:3px 6px;background:rgba(20,32,25,.58);color:#fff;font-size:8px;border-radius:7px 0 0 0;letter-spacing:.02em}
+.gb-info{padding:8px 9px 10px;display:flex;flex-direction:column;gap:5px;flex:1}
+.gb-name{font-size:12px;font-weight:800;line-height:1.38;color:var(--stamp-ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:33px;letter-spacing:-.2px}
+.gb-tagrow{display:flex;gap:3px;overflow:hidden;height:16px}
+.gb-tag{flex:none;height:16px;padding:0 4px;border-radius:3px;font-size:8px;font-weight:700;display:grid;place-items:center;letter-spacing:.01em}
+.gb-tag.rank{background:#fff3e6;color:#b3671c}
+.gb-tag.price{background:#ffeceb;color:#d9432c}
+.gb-tag.score{background:#eef4ee;color:#2f6b51}
+.gb-price{display:flex;align-items:baseline;gap:4px;margin-top:1px}
+.gb-price b{font-size:16.5px;font-weight:900;color:var(--red);letter-spacing:-.4px;line-height:1}
+.gb-price b i{font-style:normal;font-size:9.5px;margin-right:1px;font-weight:800}
+.gb-price s{font-size:9px;color:#a6b1aa}
+.gb-price em{font-style:normal;font-size:8px;font-weight:800;color:var(--red);background:#fff0ec;border-radius:3px;padding:1.5px 3px}
+.gb-meta{display:flex;align-items:center;justify-content:space-between;font-size:8.5px;color:#93a39a;margin-top:auto;padding-top:1px}
+.gb-footer{padding:0 16px 14px;text-align:center;font-size:8.5px;color:#b2bdb6}
+
+/* 骨架 / 定位中 */
+.skeleton-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 16px 20px}
+.sk-card{border-radius:14px;border:1px solid #eef4f0;overflow:hidden;background:#fff}
+.sk-img{aspect-ratio:1/1;background:linear-gradient(100deg,#eef5f1 20%,#f8fbf9 38%,#eef5f1 56%);background-size:220% 100%;animation:shimmer 1.3s infinite linear}
+.sk-body{padding:9px;display:flex;flex-direction:column;gap:6px}
+.sk-line{height:9px;border-radius:4px;background:#f0f5f2;animation:shimmer 1.3s infinite linear}
+.sk-line.w70{width:70%}.sk-line.w45{width:45%}.sk-line.big{height:14px;width:52%}
+@keyframes shimmer{0%{background-position:180% 0}100%{background-position:-20% 0}}
+.locating-bar{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.94);border:1px solid #e3f0e8;box-shadow:0 10px 30px rgba(23,64,42,.12);border-radius:16px;padding:16px 20px;display:flex;align-items:center;gap:11px;z-index:5;width:240px}
+.pin-pulse{width:32px;height:32px;border-radius:50%;background:#e8f4ee;display:grid;place-items:center;flex:none;position:relative}
+.pin-pulse::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid #b7e6cb;animation:pulse 1.4s infinite}
+.pin-pulse svg{width:14px;height:14px;fill:var(--green)}
+@keyframes pulse{0%{transform:scale(.9);opacity:.9}70%{transform:scale(1.25);opacity:0}100%{opacity:0}}
+.locating-bar b{display:block;font-size:12px;font-weight:800;color:var(--stamp-ink)}
+.locating-bar span{display:block;font-size:9.5px;color:#8da095;margin-top:3px}
+
+/* 微信授权 modal */
+.wx-icon{width:46px;height:46px;margin:10px auto 10px;border-radius:12px;background:linear-gradient(145deg,#3ea56e,#21845b);display:grid;place-items:center;color:#fff;font-size:19px;font-weight:900}
+
+/* 异常页 */
+.ex-body{padding:42px 28px 24px;text-align:center}
+.ex-icon{width:76px;height:76px;margin:0 auto;border-radius:50%;background:linear-gradient(160deg,#eaf2ee,#f6faf8);display:grid;place-items:center;border:1px solid #e2ece6}
+.ex-icon svg{width:28px;height:28px;fill:var(--green)}
+.ex-icon.warn{background:linear-gradient(160deg,#fff6ee,#fffdfa);border-color:#f6e7d7}
+.ex-icon.warn svg{fill:#c98a45}
+.ex-title{margin-top:18px;font-size:17px;font-weight:900;letter-spacing:-.3px;color:var(--stamp-ink)}
+.ex-desc{margin:9px auto 0;max-width:280px;font-size:10.5px;line-height:1.7;color:#8b9a91}
+.ex-list{margin:18px auto 0;max-width:290px;text-align:left;background:#f7f3ea;border:1px solid #ecdfc9;border-radius:12px;padding:11px 12px}
+.ex-list div{display:flex;gap:7px;font-size:9.5px;line-height:1.6;color:#6c5e4f;padding:3px 0}
+.ex-list i{font:700 8px var(--mono);color:#b2a79a;font-style:normal;margin-top:1px}
+.ex-actions{margin-top:20px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.btn-primary{width:100%;max-width:290px;height:42px;border:0;border-radius:13px;background:var(--green);color:#fff;font-size:12px;font-weight:800;box-shadow:0 6px 16px rgba(33,132,91,.24);cursor:pointer}
+.btn-primary:active{background:#186b48}
+.btn-ghost{width:100%;max-width:290px;height:40px;border-radius:13px;background:#f0ece6;color:#6c5e4f;font-size:11.5px;font-weight:700;border:0;cursor:pointer}
+.ex-note{margin-top:16px;font-size:8.5px;line-height:1.6;color:#aab5ae}
+
+/* 位置 sheet */
+.sheet-label{font-size:9px;font-weight:800;letter-spacing:.12em;color:#a29a92;margin:12px 2px 7px}
+.loc-now{display:flex;align-items:center;gap:9px;width:100%;padding:10px 11px;border-radius:11px;background:#f7f3ea;border:1px solid #e7e0d6;text-align:left;cursor:pointer}
+.loc-now svg{width:14px;height:14px;fill:var(--green);flex:none}
+.loc-now b{font-size:11px;font-weight:800;color:var(--stamp-ink)}
+.loc-now span{margin-left:auto;font-size:9px;color:var(--green);font-weight:800}
+.city-row{display:flex;gap:6px;flex-wrap:wrap}
+.city-chip{height:26px;padding:0 11px;border-radius:99px;background:#f1ede7;border:1px solid #e7e0d6;font-size:10.5px;color:#6c5e4f;font-weight:700;cursor:pointer}
+.city-chip.on{background:var(--green);border-color:var(--green);color:#fff}
+.area-row{display:flex;align-items:center;width:100%;padding:10px 2px;border-bottom:1px solid #efe9de;text-align:left;font-size:11.5px;color:#3c2622;cursor:pointer}
+.area-row:last-child{border-bottom:0}
+.area-row.on{color:var(--green);font-weight:800}
+.area-row em{margin-left:auto;font-style:normal;font-size:9px;color:#a4ada4}
+.area-row.on em{color:var(--green)}
+.sheet-tip{margin-top:10px;font-size:8.5px;line-height:1.6;color:#a8a19a;background:#f7f3ea;border-radius:8px;padding:8px 9px}
+
+/* 动画 */
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{opacity:.45;transform:translateY(35px)}}
+@keyframes pop{from{opacity:.2;transform:translateY(-48%) scale(.9)}}
+
+/* ---------- 订单明细 ---------- */
+.order-page{background:#fff;flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.order-head{padding:12px 16px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #edf2ef;background:linear-gradient(180deg,#eaf7ef 0%,#fff 100%);flex:none}
+.order-back{height:24px;padding:0 8px;border:0;background:rgba(255,255,255,.7);color:var(--green);font-size:11px;font-weight:800;border-radius:12px;cursor:pointer;display:grid;place-items:center}
+.order-title{flex:1;font-size:13px;font-weight:900;color:var(--stamp-ink);text-align:center}
+.order-meta{font-size:8.5px;color:#aab5ae}
+.order-nav{padding:9px 12px 10px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;border-bottom:1px solid #edf2ef;background:linear-gradient(180deg,#f5fbf7 0%,#fff 100%)}
+.order-nav button{height:28px;border:0;border-radius:9px;background:transparent;color:#7e9388;font-size:11px;font-weight:800;cursor:pointer;padding:0 4px;position:relative}
+.order-nav button.on{color:var(--green);background:#eaf6ef}
+.order-subnav{display:flex;align-items:center;gap:6px;padding:8px 16px;border-bottom:1px solid #edf2ef;background:#fbfdfc}
+.order-subnav span{font-size:8.5px;color:#9eaaa3;margin-right:2px}
+.order-subnav button{height:24px;padding:0 10px;border:1px solid #e1ebe5;border-radius:99px;background:#fff;color:#708078;font-size:9.5px;font-weight:700;cursor:pointer}
+.order-subnav button.on{border-color:var(--green);background:#edf8f2;color:var(--green)}
+.order-list{padding:2px 0 14px}
+.order-summary{padding:10px 16px 2px;font-size:9px;line-height:1.5;color:#87978e}
+.ob-card{margin:10px 16px;border-radius:15px;background:#fff;border:1px solid #e8efeb;box-shadow:0 4px 14px rgba(23,64,42,.05);padding:12px;display:flex;flex-direction:row;gap:11px;align-items:flex-start;cursor:pointer;outline:none}
+.ob-thumb{position:relative;width:72px;height:72px;flex:none;border-radius:11px;overflow:hidden;background:linear-gradient(135deg,#e8f2ee,#d8e7e1)}
+.ob-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.ob-thumb.img-fail img{display:none}
+.ob-thumb.img-fail::after{content:attr(data-brand);position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-weight:900;color:var(--green)}
+.ob-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.ob-card:hover,.ob-card:focus-visible{border-color:#b9d9c8;box-shadow:0 7px 18px rgba(23,64,42,.09)}
+.ob-head{display:flex;justify-content:space-between;align-items:center}
+.ob-badges{display:flex;align-items:center;gap:5px}
+.ob-status{font-size:10.5px;font-weight:800}
+.ob-title{font-size:12.5px;font-weight:800;line-height:1.38;color:var(--stamp-ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ob-type,.ob-plat{height:19px;padding:0 6px;border-radius:5px;font-size:8.5px;font-weight:850;display:grid;place-items:center}
+.ob-meta{display:flex;align-items:center;gap:7px;font-size:9px;color:#96a39c}
+.ob-meta span+span::before{content:"·";margin-right:7px;color:#c0c9c4}
+.ob-points{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid #f0f3f1;font-size:9.5px;color:#75857c}
+.ob-points b{font-size:11.5px;font-weight:900;color:var(--green)}
+.ob-points b.pending{color:#b5732d}.ob-points b.none{color:#9aa49e}
+.ob-chevron{color:#b9c2bd;font-size:15px;line-height:1}
+.order-empty{margin:42px 28px;padding:24px 18px;border:1px dashed #dce8e1;border-radius:14px;text-align:center;color:#8b9991;font-size:10.5px;line-height:1.7;background:#fbfdfc}
+
+/* ---------- 单笔订单详情 ---------- */
+.detail-title{font-size:16px;font-weight:900;line-height:1.4;color:var(--stamp-ink);margin:1px 2px 12px}
+.detail-badges{display:flex;gap:6px;margin-bottom:12px}
+.detail-grid{border:1px solid #ebe5dc;border-radius:13px;background:#fff;overflow:hidden}
+.detail-row{display:flex;align-items:flex-start;gap:12px;padding:10px 11px;border-bottom:1px solid #f1ece5;font-size:10.5px;line-height:1.5}
+.detail-row:last-child{border-bottom:0}
+.detail-row dt{width:62px;flex:none;color:#9a928b}.detail-row dd{flex:1;text-align:right;color:#4d433d;font-weight:700;word-break:break-all}
+.detail-points{margin-top:11px;padding:12px;border-radius:12px;background:#edf8f2;color:#236b4b;display:flex;align-items:center;justify-content:space-between;font-size:10px}
+.detail-points b{font-size:15px}.detail-points.pending{background:#fff7ea;color:#9b651f}.detail-points.none{background:#f4f5f4;color:#7e8782}
+.detail-note{margin-top:10px;padding:9px 10px;border-radius:9px;background:#f7f3ea;color:#8e837b;font-size:9px;line-height:1.6}
+.detail-actions{margin-top:13px}.detail-actions .btn-primary{max-width:none}
+
+/* ---------- 订阅抽屉 ---------- */
+.sub-list{margin:6px 0 0;border:1px solid #e7e0d6;border-radius:12px;overflow:hidden;background:#fff}
+.sub-item{padding:10px 12px;border-bottom:1px solid #f3efe9}
+.sub-item:last-child{border-bottom:0}
+.sub-name{font-size:11.5px;font-weight:800;color:var(--stamp-ink)}
+.sub-desc{font-size:9.5px;color:#8f8780;margin-top:3px;line-height:1.5}
+.sub-actions{display:flex;gap:8px;margin-top:12px}
+.sub-actions .btn-ghost{flex:1}
+.sub-actions .btn-primary{flex:1;background:var(--green);color:#fff;font-size:11.5px;font-weight:800;height:40px;border-radius:13px;border:0;cursor:pointer;box-shadow:0 6px 14px rgba(33,132,91,.22)}
+.sub-tip{margin-top:10px;font-size:8.5px;line-height:1.6;color:#a8a19a;background:#f7f3ea;border-radius:8px;padding:8px 9px}
+
+/* ---------- 积分到账弹窗 ---------- */
+.pa-ring{width:56px;height:56px;border-radius:50%;margin:4px auto 6px;background:linear-gradient(135deg,#43cd8b,#21845b);color:#fff;display:grid;place-items:center;font-size:18px;font-weight:900;box-shadow:0 6px 20px rgba(33,132,91,.35)}
+
+@media(max-width:1220px){.inspector{display:none}.stage{padding-right:18px}}
+@media(max-width:900px){.app{grid-template-columns:210px minmax(520px,1fr)}.flowcol{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="rail-head">
+      <div class="eyebrow">GROUP BUY · PROTOTYPE V3</div>
+      <div class="rail-title">附近团购</div>
+      <div class="rail-sub">位置团购 · 积分到账 · 订单明细</div>
+      <div class="rail-meta"><span>HTML R3</span><span class="review">已改待审</span><span>2026-11-25</span></div>
+    </div>
+    <div class="rail-body" id="railBody"></div>
+  </aside>
+  <section class="flowcol">
+    <div class="flow-head">
+      <div class="flow-title" id="flowTitle"></div>
+      <div class="flow-sub" id="flowSub"></div>
+    </div>
+    <div class="flow-body" id="flowBody"></div>
+  </section>
+  <main class="stage">
+    <div class="stage-main">
+      <div class="stage-meta">
+        <div class="stage-name"><i></i><span id="stageName">附近团购</span></div>
+        <select class="frame-select" id="frameSelect"></select>
+      </div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span class="status-icons"><i></i><i></i><i></i><b></b></span></div>
+        <div id="screen"></div>
+        <div id="tabbar"></div>
+        <div id="sheetRoot"></div>
+        <div id="toast"></div>
+      </div>
+    </div>
+    <aside class="inspector">
+      <div class="inspector-head">
+        <div class="inspector-top">
+          <span class="inspector-title">交互说明</span>
+          <span class="inspector-status" id="noteStatus">核心</span>
+        </div>
+        <div class="inspector-sub" id="noteSub"></div>
+      </div>
+      <div class="inspector-body" id="noteBody"></div>
+    </aside>
+  </main>
+</div>
+<script>
+"use strict";
+
+/* ============================================================
+ * ① 帧数据 —— 14 帧（业务主链路 10 帧 + 异常 4 帧）
+ * ============================================================ */
+const PAD2 = n => String(n).padStart(2, "0");
+
+const FRAMES = {
+  "a-auth":    {id:"A1", frame:"首次进入 · 定位授权", kind:"groupbuy-home", name:"附近团购 · 首次进入", flow:"F-MAIN", stepIndex:0},
+  "b-locating":{id:"A2", frame:"定位中", kind:"groupbuy-home", name:"附近团购 · 定位中", flow:"F-MAIN", stepIndex:1},
+  "c-home-today":{id:"A3", frame:"团购首页 · 今日必推", kind:"groupbuy-home", name:"附近团购 · 今日必推", flow:"F-MAIN", stepIndex:2},
+  "c2-sheet":  {id:"A4", frame:"切换位置", kind:"groupbuy-home", name:"附近团购 · 切换位置", flow:"F-MAIN", stepIndex:3},
+  "c-home-city":{id:"A5", frame:"切换后 · 同城热销", kind:"groupbuy-home", name:"附近团购 · 同城热销", flow:"F-MAIN", stepIndex:4},
+
+  "b-subscribe-drawer":{id:"A6", frame:"首次取链 · 订阅抽屉", kind:"order", name:"取链 · 订阅抽屉", flow:"F-MAIN2", stepIndex:0},
+  "x-subscribe-rejected":{id:"A7", frame:"订阅被拒绝", kind:"order", name:"订阅被拒绝", flow:"F-MAIN2", stepIndex:1},
+  "b-points-arrived":{id:"A8", frame:"积分到账弹窗", kind:"order", name:"积分到账 · 弹窗", flow:"F-MAIN2", stepIndex:2},
+  "c-order-list":{id:"A9", frame:"订单明细 · 分类列表", kind:"order", name:"订单明细 · 分类列表", flow:"F-MAIN2", stepIndex:3},
+  "c-order-detail":{id:"A10", frame:"单笔订单详情", kind:"order", name:"订单明细 · 单笔详情", flow:"F-MAIN2", stepIndex:4},
+
+  "x-denied":  {id:"B1", frame:"拒绝授权", kind:"groupbuy-home", name:"附近团购 · 拒绝授权", flow:"F-ERR-AUTH", stepIndex:0},
+  "x-failed":  {id:"B2", frame:"定位失败", kind:"groupbuy-home", name:"附近团购 · 定位失败", flow:"F-ERR-AUTH", stepIndex:1},
+  "x-empty":   {id:"B3", frame:"商圈无商品", kind:"groupbuy-home", name:"附近团购 · 商圈无商品", flow:"F-ERR-API", stepIndex:0},
+  "x-error":   {id:"B4", frame:"接口加载失败", kind:"groupbuy-home", name:"附近团购 · 接口失败", flow:"F-ERR-API", stepIndex:1}
+};
+
+function routeOf(key){return FRAMES[key]||{id:"",frame:key,name:key,flow:"main",stepIndex:0};}
+
+/* ============================================================
+ * ② 流程数据 —— 面向用户任务，不在流程目录暴露接口字段
+ * ============================================================ */
+const FLOWS=[
+  { group:"主链路（10帧）", flows:[
+    { id:"F-MAIN", summary:"位置团购", goal:"让用户按当前位置找到附近的团购单品",
+      steps:[
+        { title:"说明位置用途", sub:"用户可允许定位，也可选择手动选城市" },
+        { title:"定位中", sub:"展示加载状态，避免误以为页面卡住" },
+        { title:"浏览附近团购", sub:"先看今日推荐，再按需切换榜单" },
+        { title:"切换位置", sub:"选择城市与商圈后刷新商品" },
+        { title:"查看同城热销", sub:"切换榜单后保留当前城市与商圈" }
+      ]},
+    { id:"F-MAIN2", summary:"订单与积分", goal:"用户能理解积分结果，并按业务类型查看订单明细",
+      steps:[
+        { title:"开启到账提醒", sub:"用户选择是否接收积分到账消息；选择后继续前往平台" },
+        { title:"暂不接收提醒", sub:"不影响继续下单，并说明仍可在订单明细中查看" },
+        { title:"查看到账结果", sub:"到账提示只说明结果，不模拟第三方订单完成过程" },
+        { title:"按类型查看订单", sub:"一级分类：外卖 / 团购 / 电商；外卖可再筛美团 / 饿了么" },
+        { title:"查看单笔详情", sub:"展示平台、用户状态、积分结果与必要订单信息" }
+      ]}
+  ]},
+  { group:"关键异常（4帧）", flows:[
+    { id:"F-ERR-AUTH", summary:"授权兜底", goal:"授权失败时给用户两个明确出口",
+      start:"用户拒绝 / 系统定位关闭", steps:[
+        { title:"拒绝授权", sub:"主按钮手动选城市；次按钮重新授权" },
+        { title:"定位失败", sub:"检查定位开关 / 权限 / 网络" }
+      ]},
+    { id:"F-ERR-API", summary:"接口兜底", goal:"接口失败或商圈空时给明确状态与重试出口",
+      steps:[
+        { title:"商圈无商品", sub:"可以查看全城或切换商圈" },
+        { title:"商品加载失败", sub:"保留当前位置并提供重试" }
+      ]}
+  ]}
+];
+function flowById(id){for(const g of FLOWS){for(const f of g.flows){if(f.id===id)return f;}}return null;}
+function groupOfFlow(id){for(const g of FLOWS){for(const f of g.flows){if(f.id===id)return g;}}return null;}
+
+/* ============================================================
+ * ③ 页面树（rail 页面模式）
+ * ============================================================ */
+const PAGE_TREE=[
+  { group:"C 端页面", pages:[
+    { code:"GB", name:"附近团购", frames:["a-auth","b-locating","c-home-today","c-home-city"],
+      frameMeta:{
+        "a-auth":    {name:"首次进入 · 定位授权"},
+        "b-locating":{name:"定位中"},
+        "c-home-today":{name:"团购首页 · 今日必推"},
+        "c-home-city":{name:"团购首页 · 同城热销"}
+      },
+      sheets:["c2-sheet"],
+      sheetMeta:{ "c2-sheet":{name:"切换位置弹层"} }},
+    { code:"GB-ERR", name:"异常兜底", frames:["x-denied","x-failed","x-empty","x-error"],
+      frameMeta:{
+        "x-denied":{name:"拒绝授权"},
+        "x-failed":{name:"定位失败"},
+        "x-empty": {name:"商圈无商品空态"},
+        "x-error": {name:"接口加载失败"}
+      },
+      sheets:[], sheetMeta:{}},
+    { code:"ORDER", name:"积分到账与订单明细", frames:["b-subscribe-drawer","x-subscribe-rejected","b-points-arrived","c-order-list","c-order-detail"],
+      frameMeta:{
+        "b-subscribe-drawer":{name:"开启到账提醒"},
+        "x-subscribe-rejected":{name:"暂不接收提醒"},
+        "b-points-arrived":{name:"积分到账弹窗"},
+        "c-order-list":{name:"订单明细 · 分类列表"},
+        "c-order-detail":{name:"订单明细 · 单笔详情"}
+      },
+      sheets:[], sheetMeta:{}}
+  ]}
+];
+
+/* ============================================================
+ * ④ NOTES —— inspector 四段说明
+ * ============================================================ */
+const NOTES={
+  "a-auth":{status:"已改待审",sections:[
+    {h:"用户可见",rows:["说明位置仅用于推荐附近团购","允许定位与手动选城市都有明确出口"]},
+    {h:"验收",rows:["点击弹窗正文不会误触拒绝","拒绝后仍可手动选择城市"]},
+    {h:"待确认",rows:["首次进入是否立即申请位置，还是由用户主动触发"]}
+  ]},
+  "b-locating":{status:"已改待审",sections:[
+    {h:"用户可见",rows:["骨架屏与“正在定位”提示","成功、失败均有确定落点"]},
+    {h:"验收",rows:["加载期间不显示上一位置的商品","重试后流程目录只高亮位置团购"]}
+  ]},
+  "c-home-today":{status:"已改待审",sections:[
+    {h:"用户可见字段",rows:["位置、榜单、商品名、售价、可选标签、销量、可用门店数","不展示佣金、转链参数、接口字段或内部口径"]},
+    {h:"交互",rows:["点击位置切换城市与商圈","点击商品先选择是否接收到账提醒，再继续前往平台"]},
+    {h:"待确认",rows:["首页默认使用“今日必推”还是“同城热销”"]}
+  ]},
+  "c2-sheet":{status:"已改待审",sections:[
+    {h:"用户可见",rows:["当前定位、城市、商圈与全城选项","只说明选择后会刷新商品，不展示编码或接口说明"]},
+    {h:"验收",rows:["关闭回到原榜单","切换位置后榜单选中态与页面标题一致"]}
+  ]},
+  "c-home-city":{status:"已改待审",sections:[
+    {h:"用户可见",rows:["同城热销榜单与当前城市/商圈","门店数表示可用范围，不表达距离"]}
+  ]},
+  "x-denied":{status:"异常",sections:[
+    {h:"用户可见",rows:["说明未获得位置","主操作手动选城市，次操作重新授权"]},
+    {h:"验收",rows:["不静默使用默认城市冒充当前位置"]}
+  ]},
+  "x-failed":{status:"异常",sections:[
+    {h:"用户可见",rows:["定位失败原因使用通俗描述","重新定位与手动选城市两个出口"]}
+  ]},
+  "x-empty":{status:"异常",sections:[
+    {h:"用户可见",rows:["明确是当前商圈暂无商品","可以看全城或换商圈"]}
+  ]},
+  "x-error":{status:"异常",sections:[
+    {h:"用户可见",rows:["只显示加载失败与重试，不展示错误码","保留当前位置，避免用户重复选择"]}
+  ]},
+  "b-subscribe-drawer":{status:"已改待审",sections:[
+    {h:"用户可见",rows:["本轮只展示“积分到账提醒”一个主题","开启或暂不开启都不阻塞前往平台"]},
+    {h:"范围",rows:["不展示模板 ID、系统调用方式或内部推送规则","不在原型中自动模拟订单完成与到账"]},
+    {h:"待确认",rows:["第二次取链是否再次询问用户开启提醒"]}
+  ]},
+  "x-subscribe-rejected":{status:"已改待审",sections:[
+    {h:"用户可见",rows:["明确暂不接收通知不会影响下单","可继续前往平台，也可返回团购页"]}
+  ]},
+  "b-points-arrived":{status:"已改待审",sections:[
+    {h:"用户可见",rows:["到账积分、对应订单简述","稍后查看或直接进入单笔订单详情"]},
+    {h:"范围",rows:["去除“二次订阅”等技术化表达"]}
+  ]},
+  "c-order-list":{status:"已改待审",sections:[
+    {h:"分类结构",rows:["一级：全部 / 外卖 / 团购 / 电商","外卖二级：全部平台 / 美团 / 饿了么；团购为美团到店，电商当前为淘宝"]},
+    {h:"列表字段",rows:["业务类型、平台、标题或兜底名称、用户状态、时间、积分结果","不在列表堆叠原始订单号、内部状态码、必填商品图"]},
+    {h:"状态口径",rows:["外卖付款后到账；团购券核销后到账；电商付款或收货后到账","未发放时显示“核销后到账”或“未获得积分”，不再写成确定到账积分"]},
+    {h:"待确认",rows:["订单保留期限、跨平台缺省字段与多券团购的聚合方式"]}
+  ]},
+  "c-order-detail":{status:"已改待审",sections:[
+    {h:"详情字段",rows:["业务类型、平台、用户化订单状态、积分结果","订单编号、时间与金额放在详情内；缺失时整行隐藏"]},
+    {h:"类型差异",rows:["外卖区分美团与饿了么状态","团购使用“待使用 / 已核销 / 已失效”等用户文案，不展示券状态码","电商使用“已付款 / 已收货 / 维权中”等用户文案"]}
+  ]}
+};
+
+/* ============================================================
+ * ⑤ 商品数据（mock）
+ * ============================================================ */
+const CITIES={
+  "北京":{areas:["国贸","三里屯","望京","中关村","西单"]},
+  "上海":{areas:["陆家嘴","静安寺","徐家汇","南京西路"]},
+  "广州":{areas:["天河城","珠江新城","北京路","上下九"]},
+  "深圳":{areas:["福田CBD","南山科技园","海岸城","东门"]},
+  "成都":{areas:["春熙路","太古里","天府三街","宽窄巷子"]},
+  "杭州":{areas:["武林广场","西湖","滨江","钱江新城"]}
+};
+const EMPTY_AREAS={"西单":1};
+
+const SHARED=[
+  {n:"瑞幸生椰拿铁兑换券",b:"瑞幸咖啡",p:9.9,o:32,s:"2万+",ps:2321,rank:"同城咖啡人气榜第1名",priceTag:"近7天低价",heat:96,prompt:"iced coconut latte in a clear plastic cup, minimal product photo"},
+  {n:"肯德基香辣鸡腿堡三件套",b:"肯德基",p:19.9,o:34,s:"5万+",ps:1200,rank:"",priceTag:"美团最低价",heat:99,prompt:"fried chicken burger meal with fries on red tray"},
+  {n:"海底捞双人火锅套餐",b:"海底捞",p:198,o:298,s:"5000+",ps:320,rank:"同城火锅热门榜第2名",priceTag:"",heat:88,prompt:"chinese hotpot with sliced beef and rich red broth"},
+  {n:"蜜雪冰城雪王柠檬水",b:"蜜雪冰城",p:5.9,o:12,s:"30万+",ps:8888,rank:"同城饮品销量榜第1名",priceTag:"近7天低价",heat:100,prompt:"two cups of iced lemonade with fresh lemon slices"},
+  {n:"星巴克中杯拿铁兑换券",b:"星巴克",p:19.9,o:33,s:"2万+",ps:620,rank:"",priceTag:"",heat:84,prompt:"hot latte in white paper cup on cafe table"},
+  {n:"必胜客单人午餐套餐",b:"必胜客",p:39.9,o:59,s:"8000+",ps:410,rank:"",priceTag:"近15天低价",heat:80,prompt:"personal pan pizza with fresh salad on white plate"},
+  {n:"麦当劳麦辣鸡腿堡套餐",b:"麦当劳",p:21.9,o:36,s:"4万+",ps:1500,rank:"同城快餐人气榜第3名",priceTag:"",heat:94,prompt:"spicy chicken burger and fries on yellow background"},
+  {n:"喜茶多肉葡萄饮品",b:"喜茶",p:15.9,o:25,s:"1万+",ps:540,rank:"",priceTag:"近7天低价",heat:90,prompt:"grape fruit tea with real grape pieces in clear cup"}
+];
+const LOCAL={
+  "北京":[
+    {n:"茶百道双杯酸奶套餐兑换券",b:"茶百道",p:12.8,o:20,s:"1万+",ps:4509,rank:"望京饮品人气榜第1名",priceTag:"近7天低价",heat:93,prompt:"two cups of yogurt milk tea with strawberry"},
+    {n:"西贝莜面村双人餐",b:"西贝",p:128,o:196,s:"2000+",ps:180,rank:"朝阳西北菜热门榜第1名",priceTag:"",heat:78,prompt:"chinese northwest noodles and braised lamb dishes"}
+  ],
+  "上海":[
+    {n:"小杨生煎双人套餐",b:"小杨生煎",p:29.9,o:46,s:"3万+",ps:860,rank:"静安小吃人气榜第1名",priceTag:"美团最低价",heat:95,prompt:"pan fried pork buns in black iron skillet"},
+    {n:"Manner 拿铁兑换券",b:"Manner",p:15,o:25,s:"1万+",ps:390,rank:"",priceTag:"近7天低价",heat:86,prompt:"flat white coffee in small ceramic cup"}
+  ],
+  "广州":[
+    {n:"点都德双人茶点套餐",b:"点都德",p:88,o:138,s:"2万+",ps:260,rank:"天河早茶热门榜第1名",priceTag:"",heat:92,prompt:"cantonese dim sum steamer baskets on round table"},
+    {n:"茶理宜世招牌奶茶",b:"茶理宜世",p:13.9,o:22,s:"8000+",ps:310,rank:"",priceTag:"近7天低价",heat:82,prompt:"chinese style milk tea with cream top"}
+  ],
+  "深圳":[
+    {n:"木屋烧烤双人套餐",b:"木屋烧烤",p:138,o:218,s:"6000+",ps:220,rank:"福田烧烤热门榜第1名",priceTag:"",heat:89,prompt:"grilled meat skewers on charcoal grill"},
+    {n:"奈雪霸气橙子饮品",b:"奈雪的茶",p:16.9,o:26,s:"1万+",ps:430,rank:"",priceTag:"近7天低价",heat:87,prompt:"orange fruit tea with fresh orange slices"}
+  ],
+  "成都":[
+    {n:"小龙坎双人火锅套餐",b:"小龙坎",p:158,o:238,s:"9000+",ps:280,rank:"春熙路火锅热门榜第1名",priceTag:"",heat:91,prompt:"spicy sichuan hotpot with beef tripe and chili oil"},
+    {n:"书亦烧仙草奶茶",b:"书亦烧仙草",p:8.9,o:15,s:"5万+",ps:760,rank:"",priceTag:"近7天低价",heat:97,prompt:"milk tea with grass jelly and red beans"}
+  ],
+  "杭州":[
+    {n:"新白鹿双人杭帮菜",b:"新白鹿",p:118,o:178,s:"7000+",ps:190,rank:"西湖杭帮菜热门榜第1名",priceTag:"",heat:85,prompt:"hangzhou style chinese dishes with braised pork"},
+    {n:"古茗招牌奶茶",b:"古茗",p:11.9,o:18,s:"6万+",ps:920,rank:"",priceTag:"近7天低价",heat:98,prompt:"milk tea with tapioca pearls on wooden table"}
+  ]
+};
+
+/* ============================================================
+ * ⑥ SVG / 工具
+ * ============================================================ */
+const SVG={
+  pin:'<svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg>',
+  chev:'<svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6H6Z"/></svg>',
+  pinBig:'<svg viewBox="0 0 24 24"><path d="M12 1.5A8 8 0 0 0 4 9.5c0 6 8 13 8 13s8-7 8-13a8 8 0 0 0-8-8Zm0 10.8a2.8 2.8 0 1 1 0-5.6 2.8 2.8 0 0 1 0 5.6Z"/></svg>',
+  alert:'<svg viewBox="0 0 24 24"><path d="M12 2 1 21h22L12 2Zm1 14h-2v2h2v-2Zm0-7h-2v5h2V9Z"/></svg>',
+  empty:'<svg viewBox="0 0 24 24"><path d="M6 3h12l1 5H5l1-5Zm-2 7h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V10Zm5 4h6v2H9v-2Z"/></svg>'
+};
+
+const imgUrl = p => "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=" + encodeURIComponent(p) + "&image_size=square";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c]));
+const fmt = n => Number(n).toLocaleString("en-US");
+
+/* ============================================================
+ * ⑦ 状态机
+ * ============================================================ */
+const state={
+  currentRoute:"a-auth",  // frame key
+  sheet:null,              // sheet key 或 null
+  pendingCity:null,
+  pendingProductName:null,
+  city:"北京",
+  area:"国贸",
+  tab:"today",
+  globalTab:"group",
+  railMode:"flow",
+  orderFilter:"all",
+  orderPlatformFilter:"all",
+  selectedOrderId:"MT-GB-20261107-2045"
+};
+let timer=null;let toastTimer=null;
+
+function productsFor(){
+  if(EMPTY_AREAS[state.area])return [];
+  const list=(LOCAL[state.city]||[]).concat(SHARED);
+  return state.tab==="city"?list.slice().sort((a,b)=>b.heat-a.heat):list;
+}
+
+/* ============================================================
+ * ⑧ 页面视图 —— c-home-today / c-home-city 重构
+ * ============================================================ */
+function headerView(opts){
+  const locating=!!(opts&&opts.locating);
+  const locText=locating?"定位中…":esc(state.city+"·"+state.area);
+  const sub=locating?"正在获取你的位置…"
+    :state.tab==="city"
+      ?"看看本城正在热卖的团购"
+      :"为你精选附近可用的团购";
+  // 用 table-row 模式 + inline-block 从根上防止 flex 换行
+  return '<div style="flex:none;padding:8px 16px 12px;background:linear-gradient(180deg,#e3f1e9 0%,#f4faf6 58%,#fff 100%)">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:0">'
+    +'<div style="display:inline-flex;align-items:center;flex-wrap:nowrap;height:28px;padding:0 10px;border-radius:99px;background:#fff;border:1px solid #dfeeee;font-size:11.5px;font-weight:800;color:var(--stamp-ink);box-shadow:0 2px 7px rgba(23,61,42,.06);white-space:nowrap;overflow:hidden;cursor:'+(locating?"default":"pointer")+'" data-act="'+(locating?"noop":"open-loc")+'">'
+    +'<span style="display:inline-flex;width:11px;height:11px;flex:none">'+SVG.pin+'</span>'
+    +'<span style="white-space:nowrap">'+locText+'</span>'
+    +'<span style="display:inline-flex;width:8px;height:8px;margin-left:1px;flex:none">'+SVG.chev+'</span>'
+    +'</div>'
+    +'<div style="height:28px;display:inline-flex;align-items:center;padding:0 10px;border-radius:99px;background:rgba(255,255,255,.72);border:1px solid #dfeeee;font-size:10px;color:var(--green);font-weight:700;white-space:nowrap;cursor:'+(locating?"default":"pointer")+'" data-act="'+(locating?"noop":"relocate")+'">'+(locating?"请稍候":"重新定位")+'</div>'
+    +'</div>'
+    +'<div style="height:10px"></div>'
+    +'<h1 style="font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1.28;color:var(--stamp-ink);margin:0">附近团购</h1>'
+    +'<p style="margin:5px 0 0;font-size:10px;color:#8a9790;letter-spacing:.01em">'+sub+'</p>'
+    +'<div style="display:flex;gap:6px;margin-top:12px">'
+    +'<button style="height:30px;padding:0 14px;border-radius:99px;background:'+(state.tab==="today"?"var(--green)":"#fff")+';border:1px solid '+(state.tab==="today"?"var(--green)":"#e2efe7")+';font-size:11.5px;font-weight:800;color:'+(state.tab==="today"?"#fff":"var(--ink2)")+';cursor:pointer" data-act="tab" data-tab="today">今日必推</button>'
+    +'<button style="height:30px;padding:0 14px;border-radius:99px;background:'+(state.tab==="city"?"var(--green)":"#fff")+';border:1px solid '+(state.tab==="city"?"var(--green)":"#e2efe7")+';font-size:11.5px;font-weight:800;color:'+(state.tab==="city"?"#fff":"var(--ink2)")+';cursor:pointer" data-act="tab" data-tab="city">同城热销</button>'
+    +'</div>'
+    +'</div>';
+}
+
+function productCard(p){
+  const off=(p.p/p.o*10).toFixed(1);
+  const tags=[];
+  if(p.rank)tags.push('<span class="gb-tag rank">'+esc(p.rank)+'</span>');
+  if(p.priceTag)tags.push('<span class="gb-tag price">'+esc(p.priceTag)+'</span>');
+  return '<article class="gb-card" tabindex="0" role="button" data-field-id="FD-GB-CARD" data-act="product" data-name="'+esc(p.n)+'">'
+    +'<div class="gb-thumb" data-brand="'+esc(p.b)+'">'
+    +'<img src="'+imgUrl(p.prompt)+'" alt="'+esc(p.n)+'" loading="lazy" onerror="this.parentNode.classList.add(\'img-fail\')">'
+    +'<span class="mt-badge">美团</span><span class="sold-badge">已售 '+esc(p.s)+'</span></div>'
+    +'<div class="gb-info">'
+    +'<h3 class="gb-name">'+esc(p.n)+'</h3>'
+    +'<div class="gb-tagrow">'+(tags.join("")||'<span class="gb-tag score">附近可用</span>')+'</div>'
+    +'<div class="gb-price"><b><i>¥</i>'+p.p+'</b><s>¥'+p.o+'</s><em>'+off+'折</em></div>'
+    +'<div class="gb-meta"><span>'+fmt(p.ps)+' 家门店可用</span></div>'
+    +'</div></article>';
+}
+
+function skeletonCards(n){
+  let out="";
+  for(let i=0;i<(n||4);i++){
+    out+='<div class="sk-card"><div class="sk-img"></div><div class="sk-body">'
+      +'<div class="sk-line"></div><div class="sk-line w70"></div><div class="sk-line big"></div><div class="sk-line w45"></div>'
+      +'</div></div>';
+  }
+  return '<div class="skeleton-grid">'+out+'</div>';
+}
+
+function emptyBody(){
+  return '<div class="page-scroll"><div class="ex-body">'
+    +'<div class="ex-icon">'+SVG.empty+'</div>'
+    +'<h2 class="ex-title">'+esc(state.city+"·"+state.area)+' 暂无团购</h2>'
+    +'<p class="ex-desc">这个商圈暂时没有可用的团购单品，可以看看全城，或换一个商圈。</p>'
+    +'<div class="ex-actions">'
+    +'<button class="btn-primary" data-act="all-city">看看全城团购</button>'
+    +'<button class="btn-ghost" data-act="open-loc">换个商圈</button>'
+    +'</div>'
+    +'</div></div>';
+}
+function errorBody(){
+  return '<div class="page-scroll"><div class="ex-body">'
+    +'<div class="ex-icon warn">'+SVG.alert+'</div>'
+    +'<h2 class="ex-title">加载失败，请重试</h2>'
+    +'<p class="ex-desc">团购商品暂时没能加载出来，可能是网络波动或服务繁忙。你的位置已保留为 '+esc(state.city+"·"+state.area)+'。</p>'
+    +'<div class="ex-actions">'
+    +'<button class="btn-primary" data-act="retry-api">重新加载</button>'
+    +'<button class="btn-ghost" data-act="open-loc">换个位置试试</button>'
+    +'</div>'
+    +'</div></div>';
+}
+
+function listBody(){
+  const items=productsFor();
+  return '<div class="page-scroll">'
+    +'<div class="gb-strip"><i></i>商品由美团提供，价格与可用门店以美团页面为准</div>'
+    +'<div class="gb-grid">'+items.map(productCard).join("")+'</div>'
+    +'<div class="gb-footer">— 已按 '+esc(state.city+"·"+state.area)+' 展示 —</div>'
+    +'</div>';
+}
+
+/* ============================================================
+ * 订单数据 mock
+ * 两层分类：业务类型（外卖 / 团购 / 电商）→ 平台
+ * ============================================================ */
+const PLATFORMS={
+  meituan:{name:"美团",color:"#ffd100",text:"#3a2f00"},
+  eleme:  {name:"饿了么",color:"#1686b8",text:"#fff"},
+  taobao: {name:"淘宝",color:"#ff4d2e",text:"#fff"}
+};
+const BUSINESS_TYPES={
+  takeout:{label:"外卖",color:"#176f9a",bg:"#eaf5fb"},
+  groupbuy:{label:"团购",color:"#a66316",bg:"#fff3e2"},
+  ecommerce:{label:"电商",color:"#bd4e28",bg:"#fff0eb"}
+};
+const ORDERS=[
+  {id:"MT-WM-20261110-1208",platform:"meituan",type:"takeout",title:"麦当劳（国贸店）外卖订单",amount:"¥36.00",pointsText:"+18 积分",pointsState:"arrived",orderStatus:"已付款",time:"11月10日 12:08",note:"外卖订单付款后积分到账。",img:"McDonald's burger and french fries takeout meal, product photography, white background"},
+  {id:"ELM-WM-20261109-1836",platform:"eleme",type:"takeout",title:"肯德基（望京店）外卖订单",amount:"¥42.50",pointsText:"+22 积分",pointsState:"arrived",orderStatus:"已收货",time:"11月9日 18:36",note:"积分已在付款后到账，收货状态不会重复发放。",img:"KFC fried chicken bucket meal, product photography, white background"},
+  {id:"ELM-WM-20261108-1240",platform:"eleme",type:"takeout",title:"茶百道（三里屯店）外卖订单",amount:"¥19.90",pointsText:"未获得积分",pointsState:"none",orderStatus:"已失效",time:"11月8日 12:40",note:"订单未完成付款，没有获得积分。",img:"bubble milk tea in a clear plastic cup, product photography, white background"},
+  {id:"MT-GB-20261107-2045",platform:"meituan",type:"groupbuy",title:"海底捞双人火锅套餐",amount:"¥198.00",pointsText:"核销后到账",pointsState:"pending",orderStatus:"待使用",time:"11月7日 20:45",note:"团购券使用并核销后，积分才会到账。",img:"Chinese hot pot set meal with sliced beef and vegetables, top view, food photography"},
+  {id:"MT-GB-20261105-1830",platform:"meituan",type:"groupbuy",title:"北京烤鸭单人餐兑换券",amount:"¥68.00",pointsText:"+30 积分",pointsState:"arrived",orderStatus:"已核销",time:"11月5日 18:30",note:"团购券已核销，积分已到账。",img:"Peking roast duck sliced on plate, Chinese food photography"},
+  {id:"TB-EC-20261103-0912",platform:"taobao",type:"ecommerce",title:"三只松鼠坚果大礼包 1328g",amount:"¥89.00",pointsText:"+25 积分",pointsState:"arrived",orderStatus:"已付款",time:"11月3日 09:12",note:"电商订单已满足积分到账条件。",img:"mixed nuts and dried fruit snack gift pack, product photography, white background"}
+];
+function pointsView(o){
+  if(o.pointsState==="arrived")return {label:"积分已到账",value:o.pointsText,cls:""};
+  if(o.pointsState==="pending")return {label:"积分待到账",value:o.pointsText,cls:"pending"};
+  return {label:"积分结果",value:o.pointsText,cls:"none"};
+}
+function selectedOrder(){return ORDERS.find(o=>o.id===state.selectedOrderId)||ORDERS[3];}
+function orderHeaderView(){
+  return '<div class="order-head">'
+    +'<button class="order-back" data-act="back-home">‹ 返回</button>'
+    +'<h1 class="order-title">订单明细</h1>'
+    +'<span class="order-meta">外卖 · 团购 · 电商</span>'
+    +'</div>';
+}
+function orderListBody(){
+  const filter=state.orderFilter||"all";
+  const platformFilter=state.orderPlatformFilter||"all";
+  const list=ORDERS.filter(o=>(filter==="all"||o.type===filter)&&(filter!=="takeout"||platformFilter==="all"||o.platform===platformFilter));
+  let items=list.map(o=>{
+    const p=PLATFORMS[o.platform];
+    const t=BUSINESS_TYPES[o.type];
+    const pv=pointsView(o);
+    const statusColor=o.pointsState==="arrived"?"#21845b":o.pointsState==="pending"?"#a66b24":"#858f89";
+    return '<article class="ob-card" role="button" tabindex="0" data-field-id="FD-ORDER-CARD-'+o.id+'" data-act="order-detail" data-order-id="'+o.id+'">'
+      +'<div class="ob-thumb" data-brand="'+esc(p.name)+'"><img src="'+imgUrl(o.img)+'" alt="'+esc(o.title)+'" loading="lazy" onerror="this.parentNode.classList.add(\'img-fail\')"></div>'
+      +'<div class="ob-main">'
+      +'<div class="ob-head"><div class="ob-badges">'
+      +'<span class="ob-type" style="background:'+t.bg+';color:'+t.color+'">'+t.label+'</span>'
+      +'<span class="ob-plat" style="background:'+p.color+';color:'+p.text+'">'+p.name+'</span></div>'
+      +'<span class="ob-status" style="color:'+statusColor+'">'+esc(o.orderStatus)+'</span></div>'
+      +'<h3 class="ob-title">'+esc(o.title)+'</h3>'
+      +'<div class="ob-meta"><span>'+o.time+'</span>'+(o.amount?'<span>'+o.amount+'</span>':'')+'</div>'
+      +'<div class="ob-points"><span>'+pv.label+'</span><b class="'+pv.cls+'">'+pv.value+' <i class="ob-chevron">›</i></b></div>'
+      +'</div>'
+      +'</article>';
+  }).join("");
+  const subnav=filter==="takeout"?'<div class="order-subnav"><span>外卖平台</span>'
+    +'<button data-act="order-platform-filter" data-p="all" class="'+(platformFilter==="all"?"on":"")+'">全部</button>'
+    +'<button data-act="order-platform-filter" data-p="meituan" class="'+(platformFilter==="meituan"?"on":"")+'">美团</button>'
+    +'<button data-act="order-platform-filter" data-p="eleme" class="'+(platformFilter==="eleme"?"on":"")+'">饿了么</button></div>':"";
+  const empty='<div class="order-empty">当前分类暂无订单<br>可以切换到其他类型查看</div>';
+  return '<div class="order-page">'
+    +'<div class="order-nav" role="tablist" aria-label="订单业务类型">'
+    +'<button data-act="order-filter" data-f="all" class="'+(filter==="all"?"on":"")+'">全部</button>'
+    +'<button data-act="order-filter" data-f="takeout" class="'+(filter==="takeout"?"on":"")+'">外卖</button>'
+    +'<button data-act="order-filter" data-f="groupbuy" class="'+(filter==="groupbuy"?"on":"")+'">团购</button>'
+    +'<button data-act="order-filter" data-f="ecommerce" class="'+(filter==="ecommerce"?"on":"")+'">电商</button></div>'
+    +subnav
+    +'<div class="order-summary">'+(filter==="all"?'按业务类型归类，共 '+list.length+' 笔订单':BUSINESS_TYPES[filter].label+'订单 · '+list.length+' 笔')+'</div>'
+    +'<div class="page-scroll order-list">'+(items||empty)+'</div></div>';
+}
+function orderDetailSheetView(){
+  const o=selectedOrder();
+  const p=PLATFORMS[o.platform];
+  const t=BUSINESS_TYPES[o.type];
+  const pv=pointsView(o);
+  const rows=[
+    ["业务类型",t.label],
+    ["平台",p.name],
+    ["订单状态",o.orderStatus],
+    ...(o.amount?[["实付金额",o.amount]]:[]),
+    ["订单时间",o.time],
+    ["订单编号",o.id]
+  ];
+  return '<div class="mask" data-act="order-detail-close"></div>'
+    +'<section class="sheet" role="dialog" aria-label="订单详情" data-field-id="FD-ORDER-DETAIL">'
+    +'<div class="sheet-handle"></div>'
+    +'<div class="sheet-head"><div class="sheet-title"><h2>订单详情</h2><p>'+t.label+' · '+p.name+'</p></div>'
+    +'<button class="sheet-close" data-act="order-detail-close" aria-label="关闭">✕</button></div>'
+    +'<h3 class="detail-title">'+esc(o.title)+'</h3>'
+    +'<div class="detail-badges"><span class="ob-type" style="background:'+t.bg+';color:'+t.color+'">'+t.label+'</span><span class="ob-plat" style="background:'+p.color+';color:'+p.text+'">'+p.name+'</span></div>'
+    +'<dl class="detail-grid">'+rows.map(r=>'<div class="detail-row"><dt>'+r[0]+'</dt><dd>'+esc(r[1])+'</dd></div>').join("")+'</dl>'
+    +'<div class="detail-points '+pv.cls+'"><span>'+pv.label+'</span><b>'+pv.value+'</b></div>'
+    +'<div class="detail-note">'+esc(o.note)+'</div>'
+    +'<div class="detail-actions"><button class="btn-primary" data-act="order-detail-close">返回订单列表</button></div>'
+    +'</section>';
+}
+function subscribeDrawerView(){
+  return '<div class="mask" data-act="subscribe-deny"></div>'
+    +'<section class="sheet" role="dialog" aria-label="积分到账订阅">'
+    +'<div class="sheet-handle"></div>'
+    +'<div class="sheet-head"><div class="sheet-title"><h2>开启积分到账提醒</h2><p>积分到账后及时告诉你</p></div>'
+    +'<button class="sheet-close" data-act="subscribe-deny" aria-label="关闭">✕</button></div>'
+    +'<div class="sub-list">'
+    +'<div class="sub-item"><div class="sub-name">积分到账提醒</div><div class="sub-desc">到账后通知积分数量与对应订单，方便及时核对。</div></div>'
+    +'</div>'
+    +'<div class="sub-actions">'
+    +'<button class="btn-ghost" data-act="subscribe-deny">暂不开启</button>'
+    +'<button class="btn-primary" data-act="subscribe-allow">开启提醒</button></div>'
+    +'<div class="sub-tip">暂不开启也不会影响购买，之后仍可在“订单明细”查看积分结果。</div>'
+    +'</section>';
+}
+function pointsArrivedModal(){
+  return '<div class="modal-mask" data-act="points-dismiss"></div>'
+    +'<div class="modal" style="cursor:auto">'
+    +'<div class="pa-ring">+30</div>'
+    +'<h2>积分已到账</h2>'
+    +'<p>你的“北京烤鸭单人餐兑换券”已核销，30 积分已到账。</p>'
+    +'<div class="modal-actions"><button class="secondary" data-act="points-dismiss">稍后查看</button><button class="primary" data-act="points-open-order">查看订单</button></div>'
+    +'</div>';
+}
+function subscribeRejectedModal(){
+  return '<div class="modal-mask"></div><div class="modal" style="cursor:auto">'
+    +'<div class="wx-icon">✓</div><h2>暂不接收到账提醒</h2>'
+    +'<p>这不会影响继续购买。积分到账后，你仍可在“我的－订单明细”中查看。</p>'
+    +'<div class="modal-actions"><button class="secondary" data-act="subscribe-back">返回团购</button><button class="primary" data-act="continue-external">继续前往美团</button></div>'
+    +'</div>';
+}
+function exceptionHomeView(title,desc,list,actions,note,warn){
+  return '<div class="page-scroll"><div class="ex-body">'
+    +'<div class="ex-icon '+(warn?"warn":"")+'">'+SVG.pinBig+'</div>'
+    +'<h2 class="ex-title">'+title+'</h2>'
+    +'<p class="ex-desc">'+desc+'</p>'
+    +(list?'<div class="ex-list">'+list.map((x,i)=>
+      '<div><i>'+PAD2(i+1)+'</i><span>'+x+'</span></div>').join("")+'</div>':'')
+    +'<div class="ex-actions">'+actions+'</div>'
+    +(note?'<p class="ex-note">'+note+'</p>':'')
+    +'</div></div>';
+}
+
+/* ============================================================
+ * ⑨ frameView —— 按 key 渲染手机内容
+ * ============================================================ */
+function frameView(){
+  const k=state.currentRoute;
+  if(k==="a-auth"){
+    return '<div class="mobile-page">'
+      +headerView({locating:true})
+      +'<div class="page-scroll">'+skeletonCards(4)+'</div>'
+      +'</div>'
+      +'<div class="modal-mask">'
+        +'<div class="modal" style="cursor:auto"><div class="wx-icon">团</div>'
+        +'<h2>获取你的位置信息</h2>'
+        +'<p>用于为你推荐附近的团购单品，不会用于其他用途。拒绝后仍可手动选择城市。</p>'
+        +'<div class="modal-actions"><button class="secondary" data-act="deny">拒绝</button><button class="primary" data-act="allow">允许</button></div>'
+        +'</div></div>';
+  }
+  if(k==="b-locating"){
+    return '<div class="mobile-page">'+headerView({locating:true})
+      +'<div class="page-scroll">'+skeletonCards(4)+'</div>'
+      +'<div class="locating-bar"><div class="pin-pulse">'+SVG.pin+'</div>'
+      +'<div><b>正在定位…</b><span>获取附近门店与团购</span></div></div></div>';
+  }
+  if(k==="c-home-today"){ return '<div class="mobile-page">'+headerView()+listBody()+'</div>'; }
+  if(k==="c-home-city"){
+    const tmpTab=state.tab; state.tab="city";
+    const v='<div class="mobile-page">'+headerView()+listBody()+'</div>';
+    state.tab=tmpTab;
+    return v;
+  }
+  if(k==="x-denied"){
+    return '<div class="mobile-page">'
+      +exceptionHomeView(
+        "未获取到你的位置",
+        "你还没有允许小程序获取位置。手动选择城市后，同样可以查看该城市的团购单品。",
+        ["手动选择城市与商圈","页面会明确展示当前选择","之后仍可重新定位"],
+        '<button class="btn-primary" data-act="open-loc">手动选择城市</button><button class="btn-ghost" data-act="relocate">重新授权定位</button>',
+        "", true)
+      +'</div>';
+  }
+  if(k==="x-failed"){
+    return '<div class="mobile-page">'
+      +exceptionHomeView(
+        "定位失败，请重试",
+        "没能获取到你的位置，可能是系统定位关闭、信号弱或请求超时。",
+        ["检查手机定位开关与微信定位权限","换到信号更好的位置后重试","也可以直接手动选择城市"],
+        '<button class="btn-primary" data-act="relocate">重新定位</button><button class="btn-ghost" data-act="open-loc">手动选择城市</button>',
+        "", true)
+      +'</div>';
+  }
+  if(k==="x-empty"){ return '<div class="mobile-page">'+headerView()+emptyBody()+'</div>'; }
+  if(k==="x-error"){ return '<div class="mobile-page">'+headerView()+errorBody()+'</div>'; }
+
+  if(k==="c-order-list"){ return '<div class="mobile-page">'+orderHeaderView()+orderListBody()+'</div>'; }
+  if(k==="c-order-detail"){
+    return '<div class="mobile-page">'+orderHeaderView()+orderListBody()+'</div>'+orderDetailSheetView();
+  }
+  if(k==="b-subscribe-drawer"){
+    return '<div class="mobile-page">'+headerView()+listBody()+'</div>'
+      +subscribeDrawerView();
+  }
+  if(k==="x-subscribe-rejected"){
+    return '<div class="mobile-page">'+headerView()+listBody()+'</div>'+subscribeRejectedModal();
+  }
+  if(k==="b-points-arrived"){
+    return '<div class="mobile-page">'+orderHeaderView()+orderListBody()+'</div>'
+      +pointsArrivedModal();
+  }
+
+  return '<div class="mobile-page">'+headerView()+listBody()+'</div>';
+}
+
+function tabbarView(){
+  const tabs=[["积分","◎"],["领券","◈"],["团购","◇"],["我的","○"]];
+  return '<nav class="global-tabs" aria-label="全局导航">'+tabs.map(([n,ic],i)=>{
+    const key=["points","ticket","group","mine"][i];
+    return '<button class="'+(state.globalTab===key?"on":"")+'" data-act="global-tab" data-tab="'+key+'">'
+      +'<span class="ico">'+ic+'</span><span>'+n+'</span></button>';
+  }).join("")+'</nav>';
+}
+
+/* ============================================================
+ * ⑩ sheet / modal
+ * ============================================================ */
+function sheetView(){
+  if(state.sheet!=="c2-sheet")return "";
+  const sc=state.pendingCity||state.city;
+  const c=CITIES[sc];
+  return '<div class="mask" data-act="close-sheet"></div>'
+    +'<section class="sheet" role="dialog" aria-label="切换位置">'
+    +'<div class="sheet-handle"></div>'
+    +'<div class="sheet-head"><div class="sheet-title"><h2>切换位置</h2><p>选择要查看的城市与商圈</p></div>'
+    +'<button class="sheet-close" data-act="close-sheet" aria-label="关闭">✕</button></div>'
+    +'<button class="loc-now" data-act="relocate">'+SVG.pin+'<b>使用当前定位</b><span>'+esc(state.city+"·"+state.area)+'</span></button>'
+    +'<div class="sheet-label">城市</div>'
+    +'<div class="city-row">'+Object.keys(CITIES).map(city=>
+      '<button class="city-chip '+(city===sc?"on":"")+'" data-act="city" data-city="'+city+'">'+city+'</button>'
+    ).join("")+'</div>'
+    +'<div class="sheet-label">商圈 · '+sc+'</div>'
+    +c.areas.map(area=>
+      '<button class="area-row '+(sc===state.city&&area===state.area?"on":"")+'" data-act="area" data-area="'+area+'">'
+      +'<span>'+area+'</span><em>'+(EMPTY_AREAS[area]?"暂无团购":(sc===state.city&&area===state.area?"当前":""))+'</em></button>'
+    ).join("")
+    +'<button class="area-row '+(sc===state.city&&state.area==="全城"?"on":"")+'" data-act="area" data-area="全城">'
+    +'<span>全城</span><em>不限商圈</em></button>'
+    +'<div class="sheet-tip">选择后会按新位置刷新团购商品。</div>'
+    +'</section>';
+}
+
+/* ============================================================
+ * ⑪ SHELL RENDERERS —— 严格对齐参考稿的三栏渲染协议
+ * ============================================================ */
+function go(key, opts){
+  state.currentRoute=key;
+  state.sheet=(opts&&opts.sheet)||null;
+  state.pendingCity=null;
+  if(key==="c-home-city")state.tab="city";
+  if(key==="c-home-today"||key==="a-auth"||key==="b-locating")state.tab="today";
+  state.globalTab=(key==="c-order-list"||key==="c-order-detail"||key==="b-points-arrived")?"mine":"group";
+  const frameFlow=FRAMES[key]&&FRAMES[key].flow;
+  if(frameFlow)state.activeFlowId=frameFlow;  // frame 切换时同步 rail 高亮
+  renderAll();
+}
+function openSheet(key){state.sheet=key;renderAll();}
+function closeSheet(){state.sheet=null;state.pendingCity=null;renderAll();}
+
+function renderScreen(){
+  document.getElementById("screen").innerHTML=frameView();
+  const r=routeOf(state.currentRoute);
+  document.getElementById("stageName").textContent=r.name;
+  const sel=document.getElementById("frameSelect");
+  let opts="";
+  PAGE_TREE.forEach(g=>g.pages.forEach(p=>{
+    opts+='<optgroup label="'+p.code+' '+p.name+'">';
+    p.frames.forEach(k=>{
+      const rr=routeOf(k);
+      opts+='<option value="'+k+'" '+(k===state.currentRoute?"selected":"")+'>'+PAD2(rr.id)+' · '+rr.frame+'</option>';
+    });
+    p.sheets.forEach(k=>{
+      const sm=p.sheetMeta[k];
+      opts+='<option value="__sheet__:'+k+'" '+(state.sheet===k?"selected":"")+'>·弹层 · '+sm.name+'</option>';
+    });
+    opts+='</optgroup>';
+  }));
+  sel.innerHTML=opts;
+}
+
+function renderTabbar(){
+  document.getElementById("tabbar").innerHTML=tabbarView();
+}
+function renderSheet(){document.getElementById("sheetRoot").innerHTML=sheetView();}
+
+function renderRail(){
+  const root=document.getElementById("railBody");
+  let html='<div class="mode-switch">'
+    +'<button class="mode-btn '+(state.railMode==="flow"?"on":"")+'" data-modes="flow">流程</button>'
+    +'<button class="mode-btn '+(state.railMode==="page"?"on":"")+'" data-modes="page">页面</button></div>';
+  if(state.railMode==="flow"){
+    FLOWS.forEach(g=>{
+      html+='<div class="group-head">'+g.group+'<em>'+g.flows.length+' 条</em></div>';
+      g.flows.forEach(f=>{
+        const frameFlow=FRAMES[state.currentRoute]&&FRAMES[state.currentRoute].flow;
+        const active=(frameFlow||state.activeFlowId)===f.id;
+        html+='<button class="rail-item '+(active?"on":"")+'" data-flow="'+f.id+'">'
+          +'<span class="rail-dot"></span><span class="rail-name">'+f.summary
+          +(f.goal?'<em class="rail-sub">'+f.goal+'</em>':'')+'</span>'
+          +'<span class="rail-count">'+f.steps.length+'</span></button>';
+      });
+    });
+  }else{
+    PAGE_TREE.forEach(g=>{
+      html+='<div class="group-head">'+g.group+'<em>'+g.pages.length+' 页</em></div>';
+      g.pages.forEach(p=>{
+        const on=p.frames.includes(state.currentRoute)||p.sheets.includes(state.sheet);
+        html+='<button class="page-item '+(on?"on":"")+'" data-page="'+p.code+'">'
+          +'<span class="page-code">'+p.code+'</span>'
+          +'<span class="rail-name">'+p.name+'<em class="rail-sub">'+p.frames.length+' 帧 · '+p.sheets.length+' 弹层</em></span>'
+          +'<span class="rail-count">'+p.frames.length+'</span></button>';
+      });
+    });
+  }
+  root.innerHTML=html;
+}
+
+function pageByCode(code){for(const g of PAGE_TREE){for(const p of g.pages){if(p.code===code)return p;}}return null;}
+function pageForCurrent(){for(const g of PAGE_TREE){for(const p of g.pages){if(p.frames.includes(state.currentRoute)||p.sheets.includes(state.sheet))return p;}}return null;}
+
+function renderFlowCol(){
+  const title=document.getElementById("flowTitle");
+  const sub=document.getElementById("flowSub");
+  const root=document.getElementById("flowBody");
+  if(state.railMode==="flow"){
+    let f=flowById(state.activeFlowId);
+    if(!f)f=FLOWS[0].flows[0];
+    if(!f){root.innerHTML="";return;}
+    title.textContent=f.summary||"";
+    sub.textContent=f.goal||"";
+    const stepIndex=state.currentRoute&&FRAMES[state.currentRoute]&&FRAMES[state.currentRoute].flow===f.id?FRAMES[state.currentRoute].stepIndex:-1;
+    root.innerHTML=f.steps.map((s,i)=>
+      (i?'<div class="flow-arrow"></div>':"")
+      +'<div class="step '+(i===stepIndex?"on":"")+' '+(s.ext?"ext":"")+'" data-step="'+i+'" data-flow="'+f.id+'">'
+      +'<div class="step-index">'+PAD2(i+1)+'</div>'
+      +'<div><div class="step-title">'+s.title+'</div>'
+      +(s.sub?'<div class="step-sub">'+s.sub+'</div>':'')+'</div></div>'
+    ).join("");
+  }else{
+    const p=pageForCurrent()||PAGE_TREE[0].pages[0];
+    title.textContent=p.code+" "+p.name;
+    sub.textContent=p.frames.length>1?"同一路由 · "+p.frames.length+" 个状态帧":p.frames.length+" 帧页面";
+    let html="";
+    html+='<div class="section-label">STATES / 同一页面的帧</div>';
+    html+=p.frames.map((k,i)=>{
+      const meta=p.frameMeta[k];
+      const rr=routeOf(k);
+      return '<div class="step '+(state.currentRoute===k&&!state.sheet?"on":"")+'" data-page-route="'+k+'">'
+        +'<div class="step-index">'+PAD2(i+1)+'</div>'
+        +'<div><div class="step-title">'+(meta?meta.name:rr.frame)+'</div></div></div>';
+    }).join("");
+    if(p.sheets.length){
+      html+='<div class="section-label">SHEETS · 本页弹层</div>';
+      html+=p.sheets.map(k=>{
+        const sm=p.sheetMeta[k];
+        return '<div class="step '+(state.sheet===k?"on":"")+'" data-page-sheet="'+k+'">'
+          +'<div class="step-index" style="border-style:dashed">▸</div>'
+          +'<div><div class="step-title">'+(sm?sm.name:k)+'</div></div></div>';
+      }).join("");
+    }
+    root.innerHTML=html;
+  }
+}
+
+function renderNotes(){
+  const key=state.sheet?state.sheet:state.currentRoute;
+  let n=NOTES[state.currentRoute]||{status:"说明",sections:[{h:"页面",rows:[routeOf(state.currentRoute).name]}]};
+  if(state.sheet)n=NOTES[state.sheet]||n;
+  document.getElementById("noteStatus").textContent=n.status;
+  document.getElementById("noteStatus").className="inspector-status"+(n.status==="异常"?" warn":"");
+  document.getElementById("noteSub").textContent=state.sheet?"切换位置 · 弹层":routeOf(state.currentRoute).name;
+  document.getElementById("noteBody").innerHTML=n.sections.map(s=>
+    '<section class="note-section"><h4>'+s.h+'</h4>'
+    +s.rows.map(r=>'<div class="note-row"><i>'+PAD2((s.rows.indexOf(r))+1)+'</i><span>'+r+'</span></div>').join("")
+    +'</section>'
+  ).join("");
+}
+
+function renderAll(){renderScreen();renderTabbar();renderSheet();renderRail();renderFlowCol();renderNotes();}
+
+/* ============================================================
+ * ⑫ toast & 状态辅助
+ * ============================================================ */
+function toast(msg){
+  const el=document.getElementById("toast");
+  el.textContent=msg;
+  el.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove("on"),1900);
+}
+
+function startLocating(){
+  clearTimeout(timer);
+  state.currentRoute="b-locating";
+  state.sheet=null;
+  state.pendingCity=null;
+  state.activeFlowId="F-MAIN";
+  state.globalTab="group";
+  renderAll();
+  timer=setTimeout(()=>{
+    state.currentRoute="c-home-today";
+    state.city="北京";state.area="国贸";state.tab="today";
+    state.activeFlowId="F-MAIN";
+    renderAll();
+    toast("定位成功：北京·国贸");
+  },1500);
+}
+
+/* ============================================================
+ * ⑬ EVENT DELEGATION
+ * ============================================================ */
+document.addEventListener("click",e=>{
+  // rail 模式切换：流程 / 页面
+  const modeEl=e.target.closest("[data-modes]");
+  if(modeEl){
+    state.railMode=modeEl.dataset.modes;
+    renderRail();
+    renderFlowCol();
+    return;
+  }
+  // flowcol step 点击 → 切换帧
+  const stepEl=e.target.closest("[data-step]");
+  if(stepEl){
+    const f=flowById(stepEl.dataset.flow||FLOWS[0].flows[0].id);
+    const idx=Number(stepEl.dataset.step);
+    let frameKey=null, openSheetKey=null;
+    const map={
+      "F-MAIN":     [ ["a-auth",null], ["b-locating",null], ["c-home-today",null], ["c-home-today","c2-sheet"], ["c-home-city",null] ],
+      "F-MAIN2":    [ ["b-subscribe-drawer",null], ["x-subscribe-rejected",null], ["b-points-arrived",null], ["c-order-list",null], ["c-order-detail",null] ],
+      "F-ERR-AUTH": [ ["x-denied",null], ["x-failed",null] ],
+      "F-ERR-API":  [ ["x-empty",null], ["x-error",null] ]
+    };
+    if(f&&map[f.id]&&map[f.id][idx]){
+      frameKey=map[f.id][idx][0];
+      openSheetKey=map[f.id][idx][1];
+    }
+    if(frameKey){go(frameKey,{sheet:openSheetKey||null});state.activeFlowId=f.id;renderAll();}
+    return;
+  }
+  // flow rail 点击 → 切换 activeFlowId，同时跳到该 flow 的代表帧
+  const flowRailEl=e.target.closest("[data-flow]");
+  if(flowRailEl){
+    const fid=flowRailEl.dataset.flow;
+    let target=null;
+    for(const k of Object.keys(FRAMES)){
+      if(FRAMES[k].flow===fid){target=k;break;}
+    }
+    if(target){go(target);state.activeFlowId=fid;renderAll();}
+    return;
+  }
+  // rail page 点击 → 跳到该页首帧
+  const pageRailEl=e.target.closest("[data-page]");
+  if(pageRailEl){
+    const p=pageByCode(pageRailEl.dataset.page);
+    if(p&&p.frames[0])go(p.frames[0]);
+    return;
+  }
+  // page mode flowcol step 点击
+  const routeStepEl=e.target.closest("[data-page-route]");
+  if(routeStepEl){go(routeStepEl.dataset.pageRoute);return;}
+  const sheetStepEl=e.target.closest("[data-page-sheet]");
+  if(sheetStepEl){openSheet(sheetStepEl.dataset.pageSheet);return;}
+
+  // 业务 data-act
+  const actEl=e.target.closest("[data-act]");
+  if(!actEl)return;
+  const act=actEl.dataset.act;
+
+  if(act==="allow"){startLocating();return;}
+  if(act==="deny"){clearTimeout(timer);state.activeFlowId="F-ERR-AUTH";go("x-denied");return;}
+  if(act==="relocate"){startLocating();return;}
+  if(act==="retry-api"){startLocating();return;}
+  if(act==="open-loc"){state.sheet="c2-sheet";state.pendingCity=state.city;renderAll();return;}
+  if(act==="close-sheet"){closeSheet();return;}
+  if(act==="back-home"){state.activeFlowId="F-MAIN";go("c-home-today");return;}
+  if(act==="city"){state.pendingCity=actEl.dataset.city;renderSheet();renderRail();renderFlowCol();return;}
+  if(act==="area"){
+    state.city=state.pendingCity||state.city;
+    state.pendingCity=null;
+    state.area=actEl.dataset.area;
+    state.sheet=null;
+    state.currentRoute=EMPTY_AREAS[state.area]?"x-empty":(state.tab==="city"?"c-home-city":"c-home-today");
+    state.activeFlowId=EMPTY_AREAS[state.area]?"F-ERR-API":"F-MAIN";
+    renderAll();
+    toast(EMPTY_AREAS[state.area]?"该商圈暂无团购":"已切换到 "+state.city+"·"+state.area);
+    return;
+  }
+  if(act==="all-city"){
+    state.pendingCity=null;state.area="全城";state.currentRoute=state.tab==="city"?"c-home-city":"c-home-today";state.activeFlowId="F-MAIN";
+    renderAll();toast("已切换到 "+state.city+"·全城");return;
+  }
+  if(act==="tab"){state.tab=actEl.dataset.tab;state.currentRoute=state.tab==="city"?"c-home-city":"c-home-today";state.activeFlowId="F-MAIN";renderAll();return;}
+  if(act==="product"){
+    state.pendingProductName=actEl.dataset.name||null;
+    state.activeFlowId="F-MAIN2";
+    go("b-subscribe-drawer");
+    return;
+  }
+  if(act==="global-tab"){
+    const t=actEl.dataset.tab;
+    if(t==="mine"){go("c-order-list");return;}
+    if(t==="group"){go("c-home-today");return;}
+    toast("本轮仅优化「团购」和「我的」");
+    return;
+  }
+
+  // —— F-MAIN2 订阅链路 ——
+  if(act==="subscribe-allow"){
+    go("c-home-today");
+    toast("到账提醒已开启 · 继续前往美团");
+    return;
+  }
+  if(act==="subscribe-deny"){
+    state.activeFlowId="F-MAIN2";
+    go("x-subscribe-rejected");
+    return;
+  }
+  if(act==="subscribe-back"){go("c-home-today");return;}
+  if(act==="continue-external"){go("c-home-today");toast("继续前往美团");return;}
+  if(act==="points-dismiss"){go("c-order-list");return;}
+  if(act==="points-open-order"){
+    state.selectedOrderId="MT-GB-20261105-1830";
+    go("c-order-detail");
+    return;
+  }
+
+  // —— 订单明细：业务类型与外卖平台筛选 ——
+  if(act==="order-filter"){
+    state.orderFilter=actEl.dataset.f;
+    if(state.orderFilter!=="takeout")state.orderPlatformFilter="all";
+    renderAll();
+    return;
+  }
+  if(act==="order-platform-filter"){state.orderPlatformFilter=actEl.dataset.p;renderAll();return;}
+  if(act==="order-detail"){
+    state.selectedOrderId=actEl.dataset.orderId;
+    go("c-order-detail");
+    return;
+  }
+  if(act==="order-detail-close"){go("c-order-list");return;}
+
+  if(act==="noop")return;
+});
+
+document.addEventListener("change",e=>{
+  if(e.target.id==="frameSelect"){
+    const v=e.target.value;
+    if(v.startsWith("__sheet__:")){openSheet(v.slice(10));}
+    else{go(v);}
+  }
+});
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    if(state.currentRoute==="c-order-detail")go("c-order-list");
+    else if(state.sheet)closeSheet();
+  }
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches('[data-act="order-detail"],[data-act="product"]'))e.target.click();
+});
+
+// 初始化 activeFlowId 到主链路
+state.activeFlowId="F-MAIN";
+renderAll();
+
+/* ============================================================
+ * R3 交付约束
+ * - 手机预览只出现用户可理解的字段与状态。
+ * - 订单采用“业务类型 → 平台”两层分类；类型不可缺省。
+ * - 团购状态使用用户文案，不在 C 端暴露券状态码。
+ * - 外部下单与异步到账不在原型中用定时器伪造。
+ * - inspector 只记录可见字段、交互验收与待确认项。
+ * ============================================================ */
+</script>
+</body>
+</html>
