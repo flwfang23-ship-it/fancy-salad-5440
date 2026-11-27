@@ -566,19 +566,22 @@ function productsFor(){
  * ============================================================ */
 function headerView(opts){
   const locating=!!(opts&&opts.locating);
+  const hideRelocate=!!(opts&&opts.hideRelocate);
   const locText=locating?"定位中…":esc(state.city+"·"+state.area);
   const sub=locating?"正在通过经纬度获取你的位置…"
     :state.tab==="city"
       ?"本城正在热卖的团购"
       :"已按当前位置（经纬度）为你筛选";
   // 用 table-row 模式 + inline-block 从根上防止 flex 换行
+  const relocateBtn=hideRelocate?'':
+    '<div style="height:28px;display:inline-flex;align-items:center;padding:0 10px;border-radius:99px;background:rgba(255,255,255,.72);border:1px solid #dfeeee;font-size:10px;color:var(--green);font-weight:700;white-space:nowrap;cursor:'+(locating?"default":"pointer")+'" data-act="'+(locating?"noop":"relocate")+'">'+(locating?"请稍候":"重新定位")+'</div>';
   return '<div style="flex:none;padding:8px 16px 12px;background:linear-gradient(180deg,#e3f1e9 0%,#f4faf6 58%,#fff 100%)">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:0">'
     +'<div style="display:inline-flex;align-items:center;flex-wrap:nowrap;height:28px;padding:0 10px;border-radius:99px;background:#fff;border:1px solid #dfeeee;font-size:11.5px;font-weight:800;color:var(--stamp-ink);box-shadow:0 2px 7px rgba(23,61,42,.06);white-space:nowrap;overflow:hidden;cursor:default">'
     +'<span style="display:inline-flex;width:11px;height:11px;flex:none">'+SVG.pin+'</span>'
     +'<span style="white-space:nowrap">'+locText+'</span>'
     +'</div>'
-    +'<div style="height:28px;display:inline-flex;align-items:center;padding:0 10px;border-radius:99px;background:rgba(255,255,255,.72);border:1px solid #dfeeee;font-size:10px;color:var(--green);font-weight:700;white-space:nowrap;cursor:'+(locating?"default":"pointer")+'" data-act="'+(locating?"noop":"relocate")+'">'+(locating?"请稍候":"重新定位")+'</div>'
+    +relocateBtn
     +'</div>'
     +'<div style="height:10px"></div>'
     +'<h1 style="font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1.28;color:var(--stamp-ink);margin:0">附近团购</h1>'
@@ -808,8 +811,8 @@ function frameView(){
         "", true)
       +'</div>';
   }
-  if(k==="x-empty"){ return '<div class="mobile-page">'+headerView()+emptyBody()+'</div>'; }
-  if(k==="x-error"){ return '<div class="mobile-page">'+headerView()+errorBody()+'</div>'; }
+  if(k==="x-empty"){ return '<div class="mobile-page">'+headerView({hideRelocate:true})+emptyBody()+'</div>'; }
+  if(k==="x-error"){ return '<div class="mobile-page">'+headerView({hideRelocate:true})+errorBody()+'</div>'; }
 
   if(k==="c-order-list"){ return '<div class="mobile-page">'+orderHeaderView()+orderListBody()+'</div>'; }
   if(k==="b-subscribe-drawer"){
