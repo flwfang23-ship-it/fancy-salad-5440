@@ -372,12 +372,12 @@ const FLOWS=[
   { group:"关键异常（4帧）", flows:[
     { id:"F-ERR-AUTH", summary:"授权兜底", goal:"授权失败时给用户两个明确出口",
       start:"用户拒绝 / 系统定位关闭", steps:[
-        { title:"拒绝授权", sub:"主按钮重新授权定位；次按钮看全城兜底" },
-        { title:"定位失败", sub:"检查定位开关 / 权限 / 网络" }
+        { title:"无商品", sub:"主按钮重新授权定位" },
+        { title:"无商品", sub:"检查定位开关 / 权限 / 网络后重试" }
       ]},
     { id:"F-ERR-API", summary:"接口兜底", goal:"接口失败或商圈空时给明确状态与重试出口",
       steps:[
-        { title:"商圈无商品", sub:"可以查看全城或切换商圈" },
+        { title:"无商品", sub:"当前商圈暂无商品" },
         { title:"商品加载失败", sub:"保留当前位置并提供重试" }
       ]}
   ]}
@@ -439,14 +439,14 @@ const NOTES={
     {h:"用户可见",rows:["同城热销榜单与当前定位商圈","门店数表示可用范围，不表达距离"]}
   ]},
   "x-denied":{status:"异常",sections:[
-    {h:"用户可见",rows:["说明未获得位置","主操作重新授权定位，次操作看全城兜底"]},
+    {h:"用户可见",rows:["未获取到位置时显示“无商品”","主操作重新授权定位"]},
     {h:"验收",rows:["不静默使用默认位置冒充当前定位"]}
   ]},
   "x-failed":{status:"异常",sections:[
-    {h:"用户可见",rows:["定位失败原因使用通俗描述","重新定位与看全城兜底两个出口"]}
+    {h:"用户可见",rows:["定位失败时显示“无商品”","提供重新定位出口"]}
   ]},
   "x-empty":{status:"异常",sections:[
-    {h:"用户可见",rows:["明确是当前商圈暂无商品","可以看全城或换商圈"]}
+    {h:"用户可见",rows:["明确显示“无商品”","当前商圈暂无可用团购单品"]}
   ]},
   "x-error":{status:"异常",sections:[
     {h:"用户可见",rows:["只显示加载失败与重试，不展示错误码","保留当前位置，避免用户重复选择"]}
@@ -620,11 +620,10 @@ function skeletonCards(n){
 function emptyBody(){
   return '<div class="page-scroll"><div class="ex-body">'
     +'<div class="ex-icon">'+SVG.empty+'</div>'
-    +'<h2 class="ex-title">'+esc(state.city+"·"+state.area)+' 暂无团购</h2>'
-    +'<p class="ex-desc">当前位置附近暂时没有可用的团购单品，可以看看全城热门。</p>'
+    +'<h2 class="ex-title">无商品</h2>'
+    +'<p class="ex-desc">当前位置附近暂无可用团购单品</p>'
     +'<div class="ex-actions">'
-    +'<button class="btn-primary" data-act="all-city">看看全城团购</button>'
-    +'<button class="btn-ghost" data-act="relocate">重新定位</button>'
+    +'<button class="btn-primary" data-act="relocate">重新定位</button>'
     +'</div>'
     +'</div></div>';
 }
@@ -796,20 +795,20 @@ function frameView(){
   if(k==="x-denied"){
     return '<div class="mobile-page">'
       +exceptionHomeView(
-        "未获取到你的位置",
+        "无商品",
         "你还没有允许小程序获取位置。开启定位后，会按你的经纬度推荐附近团购。",
-        ["重新授权后可正常查看附近团购","也可先看全城热门团购","之后可随时重新定位"],
-        '<button class="btn-primary" data-act="relocate">重新授权定位</button><button class="btn-ghost" data-act="all-city">看看全城团购</button>',
+        ["重新授权后可正常查看附近团购","之后可随时重新定位"],
+        '<button class="btn-primary" data-act="relocate">重新授权定位</button>',
         "", true)
       +'</div>';
   }
   if(k==="x-failed"){
     return '<div class="mobile-page">'
       +exceptionHomeView(
-        "定位失败，请重试",
+        "无商品",
         "没能获取到你的位置，可能是系统定位关闭、信号弱或请求超时。",
-        ["检查手机定位开关与微信定位权限","换到信号更好的位置后重试","也可先看全城热门团购"],
-        '<button class="btn-primary" data-act="relocate">重新定位</button><button class="btn-ghost" data-act="all-city">看看全城团购</button>',
+        ["检查手机定位开关与微信定位权限","换到信号更好的位置后重试"],
+        '<button class="btn-primary" data-act="relocate">重新定位</button>',
         "", true)
       +'</div>';
   }
