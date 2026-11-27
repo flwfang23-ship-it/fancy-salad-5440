@@ -446,10 +446,10 @@ const NOTES={
     {h:"用户可见",rows:["定位失败时显示“无商品”","提供重新定位出口"]}
   ]},
   "x-empty":{status:"异常",sections:[
-    {h:"用户可见",rows:["明确显示“无商品”","当前商圈暂无可用团购单品"]}
+    {h:"用户可见",rows:["明确显示“无商品”","无按钮"]}
   ]},
   "x-error":{status:"异常",sections:[
-    {h:"用户可见",rows:["只显示加载失败与重试，不展示错误码","保留当前位置，避免用户重复选择"]}
+    {h:"用户可见",rows:["只显示加载失败与重试，不展示错误码","保留当前位置，避免用户重复选择","仅提供“重新加载”一个按钮"]}
   ]},
   "b-subscribe-drawer":{status:"已改待审",sections:[
     {h:"用户可见",rows:["本轮只展示“积分到账提醒”一个主题","开启或暂不开启都不阻塞前往平台"]},
@@ -622,9 +622,6 @@ function emptyBody(){
     +'<div class="ex-icon">'+SVG.empty+'</div>'
     +'<h2 class="ex-title">无商品</h2>'
     +'<p class="ex-desc">当前位置附近暂无可用团购单品</p>'
-    +'<div class="ex-actions">'
-    +'<button class="btn-primary" data-act="relocate">重新定位</button>'
-    +'</div>'
     +'</div></div>';
 }
 function errorBody(){
@@ -634,7 +631,6 @@ function errorBody(){
     +'<p class="ex-desc">团购商品暂时没能加载出来，可能是网络波动或服务繁忙。你的位置已保留为 '+esc(state.city+"·"+state.area)+'。</p>'
     +'<div class="ex-actions">'
     +'<button class="btn-primary" data-act="retry-api">重新加载</button>'
-    +'<button class="btn-ghost" data-act="relocate">重新定位</button>'
     +'</div>'
     +'</div></div>';
 }
