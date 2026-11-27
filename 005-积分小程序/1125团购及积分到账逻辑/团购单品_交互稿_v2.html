@@ -154,6 +154,8 @@ body{height:100vh;overflow:hidden;background:var(--stage);font-family:var(--sans
 .gb-tag{flex:none;height:16px;padding:0 4px;border-radius:3px;font-size:8px;font-weight:700;display:grid;place-items:center;letter-spacing:.01em}
 .gb-tag.rank{background:#fff3e6;color:#b3671c}
 .gb-tag.price{background:#ffeceb;color:#d9432c}
+.gb-tag.save{background:#ffeceb;color:#d9432c;font-weight:800}
+.gb-tag.hours{background:#e8f0fe;color:#1a56db}
 .gb-tag.score{background:#eef4ee;color:#2f6b51}
 .gb-price{display:flex;align-items:baseline;gap:4px;margin-top:1px}
 .gb-price b{font-size:16.5px;font-weight:900;color:var(--red);letter-spacing:-.4px;line-height:1}
@@ -431,12 +433,13 @@ const NOTES={
     {h:"验收",rows:["加载期间不显示上一位置的商品","重试后流程目录只高亮位置团购"]}
   ]},
   "c-home-today":{status:"已改待审",sections:[
-    {h:"用户可见字段",rows:["位置（经纬度反查商圈）、榜单、商品名、售价、可选标签、销量、可用门店数","不展示佣金、转链参数、接口字段或内部口径"]},
+    {h:"用户可见字段",rows:["位置（经纬度反查商圈）、榜单、商品名、售价、标签、销量、可用门店数","不展示佣金、转链参数、接口字段或内部口径"]},
+    {h:"标签优先级（只显示一个）",rows:["① 24小时营业（蓝色）","② 比15天低价高X元（红色）","③ 比日常团购省X元（红色加粗）","④ 近7天低价/美团最低价（红色）","⑤ 同城XX榜第X名（橙色）","⑥ 默认 附近可用（绿色）"]},
     {h:"交互",rows:["位置 pill 纯展示当前定位结果，不可点","点击商品先选择是否接收到账提醒，再继续前往平台"]},
     {h:"待确认",rows:["首页默认使用“今日必推”还是“同城热销”"]}
   ]},
   "c-home-city":{status:"已改待审",sections:[
-    {h:"用户可见",rows:["同城热销榜单与当前定位商圈","门店数表示可用范围，不表达距离"]}
+    {h:"用户可见",rows:["同城热销榜单与当前定位商圈","门店数表示可用范围，不表达距离","标签优先级同今日必推，只显示一个"]}
   ]},
   "x-denied":{status:"异常",sections:[
     {h:"用户可见",rows:["未获取到位置时显示“无商品”","主操作重新授权定位"]},
@@ -487,39 +490,39 @@ const NOTES={
 const EMPTY_AREAS={"西单":1};
 
 const SHARED=[
-  {n:"瑞幸生椰拿铁兑换券",b:"瑞幸咖啡",p:9.9,o:32,s:"2万+",ps:2321,rank:"同城咖啡人气榜第1名",priceTag:"近7天低价",heat:96,prompt:"iced coconut latte in a clear plastic cup, minimal product photo"},
-  {n:"肯德基香辣鸡腿堡三件套",b:"肯德基",p:19.9,o:34,s:"5万+",ps:1200,rank:"",priceTag:"美团最低价",heat:99,prompt:"fried chicken burger meal with fries on red tray"},
-  {n:"海底捞双人火锅套餐",b:"海底捞",p:198,o:298,s:"5000+",ps:320,rank:"同城火锅热门榜第2名",priceTag:"",heat:88,prompt:"chinese hotpot with sliced beef and rich red broth"},
-  {n:"蜜雪冰城雪王柠檬水",b:"蜜雪冰城",p:5.9,o:12,s:"30万+",ps:8888,rank:"同城饮品销量榜第1名",priceTag:"近7天低价",heat:100,prompt:"two cups of iced lemonade with fresh lemon slices"},
-  {n:"星巴克中杯拿铁兑换券",b:"星巴克",p:19.9,o:33,s:"2万+",ps:620,rank:"",priceTag:"",heat:84,prompt:"hot latte in white paper cup on cafe table"},
-  {n:"必胜客单人午餐套餐",b:"必胜客",p:39.9,o:59,s:"8000+",ps:410,rank:"",priceTag:"近15天低价",heat:80,prompt:"personal pan pizza with fresh salad on white plate"},
-  {n:"麦当劳麦辣鸡腿堡套餐",b:"麦当劳",p:21.9,o:36,s:"4万+",ps:1500,rank:"同城快餐人气榜第3名",priceTag:"",heat:94,prompt:"spicy chicken burger and fries on yellow background"},
-  {n:"喜茶多肉葡萄饮品",b:"喜茶",p:15.9,o:25,s:"1万+",ps:540,rank:"",priceTag:"近7天低价",heat:90,prompt:"grape fruit tea with real grape pieces in clear cup"}
+  {n:"瑞幸生椰拿铁兑换券",b:"瑞幸咖啡",p:9.9,o:32,s:"2万+",ps:2321,bizHours:"24小时营业",priceCompare:"比15天低价高3元",saveTag:"比日常团购省4.7元",priceTag:"近7天低价",rank:"同城咖啡人气榜第1名",heat:96,prompt:"iced coconut latte in a clear plastic cup, minimal product photo"},
+  {n:"肯德基香辣鸡腿堡三件套",b:"肯德基",p:19.9,o:34,s:"5万+",ps:1200,bizHours:"24小时营业",priceCompare:"比15天低价高5元",saveTag:"比日常团购省6.1元",priceTag:"美团最低价",rank:"",heat:99,prompt:"fried chicken burger meal with fries on red tray"},
+  {n:"海底捞双人火锅套餐",b:"海底捞",p:198,o:298,s:"5000+",ps:320,bizHours:"24小时营业",priceCompare:"",saveTag:"比日常团购省12元",priceTag:"",rank:"同城火锅热门榜第2名",heat:88,prompt:"chinese hotpot with sliced beef and rich red broth"},
+  {n:"蜜雪冰城雪王柠檬水",b:"蜜雪冰城",p:5.9,o:12,s:"30万+",ps:8888,bizHours:"24小时营业",priceCompare:"比15天低价高1元",saveTag:"比日常团购省1.2元",priceTag:"近7天低价",rank:"同城饮品销量榜第1名",heat:100,prompt:"two cups of iced lemonade with fresh lemon slices"},
+  {n:"星巴克中杯拿铁兑换券",b:"星巴克",p:19.9,o:33,s:"2万+",ps:620,bizHours:"",priceCompare:"比15天低价高4元",saveTag:"比日常团购省5元",priceTag:"",rank:"",heat:84,prompt:"hot latte in white paper cup on cafe table"},
+  {n:"必胜客单人午餐套餐",b:"必胜客",p:39.9,o:59,s:"8000+",ps:410,bizHours:"",priceCompare:"",saveTag:"比日常团购省7元",priceTag:"近15天低价",rank:"",heat:80,prompt:"personal pan pizza with fresh salad on white plate"},
+  {n:"麦当劳麦辣鸡腿堡套餐",b:"麦当劳",p:21.9,o:36,s:"4万+",ps:1500,bizHours:"24小时营业",priceCompare:"",saveTag:"比日常团购省8元",priceTag:"",rank:"同城快餐人气榜第3名",heat:94,prompt:"spicy chicken burger and fries on yellow background"},
+  {n:"喜茶多肉葡萄饮品",b:"喜茶",p:15.9,o:25,s:"1万+",ps:540,bizHours:"",priceCompare:"比15天低价高2元",saveTag:"",priceTag:"近7天低价",rank:"",heat:90,prompt:"grape fruit tea with real grape pieces in clear cup"}
 ];
 const LOCAL={
   "北京":[
-    {n:"茶百道双杯酸奶套餐兑换券",b:"茶百道",p:12.8,o:20,s:"1万+",ps:4509,rank:"望京饮品人气榜第1名",priceTag:"近7天低价",heat:93,prompt:"two cups of yogurt milk tea with strawberry"},
-    {n:"西贝莜面村双人餐",b:"西贝",p:128,o:196,s:"2000+",ps:180,rank:"朝阳西北菜热门榜第1名",priceTag:"",heat:78,prompt:"chinese northwest noodles and braised lamb dishes"}
+    {n:"茶百道双杯酸奶套餐兑换券",b:"茶百道",p:12.8,o:20,s:"1万+",ps:4509,bizHours:"",priceCompare:"比15天低价高2元",saveTag:"比日常团购省3.2元",priceTag:"近7天低价",rank:"望京饮品人气榜第1名",heat:93,prompt:"two cups of yogurt milk tea with strawberry"},
+    {n:"西贝莜面村双人餐",b:"西贝",p:128,o:196,s:"2000+",ps:180,bizHours:"",priceCompare:"",saveTag:"比日常团购省15元",priceTag:"",rank:"朝阳西北菜热门榜第1名",heat:78,prompt:"chinese northwest noodles and braised lamb dishes"}
   ],
   "上海":[
-    {n:"小杨生煎双人套餐",b:"小杨生煎",p:29.9,o:46,s:"3万+",ps:860,rank:"静安小吃人气榜第1名",priceTag:"美团最低价",heat:95,prompt:"pan fried pork buns in black iron skillet"},
-    {n:"Manner 拿铁兑换券",b:"Manner",p:15,o:25,s:"1万+",ps:390,rank:"",priceTag:"近7天低价",heat:86,prompt:"flat white coffee in small ceramic cup"}
+    {n:"小杨生煎双人套餐",b:"小杨生煎",p:29.9,o:46,s:"3万+",ps:860,bizHours:"24小时营业",priceCompare:"",saveTag:"比日常团购省4.5元",priceTag:"美团最低价",rank:"静安小吃人气榜第1名",heat:95,prompt:"pan fried pork buns in black iron skillet"},
+    {n:"Manner 拿铁兑换券",b:"Manner",p:15,o:25,s:"1万+",ps:390,bizHours:"",priceCompare:"比15天低价高1元",saveTag:"",priceTag:"近7天低价",rank:"",heat:86,prompt:"flat white coffee in small ceramic cup"}
   ],
   "广州":[
-    {n:"点都德双人茶点套餐",b:"点都德",p:88,o:138,s:"2万+",ps:260,rank:"天河早茶热门榜第1名",priceTag:"",heat:92,prompt:"cantonese dim sum steamer baskets on round table"},
-    {n:"茶理宜世招牌奶茶",b:"茶理宜世",p:13.9,o:22,s:"8000+",ps:310,rank:"",priceTag:"近7天低价",heat:82,prompt:"chinese style milk tea with cream top"}
+    {n:"点都德双人茶点套餐",b:"点都德",p:88,o:138,s:"2万+",ps:260,bizHours:"24小时营业",priceCompare:"",saveTag:"比日常团购省10元",priceTag:"",rank:"天河早茶热门榜第1名",heat:92,prompt:"cantonese dim sum steamer baskets on round table"},
+    {n:"茶理宜世招牌奶茶",b:"茶理宜世",p:13.9,o:22,s:"8000+",ps:310,bizHours:"",priceCompare:"比15天低价高3元",saveTag:"",priceTag:"近7天低价",rank:"",heat:82,prompt:"chinese style milk tea with cream top"}
   ],
   "深圳":[
-    {n:"木屋烧烤双人套餐",b:"木屋烧烤",p:138,o:218,s:"6000+",ps:220,rank:"福田烧烤热门榜第1名",priceTag:"",heat:89,prompt:"grilled meat skewers on charcoal grill"},
-    {n:"奈雪霸气橙子饮品",b:"奈雪的茶",p:16.9,o:26,s:"1万+",ps:430,rank:"",priceTag:"近7天低价",heat:87,prompt:"orange fruit tea with fresh orange slices"}
+    {n:"木屋烧烤双人套餐",b:"木屋烧烤",p:138,o:218,s:"6000+",ps:220,bizHours:"24小时营业",priceCompare:"",saveTag:"比日常团购省18元",priceTag:"",rank:"福田烧烤热门榜第1名",heat:89,prompt:"grilled meat skewers on charcoal grill"},
+    {n:"奈雪霸气橙子饮品",b:"奈雪的茶",p:16.9,o:26,s:"1万+",ps:430,bizHours:"",priceCompare:"",saveTag:"比日常团购省2.8元",priceTag:"近7天低价",rank:"",heat:87,prompt:"orange fruit tea with fresh orange slices"}
   ],
   "成都":[
-    {n:"小龙坎双人火锅套餐",b:"小龙坎",p:158,o:238,s:"9000+",ps:280,rank:"春熙路火锅热门榜第1名",priceTag:"",heat:91,prompt:"spicy sichuan hotpot with beef tripe and chili oil"},
-    {n:"书亦烧仙草奶茶",b:"书亦烧仙草",p:8.9,o:15,s:"5万+",ps:760,rank:"",priceTag:"近7天低价",heat:97,prompt:"milk tea with grass jelly and red beans"}
+    {n:"小龙坎双人火锅套餐",b:"小龙坎",p:158,o:238,s:"9000+",ps:280,bizHours:"24小时营业",priceCompare:"",saveTag:"比日常团购省20元",priceTag:"",rank:"春熙路火锅热门榜第1名",heat:91,prompt:"spicy sichuan hotpot with beef tripe and chili oil"},
+    {n:"书亦烧仙草奶茶",b:"书亦烧仙草",p:8.9,o:15,s:"5万+",ps:760,bizHours:"",priceCompare:"比15天低价高1元",saveTag:"",priceTag:"近7天低价",rank:"",heat:97,prompt:"milk tea with grass jelly and red beans"}
   ],
   "杭州":[
-    {n:"新白鹿双人杭帮菜",b:"新白鹿",p:118,o:178,s:"7000+",ps:190,rank:"西湖杭帮菜热门榜第1名",priceTag:"",heat:85,prompt:"hangzhou style chinese dishes with braised pork"},
-    {n:"古茗招牌奶茶",b:"古茗",p:11.9,o:18,s:"6万+",ps:920,rank:"",priceTag:"近7天低价",heat:98,prompt:"milk tea with tapioca pearls on wooden table"}
+    {n:"新白鹿双人杭帮菜",b:"新白鹿",p:118,o:178,s:"7000+",ps:190,bizHours:"",priceCompare:"",saveTag:"比日常团购省12元",priceTag:"",rank:"西湖杭帮菜热门榜第1名",heat:85,prompt:"hangzhou style chinese dishes with braised pork"},
+    {n:"古茗招牌奶茶",b:"古茗",p:11.9,o:18,s:"6万+",ps:920,bizHours:"24小时营业",priceCompare:"比15天低价高2元",saveTag:"",priceTag:"近7天低价",rank:"",heat:98,prompt:"milk tea with tapioca pearls on wooden table"}
   ]
 };
 
@@ -593,18 +596,25 @@ function headerView(opts){
     +'</div>';
 }
 
+function pickTag(p){
+  // 优先级从高到低：24小时营业 > 15天低价对比 > 比日常团购省 > 价格标签 > 榜单 > 默认
+  if(p.bizHours)    return {text:p.bizHours,      cls:"hours"};
+  if(p.priceCompare)return {text:p.priceCompare, cls:"price"};
+  if(p.saveTag)     return {text:p.saveTag,      cls:"save"};
+  if(p.priceTag)    return {text:p.priceTag,      cls:"price"};
+  if(p.rank)        return {text:p.rank,         cls:"rank"};
+  return {text:"附近可用",cls:"score"};
+}
 function productCard(p){
   const off=(p.p/p.o*10).toFixed(1);
-  const tags=[];
-  if(p.rank)tags.push('<span class="gb-tag rank">'+esc(p.rank)+'</span>');
-  if(p.priceTag)tags.push('<span class="gb-tag price">'+esc(p.priceTag)+'</span>');
+  const tag=pickTag(p);
   return '<article class="gb-card" tabindex="0" role="button" data-field-id="FD-GB-CARD" data-act="product" data-name="'+esc(p.n)+'">'
     +'<div class="gb-thumb" data-brand="'+esc(p.b)+'">'
     +'<img src="'+imgUrl(p.prompt)+'" alt="'+esc(p.n)+'" loading="lazy" onerror="this.parentNode.classList.add(\'img-fail\')">'
     +'<span class="mt-badge">美团</span><span class="sold-badge">已售 '+esc(p.s)+'</span></div>'
     +'<div class="gb-info">'
     +'<h3 class="gb-name">'+esc(p.n)+'</h3>'
-    +'<div class="gb-tagrow">'+(tags.join("")||'<span class="gb-tag score">附近可用</span>')+'</div>'
+    +'<div class="gb-tagrow"><span class="gb-tag '+tag.cls+'">'+esc(tag.text)+'</span></div>'
     +'<div class="gb-price"><b><i>¥</i>'+p.p+'</b><s>¥'+p.o+'</s><em>'+off+'折</em></div>'
     +'<div class="gb-meta"><span>'+fmt(p.ps)+' 家门店可用</span></div>'
     +'</div></article>';
